@@ -27,6 +27,7 @@ test('mgtd --help がルートコマンドを表示する', () => {
   assert.match(stdout, /USAGE/);
   assert.match(stdout, /init/);
   assert.match(stdout, /memo/);
+  assert.match(stdout, /completion/);
 });
 
 test('mgtd memo comment --help が整形出力になる', () => {

@@ -15,7 +15,8 @@
     "mgtd": "pnpm --filter meme-gtd-cli exec node dist/index.js",
     "mgtd:dev": "pnpm --filter meme-gtd-cli exec tsx ./src/index.ts",
     "bootstrap": "pnpm install && pnpm build",
-    "mgtd:install": "node ./scripts/install-cli.mjs"
+    "mgtd:install": "node ./scripts/install-cli.mjs",
+    "mgtd:pack": "node ./scripts/package-cli.mjs"
   },
   "engines": {
     "node": ">=22.0.0"

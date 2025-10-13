@@ -47,7 +47,7 @@ export default class MemoCreate extends Command {
   async run(): Promise<void> {
     const { flags } = await this.parse(MemoCreate);
     const { config } = await loadConfig({ createIfMissing: true });
-    const logger = createLogger(config);
+    const logger = flags.json ? null : createLogger(config);
 
     let body = flags.body ?? '';
 
@@ -70,7 +70,9 @@ export default class MemoCreate extends Command {
       projectIds: flags.project ?? []
     });
 
-    logger.info({ memoId: memo.id }, 'Created memo');
+    if (logger) {
+      logger.info({ memoId: memo.id }, 'Created memo');
+    }
 
     if (flags.json) {
       this.log(JSON.stringify({ memo }, null, 2));

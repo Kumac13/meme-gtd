@@ -88,7 +88,9 @@ export default class Init extends Command {
 
     if (dbExists && flags.force) {
       await fs.remove(dbPath);
-      logger.warn({ dbPath }, 'Removed existing database');
+      if (!flags.json) {
+        logger.warn({ dbPath }, 'Removed existing database');
+      }
     }
 
     const { applied, skipped } = applyMigrations(dbPath);

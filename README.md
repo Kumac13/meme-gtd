@@ -54,25 +54,31 @@ pnpm test
 - 出力には `USAGE`, `ARGUMENTS`, `FLAGS`, `EXAMPLES` などが含まれ、`--json` などのオプション説明も確認できる。
 
 ## 補完スクリプト
-- `scripts/completions/` に bash / zsh / fish 用の補完スクリプトを同梱。
+- `mgtd completion --shell <bash|zsh|fish>` で組み込みスクリプトを出力できます。
 - インストール例:
   ```bash
   # bash
-  mkdir -p ~/.local/share/mgtd/completions
-  cp scripts/completions/mgtd.bash ~/.local/share/mgtd/completions/
+  mgtd completion --shell bash --target ~/.local/share/mgtd/completions/mgtd.bash
   echo 'source ~/.local/share/mgtd/completions/mgtd.bash' >> ~/.bashrc
 
   # zsh
-  mkdir -p ~/.local/share/mgtd/completions
-  cp scripts/completions/mgtd.zsh ~/.local/share/mgtd/completions/
+  target="$HOME/.local/share/mgtd/completions/mgtd.zsh"
+  mgtd completion --shell zsh --target "$target"
   echo 'fpath=("$HOME/.local/share/mgtd/completions" $fpath)' >> ~/.zshrc
   echo 'autoload -Uz compinit && compinit' >> ~/.zshrc
 
   # fish
-  mkdir -p ~/.config/fish/completions
-  cp scripts/completions/mgtd.fish ~/.config/fish/completions/
+  mgtd completion --shell fish --target ~/.config/fish/completions/mgtd.fish
   ```
-- シェルを再起動するか設定ファイルを再読み込みすると、`mgtd` のサブコマンドやフラグを補完できる。
+- `--print-path` を付けると、バンドル済みスクリプトの格納場所を確認できます。
+  ```bash
+  mgtd completion --shell zsh --print-path
+  ```
+- シェルを再起動するか設定ファイルを再読み込みすると、`mgtd` のサブコマンドやフラグを補完できます。
+
+## リリースパッケージ
+- `pnpm mgtd:pack` で `pnpm pack` を実行し、`meme-gtd-cli-<version>.tgz` を生成できます。
+- 事前に `pnpm build` が走るため、最新ビルド成果物が含まれます。
 
 ## 主なサブコマンド一覧
 | コマンド | 説明 |

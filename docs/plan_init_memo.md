@@ -13,9 +13,11 @@
 - ✅ DB/CORE 向けの node:test テストを追加し、`pnpm test` が成功することを確認。
 - ✅ README を更新し、インストール・動作確認・テスト手順を明記。
 - ✅ CLI ヘルプ体系を刷新し、スペース区切りのサブコマンドでも `--help` が整形出力されるようにした（`src/index.ts` の正規化と各コマンド metadata を追加）。
-- ✅ bash / zsh / fish 向け補完スクリプトを `scripts/completions/` に追加し、README に導入手順を追記。
+- ✅ `mgtd completion` コマンドを追加し、bash / zsh / fish 向けスクリプトを内蔵・配布できるようにした。
+- ✅ `scripts/completions/` および README に補完導入手順を反映。
 - ✅ `CHANGELOG.md` を作成し、0.1.0 の変更履歴を整理。
-- ✅ CLI 統合テスト（help コマンド検証）を追加し、`pnpm test` で自動実行されるよう整備。
+- ✅ CLI 統合テスト（help コマンド検証 / e2e 動作確認）を追加し、`pnpm test` で自動実行されるよう整備。
+- ✅ `scripts/package-cli.mjs` で `pnpm mgtd:pack` によるパッケージ生成フローを整備。
 
 - 🔄 残改善: オートコンプリートの動的生成（将来的に `mgtd completion` コマンド化）、リリースパッケージ化、さらなる e2e テスト強化。
 
