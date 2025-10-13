@@ -7,11 +7,14 @@
   "type": "module",
   "packageManager": "pnpm@9.0.0",
   "scripts": {
-    "build": "pnpm -r --filter meme-gtd-cli build",
+    "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "dev": "pnpm --filter meme-gtd-cli dev",
-    "format": "pnpm -r format"
+    "format": "pnpm -r format",
+    "mgtd": "pnpm --filter meme-gtd-cli exec mgtd",
+    "mgtd:dev": "pnpm --filter meme-gtd-cli exec tsx packages/cli/src/index.ts",
+    "bootstrap": "pnpm install && pnpm build"
   },
   "engines": {
     "node": ">=22.0.0"

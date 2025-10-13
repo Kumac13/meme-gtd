@@ -28,7 +28,7 @@
 |----|--------|------|------|------|------|
 | S1 | 実装言語・CLIフレームワーク決定 | **決定**: TypeScript (Node.js 22) + `@oclif/core`。理由: TypeScript エコシステムとの親和性、CLI 開発の柔軟性。 | assistant | 2025-10-09 | ☑ |
 | S2 | ディレクトリ構成の策定 | **決定**: `packages/cli` (oclif), `packages/core`, `packages/db`, `packages/config`, `packages/shared`. pnpm ワークスペースで管理。 | assistant | 2025-10-09 | ☑ |
-| S3 | SQLite アクセスライブラリ調査 | **決定**: `better-sqlite3` を使用、マイグレーションは `kysely` + `kysely-migration-cli` を採用予定。FTS5 対応を検証する。 | assistant | 2025-10-09 | ☑ |
+| S3 | SQLite アクセスライブラリ調査 | **決定**: `better-sqlite3` を直接利用し、マイグレーションは自前適用（`migrate.ts`）で運用。FTS5 対応は手動検証済み。 | assistant | 2025-10-09 | ☑ |
 | S4 | スキーマドラフト作成 | schema/001_init.sql (SQLite) 作成済み。列型/インデックス/FTS トリガを実装。 | assistant | 2025-10-09 | ☑ |
 | S5 | 設定ファイル仕様決定 | `context.json` に `dbPath`, `mode`, `schemaVersion`, `updatedAt` を保持。優先度: CLIフラグ > ENV > config > default。仕様を docs に追記。 | assistant | 2025-10-11 | ☐ |
 | S6 | CLI UX 詳細設計 | サブコマンドごとのシーケンス図を作成し、エラー時の戻り値とメッセージパターンを定義。 | assistant | 2025-10-11 | ☐ |

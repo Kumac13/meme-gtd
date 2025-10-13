@@ -14,8 +14,6 @@
   "dependencies": {
     "better-sqlite3": "^9.0.0",
     "fs-extra": "^11.2.0",
-    "kysely": "^0.27.4",
-    "kysely-better-sqlite3": "^0.3.0",
     "zod": "^3.23.8",
     "meme-gtd-config": "workspace:*",
     "meme-gtd-shared": "workspace:*"

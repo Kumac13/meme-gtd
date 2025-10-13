@@ -218,7 +218,7 @@ export const addComment = (
     .run({ issueId: memoId, bodyMd, createdAt: now });
 
   return commentRowToComment(
-    db.prepare('SELECT * FROM comments WHERE id = @id').get({ id: result.lastInsertRowid })
+    db.prepare('SELECT * FROM comments WHERE id = @id').get({ id: result.lastInsertRowid }) as any
   );
 };
 
@@ -230,7 +230,7 @@ export const updateComment = (
   const now = nowIso();
   const existing = db
     .prepare('SELECT * FROM comments WHERE id = @id')
-    .get({ id: commentId });
+    .get({ id: commentId }) as any;
   if (!existing) {
     throw new Error(`Comment not found: ${commentId}`);
   }
@@ -245,7 +245,7 @@ export const updateComment = (
   ).run({ id: commentId, bodyMd, updatedAt: now });
 
   return commentRowToComment(
-    db.prepare('SELECT * FROM comments WHERE id = @id').get({ id: commentId })
+    db.prepare('SELECT * FROM comments WHERE id = @id').get({ id: commentId }) as any
   );
 };
 
@@ -261,7 +261,7 @@ export const deleteComment = (db: Database.Database, commentId: number): void =>
 export const listComments = (db: Database.Database, memoId: number): Comment[] => {
   const rows = db
     .prepare('SELECT * FROM comments WHERE issue_id = @memoId AND is_deleted = 0 ORDER BY created_at ASC')
-    .all({ memoId });
+    .all({ memoId }) as any[];
   return rows.map(commentRowToComment);
 };
 
@@ -317,8 +317,8 @@ const attachProjects = (db: Database.Database, issueId: number, projectIds: numb
 export const listMemoLabels = (db: Database.Database, memoId: number): string[] => {
   const rows = db
     .prepare(`SELECT l.name FROM labels l JOIN issue_labels il ON il.label_id = l.id WHERE il.issue_id = @memoId ORDER BY l.name`)
-    .all({ memoId });
-  return rows.map((row) => row.name as string);
+    .all({ memoId }) as Array<{ name: string }>;
+  return rows.map((row) => row.name);
 };
 
 export const setMemoLabels = (db: Database.Database, memoId: number, labels: string[]): void => {

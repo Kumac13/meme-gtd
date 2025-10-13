@@ -21,7 +21,7 @@ export default class MemoList extends Command {
       label: flags.label,
       search: flags.search,
       limit: flags.limit,
-      order: flags.order
+      order: flags.order as 'asc' | 'desc' | undefined
     });
 
     if (flags.json) {
