@@ -27,13 +27,26 @@ export default class MemoRoot extends Command {
         return;
       }
 
-      const forbiddenFlags = rest.filter((arg) => arg.startsWith('--') && arg !== '--json');
-      if (forbiddenFlags.length > 0) {
-        this.error(
+      const addFlags = new Set(['--body', '--body-file']);
+      const isNumericId = action && /^\d+$/.test(action);
+      const hasAddFlags = next.some((arg) => addFlags.has(arg));
+
+      if (isNumericId && hasAddFlags) {
+        await this.config.runCommand('memo:comment:add', [action, ...next]);
+        return;
+      }
+
+      if (
+        rest.some((arg) => arg.startsWith('--') && arg !== '--json') &&
+        !(isNumericId && !next.length)
+      ) {
+        this.log(
           'Usage: mgtd memo comment <memoId> [--json] もしくは mgtd memo comment <add|edit|delete> ...\n' +
-            '例: mgtd memo comment add 1 --body "comment"',
-          { exit: 2 }
+            '例: mgtd memo comment add 1 --body "comment"'
         );
+        await this.config.runCommand('memo:comment', ['--help']);
+        this.exit(2);
+        return;
       }
 
       await this.config.runCommand('memo:comment', rest);
