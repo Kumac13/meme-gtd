@@ -6,7 +6,9 @@ if (argv[0] === '--') {
   argv.shift();
 }
 
-run(argv, import.meta.url)
+const normalizedArgv = argv.map((arg) => (arg === '-h' ? '--help' : arg));
+
+run(normalizedArgv, import.meta.url)
   .then(async () => {
     await flush();
   })
