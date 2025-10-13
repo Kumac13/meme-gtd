@@ -18,17 +18,17 @@ export default class MemoRoot extends Command {
 
       if (action === '-h' || action === '--help') {
         this.log(
-          'memo comment コマンドの使い方:\n' +
+          'Usage:\n' +
             '  mgtd memo comment <memoId> [--json]\n' +
             '  mgtd memo comment add <memoId> --body "comment"\n' +
             '  mgtd memo comment edit <memoId> <commentId> --body "new body"\n' +
             '  mgtd memo comment delete <memoId> <commentId> --yes'
         );
-        this.log('\nサブコマンド例:');
-        this.log('  add    コメントを追加 (--body / --body-file)');
-        this.log('  edit   コメントを編集 (--body / --body-file)');
-        this.log('  delete コメントを削除 (--yes で確認省略)');
-        this.log('\nコメント一覧のみ表示する場合は `mgtd memo comment <memoId>` を実行してください。');
+        this.log('\nSubcommands:');
+        this.log('  add    add a new comment (--body / --body-file)');
+        this.log('  edit   update an existing comment (--body / --body-file)');
+        this.log('  delete remove a comment (--yes to skip confirmation)');
+        this.log('\nTo list comments only, run `mgtd memo comment <memoId>`');
         return;
       }
 
@@ -52,8 +52,8 @@ export default class MemoRoot extends Command {
         !(isNumericId && !next.length)
       ) {
         this.log(
-          'Usage: mgtd memo comment <memoId> [--json] もしくは mgtd memo comment <add|edit|delete> ...\n' +
-            '例: mgtd memo comment add 1 --body "comment"'
+          'Usage: mgtd memo comment <memoId> [--json] or mgtd memo comment <add|edit|delete> ...\n' +
+            'Example: mgtd memo comment add 1 --body "comment"'
         );
         await this.config.runCommand('memo:comment', ['--help']);
         this.exit(2);

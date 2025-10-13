@@ -3,8 +3,8 @@ import { loadConfig } from 'meme-gtd-config';
 import { MemoService } from 'meme-gtd-core';
 
 export default class MemoCommentIndex extends Command {
-  static summary = 'List comments for a memo or discover comment subcommands';
-  static description = `表示対象のメモ ID を指定するとコメント一覧を表示します。コメントの追加・編集・削除は add/edit/delete サブコマンドを利用してください。`;
+  static summary = 'List comments or find comment subcommands';
+  static description = 'Show memo comments with optional JSON output. Use the add/edit/delete subcommands to modify comments.';
   static usage = [
     'mgtd memo comment <memoId> [--json]',
     'mgtd memo comment add <memoId> --body "comment"',
