@@ -14,7 +14,8 @@
     "format": "pnpm -r format",
     "mgtd": "pnpm --filter meme-gtd-cli exec node dist/index.js",
     "mgtd:dev": "pnpm --filter meme-gtd-cli exec tsx ./src/index.ts",
-    "bootstrap": "pnpm install && pnpm build"
+    "bootstrap": "pnpm install && pnpm build",
+    "mgtd:install": "pnpm install --global ./packages/cli"
   },
   "engines": {
     "node": ">=22.0.0"

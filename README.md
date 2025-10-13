@@ -15,21 +15,21 @@ corepack prepare pnpm@9.0.0 --activate
    pnpm install
    pnpm build
    ```
-2. CLI の利用
-   - pnpm 経由で実行する場合
+2. CLI のインストール／利用
+   - pnpm 経由で直接実行する場合
      ```bash
      pnpm --filter meme-gtd-cli exec node dist/index.js --help
      pnpm --filter meme-gtd-cli exec node dist/index.js init --db ~/.local/share/mgtd/issues.db --force
      ```
-   - グローバルにリンクして使用する場合（推奨）
+   - グローバルコマンドとしてインストールする場合（推奨）
      ```bash
-    pnpm --filter meme-gtd-cli link --global
-    mgtd init --db ~/.local/share/mgtd/issues.db --force
-    mgtd memo create --body "first memo"
-    mgtd memo list --json
-    mgtd --help
-    mgtd memo --help
-    ```
+     pnpm run mgtd:install        # = pnpm install --global ./packages/cli
+     mgtd --help
+     mgtd init --db ~/.local/share/mgtd/issues.db --force
+     mgtd memo create --body "first memo"
+     mgtd memo list --json
+     mgtd memo --help
+     ```
 
 ## テスト実行
 ```bash

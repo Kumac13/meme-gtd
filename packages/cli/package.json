@@ -1,7 +1,7 @@
 {
   "name": "meme-gtd-cli",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "type": "module",
   "description": "CLI entry point for meme-gtd",
   "bin": {
@@ -16,8 +16,7 @@
   },
   "dependencies": {
     "@oclif/core": "^4.0.0",
-    "@oclif/plugin-help": "^5.0.0",
-    "@oclif/plugin-plugins": "^5.0.0",
+    "@oclif/plugin-help": "^5.0.20",
     "better-sqlite3": "^9.0.0",
     "chalk": "^5.3.0",
     "fs-extra": "^11.2.0",
@@ -45,6 +44,7 @@
   },
   "oclif": {
     "bin": "mgtd",
-    "commands": "./dist/commands"
+    "commands": "./dist/commands",
+    "helpClass": "@oclif/plugin-help"
   }
 }

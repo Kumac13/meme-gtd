@@ -9,10 +9,9 @@
 - ✅ TypeScript + oclif / pnpm ワークスペース構成を整備し、`mgtd init` / `mgtd memo` コマンドを実装。
 - ✅ `schema/001_init.sql` に全テーブルと FTS トリガを定義し、`applyMigrations` から適用可能にした。
 - ✅ `context.json` の仕様を `docs/requirement.md` に追記し、`docs/cli_requirement.md` に CLI シーケンス図を追加。
-- ✅ `pnpm mgtd` / `pnpm mgtd:dev` スクリプトで CLI を実行可能にし、`pnpm --filter meme-gtd-cli link --global` で `mgtd` コマンドとして利用できることを確認。
-- ✅ DB/CORE 向けの node:test テストを追加し、`pnpm test` が全パッケージで成功することを確認。
-- ✅ `memo` トピックのルーティングを整理し、`mgtd memo`, `mgtd memo list`, `mgtd memo --help` が期待通りに動作。
-- ✅ README を整備してセットアップ／テスト／主要コマンド／ヘルプ表示手順を追記。
+- ✅ `pnpm run mgtd:install` でグローバルに CLI を導入できるようスクリプトを整備し、`mgtd --help` / `mgtd memo --help` のルーティングを修正。
+- ✅ DB/CORE 向けの node:test テストを追加し、`pnpm test` が成功することを確認。
+- ✅ README を更新し、インストール・動作確認・テスト手順を明記。
 - 🔄 残改善: 補完スクリプト、CHANGELOG、CLI 統合テスト。
 
 ---
@@ -28,13 +27,14 @@
 
 ## 備考
 
-- 動作確認コマンド例:
+- 動作確認例:
   ```bash
   pnpm install
   pnpm build
-  pnpm mgtd init --db .tmp/issues.db --force
-  pnpm mgtd memo create --body 'first memo' --label test
-  pnpm mgtd memo list --json
-  pnpm mgtd memo --help
+  pnpm run mgtd:install
+  mgtd init --db ~/.local/share/mgtd/issues.db --force
+  mgtd memo create --body 'first memo' --label test
+  mgtd memo list --json
+  mgtd memo --help
   ```
 - Node 22.18.0 上での開発を前提。Node 24 系を利用する場合は `pnpm rebuild better-sqlite3` を推奨。
