@@ -10,28 +10,20 @@
 - ✅ `schema/001_init.sql` に全テーブルと FTS トリガを定義し、`applyMigrations` から適用可能にした。
 - ✅ `context.json` の仕様を `docs/requirement.md` に追記し、`docs/cli_requirement.md` に CLI シーケンス図を追加。
 - ✅ `pnpm mgtd` / `pnpm mgtd:dev` スクリプトで CLI を直接実行可能に調整（`pnpm mgtd init --db .tmp/issues.db --force` で確認済み）。
-- ✅ DB/CORE 向けの node:test テストを作成し、`applyMigrations` を用いる形に整理（※ `packages/core` 側は path 問題で失敗中）。
-- ❌ `pnpm test` が未完了。`packages/core` テストで `schema_migrations` テーブルが見つからず失敗する（調査・修正中）。
-- ❌ `mgtd memo list` がエラーになる問題を特定。`memo list` コマンドを `memo` のエイリアスに変更し、`mgtd memo` / `mgtd memo list` の双方で一覧できるように調整中（ビルドは通るがテスト未実施）。
-- ❌ README / 補完スクリプト / リリースノート整備は未着手。
+- ✅ DB/CORE 向けの node:test テストを追加し、`pnpm test` が全パッケージでパスすることを確認。
+- ✅ `memo list` コマンドを `memo` トピックに統合し、`mgtd memo` / `mgtd memo list` の双方で一覧できるよう修正。
+- ✅ README にセットアップ／テスト／主要コマンドを追記。
+- 🔄 補完スクリプト／リリースノート草案（フェーズ5）および CLI 統合テストは今後の改善項目。
 
 ---
 
-## Blocker / Issue
+-## 今後の改善候補
 
-| 課題 | 詳細 | 対応状況 |
-| --- | --- | --- |
-| schema_migrations が見つからない | `packages/core` のテスト環境で `applyMigrations` が schema ディレクトリを参照できない。 | 原因調査・修正中 |
-| `memo list` の仕様乖離 | `memo` ルートコマンドが一覧処理を持っていたため `mgtd memo list` がエラー。`memo list` にエイリアスを付ける形で調整。 | 修正済（ビルド確認済み） |
-| 自動テストの未整備 | `packages/db` / `packages/core` のテストを node:test で作成。CLI 統合テストは未実装。 | 継続対応 |
+| 項目 | 説明 |
+| --- | --- |
+| 補完スクリプト/リリースノート | zsh/fish 補完や CHANGELOG 草案を整備する。 |
+| CLI 統合テスト | `mgtd` コマンドを e2e で実行する自動テストを検討。 |
 
----
-
-## 未完タスク
-
-1. `packages/core` テストの修正（schema ファイル参照を安定化させ、`pnpm test` をパスさせる）。
-2. CLI ドキュメント／README／補完スクリプトなどリリース準備。
-3. CLI 統合テストの追加（`mgtd` コマンドを実際に叩くエンドツーエンドテスト）。
 
 ---
 
