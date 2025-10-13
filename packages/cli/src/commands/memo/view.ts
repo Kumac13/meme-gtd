@@ -11,7 +11,7 @@ export default class MemoView extends Command {
 
   static flags = {
     json: Flags.boolean({ description: 'Output JSON', default: false }),
-    comments: Flags.boolean({ description: 'Include comments', default: true })
+    comments: Flags.boolean({ char: 'c', description: 'Include comments', default: false })
   } as const;
 
   async run(): Promise<void> {

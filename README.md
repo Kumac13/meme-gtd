@@ -32,6 +32,7 @@ corepack prepare pnpm@9.0.0 --activate
      mgtd memo create --body "first memo"
      mgtd memo list --json
      mgtd memo comment add 1 --body "first comment"
+     mgtd memo view 1 -c
      mgtd memo --help
      ```
 
