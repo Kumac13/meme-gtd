@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 import { run, flush } from '@oclif/core';
 
-run(process.argv.slice(2), import.meta.url)
+const normalizedArgv = process.argv
+  .slice(2)
+  .flatMap((arg) => (arg === '-h' ? ['--help'] : arg));
+
+run(normalizedArgv, import.meta.url)
   .then(async () => {
     await flush();
   })

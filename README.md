@@ -23,11 +23,13 @@ corepack prepare pnpm@9.0.0 --activate
      ```
    - グローバルにリンクして使用する場合（推奨）
      ```bash
-     pnpm --filter meme-gtd-cli link --global
-     mgtd init --db ~/.local/share/mgtd/issues.db --force
-     mgtd memo create --body "first memo"
-     mgtd memo list --json
-     ```
+    pnpm --filter meme-gtd-cli link --global
+    mgtd init --db ~/.local/share/mgtd/issues.db --force
+    mgtd memo create --body "first memo"
+    mgtd memo list --json
+    mgtd --help
+    mgtd memo --help
+    ```
 
 ## テスト実行
 ```bash

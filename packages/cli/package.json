@@ -45,10 +45,6 @@
   },
   "oclif": {
     "bin": "mgtd",
-    "commands": "./dist/commands",
-    "helpClass": "@oclif/plugin-help",
-    "plugins": [
-      "@oclif/plugin-plugins"
-    ]
+    "commands": "./dist/commands"
   }
 }

@@ -7,8 +7,9 @@ export default class MemoRoot extends Command {
   async run(): Promise<void> {
     const [subcommand, ...rest] = this.argv;
 
-    if (!subcommand) {
-      await this.config.runCommand('memo:list', rest);
+    if (!subcommand || subcommand === '-h' || subcommand === '--help') {
+      const args = subcommand ? ['--help', ...rest] : rest;
+      await this.config.runCommand('memo:list', args);
       return;
     }
 
