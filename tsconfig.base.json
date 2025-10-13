@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "node",
+    "jsx": "react-jsx",
+    "declaration": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "meme-gtd-config": [
+        "packages/config/src"
+      ],
+      "meme-gtd-core": [
+        "packages/core/src"
+      ],
+      "meme-gtd-db": [
+        "packages/db/src"
+      ],
+      "meme-gtd-logger": [
+        "packages/logger/src"
+      ],
+      "meme-gtd-shared": [
+        "packages/shared/src"
+      ]
+    }
+  },
+  "exclude": [
+    "dist",
+    "node_modules"
+  ]
+}

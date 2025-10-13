@@ -1,0 +1,27 @@
+{
+  "name": "meme-gtd-shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "pnpm run clean && tsc -p tsconfig.json",
+    "clean": "rimraf dist",
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "tsx": "^4.15.0",
+    "@types/node": "^22.0.0",
+    "eslint": "^9.9.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "rimraf": "^5.0.7",
+    "vitest": "^1.6.0"
+  }
+}
