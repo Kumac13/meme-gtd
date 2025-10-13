@@ -23,7 +23,10 @@ corepack prepare pnpm@9.0.0 --activate
      ```
    - グローバルコマンドとしてインストールする場合（推奨）
      ```bash
-     pnpm run mgtd:install        # = pnpm install --global ./packages/cli
+     pnpm run mgtd:install
+     # ~/.local/bin を PATH に追加していない場合は追加
+     export PATH="$HOME/.local/bin:$PATH"
+
      mgtd --help
      mgtd init --db ~/.local/share/mgtd/issues.db --force
      mgtd memo create --body "first memo"

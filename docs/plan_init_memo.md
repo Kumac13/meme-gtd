@@ -9,7 +9,7 @@
 - ✅ TypeScript + oclif / pnpm ワークスペース構成を整備し、`mgtd init` / `mgtd memo` コマンドを実装。
 - ✅ `schema/001_init.sql` に全テーブルと FTS トリガを定義し、`applyMigrations` から適用可能にした。
 - ✅ `context.json` の仕様を `docs/requirement.md` に追記し、`docs/cli_requirement.md` に CLI シーケンス図を追加。
-- ✅ `pnpm run mgtd:install` でグローバルに CLI を導入できるようスクリプトを整備し、`mgtd --help` / `mgtd memo --help` のルーティングを修正。
+- ✅ `pnpm run mgtd:install` でグローバルに CLI を導入できるようスクリプトを整備し、`~/.local/bin/mgtd` へシンボリックリンクを作成する方式に統一。
 - ✅ DB/CORE 向けの node:test テストを追加し、`pnpm test` が成功することを確認。
 - ✅ README を更新し、インストール・動作確認・テスト手順を明記。
 - 🔄 残改善: 補完スクリプト、CHANGELOG、CLI 統合テスト。
@@ -32,6 +32,7 @@
   pnpm install
   pnpm build
   pnpm run mgtd:install
+  export PATH="$HOME/.local/bin:$PATH"
   mgtd init --db ~/.local/share/mgtd/issues.db --force
   mgtd memo create --body 'first memo' --label test
   mgtd memo list --json
