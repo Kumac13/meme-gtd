@@ -59,7 +59,18 @@ export default class Init extends Command {
     }
 
     if (dbExists && !flags.force) {
-      this.error(`Database already exists at ${dbPath}. Use --force to overwrite.`);
+      const message =
+        `Database already exists at ${dbPath}.\n` +
+        'Use `mgtd init --force` to overwrite, or specify a different path with `--db`.';
+      if (flags.json) {
+        this.log(
+          JSON.stringify({ error: message, dbPath, hint: 'Use --force or --db to proceed' }, null, 2)
+        );
+      } else {
+        this.log(message);
+      }
+      this.exit(1);
+      return;
     }
 
     if (dbExists && flags.force) {
