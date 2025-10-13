@@ -1,40 +1,68 @@
 #!/usr/bin/env node
-import { run, flush } from '@oclif/core';
+import { run, flush, Errors } from '@oclif/core';
+
+const MULTIWORD_COMMANDS = [
+  ['memo', 'comment', 'add'],
+  ['memo', 'comment', 'edit'],
+  ['memo', 'comment', 'delete'],
+  ['memo', 'comment'],
+  ['memo', 'label', 'add'],
+  ['memo', 'label', 'remove'],
+  ['memo', 'label', 'set'],
+  ['memo', 'label'],
+  ['memo', 'create'],
+  ['memo', 'delete'],
+  ['memo', 'edit'],
+  ['memo', 'list'],
+  ['memo', 'promote'],
+  ['memo', 'view'],
+  ['memo']
+] as const;
 
 const argv = process.argv.slice(2);
-if (argv[0] === '--') {
-  argv.shift();
-}
+const withoutSeparator = argv[0] === '--' ? argv.slice(1) : argv;
+const normalizedHelpArgv = withoutSeparator.map((arg) => (arg === '-h' ? '--help' : arg));
 
-if (
-  argv[0] === 'memo' &&
-  argv[1] === 'comment' &&
-  argv.slice(2).some((arg) => arg === '-h' || arg === '--help')
-) {
-  console.log(
-    'Usage:\n' +
-      '  mgtd memo comment <memoId> [--json]\n' +
-      '  mgtd memo comment add <memoId> --body "comment"\n' +
-      '  mgtd memo comment edit <memoId> <commentId> --body "new body"\n' +
-      '  mgtd memo comment delete <memoId> <commentId> --yes'
-  );
-  console.log('\nSubcommands:');
-  console.log('  add    add a new comment (--body / --body-file)');
-  console.log('  edit   update an existing comment (--body / --body-file)');
-  console.log('  delete remove a comment (--yes to skip confirmation)');
-  console.log('\nTo list comments only, run `mgtd memo comment <memoId>`');
-  process.exit(0);
-}
+const collapsedArgv = (() => {
+  if (normalizedHelpArgv.length === 0) {
+    return normalizedHelpArgv;
+  }
+  if (normalizedHelpArgv[0]?.includes(':')) {
+    return normalizedHelpArgv;
+  }
 
-const normalizedArgv = argv.map((arg) => (arg === '-h' ? '--help' : arg));
+  const lower = normalizedHelpArgv.map((token) => token.toLowerCase());
+  let bestMatch: { length: number; id: string } | undefined;
 
-run(normalizedArgv, import.meta.url)
+  for (const segments of MULTIWORD_COMMANDS) {
+    if (segments.length > lower.length) {
+      continue;
+    }
+
+    const slice = lower.slice(0, segments.length);
+    const matches = slice.every((value, index) => value === segments[index]);
+    if (!matches) {
+      continue;
+    }
+
+    const id = segments.join(':');
+    if (!bestMatch || segments.length > bestMatch.length) {
+      bestMatch = { length: segments.length, id };
+    }
+  }
+
+  if (!bestMatch) {
+    return normalizedHelpArgv;
+  }
+
+  return [bestMatch.id, ...normalizedHelpArgv.slice(bestMatch.length)];
+})();
+
+run(collapsedArgv, import.meta.url)
   .then(async () => {
     await flush();
   })
   .catch(async (error: unknown) => {
-    const err = error instanceof Error ? error : new Error(String(error));
-    console.error(err);
     await flush();
-    process.exitCode = 1;
+    await Errors.handle(error instanceof Error ? error : new Error(String(error)));
   });

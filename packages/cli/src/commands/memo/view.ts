@@ -3,15 +3,32 @@ import { loadConfig } from 'meme-gtd-config';
 import { MemoService } from 'meme-gtd-core';
 
 export default class MemoView extends Command {
-  static description = 'View a memo in detail';
+  static summary = 'Show memo details';
+  static description =
+    'Display memo metadata, body text, and optionally the associated comments.';
+  static usage = ['<%= command.id %> <memoId> [--comments] [--json]'];
+  static examples = [
+    '$ mgtd memo view 9',
+    '$ mgtd memo view 12 --comments',
+    '$ mgtd memo view 12 --comments --json'
+  ];
 
   static args = {
     id: Args.integer({ description: 'Memo ID', required: true })
   } as const;
 
   static flags = {
-    json: Flags.boolean({ description: 'Output JSON', default: false }),
-    comments: Flags.boolean({ char: 'c', description: 'Include comments', default: false })
+    json: Flags.boolean({
+      summary: 'Return JSON output',
+      description: 'Return the memo, labels, and (optional) comments as JSON.',
+      default: false
+    }),
+    comments: Flags.boolean({
+      char: 'c',
+      summary: 'Include memo comments',
+      description: 'Append memo comments after the memo body (or within the JSON payload).',
+      default: false
+    })
   } as const;
 
   async run(): Promise<void> {

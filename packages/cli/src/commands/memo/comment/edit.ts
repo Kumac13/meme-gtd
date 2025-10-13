@@ -6,6 +6,11 @@ import { promptEditor } from '../../../lib/editor.js';
 
 export default class MemoCommentEdit extends Command {
   static summary = 'Edit an existing memo comment';
+  static description =
+    'Update a memo comment by supplying new Markdown inline, from a file, or by editing the existing body.';
+  static usage = [
+    '<%= command.id %> <memoId> <commentId> [--body <text> | --body-file <path>] [--json]'
+  ];
   static examples = [
     '$ mgtd memo comment edit 1 3 --body "updated comment"',
     '$ mgtd memo comment edit 2 1 --body-file patch.md'
@@ -17,9 +22,19 @@ export default class MemoCommentEdit extends Command {
   } as const;
 
   static flags = {
-    body: Flags.string({ description: 'New comment body' }),
-    bodyFile: Flags.string({ description: 'Load body from file or stdin (-)' }),
-    json: Flags.boolean({ description: 'Output JSON', default: false })
+    body: Flags.string({
+      summary: 'Inline replacement body',
+      description: 'Provide the full comment Markdown directly.'
+    }),
+    bodyFile: Flags.string({
+      summary: 'Load replacement body from file/stdin',
+      description: 'Use "-" to read from stdin or pass a Markdown file path.'
+    }),
+    json: Flags.boolean({
+      summary: 'Return JSON output',
+      description: 'Return the updated comment record as JSON.',
+      default: false
+    })
   } as const;
 
   async run(): Promise<void> {

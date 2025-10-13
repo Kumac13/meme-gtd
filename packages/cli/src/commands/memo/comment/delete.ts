@@ -4,6 +4,8 @@ import { MemoService } from 'meme-gtd-core';
 
 export default class MemoCommentDelete extends Command {
   static summary = 'Delete an existing memo comment';
+  static description = 'Remove a comment from a memo. Confirmation is required unless --yes is supplied.';
+  static usage = ['<%= command.id %> <memoId> <commentId> [--yes]'];
   static examples = [
     '$ mgtd memo comment delete 1 3 --yes'
   ];
@@ -14,7 +16,12 @@ export default class MemoCommentDelete extends Command {
   } as const;
 
   static flags = {
-    yes: Flags.boolean({ char: 'y', description: 'Skip confirmation', default: false })
+    yes: Flags.boolean({
+      char: 'y',
+      summary: 'Skip confirmation prompt',
+      description: 'Use in scripts or when you are certain the comment should be removed.',
+      default: false
+    })
   } as const;
 
   async run(): Promise<void> {

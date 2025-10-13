@@ -3,15 +3,31 @@ import { loadConfig } from 'meme-gtd-config';
 import { MemoService } from 'meme-gtd-core';
 
 export default class MemoLabelSet extends Command {
-  static description = 'Replace memo labels with the given list';
+  static summary = 'Replace memo labels';
+  static description =
+    'Overwrite the memo label set with the provided list. Any omitted labels will be removed.';
+  static usage = ['<%= command.id %> <memoId> --label <name> [--label <name> ...] [--json]'];
+  static examples = [
+    '$ mgtd memo label set 14 --label inbox --label review',
+    '$ mgtd memo label set 14 --label focus --json'
+  ];
 
   static args = {
     id: Args.integer({ description: 'Memo ID', required: true })
   } as const;
 
   static flags = {
-    label: Flags.string({ description: 'Labels to set', multiple: true, required: true }),
-    json: Flags.boolean({ description: 'Output JSON', default: false })
+    label: Flags.string({
+      summary: 'Labels to use',
+      description: 'Provide the complete list of labels that should remain on the memo.',
+      multiple: true,
+      required: true
+    }),
+    json: Flags.boolean({
+      summary: 'Return JSON output',
+      description: 'Emit the memo and final label list as JSON.',
+      default: false
+    })
   } as const;
 
   async run(): Promise<void> {

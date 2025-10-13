@@ -3,27 +3,41 @@ import { loadConfig } from 'meme-gtd-config';
 import { MemoService } from 'meme-gtd-core';
 
 export default class MemoCommentIndex extends Command {
-  static summary = 'List comments or find comment subcommands';
-  static description = 'Show memo comments with optional JSON output. Use the add/edit/delete subcommands to modify comments.';
+  static summary = 'Inspect memo comments';
+  static description = [
+    'List the threaded comments attached to a memo. Use the dedicated subcommands',
+    'to add, edit, or delete comments when you need to make changes.',
+    '',
+    'Subcommands:',
+    '  add     Add a comment body via --body, --body-file, or the editor.',
+    '  edit    Update an existing comment (opens the editor if no body is supplied).',
+    '  delete  Remove a comment; requires --yes for non-interactive confirmation.',
+    '',
+    'Run `mgtd memo comment <subcommand> --help` for detailed usage.'
+  ].join('\n');
   static usage = [
-    'mgtd memo comment <memoId> [--json]',
-    'mgtd memo comment add <memoId> --body "comment"',
-    'mgtd memo comment edit <memoId> <commentId> --body "new body"',
-    'mgtd memo comment delete <memoId> <commentId> --yes'
+    '<%= command.id %> <memoId> [--json]',
+    '<%= command.id %> add <memoId> --body "comment"',
+    '<%= command.id %> edit <memoId> <commentId> --body "new body"',
+    '<%= command.id %> delete <memoId> <commentId> --yes'
   ];
   static examples = [
-    '$ mgtd memo comment 1 --json',
-    '$ mgtd memo comment add 1 --body "refinement"',
-    '$ mgtd memo comment edit 1 3 --body "updated"',
-    '$ mgtd memo comment delete 1 3 --yes'
+    '$ mgtd memo comment 42 --json',
+    '$ mgtd memo comment add 42 --body "Clarified acceptance criteria"',
+    '$ mgtd memo comment edit 42 3 --body-file comment.md',
+    '$ mgtd memo comment delete 42 3 --yes'
   ];
 
   static args = {
-    id: Args.integer({ description: 'Memo ID', required: true })
+    id: Args.integer({ description: 'Memo ID to inspect', required: true })
   } as const;
 
   static flags = {
-    json: Flags.boolean({ description: 'Output JSON', default: false })
+    json: Flags.boolean({
+      summary: 'Return JSON output',
+      description: 'Write the memo comments as formatted JSON for downstream tooling.',
+      default: false
+    })
   } as const;
 
   async run(): Promise<void> {

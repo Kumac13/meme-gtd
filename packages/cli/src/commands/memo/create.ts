@@ -6,14 +6,42 @@ import { loadBodyFromFile } from '../../lib/io.js';
 import { promptEditor } from '../../lib/editor.js';
 
 export default class MemoCreate extends Command {
-  static description = 'Create a new memo (Captured item)';
+  static summary = 'Capture a new memo';
+  static description =
+    'Create a memo record in the Captured state. Provide text via flags, stdin, or your configured editor.';
+  static usage = [
+    '<%= command.id %> [--body <text> | --body-file <path>] [--label <name> ...] [--project <id> ...] [--json]'
+  ];
+  static examples = [
+    '$ mgtd memo create --body "Call back supplier"',
+    '$ mgtd memo create --body-file notes.md --label inbox --label vendor',
+    '$ mgtd memo create --label backlog --json'
+  ];
 
   static flags = {
-    body: Flags.string({ description: 'Memo body text (Markdown)' }),
-    bodyFile: Flags.string({ description: 'Load body from file or - for stdin' }),
-    label: Flags.string({ description: 'Labels to apply', multiple: true }),
-    project: Flags.integer({ description: 'Project IDs to attach', multiple: true }),
-    json: Flags.boolean({ description: 'Output JSON', default: false })
+    body: Flags.string({
+      summary: 'Inline memo content',
+      description: 'Provide the memo Markdown directly on the command line.'
+    }),
+    bodyFile: Flags.string({
+      summary: 'Load memo content from a file or stdin',
+      description: 'Use "-" to read from stdin; otherwise supply a path to a Markdown file.'
+    }),
+    label: Flags.string({
+      summary: 'Apply labels',
+      description: 'Attach one or more labels during capture.',
+      multiple: true
+    }),
+    project: Flags.integer({
+      summary: 'Associate projects',
+      description: 'Link memo to one or more project IDs.',
+      multiple: true
+    }),
+    json: Flags.boolean({
+      summary: 'Return JSON output',
+      description: 'Return the created memo payload in JSON format.',
+      default: false
+    })
   } as const;
 
   async run(): Promise<void> {

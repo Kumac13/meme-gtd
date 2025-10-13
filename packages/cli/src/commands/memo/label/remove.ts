@@ -3,15 +3,31 @@ import { loadConfig } from 'meme-gtd-config';
 import { MemoService } from 'meme-gtd-core';
 
 export default class MemoLabelRemove extends Command {
-  static description = 'Remove labels from a memo';
+  static summary = 'Remove memo labels';
+  static description =
+    'Detach one or more labels from a memo. Remaining labels are left untouched.';
+  static usage = ['<%= command.id %> <memoId> --label <name> [--label <name> ...] [--json]'];
+  static examples = [
+    '$ mgtd memo label remove 12 --label backlog',
+    '$ mgtd memo label remove 12 --label backlog --label weekly --json'
+  ];
 
   static args = {
     id: Args.integer({ description: 'Memo ID', required: true })
   } as const;
 
   static flags = {
-    label: Flags.string({ description: 'Labels to remove', multiple: true, required: true }),
-    json: Flags.boolean({ description: 'Output JSON', default: false })
+    label: Flags.string({
+      summary: 'Labels to remove',
+      description: 'Provide one or more labels that should be removed from the memo.',
+      multiple: true,
+      required: true
+    }),
+    json: Flags.boolean({
+      summary: 'Return JSON output',
+      description: 'Emit the updated memo and label list in JSON format.',
+      default: false
+    })
   } as const;
 
   async run(): Promise<void> {

@@ -3,14 +3,42 @@ import { loadConfig } from 'meme-gtd-config';
 import { MemoService } from 'meme-gtd-core';
 
 export default class MemoList extends Command {
-  static description = 'List memo items';
+  static summary = 'List captured memos';
+  static description =
+    'Show captured memo items, optionally filtered by label, full-text search, or update order.';
+  static usage = [
+    '<%= command.id %> [--label <name>] [--search <query>] [--order <asc|desc>] [--limit <n>] [--json]'
+  ];
+  static examples = [
+    '$ mgtd memo list',
+    '$ mgtd memo list --label inbox --order asc',
+    '$ mgtd memo list --search "next actions" --limit 5 --json'
+  ];
 
   static flags = {
-    label: Flags.string({ description: 'Filter by label name' }),
-    search: Flags.string({ description: 'Full text search query' }),
-    limit: Flags.integer({ description: 'Limit number of results' }),
-    order: Flags.string({ description: 'Order by updated date asc|desc', options: ['asc', 'desc'], default: 'desc' }),
-    json: Flags.boolean({ description: 'Output JSON', default: false })
+    label: Flags.string({
+      summary: 'Filter by label',
+      description: 'Return only memos tagged with the provided label value.'
+    }),
+    search: Flags.string({
+      summary: 'Filter using full-text search',
+      description: 'Runs the query against memo Markdown content using SQLite FTS.'
+    }),
+    limit: Flags.integer({
+      summary: 'Maximum number of rows',
+      description: 'Restrict the number of results to the provided value.'
+    }),
+    order: Flags.string({
+      summary: 'Sort direction',
+      description: 'Choose whether to display most recently updated memos first or last.',
+      options: ['asc', 'desc'],
+      default: 'desc'
+    }),
+    json: Flags.boolean({
+      summary: 'Return JSON output',
+      description: 'Emit the memo list as JSON so it can be piped to tools like jq.',
+      default: false
+    })
   } as const;
 
   async run(): Promise<void> {

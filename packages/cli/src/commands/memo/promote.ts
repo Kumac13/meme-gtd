@@ -5,19 +5,52 @@ import { loadBodyFromFile } from '../../lib/io.js';
 import { promptEditor } from '../../lib/editor.js';
 
 export default class MemoPromote extends Command {
-  static description = 'Promote a memo into a task';
+  static summary = 'Promote a memo to a task';
+  static description =
+    'Convert a memo into an actionable task, optionally rewriting the body, labels, or status during promotion.';
+  static usage = [
+    '<%= command.id %> <memoId> --title <text> [--body <text> | --body-file <path>]',
+    '<%= command.id %> <memoId> --title <text> [--label <name> ...] [--status <state>] [--json]'
+  ];
+  static examples = [
+    '$ mgtd memo promote 21 --title "Ship onboarding email" --status next',
+    '$ mgtd memo promote 8 --title "Draft test plan" --body-file plan.md --label qa',
+    '$ mgtd memo promote 5 --title "Kickoff meeting" --json'
+  ];
 
   static args = {
     id: Args.integer({ description: 'Memo ID', required: true })
   } as const;
 
   static flags = {
-    title: Flags.string({ description: 'Task title', required: true }),
-    body: Flags.string({ description: 'Task body override' }),
-    bodyFile: Flags.string({ description: 'Load body from file or stdin (-)' }),
-    label: Flags.string({ description: 'Labels to apply to the new task', multiple: true }),
-    status: Flags.string({ description: 'Initial task status', default: 'open' }),
-    json: Flags.boolean({ description: 'Output JSON', default: false })
+    title: Flags.string({
+      summary: 'Task title',
+      description: 'Sets the title of the new task created from the memo.',
+      required: true
+    }),
+    body: Flags.string({
+      summary: 'Override task body inline',
+      description: 'Provide Markdown content that will populate the task body.'
+    }),
+    bodyFile: Flags.string({
+      summary: 'Override task body from file/stdin',
+      description: 'Use "-" for stdin or pass a file with Markdown content.'
+    }),
+    label: Flags.string({
+      summary: 'Labels to copy to the task',
+      description: 'Apply one or more labels to the resulting task.',
+      multiple: true
+    }),
+    status: Flags.string({
+      summary: 'Initial task status',
+      description: 'Set the status that the new task should start in.',
+      default: 'open'
+    }),
+    json: Flags.boolean({
+      summary: 'Return JSON output',
+      description: 'Return the promoted memo and new task ID as JSON.',
+      default: false
+    })
   } as const;
 
   async run(): Promise<void> {

@@ -12,6 +12,7 @@
 - ✅ `pnpm run mgtd:install` でグローバルに CLI を導入できるようスクリプトを整備し、`~/.local/bin/mgtd` へシンボリックリンクを作成する方式に統一。
 - ✅ DB/CORE 向けの node:test テストを追加し、`pnpm test` が成功することを確認。
 - ✅ README を更新し、インストール・動作確認・テスト手順を明記。
+- ✅ CLI ヘルプ体系を刷新し、スペース区切りのサブコマンドでも `--help` が整形出力されるようにした（`src/index.ts` の正規化と各コマンド metadata を追加）。
 - 🔄 残改善: 補完スクリプト、CHANGELOG、CLI 統合テスト。
 
 ---

@@ -6,23 +6,36 @@ import { applyMigrations } from 'meme-gtd-db';
 import { createLogger } from 'meme-gtd-logger';
 
 export default class Init extends Command {
+  static summary = 'Bootstrap local mgtd storage';
   static description = 'Initialize the local mgtd database and configuration';
+  static usage = ['<%= command.id %> [--db <path>] [--force] [--dry-run] [--json]'];
+  static examples = [
+    '$ mgtd init',
+    '$ mgtd init --db ~/.local/share/mgtd/issues.db',
+    '$ mgtd init --force --json'
+  ];
 
   static flags = {
     db: Flags.string({
-      description: 'Path to the SQLite database file',
+      summary: 'SQLite database file path',
+      description:
+        'Override the configured SQLite database location. Defaults to the path stored in mgtd config.',
       required: false
     }),
     force: Flags.boolean({
-      description: 'Overwrite existing database if present',
+      summary: 'Overwrite any existing database',
+      description: 'Remove the current database before re-creating it from migrations.',
       default: false
     }),
     dryRun: Flags.boolean({
-      description: 'Show what would happen without modifying files',
+      summary: 'Preview actions without writing files',
+      description:
+        'Emit a summary of configuration and migration changes instead of touching the filesystem.',
       default: false
     }),
     json: Flags.boolean({
-      description: 'Output result as JSON',
+      summary: 'Return structured JSON output',
+      description: 'Useful for scripting: returns config and migration details as JSON.',
       default: false
     })
   } as const;

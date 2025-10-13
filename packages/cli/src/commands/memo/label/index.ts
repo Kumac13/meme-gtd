@@ -3,14 +3,22 @@ import { loadConfig } from 'meme-gtd-config';
 import { MemoService } from 'meme-gtd-core';
 
 export default class MemoLabelIndex extends Command {
-  static description = 'List labels assigned to a memo';
+  static summary = 'List memo labels';
+  static description =
+    'Show labels currently attached to a memo. Use the add/remove/set subcommands to update assignments.';
+  static usage = ['<%= command.id %> <memoId> [--json]'];
+  static examples = ['$ mgtd memo label 17', '$ mgtd memo label 17 --json'];
 
   static args = {
     id: Args.integer({ description: 'Memo ID', required: true })
   } as const;
 
   static flags = {
-    json: Flags.boolean({ description: 'Output JSON', default: false })
+    json: Flags.boolean({
+      summary: 'Return JSON output',
+      description: 'Emit the memo labels as JSON.',
+      default: false
+    })
   } as const;
 
   async run(): Promise<void> {
