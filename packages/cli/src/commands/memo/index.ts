@@ -56,7 +56,7 @@ export default class MemoRoot extends Command {
             'Example: mgtd memo comment add 1 --body "comment"'
         );
         await this.config.runCommand('memo:comment', ['--help']);
-        this.exit(2);
+        process.exitCode = 2;
         return;
       }
 

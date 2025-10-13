@@ -33,13 +33,16 @@ if (!fs.existsSync(source)) {
   process.exit(1);
 }
 
-fs.chmodSync(source, 0o755);
 const destination = path.join(binDir, 'mgtd');
 if (fs.existsSync(destination)) {
-  fs.rmSync(destination);
+  fs.rmSync(destination, { force: true });
 }
 
-fs.symlinkSync(source, destination);
+const wrapper = `#!/usr/bin/env bash
+node "${source}" "$@"
+`;
+fs.writeFileSync(destination, wrapper, { mode: 0o755 });
+fs.chmodSync(destination, 0o755);
 console.log(`mgtd installed at ${destination}`);
 
 const pathEntries = (process.env.PATH || '').split(path.delimiter);

@@ -69,7 +69,7 @@ export default class Init extends Command {
       } else {
         this.log(message);
       }
-      this.exit(1);
+      process.exitCode = 1;
       return;
     }
 
