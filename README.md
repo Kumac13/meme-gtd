@@ -50,8 +50,29 @@ pnpm test
   mgtd memo comment --help
   mgtd memo view --help
   mgtd memo label add --help
-  ```
+```
 - 出力には `USAGE`, `ARGUMENTS`, `FLAGS`, `EXAMPLES` などが含まれ、`--json` などのオプション説明も確認できる。
+
+## 補完スクリプト
+- `scripts/completions/` に bash / zsh / fish 用の補完スクリプトを同梱。
+- インストール例:
+  ```bash
+  # bash
+  mkdir -p ~/.local/share/mgtd/completions
+  cp scripts/completions/mgtd.bash ~/.local/share/mgtd/completions/
+  echo 'source ~/.local/share/mgtd/completions/mgtd.bash' >> ~/.bashrc
+
+  # zsh
+  mkdir -p ~/.local/share/mgtd/completions
+  cp scripts/completions/mgtd.zsh ~/.local/share/mgtd/completions/
+  echo 'fpath=("$HOME/.local/share/mgtd/completions" $fpath)' >> ~/.zshrc
+  echo 'autoload -Uz compinit && compinit' >> ~/.zshrc
+
+  # fish
+  mkdir -p ~/.config/fish/completions
+  cp scripts/completions/mgtd.fish ~/.config/fish/completions/
+  ```
+- シェルを再起動するか設定ファイルを再読み込みすると、`mgtd` のサブコマンドやフラグを補完できる。
 
 ## 主なサブコマンド一覧
 | コマンド | 説明 |
