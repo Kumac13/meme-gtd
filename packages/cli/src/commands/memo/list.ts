@@ -5,6 +5,10 @@ import { MemoService } from 'meme-gtd-core';
 export default class MemoList extends Command {
   static description = 'List memo items';
 
+  static aliases = ['memo'];
+
+  static strict = false;
+
   static flags = {
     label: Flags.string({ description: 'Filter by label name' }),
     search: Flags.string({ description: 'Full text search query' }),
@@ -14,6 +18,9 @@ export default class MemoList extends Command {
   } as const;
 
   async run(): Promise<void> {
+    if (this.argv[0] === 'list') {
+      this.argv.shift();
+    }
     const { flags } = await this.parse(MemoList);
     const { config } = await loadConfig({ createIfMissing: true });
     const service = new MemoService({ config });

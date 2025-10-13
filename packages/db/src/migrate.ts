@@ -30,6 +30,16 @@ export const applyMigrations = (dbPath: string): MigrationResult => {
 
   const result: MigrationResult = { applied: [], skipped: [] };
 
+  const hasMigrationTable = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='schema_migrations'")
+    .get();
+
+  if (!hasMigrationTable) {
+    db.exec(
+      "CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')))"
+    );
+  }
+
   for (const migration of migrations) {
     if (!fs.existsSync(migration.file)) {
       throw new Error(`Migration file not found: ${migration.file}`);

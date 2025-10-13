@@ -9,14 +9,15 @@
     "build": "pnpm run clean && tsc -p tsconfig.json",
     "clean": "rimraf dist",
     "lint": "eslint \"src/**/*.ts\"",
-    "test": "vitest"
+    "test": "tsx --tsconfig tsconfig.json test/memoService.test.ts"
   },
   "dependencies": {
     "meme-gtd-db": "workspace:*",
     "meme-gtd-shared": "workspace:*",
     "zod": "^3.23.8",
     "better-sqlite3": "^9.0.0",
-    "meme-gtd-config": "workspace:*"
+    "meme-gtd-config": "workspace:*",
+    "fs-extra": "^11.2.0"
   },
   "devDependencies": {
     "typescript": "^5.5.4",

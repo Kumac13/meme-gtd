@@ -69,6 +69,57 @@ app
 * すべての `list` / `view` 系コマンドは `--json` を提供し、CLI テストのため `--limit`, `--search` を実装。
 * 破壊的操作（`delete`, `close` など）は確認プロンプトを表示し、`--yes` でスキップ可能（`gh` 準拠）。
 
+### メモコマンド・シーケンス図
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant CLI as mgtd CLI
+  participant CFG as Config Loader
+  participant DB as SQLite (memoRepository)
+  participant CORE as MemoService
+
+  U->>CLI: mgtd memo create --label idea
+  CLI->>CFG: loadConfig()
+  CFG-->>CLI: MgtdConfig
+  CLI->>CORE: MemoService#create(body, labels)
+  CORE->>DB: createMemo() + attachLabels()
+  DB-->>CORE: Memo record
+  CORE-->>CLI: Memo DTO
+  CLI-->>U: Created memo #ID
+
+  U->>CLI: mgtd memo promote <id> --title …
+  CLI->>CFG: loadConfig()
+  CLI->>CORE: MemoService#promote()
+  CORE->>DB: getMemo(); insert task; insert link
+  DB-->>CORE: {memo, taskId}
+  CORE-->>CLI: Promotion result
+  CLI-->>U: Promoted memo -> task
+```
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant CLI as mgtd init
+  participant CFG as Config Loader
+  participant DB as migrate.ts
+  participant FS as File System
+
+  U->>CLI: mgtd init --db ~/tmp/issues.db
+  CLI->>CFG: loadConfig(createIfMissing)
+  CFG-->>CLI: config(default)
+  CLI->>FS: check dbPath/configPath
+  opt force
+    CLI->>FS: remove existing DB
+  end
+  CLI->>DB: applyMigrations()
+  DB->>FS: read schema SQL
+  DB-->>CLI: applied versions
+  CLI->>CFG: writeConfig(updated)
+  CFG->>FS: write context.json
+  CLI-->>U: Summary / JSON
+```
+
 ### サブコマンド詳細
 
 #### init

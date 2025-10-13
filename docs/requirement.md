@@ -132,6 +132,21 @@ stateDiagram-v2
 - 設定値は `~/.config/mgtd/context.json` などのコンフィグに記録し、インターフェイス層が起動時に読み込む。
 - 操作用のコマンド/API 詳細は各インターフェイス仕様で定義する。
 - 初回セットアップ時は `mgtd init` で DB と設定ファイルを生成し、既存環境に対しては `--force` で再初期化できる（バックアップは利用者責任）。
+- **context.json スキーマの詳細**:
+  - 例:
+    ```json
+    {
+      "dbPath": "/Users/<name>/.local/share/mgtd/issues.db",
+      "mode": "local",
+      "schemaVersion": "001_init",
+      "updatedAt": "2025-10-09T12:00:00.000Z"
+    }
+    ```
+  - 優先順位: `CLIフラグ > 環境変数(MGTD_CONFIG_PATH, MGTD_DB_PATH, MGTD_MODE) > config > 既定値`。
+  - `mode` は現状 `local` 固定。将来 `remote` を追加する場合も schemaVersion が同期の基準。
+  - CLI は読み込み後に `zod` でバリデーションし、欠損値をデフォルト値で補完する。
+  - `mgtd init` 実行時に最新マイグレーションを適用し、`schemaVersion` と `updatedAt` を更新する。
+
 
 ### 4.8 バックエンド運用ポリシー
 

@@ -12,8 +12,8 @@
     "test": "pnpm -r test",
     "dev": "pnpm --filter meme-gtd-cli dev",
     "format": "pnpm -r format",
-    "mgtd": "pnpm --filter meme-gtd-cli exec mgtd",
-    "mgtd:dev": "pnpm --filter meme-gtd-cli exec tsx packages/cli/src/index.ts",
+    "mgtd": "pnpm --filter meme-gtd-cli exec node dist/index.js",
+    "mgtd:dev": "pnpm --filter meme-gtd-cli exec tsx ./src/index.ts",
     "bootstrap": "pnpm install && pnpm build"
   },
   "engines": {
