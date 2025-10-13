@@ -3,7 +3,10 @@ import { loadConfig } from 'meme-gtd-config';
 import { MemoService } from 'meme-gtd-core';
 
 export default class MemoCommentDelete extends Command {
-  static description = 'Delete a memo comment';
+  static summary = 'Delete an existing memo comment';
+  static examples = [
+    '$ mgtd memo comment delete 1 3 --yes'
+  ];
 
   static args = {
     memoId: Args.integer({ description: 'Memo ID', required: true }),

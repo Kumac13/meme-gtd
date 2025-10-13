@@ -5,7 +5,11 @@ import { loadBodyFromFile } from '../../../lib/io.js';
 import { promptEditor } from '../../../lib/editor.js';
 
 export default class MemoCommentEdit extends Command {
-  static description = 'Edit a memo comment';
+  static summary = 'Edit an existing memo comment';
+  static examples = [
+    '$ mgtd memo comment edit 1 3 --body "updated comment"',
+    '$ mgtd memo comment edit 2 1 --body-file patch.md'
+  ];
 
   static args = {
     memoId: Args.integer({ description: 'Memo ID', required: true }),

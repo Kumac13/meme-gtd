@@ -17,7 +17,18 @@ export default class MemoRoot extends Command {
       const [action, ...next] = rest;
 
       if (action === '-h' || action === '--help') {
-        await this.config.runCommand('memo:comment', ['--help']);
+        this.log(
+          'memo comment コマンドの使い方:\n' +
+            '  mgtd memo comment <memoId> [--json]\n' +
+            '  mgtd memo comment add <memoId> --body "comment"\n' +
+            '  mgtd memo comment edit <memoId> <commentId> --body "new body"\n' +
+            '  mgtd memo comment delete <memoId> <commentId> --yes'
+        );
+        this.log('\nサブコマンド例:');
+        this.log('  add    コメントを追加 (--body / --body-file)');
+        this.log('  edit   コメントを編集 (--body / --body-file)');
+        this.log('  delete コメントを削除 (--yes で確認省略)');
+        this.log('\nコメント一覧のみ表示する場合は `mgtd memo comment <memoId>` を実行してください。');
         return;
       }
 
