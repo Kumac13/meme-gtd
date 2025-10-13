@@ -34,6 +34,7 @@ export default class MemoCommentIndex extends Command {
 
   static flags = {
     json: Flags.boolean({
+      char: 'j',
       summary: 'Return JSON output',
       description: 'Write the memo comments as formatted JSON for downstream tooling.',
       default: false

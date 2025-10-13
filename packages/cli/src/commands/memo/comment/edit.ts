@@ -23,14 +23,17 @@ export default class MemoCommentEdit extends Command {
 
   static flags = {
     body: Flags.string({
+      char: 'b',
       summary: 'Inline replacement body',
       description: 'Provide the full comment Markdown directly.'
     }),
     bodyFile: Flags.string({
+      char: 'f',
       summary: 'Load replacement body from file/stdin',
       description: 'Use "-" to read from stdin or pass a Markdown file path.'
     }),
     json: Flags.boolean({
+      char: 'j',
       summary: 'Return JSON output',
       description: 'Return the updated comment record as JSON.',
       default: false

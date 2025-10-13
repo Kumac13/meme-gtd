@@ -28,23 +28,29 @@ test('mgtd end-to-end memo lifecycle', () => {
     MGTD_CONFIG_PATH: configPath
   };
 
-  const init = runCli(['init', '--db', dbPath, '--force', '--json'], { env });
+  const init = runCli(['init', '-d', dbPath, '-f', '-j'], { env });
   assert.equal(init.status, 0, init.stderr);
   const initPayload = JSON.parse(init.stdout);
   assert.equal(initPayload.dbPath, path.resolve(dbPath));
 
-  const create = runCli(['memo', 'create', '--body', 'e2e memo', '--label', 'test', '--json'], { env });
+  const create = runCli(['memo', 'create', '-b', 'e2e memo', '-l', 'test', '-j'], { env });
   assert.equal(create.status, 0, create.stderr);
   const created = JSON.parse(create.stdout);
   assert.ok(created.memo.id > 0);
 
-  const list = runCli(['memo', 'list', '--json'], { env });
+  const positional = runCli(['memo', 'create', 'positional memo', '-l', 'pos', '-j'], { env });
+  assert.equal(positional.status, 0, positional.stderr);
+  const createdPositional = JSON.parse(positional.stdout);
+  assert.ok(createdPositional.memo.id > created.memo.id);
+
+  const list = runCli(['memo', 'list', '-j'], { env });
   assert.equal(list.status, 0, list.stderr);
   const memos = JSON.parse(list.stdout);
-  assert.equal(memos.memos.length, 1);
-  assert.equal(memos.memos[0].bodyMd, 'e2e memo');
+  const bodies = memos.memos.map((memo) => memo.bodyMd);
+  assert.ok(bodies.includes('e2e memo'));
+  assert.ok(bodies.includes('positional memo'));
 
-  const completion = runCli(['completion', '--shell', 'bash'], { env });
+  const completion = runCli(['completion', '-s', 'bash'], { env });
   assert.equal(completion.status, 0, completion.stderr);
   assert.match(completion.stdout, /_mgtd_complete_full/);
 });

@@ -15,6 +15,7 @@ export default class MemoLabelIndex extends Command {
 
   static flags = {
     json: Flags.boolean({
+      char: 'j',
       summary: 'Return JSON output',
       description: 'Emit the memo labels as JSON.',
       default: false

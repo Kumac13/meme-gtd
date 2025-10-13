@@ -25,34 +25,41 @@ export default class MemoEdit extends Command {
 
   static flags = {
     body: Flags.string({
+      char: 'b',
       summary: 'Replace memo text inline',
       description: 'Provide the full memo Markdown content as a string.'
     }),
     bodyFile: Flags.string({
+      char: 'f',
       summary: 'Replace memo text from file/stdin',
       description: 'Use "-" to read from stdin or pass a file path.'
     }),
     addLabel: Flags.string({
+      char: 'a',
       summary: 'Labels to add',
       description: 'Append one or more labels without removing existing ones.',
       multiple: true
     }),
     removeLabel: Flags.string({
+      char: 'r',
       summary: 'Labels to remove',
       description: 'Drop one or more labels from the memo.',
       multiple: true
     }),
     setLabel: Flags.string({
+      char: 's',
       summary: 'Overwrite label set',
       description: 'Replace the memo labels with this exact list.',
       multiple: true
     }),
     project: Flags.integer({
+      char: 'p',
       summary: 'Set related project IDs',
       description: 'Override the memo project links with the provided IDs.',
       multiple: true
     }),
     json: Flags.boolean({
+      char: 'j',
       summary: 'Return JSON output',
       description: 'Emit the updated memo payload as JSON.',
       default: false

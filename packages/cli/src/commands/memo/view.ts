@@ -19,6 +19,7 @@ export default class MemoView extends Command {
 
   static flags = {
     json: Flags.boolean({
+      char: 'j',
       summary: 'Return JSON output',
       description: 'Return the memo, labels, and (optional) comments as JSON.',
       default: false

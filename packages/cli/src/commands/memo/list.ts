@@ -17,24 +17,29 @@ export default class MemoList extends Command {
 
   static flags = {
     label: Flags.string({
+      char: 'l',
       summary: 'Filter by label',
       description: 'Return only memos tagged with the provided label value.'
     }),
     search: Flags.string({
+      char: 's',
       summary: 'Filter using full-text search',
       description: 'Runs the query against memo Markdown content using SQLite FTS.'
     }),
     limit: Flags.integer({
+      char: 'n',
       summary: 'Maximum number of rows',
       description: 'Restrict the number of results to the provided value.'
     }),
     order: Flags.string({
+      char: 'o',
       summary: 'Sort direction',
       description: 'Choose whether to display most recently updated memos first or last.',
       options: ['asc', 'desc'],
       default: 'desc'
     }),
     json: Flags.boolean({
+      char: 'j',
       summary: 'Return JSON output',
       description: 'Emit the memo list as JSON so it can be piped to tools like jq.',
       default: false

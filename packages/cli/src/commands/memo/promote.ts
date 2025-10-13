@@ -24,29 +24,35 @@ export default class MemoPromote extends Command {
 
   static flags = {
     title: Flags.string({
+      char: 't',
       summary: 'Task title',
       description: 'Sets the title of the new task created from the memo.',
       required: true
     }),
     body: Flags.string({
+      char: 'b',
       summary: 'Override task body inline',
       description: 'Provide Markdown content that will populate the task body.'
     }),
     bodyFile: Flags.string({
+      char: 'f',
       summary: 'Override task body from file/stdin',
       description: 'Use "-" for stdin or pass a file with Markdown content.'
     }),
     label: Flags.string({
+      char: 'l',
       summary: 'Labels to copy to the task',
       description: 'Apply one or more labels to the resulting task.',
       multiple: true
     }),
     status: Flags.string({
+      char: 's',
       summary: 'Initial task status',
       description: 'Set the status that the new task should start in.',
       default: 'open'
     }),
     json: Flags.boolean({
+      char: 'j',
       summary: 'Return JSON output',
       description: 'Return the promoted memo and new task ID as JSON.',
       default: false

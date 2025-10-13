@@ -18,12 +18,14 @@ export default class MemoLabelSet extends Command {
 
   static flags = {
     label: Flags.string({
+      char: 'l',
       summary: 'Labels to use',
       description: 'Provide the complete list of labels that should remain on the memo.',
       multiple: true,
       required: true
     }),
     json: Flags.boolean({
+      char: 'j',
       summary: 'Return JSON output',
       description: 'Emit the memo and final label list as JSON.',
       default: false

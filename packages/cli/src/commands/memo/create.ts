@@ -1,4 +1,4 @@
-import { Command, Flags } from '@oclif/core';
+import { Args, Command, Flags } from '@oclif/core';
 import { loadConfig } from 'meme-gtd-config';
 import { MemoService } from 'meme-gtd-core';
 import { createLogger } from 'meme-gtd-logger';
@@ -18,26 +18,38 @@ export default class MemoCreate extends Command {
     '$ mgtd memo create --label backlog --json'
   ];
 
+  static args = {
+    body: Args.string({
+      description: 'Memo body text provided positionally (quotes recommended for spaces)',
+      required: false
+    })
+  } as const;
+
   static flags = {
     body: Flags.string({
+      char: 'b',
       summary: 'Inline memo content',
       description: 'Provide the memo Markdown directly on the command line.'
     }),
     bodyFile: Flags.string({
+      char: 'f',
       summary: 'Load memo content from a file or stdin',
       description: 'Use "-" to read from stdin; otherwise supply a path to a Markdown file.'
     }),
     label: Flags.string({
+      char: 'l',
       summary: 'Apply labels',
       description: 'Attach one or more labels during capture.',
       multiple: true
     }),
     project: Flags.integer({
+      char: 'p',
       summary: 'Associate projects',
       description: 'Link memo to one or more project IDs.',
       multiple: true
     }),
     json: Flags.boolean({
+      char: 'j',
       summary: 'Return JSON output',
       description: 'Return the created memo payload in JSON format.',
       default: false
@@ -45,11 +57,11 @@ export default class MemoCreate extends Command {
   } as const;
 
   async run(): Promise<void> {
-    const { flags } = await this.parse(MemoCreate);
+    const { args, flags } = await this.parse(MemoCreate);
     const { config } = await loadConfig({ createIfMissing: true });
     const logger = flags.json ? null : createLogger(config);
 
-    let body = flags.body ?? '';
+    let body = flags.body ?? args.body ?? '';
 
     if (!body && flags.bodyFile) {
       body = await loadBodyFromFile(flags.bodyFile);

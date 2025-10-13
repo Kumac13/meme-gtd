@@ -17,23 +17,27 @@ export default class Init extends Command {
 
   static flags = {
     db: Flags.string({
+      char: 'd',
       summary: 'SQLite database file path',
       description:
         'Override the configured SQLite database location. Defaults to the path stored in mgtd config.',
       required: false
     }),
     force: Flags.boolean({
+      char: 'f',
       summary: 'Overwrite any existing database',
       description: 'Remove the current database before re-creating it from migrations.',
       default: false
     }),
     dryRun: Flags.boolean({
+      char: 'n',
       summary: 'Preview actions without writing files',
       description:
         'Emit a summary of configuration and migration changes instead of touching the filesystem.',
       default: false
     }),
     json: Flags.boolean({
+      char: 'j',
       summary: 'Return structured JSON output',
       description: 'Useful for scripting: returns config and migration details as JSON.',
       default: false

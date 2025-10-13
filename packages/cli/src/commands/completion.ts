@@ -20,16 +20,19 @@ export default class Completion extends Command {
 
   static flags = {
     shell: Flags.string({
+      char: 's',
       summary: 'Target shell',
       description: 'Specify which shell completion script to emit.',
       options: shells,
       default: 'bash'
     }),
     target: Flags.string({
+      char: 't',
       summary: 'Write output to this file',
       description: 'If provided, the completion script will be written to the given path.'
     }),
     printPath: Flags.boolean({
+      char: 'p',
       summary: 'Print the bundled script path',
       description: 'Show the absolute path to the built-in completion script for the selected shell.',
       default: false

@@ -22,14 +22,17 @@ export default class MemoCommentAdd extends Command {
 
   static flags = {
     body: Flags.string({
+      char: 'b',
       summary: 'Inline comment body',
       description: 'Provide the comment Markdown directly on the command line.'
     }),
     bodyFile: Flags.string({
+      char: 'f',
       summary: 'Load comment body from file/stdin',
       description: 'Use "-" to read from stdin, or pass a path to a Markdown file.'
     }),
     json: Flags.boolean({
+      char: 'j',
       summary: 'Return JSON output',
       description: 'Emit the created comment as JSON for scripting.',
       default: false

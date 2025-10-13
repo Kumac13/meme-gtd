@@ -18,12 +18,14 @@ export default class MemoLabelAdd extends Command {
 
   static flags = {
     label: Flags.string({
+      char: 'l',
       summary: 'Labels to append',
       description: 'Provide one or more labels to add to the memo.',
       multiple: true,
       required: true
     }),
     json: Flags.boolean({
+      char: 'j',
       summary: 'Return JSON output',
       description: 'Emit the updated memo and labels as JSON.',
       default: false

@@ -18,12 +18,14 @@ export default class MemoLabelRemove extends Command {
 
   static flags = {
     label: Flags.string({
+      char: 'l',
       summary: 'Labels to remove',
       description: 'Provide one or more labels that should be removed from the memo.',
       multiple: true,
       required: true
     }),
     json: Flags.boolean({
+      char: 'j',
       summary: 'Return JSON output',
       description: 'Emit the updated memo and label list in JSON format.',
       default: false
