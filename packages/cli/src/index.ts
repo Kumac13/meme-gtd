@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 import { run, flush } from '@oclif/core';
 
-run(process.argv.slice(2), import.meta.url)
+const argv = process.argv.slice(2);
+if (argv[0] === '--') {
+  argv.shift();
+}
+
+run(argv, import.meta.url)
   .then(async () => {
     await flush();
   })
