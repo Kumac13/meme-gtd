@@ -103,29 +103,29 @@
 
 #### 1. `memo create`コマンドへの`--editor` / `--no-editor`追加
 
-- [ ] T026 [US2] `packages/cli/src/commands/memo/create.ts`に`--editor`と`--no-editor`フラグを追加（`exclusive`オプション設定）
-- [ ] T027 [US2] `packages/cli/src/commands/memo/create.ts`の`run()`メソッドで`maybePromptEditor()`を使用するようエディタ起動ロジックを更新
-- [ ] T028 [US2] `packages/cli/src/commands/memo/create.ts`のexamplesに`--editor` / `--no-editor`の使用例を追加
+- [x] T026 [US2] `packages/cli/src/commands/memo/create.ts`に`--editor`と`--no-editor`フラグを追加（`exclusive`オプション設定）
+- [x] T027 [US2] `packages/cli/src/commands/memo/create.ts`の`run()`メソッドで`maybePromptEditor()`を使用するようエディタ起動ロジックを更新
+- [x] T028 [US2] `packages/cli/src/commands/memo/create.ts`のexamplesに`--editor` / `--no-editor`の使用例を追加
 
 #### 2. `memo edit`コマンドへの`--editor` / `--no-editor`追加
 
-- [ ] T029 [US2] `packages/cli/src/commands/memo/edit.ts`に`--editor`と`--no-editor`フラグを追加（`exclusive`オプション設定）
-- [ ] T030 [US2] `packages/cli/src/commands/memo/edit.ts`の`run()`メソッドで`maybePromptEditor()`を使用するようエディタ起動ロジックを更新
-- [ ] T031 [US2] `packages/cli/src/commands/memo/edit.ts`のexamplesに`--editor` / `--no-editor`の使用例を追加
+- [x] T029 [US2] `packages/cli/src/commands/memo/edit.ts`に`--editor`と`--no-editor`フラグを追加（`exclusive`オプション設定）
+- [x] T030 [US2] `packages/cli/src/commands/memo/edit.ts`の`run()`メソッドで`maybePromptEditor()`を使用するようエディタ起動ロジックを更新
+- [x] T031 [US2] `packages/cli/src/commands/memo/edit.ts`のexamplesに`--editor` / `--no-editor`の使用例を追加
 
 #### 3. `memo comment add`コマンドへの`--editor` / `--no-editor`追加
 
-- [ ] T032 [P] [US2] `packages/cli/src/commands/memo/comment/add.ts`に`--editor`と`--no-editor`フラグを追加（`exclusive`オプション設定）
-- [ ] T033 [US2] `packages/cli/src/commands/memo/comment/add.ts`の`run()`メソッドで`maybePromptEditor()`を使用するようエディタ起動ロジックを更新
-- [ ] T034 [US2] `packages/cli/src/commands/memo/comment/add.ts`のexamplesに`--editor` / `--no-editor`の使用例を追加
+- [x] T032 [P] [US2] `packages/cli/src/commands/memo/comment/add.ts`に`--editor`と`--no-editor`フラグを追加（`exclusive`オプション設定）
+- [x] T033 [US2] `packages/cli/src/commands/memo/comment/add.ts`の`run()`メソッドで`maybePromptEditor()`を使用するようエディタ起動ロジックを更新
+- [x] T034 [US2] `packages/cli/src/commands/memo/comment/add.ts`のexamplesに`--editor` / `--no-editor`の使用例を追加
 
 #### 4. テストの追加（User Story 2）
 
-- [ ] T035 [P] [US2] `packages/cli/test/commands/memo/create.test.ts`に`--editor`フラグのテストを追加
-- [ ] T036 [P] [US2] `packages/cli/test/commands/memo/create.test.ts`に`--no-editor`フラグのテストを追加
-- [ ] T037 [P] [US2] `packages/cli/test/commands/memo/create.test.ts`に`--editor`と`--no-editor`の相互排他テストを追加
-- [ ] T038 [P] [US2] `packages/cli/test/commands/memo/edit.test.ts`に`--editor` / `--no-editor`フラグのテストを追加
-- [ ] T039 [P] [US2] `packages/cli/test/commands/memo/comment/add.test.ts`に`--editor` / `--no-editor`フラグのテストを追加
+- [x] T035 [P] [US2] `packages/cli/test/commands/memo/create.test.ts`に`--editor`フラグのテストを追加
+- [x] T036 [P] [US2] `packages/cli/test/commands/memo/create.test.ts`に`--no-editor`フラグのテストを追加
+- [x] T037 [P] [US2] `packages/cli/test/commands/memo/create.test.ts`に`--editor`と`--no-editor`の相互排他テストを追加
+- [x] T038 [P] [US2] `packages/cli/test/commands/memo/edit.test.ts`に`--editor` / `--no-editor`フラグのテストを追加
+- [x] T039 [P] [US2] `packages/cli/test/commands/memo/comment/add.test.ts`に`--editor` / `--no-editor`フラグのテストを追加
 
 **Checkpoint**: User Story 2完了 - エディタフラグがすべての対象コマンドで動作し、優先順位ロジックが正しく機能する
 
