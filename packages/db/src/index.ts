@@ -30,4 +30,47 @@ export const ensureDatabase = (config: MgtdConfig): Database.Database => {
 
 export type SqliteRow = Record<string, unknown>;
 
-export * from './memoRepository.js';
+// Memo repository exports
+export {
+  createMemo,
+  getMemo,
+  listMemos,
+  updateMemo,
+  deleteMemo,
+  promoteMemo,
+  addComment,
+  updateComment,
+  deleteComment,
+  listComments,
+  listMemoLabels,
+  setMemoLabels,
+  setBookmark,
+  type CreateMemoInput,
+  type UpdateMemoInput,
+  type ListMemoFilters,
+  type PromoteMemoInput
+} from './memoRepository.js';
+
+// Task repository exports
+export {
+  createTask,
+  getTask,
+  listTasks,
+  updateTask,
+  deleteTask,
+  setTaskStatus,
+  listTaskLabels,
+  setTaskLabels,
+  type CreateTaskInput,
+  type UpdateTaskInput,
+  type ListTaskFilters
+} from './taskRepository.js';
+
+// Task-specific aliases for shared functions
+export {
+  addComment as addTaskComment,
+  updateComment as updateTaskComment,
+  deleteComment as deleteTaskComment,
+  listComments as listTaskComments,
+  setBookmark as setTaskBookmark
+} from './taskRepository.js';
