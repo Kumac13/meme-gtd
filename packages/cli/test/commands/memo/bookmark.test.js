@@ -44,7 +44,7 @@ describe('memo bookmark command (User Story 1)', () => {
     const memoId = JSON.parse(create.stdout).memo.id;
 
     // Bookmark the memo
-    const bookmark = runCli(['memo', 'bookmark', String(memoId)], { env });
+    const bookmark = runCli(['memo:bookmark', String(memoId)], { env });
     assert.equal(bookmark.status, 0, bookmark.stderr);
     assert.match(bookmark.stdout, /Bookmarked memo #\d+/, 'Should show success message');
   });
@@ -55,10 +55,10 @@ describe('memo bookmark command (User Story 1)', () => {
     const memoId = JSON.parse(create.stdout).memo.id;
 
     // Bookmark twice
-    const bookmark1 = runCli(['memo', 'bookmark', String(memoId)], { env });
+    const bookmark1 = runCli(['memo:bookmark', String(memoId)], { env });
     assert.equal(bookmark1.status, 0, 'First bookmark should succeed');
 
-    const bookmark2 = runCli(['memo', 'bookmark', String(memoId)], { env });
+    const bookmark2 = runCli(['memo:bookmark', String(memoId)], { env });
     assert.equal(bookmark2.status, 0, 'Second bookmark should succeed (idempotent)');
   });
 
@@ -68,7 +68,7 @@ describe('memo bookmark command (User Story 1)', () => {
     const memoId = JSON.parse(create.stdout).memo.id;
 
     // Bookmark with JSON flag
-    const bookmark = runCli(['memo', 'bookmark', String(memoId), '--json'], { env });
+    const bookmark = runCli(['memo:bookmark', String(memoId), '--json'], { env });
     assert.equal(bookmark.status, 0, bookmark.stderr);
 
     const result = JSON.parse(bookmark.stdout);
@@ -78,7 +78,7 @@ describe('memo bookmark command (User Story 1)', () => {
 
   test('memo bookmark error: non-existent ID', () => {
     // Try to bookmark non-existent memo
-    const result = runCli(['memo', 'bookmark', '99999'], { env });
+    const result = runCli(['memo:bookmark', '99999'], { env });
     assert.notEqual(result.status, 0, 'Should fail with non-existent ID');
     assert.match(result.stderr, /not found/i, 'Should show not found error');
   });
@@ -88,10 +88,10 @@ describe('memo bookmark command (User Story 1)', () => {
     // Create and bookmark a memo
     const create = runCli(['memo', 'create', '-b', 'Unbookmark test', '-j'], { env });
     const memoId = JSON.parse(create.stdout).memo.id;
-    runCli(['memo', 'bookmark', String(memoId)], { env });
+    runCli(['memo:bookmark', String(memoId)], { env });
 
     // Unbookmark the memo
-    const unbookmark = runCli(['memo', 'unbookmark', String(memoId)], { env });
+    const unbookmark = runCli(['memo:unbookmark', String(memoId)], { env });
     assert.equal(unbookmark.status, 0, unbookmark.stderr);
     assert.match(unbookmark.stdout, /Removed bookmark from memo #\d+/, 'Should show success message');
   });
@@ -102,10 +102,10 @@ describe('memo bookmark command (User Story 1)', () => {
     const memoId = JSON.parse(create.stdout).memo.id;
 
     // Unbookmark twice (even though not bookmarked)
-    const unbookmark1 = runCli(['memo', 'unbookmark', String(memoId)], { env });
+    const unbookmark1 = runCli(['memo:unbookmark', String(memoId)], { env });
     assert.equal(unbookmark1.status, 0, 'First unbookmark should succeed');
 
-    const unbookmark2 = runCli(['memo', 'unbookmark', String(memoId)], { env });
+    const unbookmark2 = runCli(['memo:unbookmark', String(memoId)], { env });
     assert.equal(unbookmark2.status, 0, 'Second unbookmark should succeed (idempotent)');
   });
 
@@ -113,10 +113,10 @@ describe('memo bookmark command (User Story 1)', () => {
     // Create and bookmark a memo
     const create = runCli(['memo', 'create', '-b', 'JSON unbookmark', '-j'], { env });
     const memoId = JSON.parse(create.stdout).memo.id;
-    runCli(['memo', 'bookmark', String(memoId)], { env });
+    runCli(['memo:bookmark', String(memoId)], { env });
 
     // Unbookmark with JSON flag
-    const unbookmark = runCli(['memo', 'unbookmark', String(memoId), '--json'], { env });
+    const unbookmark = runCli(['memo:unbookmark', String(memoId), '--json'], { env });
     assert.equal(unbookmark.status, 0, unbookmark.stderr);
 
     const result = JSON.parse(unbookmark.stdout);
@@ -129,14 +129,14 @@ describe('memo bookmark command (User Story 1)', () => {
     // Create bookmarked and non-bookmarked memos
     const create1 = runCli(['memo', 'create', '-b', 'Bookmarked memo 1', '-j'], { env });
     const id1 = JSON.parse(create1.stdout).memo.id;
-    runCli(['memo', 'bookmark', String(id1)], { env });
+    runCli(['memo:bookmark', String(id1)], { env });
 
     const create2 = runCli(['memo', 'create', '-b', 'Non-bookmarked memo', '-j'], { env });
     JSON.parse(create2.stdout).memo.id; // Not bookmarked
 
     const create3 = runCli(['memo', 'create', '-b', 'Bookmarked memo 2', '-j'], { env });
     const id3 = JSON.parse(create3.stdout).memo.id;
-    runCli(['memo', 'bookmark', String(id3)], { env });
+    runCli(['memo:bookmark', String(id3)], { env });
 
     // List only bookmarked memos
     const list = runCli(['memo', 'list', '--bookmarked', '--json'], { env });
@@ -160,11 +160,11 @@ describe('memo bookmark command (User Story 1)', () => {
     // Create bookmarked memos with different labels
     const create1 = runCli(['memo', 'create', '-b', 'Urgent bookmarked', '--label', 'urgent', '-j'], { env });
     const id1 = JSON.parse(create1.stdout).memo.id;
-    runCli(['memo', 'bookmark', String(id1)], { env });
+    runCli(['memo:bookmark', String(id1)], { env });
 
     const create2 = runCli(['memo', 'create', '-b', 'Bookmarked no label', '-j'], { env });
     const id2 = JSON.parse(create2.stdout).memo.id;
-    runCli(['memo', 'bookmark', String(id2)], { env });
+    runCli(['memo:bookmark', String(id2)], { env });
 
     const create3 = runCli(['memo', 'create', '-b', 'Urgent not bookmarked', '--label', 'urgent', '-j'], { env });
     JSON.parse(create3.stdout).memo.id; // Not bookmarked
