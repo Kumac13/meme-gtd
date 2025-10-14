@@ -27,6 +27,8 @@ app
  │   ├─ edit
  │   ├─ delete
  │   ├─ promote
+ │   ├─ bookmark
+ │   ├─ unbookmark
  │   ├─ comment (add|edit|delete)
  │   └─ label (add|set|remove)
  ├─ task
@@ -35,6 +37,8 @@ app
  │   ├─ view
  │   ├─ edit
  │   ├─ close|cancel|reopen|delete
+ │   ├─ bookmark
+ │   ├─ unbookmark
  │   ├─ comment (add|edit|delete)
  │   └─ label (add|set|remove)
  ├─ label (list|create|delete)
@@ -173,10 +177,11 @@ sequenceDiagram
 | `--label NAME` | 指定ラベルを持つメモのみ。複数指定可。 |
 | `--search QUERY` | 本文のフリーテキスト検索（FTS5 利用）。 |
 | `--order {asc|desc}` | ソート順。既定 `desc`。 |
+| `--bookmarked` | ブックマーク済みメモのみ表示。 |
 | `--json FIELDS` | JSON 出力。 |
 | `--template STRING` | カスタム表示。 |
 
-* 出力: 既定は表形式（ID, Preview, Updated, Labels）。`--json` は `[{id, number, body, updatedAt, labels}]`。
+* 出力: 既定は表形式（ID, Preview, Updated, Labels, Bookmark）。`--json` は `[{id, number, body, updatedAt, labels, isBookmarked}]`。
 
 ##### memo view
 
@@ -214,6 +219,20 @@ sequenceDiagram
 * `memo comment delete`: 論理削除。`--yes` 対応。
 * `--json` はコメントエンティティを返却。
 
+##### memo bookmark
+
+* 目的: メモにブックマークを付けて優先アクセスを可能にする。
+* 入力: メモ ID（必須）。
+* 挙動: 対象メモの `is_bookmarked` を `true` に設定。既にブックマーク済みでもエラーにせず成功（冪等性）。
+* 出力: 標準出力にブックマーク設定完了メッセージ。`--json` では `{id, isBookmarked: true}` を返す。
+
+##### memo unbookmark
+
+* 目的: メモからブックマークを外す。
+* 入力: メモ ID（必須）。
+* 挙動: 対象メモの `is_bookmarked` を `false` に設定。ブックマークされていなくてもエラーにせず成功（冪等性）。
+* 出力: 標準出力にブックマーク解除完了メッセージ。`--json` では `{id, isBookmarked: false}` を返す。
+
 ##### memo label
 
 * `memo label add`: 既存ラベルを追加。
@@ -225,9 +244,12 @@ sequenceDiagram
 
 * 役割: Inbox〜実行フェーズを管理。`memo promote` 由来または `task create` で直接生成。
 * `task create`: `gh issue create` 相当のオプションに加え、`--status` 初期値指定、`--scheduled-on DATE` を独自追加。
-* `task list`: `--status`, `--label`, `--project`, `--assignee`, `--limit`, `--json`。
+* `task list`: `--status`, `--label`, `--project`, `--assignee`, `--limit`, `--bookmarked`, `--json`。
+  - `--bookmarked`: ブックマーク済みタスクのみ表示。
 * `task edit`: `--title`, `--body`, `--status`, `--scheduled-on`, `--add-label`, `--remove-label`, `--project`。
 * `task close|cancel|reopen`: ステータス遷移。`--comment` で理由コメントを同時追加可。
+* `task bookmark`: タスクにブックマークを設定（冪等）。
+* `task unbookmark`: タスクからブックマークを解除（冪等）。
 * コメント・ラベル操作は `memo` と同等。
 
 #### label / project / link / context

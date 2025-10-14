@@ -38,6 +38,11 @@ export default class MemoList extends Command {
       options: ['asc', 'desc'],
       default: 'desc'
     }),
+    bookmarked: Flags.boolean({
+      summary: 'Show only bookmarked memos',
+      description: 'Filter the list to show only bookmarked memos.',
+      default: false
+    }),
     json: Flags.boolean({
       char: 'j',
       summary: 'Return JSON output',
@@ -54,7 +59,8 @@ export default class MemoList extends Command {
       label: flags.label,
       search: flags.search,
       limit: flags.limit,
-      order: flags.order as 'asc' | 'desc' | undefined
+      order: flags.order as 'asc' | 'desc' | undefined,
+      isBookmarked: flags.bookmarked ? true : undefined
     });
 
     if (flags.json) {
@@ -68,7 +74,8 @@ export default class MemoList extends Command {
     }
 
     for (const memo of memos) {
-      this.log(`#${memo.id}\t${memo.bodyMd.split('\n')[0].slice(0, 80)}\t${memo.updatedAt}`);
+      const indicator = memo.isBookmarked ? '★' : ' ';
+      this.log(`${indicator} #${memo.id}\t${memo.bodyMd.split('\n')[0].slice(0, 80)}\t${memo.updatedAt}`);
     }
   }
 }

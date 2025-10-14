@@ -20,6 +20,7 @@ export interface ListMemoFilters {
   search?: string;
   limit?: number;
   order?: 'asc' | 'desc';
+  isBookmarked?: boolean;
 }
 
 const memoRowToMemo = (row: any): Memo => ({
@@ -90,6 +91,11 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
     params.label = filters.label;
   }
 
+  if (filters.isBookmarked !== undefined) {
+    conditions.push('is_bookmarked = @isBookmarked');
+    params.isBookmarked = filters.isBookmarked ? 1 : 0;
+  }
+
   let orderBy = 'updated_at DESC';
   if (filters.order === 'asc') {
     orderBy = 'updated_at ASC';
@@ -102,8 +108,12 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
   }
 
   if (filters.search) {
+    const searchConditions = ["i.type = 'memo'", 'i.is_deleted = 0', 'f.body_md MATCH @search'];
+    if (filters.isBookmarked !== undefined) {
+      searchConditions.push('i.is_bookmarked = @isBookmarked');
+    }
     sql = `SELECT i.* FROM issues i JOIN issues_fts f ON f.issue_id = i.id
-            WHERE i.type = 'memo' AND i.is_deleted = 0 AND f.body_md MATCH @search
+            WHERE ${searchConditions.join(' AND ')}
             ORDER BY i.updated_at ${filters.order === 'asc' ? 'ASC' : 'DESC'}`;
     params.search = filters.search;
     if (filters.limit) {
@@ -334,4 +344,30 @@ const resetProjects = (db: Database.Database, issueId: number, projectIds: numbe
     return;
   }
   attachProjects(db, issueId, projectIds);
+};
+
+export const setBookmark = (db: Database.Database, id: number, isBookmarked: boolean): void => {
+  const stmt = db.prepare(
+    `UPDATE issues
+     SET is_bookmarked = @isBookmarked, updated_at = @updatedAt
+     WHERE id = @id AND type = 'memo' AND is_deleted = 0`
+  );
+
+  const result = stmt.run({
+    id,
+    isBookmarked: isBookmarked ? 1 : 0,
+    updatedAt: nowIso()
+  });
+
+  if (result.changes === 0) {
+    // Check if it's a type mismatch or not found
+    const check = db
+      .prepare('SELECT type FROM issues WHERE id = @id AND is_deleted = 0')
+      .get({ id }) as { type: string } | undefined;
+
+    if (check && check.type !== 'memo') {
+      throw new Error(`Issue #${id} is not a memo`);
+    }
+    throw new Error(`Memo #${id} not found`);
+  }
 };
