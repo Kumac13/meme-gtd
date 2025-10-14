@@ -10,6 +10,8 @@ const MULTIWORD_COMMANDS = [
   ['memo', 'label', 'remove'],
   ['memo', 'label', 'set'],
   ['memo', 'label'],
+  ['memo', 'bookmark'],
+  ['memo', 'unbookmark'],
   ['memo', 'create'],
   ['memo', 'delete'],
   ['memo', 'edit'],
