@@ -3,6 +3,7 @@ import { loadConfig } from 'meme-gtd-config';
 import { MemoService } from 'meme-gtd-core';
 import { loadBodyFromFile } from '../../../lib/io.js';
 import { promptEditor } from '../../../lib/editor.js';
+import { detectLegacyFlags, formatLegacyFlagError } from '../../../lib/legacy-flags.js';
 
 export default class MemoCommentEdit extends Command {
   static summary = 'Edit an existing memo comment';
@@ -27,7 +28,7 @@ export default class MemoCommentEdit extends Command {
       summary: 'Inline replacement body',
       description: 'Provide the full comment Markdown directly.'
     }),
-    bodyFile: Flags.string({
+    'body-file': Flags.string({
       char: 'f',
       summary: 'Load replacement body from file/stdin',
       description: 'Use "-" to read from stdin or pass a Markdown file path.'
@@ -41,13 +42,22 @@ export default class MemoCommentEdit extends Command {
   } as const;
 
   async run(): Promise<void> {
+    // 旧フラグ検出
+    const legacyResult = detectLegacyFlags({
+      '--bodyFile': '--body-file'
+    });
+
+    if (legacyResult.detected) {
+      this.error(formatLegacyFlagError(legacyResult));
+    }
+
     const { args, flags } = await this.parse(MemoCommentEdit);
     const { config } = await loadConfig({ createIfMissing: true });
     const service = new MemoService({ config });
 
     let body = flags.body ?? '';
-    if (!body && flags.bodyFile) {
-      body = await loadBodyFromFile(flags.bodyFile);
+    if (!body && flags['body-file']) {
+      body = await loadBodyFromFile(flags['body-file']);
     }
     if (!body) {
       const comments = service.listComments(args.memoId);

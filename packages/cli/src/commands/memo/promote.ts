@@ -3,6 +3,7 @@ import { loadConfig } from 'meme-gtd-config';
 import { MemoService } from 'meme-gtd-core';
 import { loadBodyFromFile } from '../../lib/io.js';
 import { promptEditor } from '../../lib/editor.js';
+import { detectLegacyFlags, formatLegacyFlagError } from '../../lib/legacy-flags.js';
 
 export default class MemoPromote extends Command {
   static summary = 'Promote a memo to a task';
@@ -34,7 +35,7 @@ export default class MemoPromote extends Command {
       summary: 'Override task body inline',
       description: 'Provide Markdown content that will populate the task body.'
     }),
-    bodyFile: Flags.string({
+    'body-file': Flags.string({
       char: 'f',
       summary: 'Override task body from file/stdin',
       description: 'Use "-" for stdin or pass a file with Markdown content.'
@@ -60,13 +61,22 @@ export default class MemoPromote extends Command {
   } as const;
 
   async run(): Promise<void> {
+    // 旧フラグ検出
+    const legacyResult = detectLegacyFlags({
+      '--bodyFile': '--body-file'
+    });
+
+    if (legacyResult.detected) {
+      this.error(formatLegacyFlagError(legacyResult));
+    }
+
     const { args, flags } = await this.parse(MemoPromote);
     const { config } = await loadConfig({ createIfMissing: true });
     const service = new MemoService({ config });
 
     let body = flags.body;
-    if (!body && flags.bodyFile) {
-      body = await loadBodyFromFile(flags.bodyFile);
+    if (!body && flags['body-file']) {
+      body = await loadBodyFromFile(flags['body-file']);
     }
     if (!body) {
       const memo = service.show(args.id);
