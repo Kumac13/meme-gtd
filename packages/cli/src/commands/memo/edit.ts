@@ -2,7 +2,7 @@ import { Args, Command, Flags } from '@oclif/core';
 import { loadConfig } from 'meme-gtd-config';
 import { MemoService } from 'meme-gtd-core';
 import { loadBodyFromFile } from '../../lib/io.js';
-import { promptEditor } from '../../lib/editor.js';
+import { promptEditor, maybePromptEditor } from '../../lib/editor.js';
 import { detectLegacyFlags, formatLegacyFlagError } from '../../lib/legacy-flags.js';
 
 export default class MemoEdit extends Command {
@@ -34,6 +34,16 @@ export default class MemoEdit extends Command {
       char: 'f',
       summary: 'Replace memo text from file/stdin',
       description: 'Use "-" to read from stdin or pass a file path.'
+    }),
+    editor: Flags.boolean({
+      summary: 'Force editor launch',
+      description: 'Always launch the configured editor with existing content.',
+      exclusive: ['no-editor']
+    }),
+    'no-editor': Flags.boolean({
+      summary: 'Suppress editor launch',
+      description: 'Never launch the editor, only apply flag-based changes.',
+      exclusive: ['editor']
     }),
     'add-label': Flags.string({
       char: 'a',
@@ -85,10 +95,25 @@ export default class MemoEdit extends Command {
       body = await loadBodyFromFile(flags['body-file']);
     }
 
-    if (flags.body === undefined && flags['body-file'] === undefined && !flags['add-label'] && !flags['remove-label'] && !flags.project) {
-      // If no flags provided, open editor with existing content
+    // エディタ起動の判定
+    const shouldLaunchEditor = flags.body === undefined &&
+                               flags['body-file'] === undefined &&
+                               !flags['add-label'] &&
+                               !flags['remove-label'] &&
+                               !flags.project &&
+                               !flags['no-editor'];
+
+    if (shouldLaunchEditor || flags.editor) {
       const memo = service.show(args.id);
-      body = await promptEditor(memo.bodyMd);
+      const editorResult = await maybePromptEditor({
+        editor: flags.editor || shouldLaunchEditor,
+        noEditor: flags['no-editor'],
+        initialContent: body || memo.bodyMd
+      });
+
+      if (editorResult !== undefined) {
+        body = editorResult;
+      }
     }
 
     const updateResult = service.edit({
