@@ -20,6 +20,7 @@ export interface ListMemoFilters {
   search?: string;
   limit?: number;
   order?: 'asc' | 'desc';
+  isBookmarked?: boolean;
 }
 
 const memoRowToMemo = (row: any): Memo => ({
@@ -90,6 +91,11 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
     params.label = filters.label;
   }
 
+  if (filters.isBookmarked !== undefined) {
+    conditions.push('is_bookmarked = @isBookmarked');
+    params.isBookmarked = filters.isBookmarked ? 1 : 0;
+  }
+
   let orderBy = 'updated_at DESC';
   if (filters.order === 'asc') {
     orderBy = 'updated_at ASC';
@@ -102,8 +108,12 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
   }
 
   if (filters.search) {
+    const searchConditions = ["i.type = 'memo'", 'i.is_deleted = 0', 'f.body_md MATCH @search'];
+    if (filters.isBookmarked !== undefined) {
+      searchConditions.push('i.is_bookmarked = @isBookmarked');
+    }
     sql = `SELECT i.* FROM issues i JOIN issues_fts f ON f.issue_id = i.id
-            WHERE i.type = 'memo' AND i.is_deleted = 0 AND f.body_md MATCH @search
+            WHERE ${searchConditions.join(' AND ')}
             ORDER BY i.updated_at ${filters.order === 'asc' ? 'ASC' : 'DESC'}`;
     params.search = filters.search;
     if (filters.limit) {
