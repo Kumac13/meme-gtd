@@ -11,6 +11,7 @@ import {
   listMemoLabels,
   listMemos,
   promoteMemo,
+  setBookmark,
   setMemoLabels,
   updateComment,
   updateMemo,
@@ -77,5 +78,9 @@ export class MemoService {
 
   public setLabels(memoId: number, labels: string[]) {
     return setMemoLabels(this.db, memoId, labels);
+  }
+
+  public setBookmark(id: number, isBookmarked: boolean) {
+    return setBookmark(this.db, id, isBookmarked);
   }
 }
