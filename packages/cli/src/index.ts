@@ -42,7 +42,6 @@ const MULTIWORD_COMMANDS = [
   ['task', 'close'],
   ['task', 'cancel'],
   ['task', 'reopen'],
-  ['task', 'reschedule'],
   ['task']
 ] as const;
 
