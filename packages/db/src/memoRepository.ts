@@ -335,3 +335,29 @@ const resetProjects = (db: Database.Database, issueId: number, projectIds: numbe
   }
   attachProjects(db, issueId, projectIds);
 };
+
+export const setBookmark = (db: Database.Database, id: number, isBookmarked: boolean): void => {
+  const stmt = db.prepare(
+    `UPDATE issues
+     SET is_bookmarked = @isBookmarked, updated_at = @updatedAt
+     WHERE id = @id AND type = 'memo' AND is_deleted = 0`
+  );
+
+  const result = stmt.run({
+    id,
+    isBookmarked: isBookmarked ? 1 : 0,
+    updatedAt: nowIso()
+  });
+
+  if (result.changes === 0) {
+    // Check if it's a type mismatch or not found
+    const check = db
+      .prepare('SELECT type FROM issues WHERE id = @id AND is_deleted = 0')
+      .get({ id }) as { type: string } | undefined;
+
+    if (check && check.type !== 'memo') {
+      throw new Error(`Issue #${id} is not a memo`);
+    }
+    throw new Error(`Memo #${id} not found`);
+  }
+};

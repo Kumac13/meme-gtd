@@ -21,10 +21,10 @@
 
 **Purpose**: Verify project structure and dependencies
 
-- [ ] T001 Verify monorepo structure (packages/cli, packages/db exist)
-- [ ] T002 [P] Verify TypeScript + oclif dependencies in packages/cli/package.json
-- [ ] T003 [P] Verify better-sqlite3 in packages/db/package.json
-- [ ] T004 [P] Verify node:test is available (Node.js >=22.0.0)
+- [X] T001 Verify monorepo structure (packages/cli, packages/db exist)
+- [X] T002 [P] Verify TypeScript + oclif dependencies in packages/cli/package.json
+- [X] T003 [P] Verify better-sqlite3 in packages/db/package.json
+- [X] T004 [P] Verify node:test is available (Node.js >=22.0.0) ⚠️ Node v20.18.3 detected, but node:test is available
 
 ---
 
@@ -34,7 +34,7 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 [P] [Foundation] Add setBookmark() method to packages/db/src/memoRepository.ts
+- [X] T005 [P] [Foundation] Add setBookmark() method to packages/db/src/memoRepository.ts
   - Signature: `setBookmark(db: Database, id: number, isBookmarked: boolean): void`
   - SQL: UPDATE issues SET is_bookmarked = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND type = 'memo' AND is_deleted = 0
   - Error handling: Check rows affected, throw if 0 (with type check for better error message)
@@ -42,10 +42,12 @@
 - [ ] T006 [P] [Foundation] Add setBookmark() method to packages/db/src/taskRepository.ts
   - Same as T005 but with `type = 'task'`
   - Error messages: "Task" instead of "Memo"
+  - ⚠️ SKIPPED: taskRepository.ts doesn't exist yet (task feature not implemented)
 
-- [ ] T007 [Foundation] Export setBookmark from packages/db/src/index.ts for both repositories
+- [X] T007 [Foundation] Export setBookmark from packages/db/src/index.ts for both repositories
+  - Already exported via `export * from './memoRepository.js'`
 
-**Checkpoint**: Foundation ready - user story implementation can now begin in parallel
+**Checkpoint**: Foundation ready for memo bookmarking - User Story 1 can now begin
 
 ---
 
