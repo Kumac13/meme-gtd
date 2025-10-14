@@ -53,41 +53,41 @@
 
 #### 1. `memo create`コマンドの更新
 
-- [ ] T006 [US1] `packages/cli/src/commands/memo/create.ts`のフラグ定義を更新（`bodyFile` → `body-file`）
-- [ ] T007 [US1] `packages/cli/src/commands/memo/create.ts`の`run()`メソッドに旧フラグ検出ロジックを追加
-- [ ] T008 [US1] `packages/cli/src/commands/memo/create.ts`のusageとexamplesを更新（kebab-case）
+- [x] T006 [US1] `packages/cli/src/commands/memo/create.ts`のフラグ定義を更新（`bodyFile` → `body-file`）
+- [x] T007 [US1] `packages/cli/src/commands/memo/create.ts`の`run()`メソッドに旧フラグ検出ロジックを追加
+- [x] T008 [US1] `packages/cli/src/commands/memo/create.ts`のusageとexamplesを更新（kebab-case）
 
 #### 2. `memo edit`コマンドの更新
 
-- [ ] T009 [US1] `packages/cli/src/commands/memo/edit.ts`のフラグ定義を更新（`bodyFile` → `body-file`, `addLabel` → `add-label`, `removeLabel` → `remove-label`）
-- [ ] T010 [US1] `packages/cli/src/commands/memo/edit.ts`の`run()`メソッドに旧フラグ検出ロジックを追加
-- [ ] T011 [US1] `packages/cli/src/commands/memo/edit.ts`のusageとexamplesを更新（kebab-case）
+- [x] T009 [US1] `packages/cli/src/commands/memo/edit.ts`のフラグ定義を更新（`bodyFile` → `body-file`, `addLabel` → `add-label`, `removeLabel` → `remove-label`）
+- [x] T010 [US1] `packages/cli/src/commands/memo/edit.ts`の`run()`メソッドに旧フラグ検出ロジックを追加
+- [x] T011 [US1] `packages/cli/src/commands/memo/edit.ts`のusageとexamplesを更新（kebab-case）
 
 #### 3. `memo promote`コマンドの更新
 
-- [ ] T012 [P] [US1] `packages/cli/src/commands/memo/promote.ts`のフラグ定義を更新（`bodyFile` → `body-file`, `addLabel` → `add-label`, `removeLabel` → `remove-label`）
-- [ ] T013 [US1] `packages/cli/src/commands/memo/promote.ts`の`run()`メソッドに旧フラグ検出ロジックを追加
-- [ ] T014 [US1] `packages/cli/src/commands/memo/promote.ts`のusageとexamplesを更新（kebab-case）
+- [x] T012 [P] [US1] `packages/cli/src/commands/memo/promote.ts`のフラグ定義を更新（`bodyFile` → `body-file`, `addLabel` → `add-label`, `removeLabel` → `remove-label`）
+- [x] T013 [US1] `packages/cli/src/commands/memo/promote.ts`の`run()`メソッドに旧フラグ検出ロジックを追加
+- [x] T014 [US1] `packages/cli/src/commands/memo/promote.ts`のusageとexamplesを更新（kebab-case）
 
 #### 4. `memo comment add`コマンドの更新
 
-- [ ] T015 [P] [US1] `packages/cli/src/commands/memo/comment/add.ts`のフラグ定義を更新（`bodyFile` → `body-file`）
-- [ ] T016 [US1] `packages/cli/src/commands/memo/comment/add.ts`の`run()`メソッドに旧フラグ検出ロジックを追加
-- [ ] T017 [US1] `packages/cli/src/commands/memo/comment/add.ts`のusageとexamplesを更新（kebab-case）
+- [x] T015 [P] [US1] `packages/cli/src/commands/memo/comment/add.ts`のフラグ定義を更新（`bodyFile` → `body-file`）
+- [x] T016 [US1] `packages/cli/src/commands/memo/comment/add.ts`の`run()`メソッドに旧フラグ検出ロジックを追加
+- [x] T017 [US1] `packages/cli/src/commands/memo/comment/add.ts`のusageとexamplesを更新（kebab-case）
 
 #### 5. `memo comment edit`コマンドの更新
 
-- [ ] T018 [P] [US1] `packages/cli/src/commands/memo/comment/edit.ts`のフラグ定義を更新（`bodyFile` → `body-file`）
-- [ ] T019 [US1] `packages/cli/src/commands/memo/comment/edit.ts`の`run()`メソッドに旧フラグ検出ロジックを追加
-- [ ] T020 [US1] `packages/cli/src/commands/memo/comment/edit.ts`のusageとexamplesを更新（kebab-case）
+- [x] T018 [P] [US1] `packages/cli/src/commands/memo/comment/edit.ts`のフラグ定義を更新（`bodyFile` → `body-file`）
+- [x] T019 [US1] `packages/cli/src/commands/memo/comment/edit.ts`の`run()`メソッドに旧フラグ検出ロジックを追加
+- [x] T020 [US1] `packages/cli/src/commands/memo/comment/edit.ts`のusageとexamplesを更新（kebab-case）
 
 #### 6. テストの更新（User Story 1）
 
-- [ ] T021 [P] [US1] `packages/cli/test/commands/memo/create.test.ts`を更新（kebab-caseフラグに変更）
-- [ ] T022 [P] [US1] `packages/cli/test/commands/memo/create.test.ts`に旧フラグエラーメッセージのテストを追加
-- [ ] T023 [P] [US1] `packages/cli/test/commands/memo/edit.test.ts`を更新（kebab-caseフラグに変更）
-- [ ] T024 [P] [US1] `packages/cli/test/commands/memo/edit.test.ts`に旧フラグエラーメッセージのテストを追加
-- [ ] T025 [P] [US1] 統合テスト`packages/cli/test/integration/cli.test.ts`を更新（kebab-caseオプションの動作確認）
+- [x] T021 [P] [US1] `packages/cli/test/commands/memo/create.test.ts`を更新（kebab-caseフラグに変更）
+- [x] T022 [P] [US1] `packages/cli/test/commands/memo/create.test.ts`に旧フラグエラーメッセージのテストを追加
+- [x] T023 [P] [US1] `packages/cli/test/commands/memo/edit.test.ts`を更新（kebab-caseフラグに変更）
+- [x] T024 [P] [US1] `packages/cli/test/commands/memo/edit.test.ts`に旧フラグエラーメッセージのテストを追加
+- [x] T025 [P] [US1] 統合テスト`packages/cli/test/integration/cli.test.ts`を更新（kebab-caseオプションの動作確認）
 
 **Checkpoint**: User Story 1完了 - すべてのmemoコマンドでkebab-caseオプションが動作し、旧オプションは適切なエラーを返す
 
