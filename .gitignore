@@ -1,0 +1,10 @@
+node_modules/
+pnpm-lock.yaml
+packages/*/dist/
+packages/*/node_modules/
+dist/
+*.log
+.DS_Store
+.tmp/
+.claude/
+.specify/
