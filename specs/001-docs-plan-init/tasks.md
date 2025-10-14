@@ -141,21 +141,21 @@
 
 #### 1. `memo edit`から`--set-label`フラグを削除
 
-- [ ] T040 [US3] `packages/cli/src/commands/memo/edit.ts`から`setLabel`フラグ定義を削除
-- [ ] T041 [US3] `packages/cli/src/commands/memo/edit.ts`の`run()`メソッドから`setLabel`処理ロジックを削除
-- [ ] T042 [US3] `packages/cli/src/commands/memo/edit.ts`の旧フラグ検出ロジックに`--setLabel` / `--set-label`を追加（移行ガイダンス付きエラー）
-- [ ] T043 [US3] `packages/cli/src/commands/memo/edit.ts`のusageとexamplesから`--set-label`を削除
+- [x] T040 [US3] `packages/cli/src/commands/memo/edit.ts`から`setLabel`フラグ定義を削除（User Story 1で完了）
+- [x] T041 [US3] `packages/cli/src/commands/memo/edit.ts`の`run()`メソッドから`setLabel`処理ロジックを削除（User Story 1で完了）
+- [x] T042 [US3] `packages/cli/src/commands/memo/edit.ts`の旧フラグ検出ロジックに`--setLabel` / `--set-label`を追加（User Story 1で完了）
+- [x] T043 [US3] `packages/cli/src/commands/memo/edit.ts`のusageとexamplesから`--set-label`を削除（User Story 1で完了）
 
 #### 2. `memo label set`コマンドの確認
 
-- [ ] T044 [P] [US3] `packages/cli/src/commands/memo/label/set.ts`が正しく動作していることを確認（変更不要）
-- [ ] T045 [P] [US3] `packages/db/src/repositories/memoRepository.ts`の`setMemoLabels()`関数が保持されていることを確認
+- [x] T044 [P] [US3] `packages/cli/src/commands/memo/label/set.ts`が正しく動作していることを確認（変更不要）
+- [x] T045 [P] [US3] `packages/db/src/repositories/memoRepository.ts`の`setMemoLabels()`関数が保持されていることを確認
 
 #### 3. テストの更新（User Story 3）
 
-- [ ] T046 [P] [US3] `packages/cli/test/commands/memo/edit.test.ts`から`--set-label`使用のテストケースを削除
-- [ ] T047 [P] [US3] `packages/cli/test/commands/memo/edit.test.ts`に`--set-label`エラーメッセージのテストを追加（移行ガイダンス確認）
-- [ ] T048 [P] [US3] 統合テスト`packages/cli/test/integration/cli.test.ts`に`memo label set`の動作確認テストを追加
+- [x] T046 [P] [US3] `packages/cli/test/commands/memo/edit.test.ts`から`--set-label`使用のテストケースを削除（元々存在しない）
+- [x] T047 [P] [US3] `packages/cli/test/commands/memo/edit.test.ts`に`--set-label`エラーメッセージのテストを追加（User Story 1で完了）
+- [x] T048 [P] [US3] 統合テスト`packages/cli/test/integration/cli.test.ts`に`memo label set`の動作確認テストを追加
 
 **Checkpoint**: User Story 3完了 - `memo edit --set-label`が削除され、`memo label set`への移行が完了
 
