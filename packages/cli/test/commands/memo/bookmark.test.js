@@ -142,7 +142,8 @@ describe('memo bookmark command (User Story 1)', () => {
     const list = runCli(['memo', 'list', '--bookmarked', '--json'], { env });
     assert.equal(list.status, 0, list.stderr);
 
-    const memos = JSON.parse(list.stdout);
+    const result = JSON.parse(list.stdout);
+    const memos = result.memos;
     assert.ok(Array.isArray(memos), 'Should return array');
 
     // All returned memos should be bookmarked
@@ -173,7 +174,8 @@ describe('memo bookmark command (User Story 1)', () => {
     const list = runCli(['memo', 'list', '--bookmarked', '--label', 'urgent', '--json'], { env });
     assert.equal(list.status, 0, list.stderr);
 
-    const memos = JSON.parse(list.stdout);
+    const result = JSON.parse(list.stdout);
+    const memos = result.memos;
 
     // Should only have memos that are both bookmarked AND have urgent label
     assert.ok(memos.length >= 1, 'Should have at least one result');
