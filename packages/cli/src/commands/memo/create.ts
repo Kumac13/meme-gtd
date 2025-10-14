@@ -4,6 +4,7 @@ import { MemoService } from 'meme-gtd-core';
 import { createLogger } from 'meme-gtd-logger';
 import { loadBodyFromFile } from '../../lib/io.js';
 import { promptEditor } from '../../lib/editor.js';
+import { detectLegacyFlags, formatLegacyFlagError } from '../../lib/legacy-flags.js';
 
 export default class MemoCreate extends Command {
   static summary = 'Capture a new memo';
@@ -31,7 +32,7 @@ export default class MemoCreate extends Command {
       summary: 'Inline memo content',
       description: 'Provide the memo Markdown directly on the command line.'
     }),
-    bodyFile: Flags.string({
+    'body-file': Flags.string({
       char: 'f',
       summary: 'Load memo content from a file or stdin',
       description: 'Use "-" to read from stdin; otherwise supply a path to a Markdown file.'
@@ -57,14 +58,23 @@ export default class MemoCreate extends Command {
   } as const;
 
   async run(): Promise<void> {
+    // 旧フラグ検出
+    const legacyResult = detectLegacyFlags({
+      '--bodyFile': '--body-file'
+    });
+
+    if (legacyResult.detected) {
+      this.error(formatLegacyFlagError(legacyResult));
+    }
+
     const { args, flags } = await this.parse(MemoCreate);
     const { config } = await loadConfig({ createIfMissing: true });
     const logger = flags.json ? null : createLogger(config);
 
     let body = flags.body ?? args.body ?? '';
 
-    if (!body && flags.bodyFile) {
-      body = await loadBodyFromFile(flags.bodyFile);
+    if (!body && flags['body-file']) {
+      body = await loadBodyFromFile(flags['body-file']);
     }
 
     if (!body) {

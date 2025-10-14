@@ -3,6 +3,7 @@ import { loadConfig } from 'meme-gtd-config';
 import { MemoService } from 'meme-gtd-core';
 import { loadBodyFromFile } from '../../lib/io.js';
 import { promptEditor } from '../../lib/editor.js';
+import { detectLegacyFlags, formatLegacyFlagError } from '../../lib/legacy-flags.js';
 
 export default class MemoEdit extends Command {
   static summary = 'Update memo content or metadata';
@@ -29,27 +30,21 @@ export default class MemoEdit extends Command {
       summary: 'Replace memo text inline',
       description: 'Provide the full memo Markdown content as a string.'
     }),
-    bodyFile: Flags.string({
+    'body-file': Flags.string({
       char: 'f',
       summary: 'Replace memo text from file/stdin',
       description: 'Use "-" to read from stdin or pass a file path.'
     }),
-    addLabel: Flags.string({
+    'add-label': Flags.string({
       char: 'a',
       summary: 'Labels to add',
       description: 'Append one or more labels without removing existing ones.',
       multiple: true
     }),
-    removeLabel: Flags.string({
+    'remove-label': Flags.string({
       char: 'r',
       summary: 'Labels to remove',
       description: 'Drop one or more labels from the memo.',
-      multiple: true
-    }),
-    setLabel: Flags.string({
-      char: 's',
-      summary: 'Overwrite label set',
-      description: 'Replace the memo labels with this exact list.',
       multiple: true
     }),
     project: Flags.integer({
@@ -67,17 +62,30 @@ export default class MemoEdit extends Command {
   } as const;
 
   async run(): Promise<void> {
+    // 旧フラグ検出
+    const legacyResult = detectLegacyFlags({
+      '--bodyFile': '--body-file',
+      '--addLabel': '--add-label',
+      '--removeLabel': '--remove-label',
+      '--setLabel': 'removed (use: mgtd memo label set)',
+      '--set-label': 'removed (use: mgtd memo label set)'
+    });
+
+    if (legacyResult.detected) {
+      this.error(formatLegacyFlagError(legacyResult));
+    }
+
     const { args, flags } = await this.parse(MemoEdit);
     const { config } = await loadConfig({ createIfMissing: true });
     const service = new MemoService({ config });
 
     let body: string | undefined = flags.body;
 
-    if (!body && flags.bodyFile) {
-      body = await loadBodyFromFile(flags.bodyFile);
+    if (!body && flags['body-file']) {
+      body = await loadBodyFromFile(flags['body-file']);
     }
 
-    if (flags.body === undefined && flags.bodyFile === undefined && !flags.setLabel && !flags.addLabel && !flags.removeLabel && !flags.project) {
+    if (flags.body === undefined && flags['body-file'] === undefined && !flags['add-label'] && !flags['remove-label'] && !flags.project) {
       // If no flags provided, open editor with existing content
       const memo = service.show(args.id);
       body = await promptEditor(memo.bodyMd);
@@ -86,14 +94,10 @@ export default class MemoEdit extends Command {
     const updateResult = service.edit({
       id: args.id,
       bodyMd: body,
-      addLabels: flags.addLabel,
-      removeLabels: flags.removeLabel,
+      addLabels: flags['add-label'],
+      removeLabels: flags['remove-label'],
       projectIds: flags.project
     });
-
-    if (flags.setLabel) {
-      service.setLabels(args.id, flags.setLabel);
-    }
 
     if (flags.json) {
       this.log(JSON.stringify({ memo: updateResult }, null, 2));
