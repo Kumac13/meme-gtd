@@ -2,7 +2,7 @@ import { Args, Command, Flags } from '@oclif/core';
 import { loadConfig } from 'meme-gtd-config';
 import { MemoService } from 'meme-gtd-core';
 import { loadBodyFromFile } from '../../../lib/io.js';
-import { promptEditor } from '../../../lib/editor.js';
+import { promptEditor, maybePromptEditor } from '../../../lib/editor.js';
 import { detectLegacyFlags, formatLegacyFlagError } from '../../../lib/legacy-flags.js';
 
 export default class MemoCommentAdd extends Command {
@@ -32,6 +32,16 @@ export default class MemoCommentAdd extends Command {
       summary: 'Load comment body from file/stdin',
       description: 'Use "-" to read from stdin, or pass a path to a Markdown file.'
     }),
+    editor: Flags.boolean({
+      summary: 'Force editor launch',
+      description: 'Always launch the configured editor, even when body content is provided.',
+      exclusive: ['no-editor']
+    }),
+    'no-editor': Flags.boolean({
+      summary: 'Suppress editor launch',
+      description: 'Never launch the editor, even when body content is missing.',
+      exclusive: ['editor']
+    }),
     json: Flags.boolean({
       char: 'j',
       summary: 'Return JSON output',
@@ -58,8 +68,16 @@ export default class MemoCommentAdd extends Command {
     if (!body && flags['body-file']) {
       body = await loadBodyFromFile(flags['body-file']);
     }
-    if (!body) {
-      body = await promptEditor();
+
+    // エディタ起動の制御
+    const editorResult = await maybePromptEditor({
+      editor: flags.editor,
+      noEditor: flags['no-editor'],
+      initialContent: body
+    });
+
+    if (editorResult !== undefined) {
+      body = editorResult;
     }
     if (!body.trim()) {
       this.error('Comment body cannot be empty.');
