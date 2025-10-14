@@ -76,6 +76,12 @@ pnpm test
   ```
 - シェルを再起動するか設定ファイルを再読み込みすると、`mgtd` のサブコマンドやフラグを補完できます。
 
+## 開発
+
+### バージョン管理
+
+バージョン管理戦略とリリースプロセスについては [docs/versioning.md](./docs/versioning.md) を参照してください。
+
 ## リリースパッケージ
 - `pnpm mgtd:pack` で `pnpm pack` を実行し、`meme-gtd-cli-<version>.tgz` を生成できます。
 - 事前に `pnpm build` が走るため、最新ビルド成果物が含まれます。
