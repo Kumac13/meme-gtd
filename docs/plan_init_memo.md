@@ -21,40 +21,33 @@
 - ✅ CLI 統合テスト（help コマンド検証 / e2e 動作確認）を追加し、`pnpm test` で自動実行されるよう整備。
 - ✅ `scripts/package-cli.mjs` で `pnpm mgtd:pack` によるパッケージ生成フローを整備。
 
-### 🔧 要件不一致の修正計画（v0.1.1）
+### ✅ 完了済み（v0.1.1 - 2025-10-14）
 
-**背景**: `docs/cli_requirement.md` との照合により、以下の要件不一致が判明。GitHub CLI 準拠の原則に従い修正が必要。
+**背景**: `docs/cli_requirement.md` との照合により、要件不一致が判明し修正完了。
 
-#### 1. オプション命名規則の統一（kebab-case 化）
+#### 1. ✅ オプション命名規則の統一（kebab-case 化）
 
-**問題点**:
-- ❌ 現状: `--bodyFile`, `--addLabel`, `--removeLabel`, `--setLabel` (camelCase)
-- ✅ 要件: `--body-file`, `--add-label`, `--remove-label` (kebab-case, GitHub CLI 準拠)
+**修正内容**:
+- ✅ 全 memo コマンドのフラグ定義を kebab-case に変更
+  - `--bodyFile` → `--body-file`
+  - `--addLabel` → `--add-label`
+  - `--removeLabel` → `--remove-label`
+- ✅ 旧 camelCase フラグの検出とエラーメッセージ表示機能を追加
+- ✅ テストコード追加（7テスト）
 
 **影響範囲**: `memo create`, `memo edit`, `memo promote`, `memo comment add/edit`
 
-**修正内容**:
-- [ ] 全 memo コマンドのフラグ定義を kebab-case に変更
-- [ ] テストコード・ドキュメントの表記を更新
+#### 2. ✅ `--editor` / `--no-editor` フラグの追加
 
-#### 2. `--editor` / `--no-editor` フラグの追加
+**実装内容**:
+- ✅ `memo create` に `--editor` / `--no-editor` フラグを追加
+- ✅ `memo edit` に `--editor` / `--no-editor` フラグを追加
+- ✅ `memo comment add` に `--editor` / `--no-editor` フラグを追加
+- ✅ エディタ起動ロジックをフラグ優先度に従って整理
+- ✅ `maybePromptEditor()` ヘルパー関数を実装
+- ✅ TDDアプローチでテスト先行開発（13テスト）
 
-**要件（cli_requirement.md:157, 211）**:
-- `memo create`: `--editor` / `--no-editor` で強制起動/抑止
-- `memo edit`: 既存本文をエディタで編集（デフォルト動作）
-- `memo comment add`: エディタでコメント作成
-
-**問題点**:
-- ❌ 現状は「本文が空の場合に自動起動」のみで、明示的な制御ができない
-- ❌ `--body` 指定時でも `--editor` で上書き編集できるべき（GitHub CLI 準拠）
-
-**修正内容**:
-- [ ] `memo create` に `--editor` / `--no-editor` フラグを追加
-- [ ] `memo edit` に `--editor` / `--no-editor` フラグを追加
-- [ ] `memo comment add` に `--editor` / `--no-editor` フラグを追加
-- [ ] エディタ起動ロジックをフラグ優先度に従って整理
-
-**期待される動作**:
+**実現された動作**:
 ```bash
 # 既存本文をエディタで編集（デフォルト）
 mgtd memo edit 12
@@ -66,16 +59,19 @@ mgtd memo edit 12 --body "draft" --editor
 mgtd memo edit 12 --body "final" --no-editor
 ```
 
-#### 3. `--set-label` の削除（機能重複の解消）
-
-**問題点**:
-- `memo edit --set-label` と `memo label set` が機能重複
-- GitHub CLI には `--set-label` が存在しない（`--add-label` / `--remove-label` のみ）
+#### 3. ✅ `--set-label` の削除（機能重複の解消）
 
 **修正内容**:
-- [ ] `memo edit` から `--set-label` フラグを削除
-- [ ] ラベルの完全置換は `memo label set` コマンドに一元化
-- [ ] `packages/db/src/memoRepository.ts` の `setMemoLabels` 関数は保持（`memo label set` で使用）
+- ✅ `memo edit` から `--set-label` フラグを削除
+- ✅ ラベルの完全置換は `memo label set` コマンドに一元化
+- ✅ `packages/db/src/memoRepository.ts` の `setMemoLabels` 関数は保持（`memo label set` で使用）
+- ✅ 旧フラグ使用時の移行ガイダンスを表示
+- ✅ テストコード追加（6テスト）
+
+**品質保証**:
+- ✅ 全30テスト合格
+- ✅ CHANGELOG.md更新（v0.1.1エントリ）
+- ✅ 破壊的変更の明確な文書化
 
 ### 🔄 今後の改善予定
 
