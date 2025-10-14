@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.0 - 2025-10-14
+
+### New Features
+
+- **バージョン確認コマンドの追加**: CLIのバージョンを確認する機能を実装しました。
+  - `mgtd --version` / `mgtd -v`: バージョン番号を表示
+  - `mgtd version`: 詳細なバージョン情報を表示（Node.jsバージョン、プラットフォーム情報）
+  - `mgtd version --json`: JSON形式で環境情報を出力
+
+- **バージョン管理戦略のドキュメント化**: Fixed Versioning採用、SemVerルール、リリースプロセスを `docs/versioning.md` に記載しました。
+  - README.mdから参照可能
+
+### Tests
+
+- バージョンコマンドの統合テスト（5テスト）を追加
+- パフォーマンス検証：すべてのバージョンコマンドが100ms以内で完了
+
 ## 0.1.1 - 2025-10-14
 
 ### Breaking Changes

@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 import { run, flush, Errors } from '@oclif/core';
+import fsExtra from 'fs-extra';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const { readJsonSync } = fsExtra;
 
 const MULTIWORD_COMMANDS = [
   ['memo', 'comment', 'add'],
@@ -59,6 +64,20 @@ const collapsedArgv = (() => {
 
   return [bestMatch.id, ...normalizedHelpArgv.slice(bestMatch.length)];
 })();
+
+// Handle version flag before oclif routing
+if (process.argv.includes('--version') || process.argv.includes('-v')) {
+  try {
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const pkgPath = join(__dirname, '../package.json');
+    const pkg = readJsonSync(pkgPath);
+    console.log(pkg.version);
+    process.exit(0);
+  } catch (error) {
+    console.error('Error: Could not read package.json');
+    process.exit(1);
+  }
+}
 
 run(collapsedArgv, import.meta.url)
   .then(async () => {
