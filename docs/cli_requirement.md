@@ -39,7 +39,7 @@ app
  │   ├─ bookmark
  │   ├─ unbookmark
  │   └─ comment (add|edit|delete)
- ├─ label (list|add|set|delete)
+ ├─ label (list|create|set|delete)
  ├─ project (create|add|move)
  ├─ link (add)
  └─ context (set|show)
@@ -281,7 +281,7 @@ sequenceDiagram
 | ---------- | ---- |
 | `--json` | JSON配列形式で出力。 |
 
-##### label add
+##### label create
 
 * 目的: 新しいラベルを作成する。
 * 入力: ラベル名（必須）。`--description` で説明を追加可能。
