@@ -25,17 +25,17 @@
 
 ### User Story 2 - 新規ラベルの作成 (Priority: P1)
 
-ユーザーは、memo/taskから独立して新しいラベルをシステムに登録できる。現在、ラベルは`memo label add`や`task label add`を通じて暗黙的に作成されるが、事前にラベルを定義して整理したい。
+ユーザーは、memo/taskから独立して新しいラベルをシステムに登録できる。現在、ラベルは`memo label create`や`task label create`を通じて暗黙的に作成されるが、事前にラベルを定義して整理したい。
 
 **Why this priority**: ラベル体系を事前に設計し、統一的なラベル運用を可能にする基本機能。
 
-**Independent Test**: `mgtd label add <name>`を実行し、データベースにラベルが作成され、その後`mgtd label list`で確認できることで単独テスト可能。
+**Independent Test**: `mgtd label create <name>`を実行し、データベースにラベルが作成され、その後`mgtd label list`で確認できることで単独テスト可能。
 
 **Acceptance Scenarios**:
 
-1. **Given** ラベル"documentation"が存在しない、**When** `mgtd label add documentation`を実行する、**Then** ラベルが作成され、成功メッセージが表示される
-2. **Given** ラベル"bug"がすでに存在する、**When** `mgtd label add bug`を実行する、**Then** エラーメッセージ「Label 'bug' already exists」が表示される
-3. **Given** 新規ラベル作成が成功した、**When** `mgtd label add feature --json`を実行する、**Then** 作成されたラベル情報（name, id, created_at）がJSON形式で返される
+1. **Given** ラベル"documentation"が存在しない、**When** `mgtd label create documentation`を実行する、**Then** ラベルが作成され、成功メッセージが表示される
+2. **Given** ラベル"bug"がすでに存在する、**When** `mgtd label create bug`を実行する、**Then** エラーメッセージ「Label 'bug' already exists」が表示される
+3. **Given** 新規ラベル作成が成功した、**When** `mgtd label create feature --json`を実行する、**Then** 作成されたラベル情報（name, id, created_at）がJSON形式で返される
 
 ---
 
@@ -85,7 +85,7 @@
 ### Functional Requirements
 
 - **FR-001**: システムは`mgtd label list`コマンドで、データベース内の全ラベルを一覧表示しなければならない
-- **FR-002**: システムは`mgtd label add <name>`コマンドで、新しいラベルを作成しなければならない
+- **FR-002**: システムは`mgtd label create <name>`コマンドで、新しいラベルを作成しなければならない
 - **FR-003**: システムは重複するラベル名の作成を拒否し、明確なエラーメッセージを返さなければならない
 - **FR-004**: システムは`mgtd label set <issue-id> <label-id>`コマンドで、指定されたissue（memoまたはtask）にラベルを割り当てなければならない
 - **FR-005**: `mgtd label set`は、issueのtype（memo/task）を自動判別し、既存の`attachLabels()`関数を使用しなければならない
@@ -106,7 +106,7 @@
 
 ### Measurable Outcomes
 
-- **SC-001**: ユーザーは、3コマンド以内（`mgtd label list`, `mgtd label add`, `mgtd label set`）で新規ラベルの作成から割り当てまでを完了できる
+- **SC-001**: ユーザーは、3コマンド以内（`mgtd label list`, `mgtd label create`, `mgtd label set`）で新規ラベルの作成から割り当てまでを完了できる
 - **SC-002**: `mgtd label list`コマンドは、1000件のラベルが存在する場合でも1秒以内に結果を表示する
 - **SC-003**: ラベル削除時、関連するissue_labelsレコードが100%自動削除され、孤立レコードが残らない
 - **SC-004**: 全てのlabelコマンドは、`--json`フラグ使用時に有効なJSON形式の出力を返す（JSONパーサーでエラーが発生しない）

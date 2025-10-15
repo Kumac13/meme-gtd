@@ -49,13 +49,13 @@ urgent
 
 ---
 
-## Command: `mgtd label add`
+## Command: `mgtd label create`
 
 **Purpose**: Create a new label
 
 **Usage**:
 ```bash
-mgtd label add <name> [--description <text>] [--json]
+mgtd label create <name> [--description <text>] [--json]
 ```
 
 **Arguments**:
@@ -185,11 +185,11 @@ Label 'obsolete' deleted
 The following commands must be deleted and return "command not found":
 
 - `mgtd memo label`
-- `mgtd memo label add`
+- `mgtd memo label create`
 - `mgtd memo label set`
 - `mgtd memo label remove`
 - `mgtd task label`
-- `mgtd task label add`
+- `mgtd task label create`
 - `mgtd task label set`
 - `mgtd task label remove`
 
