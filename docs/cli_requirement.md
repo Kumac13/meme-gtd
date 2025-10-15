@@ -182,6 +182,10 @@ sequenceDiagram
 | `--template STRING` | カスタム表示。 |
 
 * 出力: 既定は表形式（ID, Preview, Updated, Labels, Bookmark）。`--json` は `[{id, number, body, updatedAt, labels, isBookmarked}]`。
+| `--json FIELDS` | JSON 出力。 |
+| `--template STRING` | カスタム表示。 |
+
+* 出力: 既定は表形式（ID, Preview, Updated, Labels）。`--json` は `[{id, number, body, updatedAt, labels}]`。
 
 ##### memo view
 
@@ -214,6 +218,8 @@ sequenceDiagram
 | `--json` | JSON出力: `{id, deleted: true}`。 |
 
 * 非TTY環境（パイプ、リダイレクト）: `--yes` フラグが必須。フラグなしの場合はエラーメッセージを表示。
+* 論理削除。`is_deleted = true`。`--yes` で確認省略。
+* `--json` では `{id, deleted: true}` を返却。
 
 ##### memo promote
 
@@ -263,6 +269,9 @@ sequenceDiagram
 * `task close|cancel|reopen`: ステータス遷移。`--comment` で理由コメントを同時追加可。
 * `task bookmark`: タスクにブックマークを設定（冪等）。
 * `task unbookmark`: タスクからブックマークを解除（冪等）。
+* `task list`: `--status`, `--label`, `--project`, `--assignee`, `--limit`, `--json`。
+* `task edit`: `--title`, `--body`, `--status`, `--scheduled-on`, `--add-label`, `--remove-label`, `--project`。
+* `task close|cancel|reopen`: ステータス遷移。`--comment` で理由コメントを同時追加可。
 * コメント・ラベル操作は `memo` と同等。
 
 #### label / project / link / context

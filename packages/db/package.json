@@ -9,7 +9,7 @@
     "build": "pnpm run clean && tsc -p tsconfig.json",
     "clean": "rimraf dist",
     "lint": "eslint \"src/**/*.ts\"",
-    "test": "tsx --tsconfig tsconfig.json test/memoRepository.test.ts"
+    "test": "node --import tsx/esm --test test/*.test.ts"
   },
   "dependencies": {
     "better-sqlite3": "^9.0.0",
