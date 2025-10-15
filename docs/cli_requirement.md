@@ -29,8 +29,7 @@ app
  │   ├─ promote
  │   ├─ bookmark
  │   ├─ unbookmark
- │   ├─ comment (add|edit|delete)
- │   └─ label (add|set|remove)
+ │   └─ comment (add|edit|delete)
  ├─ task
  │   ├─ create
  │   ├─ list
@@ -39,9 +38,8 @@ app
  │   ├─ close|cancel|reopen|delete
  │   ├─ bookmark
  │   ├─ unbookmark
- │   ├─ comment (add|edit|delete)
- │   └─ label (add|set|remove)
- ├─ label (list|create|delete)
+ │   └─ comment (add|edit|delete)
+ ├─ label (list|add|set|delete)
  ├─ project (create|add|move)
  ├─ link (add)
  └─ context (set|show)
@@ -252,12 +250,6 @@ sequenceDiagram
 * 挙動: 対象メモの `is_bookmarked` を `false` に設定。ブックマークされていなくてもエラーにせず成功（冪等性）。
 * 出力: 標準出力にブックマーク解除完了メッセージ。`--json` では `{id, isBookmarked: false}` を返す。
 
-##### memo label
-
-* `memo label add`: 既存ラベルを追加。
-* `memo label set`: 現在のラベル集合を上書き。
-* `memo label remove`: 指定ラベルを外す。
-* 各コマンドで `--json` により現在のラベル一覧を返す。
 
 #### task
 
@@ -274,9 +266,65 @@ sequenceDiagram
 * `task close|cancel|reopen`: ステータス遷移。`--comment` で理由コメントを同時追加可。
 * コメント・ラベル操作は `memo` と同等。
 
-#### label / project / link / context
+#### label
 
-* `label create|list|delete`: ラベル名は一意。`--json` で `[{name, description}]`。
+統合ラベル管理コマンド。memo/taskから独立してラベルを管理する。
+
+##### label list
+
+* 目的: システム内の全ラベルを一覧表示する。
+* 入力: なし。
+* 出力: 既定はラベル名を1行ずつ表示。`--json` では `[{id, name, description, createdAt}]` 形式。
+* オプション:
+
+| オプション | 説明 |
+| ---------- | ---- |
+| `--json` | JSON配列形式で出力。 |
+
+##### label add
+
+* 目的: 新しいラベルを作成する。
+* 入力: ラベル名（必須）。`--description` で説明を追加可能。
+* 出力: 既定は `Label '<name>' created`。`--json` では作成されたLabelオブジェクト。
+* バリデーション: ラベル名は一意（case-sensitive）。重複時はエラー `Label '<name>' already exists`。
+* オプション:
+
+| オプション | 説明 |
+| ---------- | ---- |
+| `--description`, `-d STRING` | ラベルの説明を追加。 |
+| `--json` | JSON形式で出力。 |
+
+##### label set
+
+* 目的: issueにラベルを割り当てる（memo/task両対応）。
+* 入力: `<issue-id>` と `<label-id>`（両方必須）。
+* 挙動: 対象issueにラベルを追加。冪等性あり（重複割り当てエラーなし）。
+* 出力: 既定は `Label assigned to issue #<id>`。`--json` では `{issue_id, label_id, assigned_at}`。
+* エラー:
+  - Issue不存在: `Issue #<id> not found`
+  - Issue削除済み: `Issue not found or deleted`
+  - Label不存在: `Label #<id> not found`
+* オプション:
+
+| オプション | 説明 |
+| ---------- | ---- |
+| `--json` | JSON形式で出力。 |
+
+##### label delete
+
+* 目的: ラベルを削除する（CASCADE削除）。
+* 入力: ラベル名（必須）。
+* 挙動: 指定ラベルを削除。関連する `issue_labels` も自動削除（CASCADE）。
+* 出力: 既定は `Label '<name>' deleted`。`--json` では `{name, deleted: true}`。
+* エラー: 存在しないラベル指定時は `Label '<name>' not found`。
+* オプション:
+
+| オプション | 説明 |
+| ---------- | ---- |
+| `--json` | JSON形式で出力。 |
+
+#### project / link / context
+
 * `project create`: GitHub Projects 互換（名前、`--view board|table`、`--json`）。`project add` で issue を列に配置（`--column` 指定）。`project move` は既存アイテムの並び替え。
 * `link add`: `--type {parent,child,relates,derived_from}`、`--target ID`。`memo promote` 以外でも任意リンクを許可。
 * `context set`: `context set --db PATH` でローカル SQLite のファイルパスを登録。設定後は `context show` で確認でき、`--json` で現在値を返す。
