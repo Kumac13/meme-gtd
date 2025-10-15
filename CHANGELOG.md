@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.3.0 - 2025-10-15
+
+### Breaking Changes
+
+- **統合ラベル管理システム**: `memo label` および `task label` コマンドを廃止し、統合された `mgtd label` コマンドに置き換えました。
+  - 削除されたコマンド: `memo label`, `memo label add`, `memo label set`, `memo label remove`, `task label`, `task label add`, `task label set`, `task label remove`
+  - 新しいコマンド: `mgtd label list`, `mgtd label create`, `mgtd label set`, `mgtd label delete`
+  - ラベルは memo と task の両方で共通して使用できるようになりました。
+
+### New Features
+
+- **`mgtd label list`**: データベース内の全ラベルを一覧表示します。
+  - `--json` フラグで JSON 形式の出力をサポート
+- **`mgtd label create <name>`**: 新しいラベルを作成します。
+  - `--description` フラグでラベルの説明を追加可能
+  - `--json` フラグで作成されたラベル情報を JSON 形式で出力
+- **`mgtd label set <issue-id> <label-id>`**: memo または task にラベルを割り当てます。
+  - issue-id は memo/task を自動判別
+  - 冪等性を保証（重複割り当てでもエラーにならない）
+  - `--json` フラグでラベル割り当て情報を JSON 形式で出力
+- **`mgtd label delete <name>`**: ラベルを削除します。
+  - CASCADE 削除により、関連する全ての issue からラベルが自動的に解除されます
+  - `--json` フラグで削除結果を JSON 形式で出力
+
+### Bug Fixes
+
+- **`mgtd label list`**: ラベル ID を表示するように修正しました。
+  - 以前は名前のみが表示されており、`mgtd label set` で必要な ID を確認できない問題がありました
+  - 現在は `<id>\t<name>` の形式で表示されます（例: `1	bug`）
+
+### Documentation
+
+- README.md に統合ラベルコマンドを追加
+- docs/cli_requirement.md のコマンドツリーを更新
+- CLAUDE.md に「意味のある単位で小まめにコミットする」「ドキュメント（README.md、docs/）を更新する」の原則を追加
+
 ## 0.2.0 - 2025-10-14
 
 ### New Features

@@ -49,7 +49,7 @@ pnpm test
   ```bash
   mgtd memo comment --help
   mgtd memo view --help
-  mgtd memo label add --help
+  mgtd label list --help
 ```
 - 出力には `USAGE`, `ARGUMENTS`, `FLAGS`, `EXAMPLES` などが含まれ、`--json` などのオプション説明も確認できる。
 
@@ -94,4 +94,7 @@ pnpm test
 | `mgtd memo list` | メモ一覧取得（`--label`, `--search`, `--limit`, `--order`, `--json` 等） |
 | `mgtd memo promote` | メモをタスクに昇格（`--title`, `--body`, `--label`, `--status`, `--json` 等） |
 | `mgtd memo comment` | コメント閲覧/操作（`add`/`edit`/`delete` サブコマンドと `--json` など） |
-| `mgtd memo label` | ラベル閲覧/操作（`add`/`remove`/`set` サブコマンドと `--json` など） |
+| `mgtd label list` | 統合ラベル一覧表示（memo/task共通、`--json` など） |
+| `mgtd label create` | 新規ラベル作成（`--description`, `--json` など） |
+| `mgtd label set` | issueにラベル割り当て（memo/task共通、`<issue-id> <label-id>`） |
+| `mgtd label delete` | ラベル削除（CASCADE、`--json` など） |

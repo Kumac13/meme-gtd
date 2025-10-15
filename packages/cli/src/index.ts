@@ -11,10 +11,6 @@ const MULTIWORD_COMMANDS = [
   ['memo', 'comment', 'edit'],
   ['memo', 'comment', 'delete'],
   ['memo', 'comment'],
-  ['memo', 'label', 'add'],
-  ['memo', 'label', 'remove'],
-  ['memo', 'label', 'set'],
-  ['memo', 'label'],
   ['memo', 'bookmark'],
   ['memo', 'unbookmark'],
   ['memo', 'create'],
@@ -28,10 +24,6 @@ const MULTIWORD_COMMANDS = [
   ['task', 'comment', 'edit'],
   ['task', 'comment', 'delete'],
   ['task', 'comment'],
-  ['task', 'label', 'add'],
-  ['task', 'label', 'remove'],
-  ['task', 'label', 'set'],
-  ['task', 'label'],
   ['task', 'bookmark'],
   ['task', 'unbookmark'],
   ['task', 'create'],
@@ -42,7 +34,12 @@ const MULTIWORD_COMMANDS = [
   ['task', 'close'],
   ['task', 'cancel'],
   ['task', 'reopen'],
-  ['task']
+  ['task'],
+  ['label', 'create'],
+  ['label', 'set'],
+  ['label', 'delete'],
+  ['label', 'list'],
+  ['label']
 ] as const;
 
 const argv = process.argv.slice(2);
