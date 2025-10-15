@@ -2,15 +2,15 @@ import { Command, Flags, Args } from '@oclif/core';
 import { loadConfig } from 'meme-gtd-config';
 import { LabelService } from 'meme-gtd-core';
 
-export default class LabelAdd extends Command {
+export default class LabelCreate extends Command {
   static summary = 'Create a new label';
   static description =
     'Create a new label that can be assigned to both memos and tasks. Label names must be unique.';
   static usage = ['<%= command.id %> <name> [--description <text>] [--json]'];
   static examples = [
-    '$ mgtd label add bug',
-    '$ mgtd label add feature --description "New features"',
-    '$ mgtd label add urgent --json'
+    '$ mgtd label create bug',
+    '$ mgtd label create feature --description "New features"',
+    '$ mgtd label create urgent --json'
   ];
 
   static args = {
@@ -35,7 +35,7 @@ export default class LabelAdd extends Command {
   } as const;
 
   async run(): Promise<void> {
-    const { args, flags } = await this.parse(LabelAdd);
+    const { args, flags } = await this.parse(LabelCreate);
     const { config } = await loadConfig({ createIfMissing: true });
     const service = new LabelService({ config });
 
