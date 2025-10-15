@@ -74,3 +74,13 @@ export {
   listComments as listTaskComments,
   setBookmark as setTaskBookmark
 } from './taskRepository.js';
+
+// Label repository exports
+export {
+  listAllLabels,
+  getLabel,
+  getLabelByName,
+  createLabel,
+  attachLabelToIssue,
+  deleteLabel
+} from './labelRepository.js';
