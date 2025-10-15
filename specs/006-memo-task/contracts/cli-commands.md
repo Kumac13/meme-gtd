@@ -20,9 +20,9 @@ mgtd label list [--json]
 
 **Output** (default):
 ```
-bug
-feature
-urgent
+1	bug
+2	feature
+3	urgent
 ```
 
 **Output** (`--json`):

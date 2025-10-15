@@ -35,7 +35,7 @@ export default class LabelList extends Command {
     }
 
     for (const label of labels) {
-      this.log(label.name);
+      this.log(`${label.id}\t${label.name}`);
     }
   }
 }
