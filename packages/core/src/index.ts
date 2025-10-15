@@ -31,6 +31,13 @@ import {
   setTaskStatus,
   updateTaskComment,
   updateTask,
+  // Label functions
+  listAllLabels,
+  getLabel,
+  getLabelByName,
+  createLabel,
+  attachLabelToIssue,
+  deleteLabel,
   // Types
   type CreateMemoInput,
   type CreateTaskInput,
@@ -182,5 +189,33 @@ export class TaskService {
 
   public setBookmark(id: number, isBookmarked: boolean) {
     return setTaskBookmark(this.db, id, isBookmarked);
+  }
+}
+
+export interface LabelServiceOptions {
+  config: MgtdConfig;
+}
+
+export class LabelService {
+  private readonly db: Database.Database;
+
+  constructor(private readonly options: LabelServiceOptions) {
+    this.db = ensureDatabase(options.config);
+  }
+
+  public list() {
+    return listAllLabels(this.db);
+  }
+
+  public create(name: string, description?: string) {
+    return createLabel(this.db, name, description);
+  }
+
+  public assignToIssue(issueId: number, labelId: number) {
+    return attachLabelToIssue(this.db, issueId, labelId);
+  }
+
+  public delete(name: string) {
+    return deleteLabel(this.db, name);
   }
 }
