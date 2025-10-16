@@ -255,6 +255,9 @@ sequenceDiagram
 
 * 役割: Inbox〜実行フェーズを管理。`memo promote` 由来または `task create` で直接生成。
 * `task create`: `gh issue create` 相当のオプションに加え、`--status` 初期値指定、`--scheduled-on DATE` を独自追加。
+  - **v0.4.0 から `--body` は任意**。空bodyでタスク作成可能（GTDキャプチャワークフロー対応）。
+  - タイトル（`--title`）は必須。本文（`--body`）は省略可能で、後から `task edit` で追加できる。
+* `task view`: 空body時は `(no body)` プレースホルダーを表示（JSON出力では `bodyMd: ""`）。
 * `task list`: `--status`, `--label`, `--project`, `--assignee`, `--limit`, `--bookmarked`, `--json`。
   - `--bookmarked`: ブックマーク済みタスクのみ表示。
 * `task edit`: `--title`, `--body`, `--status`, `--scheduled-on`, `--add-label`, `--remove-label`, `--project`。
@@ -340,7 +343,7 @@ sequenceDiagram
 | id                      | int                 | 必須 | 全レコード共通連番                                                        |
 | type                    | enum(`memo`,`task`) | 必須 | レコード種別                                                           |
 | title                   | string?             | 任意 | メモでは常にNULL、タスクでは必須                                            |
-| body_md                 | string              | 必須 | 本文（Markdown）                                                     |
+| body_md                 | string              | 必須 | 本文（Markdown）。v0.4.0以降タスクでは空文字列可（メモは引き続き必須）                  |
 | status                  | enum?               | 任意 | taskでのみ使用（`open`,`next`,`waiting`,`scheduled`,`done`,`canceled`） |
 | scheduled_on            | date?               | 任意 | 予定日（task中心）                                                      |
 | meta                    | json                | 任意 | 補足情報                                                             |

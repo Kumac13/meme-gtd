@@ -15,6 +15,49 @@
 - コマンド・ファイルは全体を提示（部分的な省略禁止）
 - 実装前に`docs/requirements.md`を必ず参照
 
+## テストDBの使用（必須）
+
+**重要**: 手動検証・マニュアルテストは**必ずテストDB**を使用すること。本番DBには絶対に触れない。
+
+### テストDBの作成方法
+
+```bash
+# 一時ディレクトリにテスト環境を作成
+TEST_DIR=$(mktemp -d)
+TEST_CONFIG="$TEST_DIR/context.json"
+TEST_DB="$TEST_DIR/issues.db"
+
+# 環境変数でテストDBを指定してコマンド実行
+MGTD_CONFIG_PATH="$TEST_CONFIG" node dist/index.js init -d "$TEST_DB" -f -j
+
+# テスト実行例
+MGTD_CONFIG_PATH="$TEST_CONFIG" node dist/index.js task create -t "Test" -b "" --no-editor -j
+MGTD_CONFIG_PATH="$TEST_CONFIG" node dist/index.js task list -j
+```
+
+### 自動テスト内での使用
+
+自動テスト（`test/**/*.test.js`）では既に一時DBを使用している。以下のパターンを参考にすること：
+
+```javascript
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mgtd-test-'));
+const configPath = path.join(tmp, 'context.json');
+const dbPath = path.join(tmp, 'issues.db');
+const env = {
+  ...process.env,
+  MGTD_CONFIG_PATH: configPath
+};
+
+// この env を使ってコマンド実行
+const init = runCli(['init', '-d', dbPath, '-f', '-j'], { env });
+```
+
+### 禁止事項
+
+- ❌ 環境変数なしで `node dist/index.js` を直接実行（本番DBを使ってしまう）
+- ❌ `mgtd` コマンドを直接実行してテスト（本番DBを使ってしまう）
+- ✅ 必ず `MGTD_CONFIG_PATH` を指定してテスト用DB環境を使用
+
 ## バージョン管理の自動実行
 
 新機能の実装が完了し、PRを作成する前に、**必ず以下を実行する**：
