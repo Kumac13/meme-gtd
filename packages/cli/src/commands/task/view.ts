@@ -55,7 +55,7 @@ export default class TaskView extends Command {
     this.log(`Updated: ${task.updatedAt}`);
     this.log(`Labels: ${labels.join(', ') || '(none)'}`);
     this.log('---');
-    this.log(task.bodyMd);
+    this.log(task.bodyMd || '(no body)');
 
     if (comments.length) {
       this.log('\nComments:');
