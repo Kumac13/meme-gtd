@@ -114,10 +114,6 @@ export default class TaskCreate extends Command {
       body = editorResult;
     }
 
-    if (!body.trim()) {
-      this.error('Task body cannot be empty.');
-    }
-
     const service = new TaskService({ config });
     const task = service.create({
       title: flags.title,
