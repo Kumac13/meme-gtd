@@ -71,14 +71,22 @@ export default class LinkList extends Command {
       }
 
       this.log(`Links for issue #${issueId}:\n`);
+
+      // Calculate column widths for alignment
+      const maxLinkIdWidth = Math.max(...linksWithDirection.map(l => String(l.id).length));
+      const maxTypeWidth = Math.max(...linksWithDirection.map(l => l.linkType.length));
+
       for (const link of linksWithDirection) {
+        const linkIdPadded = String(link.id).padStart(maxLinkIdWidth);
+        const typePadded = link.linkType.padEnd(maxTypeWidth);
+
         if (link.direction === 'outgoing') {
           this.log(
-            `  #${link.id}: #${link.sourceIssueId} --${link.linkType}--> #${link.targetIssueId}`
+            `  #${linkIdPadded}  #${link.sourceIssueId} --${typePadded}--> #${link.targetIssueId}`
           );
         } else {
           this.log(
-            `  #${link.id}: #${link.targetIssueId} <--${link.linkType}-- #${link.sourceIssueId}`
+            `  #${linkIdPadded}  #${link.targetIssueId} <--${typePadded}-- #${link.sourceIssueId}`
           );
         }
       }
