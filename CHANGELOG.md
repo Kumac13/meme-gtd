@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.5.0 - 2025-10-18
+
+### New Features
+
+- **リンクコマンドの実装**: タスク・メモ間の関係性を管理する `mgtd link` コマンドを追加しました。
+  - `mgtd link add --type <type> --source <id> --target <id>`: issue間のリンクを作成
+    - 4つのリンクタイプをサポート: `parent` (親子階層), `child` (逆方向), `relates` (関連性), `derived_from` (派生)
+    - バリデーション: 自己参照チェック、重複チェック、ID存在確認
+    - `--json` フラグで作成されたリンク情報をJSON形式で出力
+  - `mgtd link list <issue-id>`: 指定issueのリンク一覧を表示
+    - 双方向検索（sourceとtargetの両方から検索）
+    - 方向矢印付き表示（`→` outgoing, `←` incoming）
+    - `--type <type>` フラグで特定タイプのみフィルタ
+    - `--json` フラグで `direction` フィールド付きJSON配列を出力
+  - `mgtd link remove <link-id>`: リンクをIDで削除
+    - 対話的な確認プロンプト（リンク内容のプレビュー表示）
+    - `--yes` フラグで確認プロンプトをスキップ
+    - `--json` フラグで削除結果をJSON形式で出力
+
+### Documentation
+
+- README.md にlinkコマンドを追加
+- docs/cli_requirement.md にlink add/list/remove の仕様を追加
+- specs/008-https-github-com/ に詳細な設計ドキュメントを追加
+  - spec.md: ユーザーストーリーと受け入れ基準
+  - plan.md: 技術的実装計画
+  - tasks.md: 25タスクの詳細な実装計画（23タスク完了）
+  - quickstart.md: 手動テストシナリオ
+
+### Tests
+
+- Repository層テスト（packages/db/test/linkRepository.test.ts）: 14テスト
+- Service層テスト（packages/core/test/linkService.test.ts）: 8テスト
+- すべてのテストが合格 ✅
+
 ## 0.3.0 - 2025-10-15
 
 ### Breaking Changes
