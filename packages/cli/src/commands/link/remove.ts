@@ -45,11 +45,7 @@ export default class LinkRemove extends Command {
     // Get link for preview (also validates it exists)
     let link;
     try {
-      const links = service.list(0); // Get all links
-      link = links.find((l) => l.id === linkId);
-      if (!link) {
-        throw new Error(`Link #${linkId} not found`);
-      }
+      link = service.getById(linkId);
     } catch (error) {
       if (flags.json) {
         this.log(

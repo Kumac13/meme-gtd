@@ -6,6 +6,7 @@ import {
   listLinks as dbListLinks,
   deleteLink as dbDeleteLink,
   findLink,
+  getLinkById as dbGetLinkById,
   type CreateLinkInput,
   type ListLinksFilters
 } from 'meme-gtd-db';
@@ -77,6 +78,22 @@ export class LinkService {
       };
 
       return dbCreateLink(db, input);
+    } finally {
+      db.close();
+    }
+  }
+
+  /**
+   * Get a link by ID
+   * @param linkId Link ID
+   * @returns Link
+   * @throws Error if link not found
+   */
+  getById(linkId: number): Link {
+    const db = ensureDatabase(this.config);
+
+    try {
+      return dbGetLinkById(db, linkId);
     } finally {
       db.close();
     }
