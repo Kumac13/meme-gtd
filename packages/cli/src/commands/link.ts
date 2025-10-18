@@ -10,12 +10,14 @@ export default class LinkRoot extends Command {
     '  - derived_from: Tasks derived from memos\n\n' +
     'Available subcommands:\n' +
     '  - add: Create a new link between two issues\n' +
-    '  - list: Show all links for a specific issue';
+    '  - list: Show all links for a specific issue\n' +
+    '  - remove: Delete a link by its ID';
 
   static examples = [
     '$ mgtd link add --type parent --source 5 --target 10',
     '$ mgtd link list 5',
-    '$ mgtd link list 10 --type parent'
+    '$ mgtd link list 10 --type parent',
+    '$ mgtd link remove 3'
   ];
 
   async run(): Promise<void> {
