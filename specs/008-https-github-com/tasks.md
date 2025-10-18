@@ -89,21 +89,21 @@
 
 ### Implementation for User Story 1
 
-- [ ] T010 [P] [US1] `packages/cli/src/commands/link/add.ts` を作成
+- [x] T010 [P] [US1] `packages/cli/src/commands/link/add.ts` を作成
   - フラグ: `--type` (-t), `--source` (-s), `--target` (-T), `--json` (-j)
   - LinkServiceを使用してリンク作成
   - エラーハンドリング（Service層のエラーをCLI形式で表示）
   - 成功時の出力: `Link created: #<id> (<source> --<type>--> <target>)`
   - JSON出力対応: `{"id":..., "sourceIssueId":..., ...}`
 
-- [ ] T011 [P] [US1] `packages/cli/src/commands/link/list.ts` を作成（P1で必要 - リンク確認用）
+- [x] T011 [P] [US1] `packages/cli/src/commands/link/list.ts` を作成（P1で必要 - リンク確認用）
   - 引数: `<issue-id>`
   - フラグ: `--type` (-t), `--json` (-j)
   - LinkServiceを使用してリンク一覧取得
   - 人間可読出力: 方向矢印（→/←）付きフォーマット
   - JSON出力: `direction`フィールド追加（outgoing/incoming）
 
-- [ ] T012 [US1] `packages/cli/src/commands/link.ts` のヘルプメッセージ更新
+- [x] T012 [US1] `packages/cli/src/commands/link.ts` のヘルプメッセージ更新
   - サブコマンド（add, list）の説明を追加
 
 **Checkpoint**: P1完了 ✅ - 親子リンクの作成・表示が動作、MVP達成
