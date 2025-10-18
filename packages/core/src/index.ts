@@ -219,3 +219,6 @@ export class LabelService {
     return deleteLabel(this.db, name);
   }
 }
+
+// Link Service
+export { LinkService, type LinkServiceOptions } from './linkService.js';
