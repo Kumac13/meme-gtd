@@ -118,12 +118,12 @@
 
 ### Implementation for User Story 2
 
-- [ ] T013 [US2] `packages/cli/src/commands/link/list.ts` の拡張
+- [x] T013 [US2] `packages/cli/src/commands/link/list.ts` の拡張
   - `--type`フィルタの完全実装（親、子、relates、derived_fromの全対応）
   - リンクなし時のメッセージ: `No links found for issue #<id>`
   - エラーケース: 無効なtype値の検証とエラーメッセージ
 
-- [ ] T014 [P] [US2] 出力フォーマットの洗練
+- [x] T014 [P] [US2] 出力フォーマットの洗練
   - 列幅の調整（link ID、type、矢印、issue IDの整列）
   - TypeScript型定義の整備（LinkWithDirection型）
 
@@ -139,7 +139,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] `packages/cli/src/commands/link/add.ts` でrelatesタイプの動作確認
+- [x] T015 [US3] `packages/cli/src/commands/link/add.ts` でrelatesタイプの動作確認
   - 既存コード（T010）で実装済みだが、relatesタイプの明示的テスト
   - contractsのrelatesシナリオに沿った動作確認
 
@@ -155,7 +155,7 @@
 
 ### Implementation for User Story 4
 
-- [ ] T016 [US4] `packages/cli/src/commands/link/add.ts` でderived_fromタイプの動作確認
+- [x] T016 [US4] `packages/cli/src/commands/link/add.ts` でderived_fromタイプの動作確認
   - 既存コード（T010）で実装済みだが、derived_fromタイプの明示的テスト
   - memo→task間のリンク作成シナリオを確認
 
@@ -171,11 +171,11 @@
 
 ### Implementation for User Story 5
 
-- [ ] T017 [US5] 確認プロンプト実装の調査
+- [x] T017 [US5] 確認プロンプト実装の調査
   - 既存コマンド（task delete等）で確認プロンプトの実装があるか調査
   - `readline`または`@inquirer/prompts`の選択を決定
 
-- [ ] T018 [US5] `packages/cli/src/commands/link/remove.ts` を作成
+- [x] T018 [US5] `packages/cli/src/commands/link/remove.ts` を作成
   - 引数: `<link-id>`
   - フラグ: `--yes` (-y), `--json` (-j)
   - 確認プロンプト: `Delete link #<id> (<source> --<type>--> <target>)? (y/N):`
@@ -185,7 +185,7 @@
   - キャンセル時: `Cancelled`
   - JSON出力: `{"deleted": true/false, "linkId": ..., "reason": ...}`
 
-- [ ] T019 [US5] `packages/cli/src/commands/link.ts` のヘルプメッセージ更新
+- [x] T019 [US5] `packages/cli/src/commands/link.ts` のヘルプメッセージ更新
   - removeサブコマンドの説明を追加
 
 **Checkpoint**: P5完了 ✅ - リンク削除機能が動作、全ユーザーストーリー完了
@@ -198,22 +198,22 @@
 
 ### Documentation
 
-- [ ] T020 [P] `docs/cli-commands.md` を更新
+- [x] T020 [P] `docs/cli_requirement.md` を更新
   - linkコマンドの仕様を追記（`mgtd link add/list/remove`）
   - 各サブコマンドのオプション一覧
   - 使用例
 
-- [ ] T021 [P] `README.md` を更新（必要に応じて）
+- [x] T021 [P] `README.md` を更新（必要に応じて）
   - linkコマンドの説明を追加
   - GTDワークフローでの活用例
 
 ### Build & Integration
 
-- [ ] T022 プロジェクト全体のビルド確認
+- [x] T022 プロジェクト全体のビルド確認
   - `pnpm build` が全パッケージで成功することを確認
   - 型エラー、リントエラーがないことを確認
 
-- [ ] T023 手動テスト実行（quickstart.mdのシナリオ）
+- [x] T023 手動テスト実行（quickstart.mdのシナリオ）
   - Scenario 1-7を実行してE2E動作確認
   - テストDB使用の徹底確認
 
