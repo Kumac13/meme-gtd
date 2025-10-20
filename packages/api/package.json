@@ -13,7 +13,8 @@
     "test:watch": "tsx --test --watch test/**/*.test.ts",
     "openapi:generate": "tsx scripts/generate-openapi.ts",
     "openapi:validate": "redocly lint docs/api/openapi.yaml",
-    "openapi:bundle": "redocly bundle docs/api/openapi.yaml -o docs/api/openapi.bundle.yaml"
+    "openapi:bundle": "redocly bundle docs/api/openapi.yaml -o docs/api/openapi.bundle.yaml",
+    "sdk:generate-types": "./scripts/generate-sdk-types.sh"
   },
   "keywords": [
     "gtd",

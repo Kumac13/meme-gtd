@@ -140,7 +140,54 @@ pnpm openapi:generate
 
 # Validate OpenAPI spec
 pnpm openapi:validate
+
+# Bundle OpenAPI spec (resolve all $refs)
+pnpm openapi:bundle
 ```
+
+The generated spec is output to `docs/api/openapi.yaml` and includes:
+- Full endpoint documentation with tags and descriptions
+- Request/response schemas with field descriptions
+- Nullable field support (OpenAPI 3.0 compatible)
+- Error response schemas
+
+## SDK Generation
+
+You can generate type-safe client SDKs from the OpenAPI specification using tools like:
+
+### TypeScript/JavaScript (using openapi-typescript)
+
+```bash
+# Install openapi-typescript
+npm install -D openapi-typescript
+
+# Generate TypeScript types (using npm script)
+pnpm sdk:generate-types
+
+# Or run the script directly with custom output path
+./scripts/generate-sdk-types.sh path/to/output.ts
+```
+
+### Python (using openapi-python-client)
+
+```bash
+# Install openapi-python-client
+pip install openapi-python-client
+
+# Generate Python client
+openapi-python-client generate --path docs/api/openapi.yaml
+```
+
+### Other Languages
+
+The OpenAPI specification can be used with various code generators:
+- **Java**: openapi-generator (Spring, JAX-RS, etc.)
+- **Go**: oapi-codegen
+- **Rust**: openapi-generator
+- **Ruby**: openapi-generator
+- **PHP**: openapi-generator
+
+See [OpenAPI Generator](https://openapi-generator.tech/) for more language options.
 
 ## Architecture
 
