@@ -124,22 +124,22 @@ export default function TasksList() {
           <p className="text-gray-400 text-sm mt-2">Create your first task to get started</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
           {tasks.map((task) => (
             <Link
               key={task.id}
               to={`/tasks/${task.id}`}
-              className="block bg-white border border-gray-200 rounded-lg p-6 hover:border-blue-400 hover:shadow-md transition-all"
+              className="block p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h2 className="text-xl font-semibold text-gray-900">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h2 className="text-base font-semibold text-gray-900">
                       {task.title || `Task #${task.id}`}
                     </h2>
                     {task.status && (
                       <span
-                        className={`px-2 py-1 text-xs font-medium rounded ${
+                        className={`px-2 py-0.5 text-xs font-medium rounded ${
                           statusColors[task.status] || 'bg-gray-100 text-gray-800'
                         }`}
                       >
@@ -148,26 +148,22 @@ export default function TasksList() {
                     )}
                   </div>
                   {task.bodyMd && (
-                    <p className="text-gray-600 text-sm line-clamp-2">
-                      {truncateMarkdown(task.bodyMd, 150)}
+                    <p className="text-gray-600 text-sm mb-2">
+                      {truncateMarkdown(task.bodyMd, 100)}
                     </p>
                   )}
+                  <div className="flex items-center text-xs text-gray-500 space-x-3">
+                    <span>#{task.id}</span>
+                    {task.scheduledOn && (
+                      <span>
+                        Scheduled: {formatDateTime(task.scheduledOn).split(' ')[0]}
+                      </span>
+                    )}
+                    <span title={formatDateTime(task.createdAt)}>
+                      {formatRelativeTime(task.createdAt)}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-4 flex items-center text-xs text-gray-500 space-x-4">
-                {task.scheduledOn && (
-                  <span className="font-medium">
-                    Scheduled: {formatDateTime(task.scheduledOn).split(' ')[0]}
-                  </span>
-                )}
-                <span title={formatDateTime(task.createdAt)}>
-                  Created {formatRelativeTime(task.createdAt)}
-                </span>
-                {task.updatedAt !== task.createdAt && (
-                  <span title={formatDateTime(task.updatedAt)}>
-                    Updated {formatRelativeTime(task.updatedAt)}
-                  </span>
-                )}
               </div>
             </Link>
           ))}

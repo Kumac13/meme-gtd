@@ -82,34 +82,30 @@ export default function MemosList() {
           <p className="text-gray-400 text-sm mt-2">Create your first memo to get started</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
           {memos.map((memo) => (
             <Link
               key={memo.id}
               to={`/memos/${memo.id}`}
-              className="block bg-white border border-gray-200 rounded-lg p-6 hover:border-blue-400 hover:shadow-md transition-all"
+              className="block p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                    {memo.title || `Memo #${memo.id}`}
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-base font-semibold text-gray-900 mb-1">
+                    {memo.title || truncateMarkdown(memo.bodyMd, 60)}
                   </h2>
                   {memo.bodyMd && (
-                    <p className="text-gray-600 text-sm line-clamp-2">
-                      {truncateMarkdown(memo.bodyMd, 150)}
+                    <p className="text-gray-600 text-sm mb-2">
+                      {truncateMarkdown(memo.bodyMd, 100)}
                     </p>
                   )}
+                  <div className="flex items-center text-xs text-gray-500 space-x-3">
+                    <span>#{memo.id}</span>
+                    <span title={formatDateTime(memo.createdAt)}>
+                      {formatRelativeTime(memo.createdAt)}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-4 flex items-center text-xs text-gray-500 space-x-4">
-                <span title={formatDateTime(memo.createdAt)}>
-                  Created {formatRelativeTime(memo.createdAt)}
-                </span>
-                {memo.updatedAt !== memo.createdAt && (
-                  <span title={formatDateTime(memo.updatedAt)}>
-                    Updated {formatRelativeTime(memo.updatedAt)}
-                  </span>
-                )}
               </div>
             </Link>
           ))}
