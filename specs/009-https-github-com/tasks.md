@@ -79,26 +79,26 @@
 
 ### Schemas for User Story 1
 
-- [ ] T020 [P] [US1] Define Memo schemas in `packages/api/src/schemas/memoSchemas.ts` (CreateMemoRequestSchema, UpdateMemoRequestSchema, PromoteMemoRequestSchema, MemoSchema, MemoDetailSchema)
-- [ ] T021 [P] [US1] Define Comment schemas in `packages/api/src/schemas/commentSchemas.ts` (CreateCommentRequestSchema, UpdateCommentRequestSchema, CommentSchema)
-- [ ] T022 [P] [US1] Define error response schemas in `packages/api/src/schemas/errorSchemas.ts` (ErrorResponseSchema, ValidationErrorResponseSchema)
+- [X] T020 [P] [US1] Define Memo schemas in `packages/api/src/schemas/memoSchemas.ts` (CreateMemoRequestSchema, UpdateMemoRequestSchema, PromoteMemoRequestSchema, MemoSchema, MemoDetailSchema)
+- [X] T021 [P] [US1] Define Comment schemas in `packages/api/src/schemas/commentSchemas.ts` (CreateCommentRequestSchema, UpdateCommentRequestSchema, CommentSchema)
+- [X] T022 [P] [US1] Define error response schemas in `packages/api/src/schemas/errorSchemas.ts` (ErrorResponseSchema, ValidationErrorResponseSchema)
 
 ### Handlers for User Story 1
 
-- [ ] T023 [US1] Implement memo handlers in `packages/api/src/handlers/memoHandlers.ts` (createMemoHandler, listMemosHandler, getMemoHandler, updateMemoHandler, deleteMemoHandler, promoteMemoHandler, bookmarkMemoHandler, unbookmarkMemoHandler) - depends on T020
-- [ ] T024 [P] [US1] Implement memo comment handlers in `packages/api/src/handlers/commentHandlers.ts` (listMemoCommentsHandler, createMemoCommentHandler, updateMemoCommentHandler, deleteMemoCommentHandler) - depends on T021
+- [X] T023 [US1] Implement memo handlers in `packages/api/src/handlers/memoHandlers.ts` (createMemoHandler, listMemosHandler, getMemoHandler, updateMemoHandler, deleteMemoHandler, promoteMemoHandler, bookmarkMemoHandler, unbookmarkMemoHandler) - depends on T020
+- [X] T024 [P] [US1] Implement memo comment handlers in `packages/api/src/handlers/commentHandlers.ts` (listMemoCommentsHandler, createMemoCommentHandler, updateMemoCommentHandler, deleteMemoCommentHandler) - depends on T021
 
 ### Routes for User Story 1
 
-- [ ] T025 [US1] Implement memo routes in `packages/api/src/routes/memos.ts` (POST/GET/PATCH/DELETE /api/memos, POST /api/memos/:id/promote, POST /api/memos/:id/bookmark, POST /api/memos/:id/unbookmark, GET/POST /api/memos/:id/comments, PATCH/DELETE /api/memos/:memoId/comments/:commentId) - depends on T023, T024
-- [ ] T026 [US1] Register memo routes in `server.ts` (app.register(memoRoutes)) - depends on T025
+- [X] T025 [US1] Implement memo routes in `packages/api/src/routes/memos.ts` (POST/GET/PATCH/DELETE /api/memos, POST /api/memos/:id/promote, POST /api/memos/:id/bookmark, POST /api/memos/:id/unbookmark, GET/POST /api/memos/:id/comments, PATCH/DELETE /api/memos/:memoId/comments/:commentId) - depends on T023, T024
+- [X] T026 [US1] Register memo routes in `server.ts` (app.register(memoRoutes)) - depends on T025
 
 ### Integration Tests for User Story 1
 
-- [ ] T027 [US1] Implement memo CRUD integration tests in `packages/api/test/integration/memos.test.ts` (POST /api/memos, GET /api/memos, GET /api/memos/:id, PATCH /api/memos/:id, DELETE /api/memos/:id) - depends on T026
-- [ ] T028 [P] [US1] Implement memo promote integration test in `packages/api/test/integration/memos.test.ts` (POST /api/memos/:id/promote) - depends on T026
-- [ ] T029 [P] [US1] Implement memo bookmark integration test in `packages/api/test/integration/memos.test.ts` (POST /api/memos/:id/bookmark, POST /api/memos/:id/unbookmark) - depends on T026
-- [ ] T030 [P] [US1] Implement memo comment integration tests in `packages/api/test/integration/comments.test.ts` (GET/POST/PATCH/DELETE memo comments) - depends on T026
+- [X] T027 [US1] Implement memo CRUD integration tests in `packages/api/test/integration/memos.test.ts` (POST /api/memos, GET /api/memos, GET /api/memos/:id, PATCH /api/memos/:id, DELETE /api/memos/:id) - depends on T026
+- [X] T028 [P] [US1] Implement memo promote integration test in `packages/api/test/integration/memos.test.ts` (POST /api/memos/:id/promote) - depends on T026
+- [X] T029 [P] [US1] Implement memo bookmark integration test in `packages/api/test/integration/memos.test.ts` (POST /api/memos/:id/bookmark, POST /api/memos/:id/unbookmark) - depends on T026
+- [X] T030 [P] [US1] Implement memo comment integration tests in `packages/api/test/integration/comments.test.ts` (GET/POST/PATCH/DELETE memo comments) - depends on T026
 
 **Checkpoint**: User Story 1 complete - memos fully manageable via HTTP API
 
@@ -112,24 +112,24 @@
 
 ### Schemas for User Story 2
 
-- [ ] T031 [P] [US2] Define Task schemas in `packages/api/src/schemas/taskSchemas.ts` (CreateTaskRequestSchema, UpdateTaskRequestSchema, TaskSchema, TaskDetailSchema, TaskStatusSchema)
+- [X] T031 [P] [US2] Define Task schemas in `packages/api/src/schemas/taskSchemas.ts` (CreateTaskRequestSchema, UpdateTaskRequestSchema, TaskSchema, TaskDetailSchema, TaskStatusSchema)
 
 ### Handlers for User Story 2
 
-- [ ] T032 [US2] Implement task handlers in `packages/api/src/handlers/taskHandlers.ts` (createTaskHandler, listTasksHandler, getTaskHandler, updateTaskHandler, deleteTaskHandler, closeTaskHandler, cancelTaskHandler, reopenTaskHandler, bookmarkTaskHandler, unbookmarkTaskHandler) - depends on T031
-- [ ] T033 [P] [US2] Implement task comment handlers in `packages/api/src/handlers/commentHandlers.ts` (listTaskCommentsHandler, createTaskCommentHandler, updateTaskCommentHandler, deleteTaskCommentHandler) - depends on T021 (comment schema already defined in US1)
+- [X] T032 [US2] Implement task handlers in `packages/api/src/handlers/taskHandlers.ts` (createTaskHandler, listTasksHandler, getTaskHandler, updateTaskHandler, deleteTaskHandler, closeTaskHandler, cancelTaskHandler, reopenTaskHandler, bookmarkTaskHandler, unbookmarkTaskHandler) - depends on T031
+- [X] T033 [P] [US2] Implement task comment handlers in `packages/api/src/handlers/commentHandlers.ts` (listTaskCommentsHandler, createTaskCommentHandler, updateTaskCommentHandler, deleteTaskCommentHandler) - depends on T021 (comment schema already defined in US1)
 
 ### Routes for User Story 2
 
-- [ ] T034 [US2] Implement task routes in `packages/api/src/routes/tasks.ts` (POST/GET/PATCH/DELETE /api/tasks, POST /api/tasks/:id/close, POST /api/tasks/:id/cancel, POST /api/tasks/:id/reopen, POST /api/tasks/:id/bookmark, POST /api/tasks/:id/unbookmark, GET/POST /api/tasks/:id/comments, PATCH/DELETE /api/tasks/:taskId/comments/:commentId) - depends on T032, T033
-- [ ] T035 [US2] Register task routes in `server.ts` (app.register(taskRoutes)) - depends on T034
+- [X] T034 [US2] Implement task routes in `packages/api/src/routes/tasks.ts` (POST/GET/PATCH/DELETE /api/tasks, POST /api/tasks/:id/close, POST /api/tasks/:id/cancel, POST /api/tasks/:id/reopen, POST /api/tasks/:id/bookmark, POST /api/tasks/:id/unbookmark, GET/POST /api/tasks/:id/comments, PATCH/DELETE /api/tasks/:taskId/comments/:commentId) - depends on T032, T033
+- [X] T035 [US2] Register task routes in `server.ts` (app.register(taskRoutes)) - depends on T034
 
 ### Integration Tests for User Story 2
 
-- [ ] T036 [US2] Implement task CRUD integration tests in `packages/api/test/integration/tasks.test.ts` (POST /api/tasks, GET /api/tasks with status filter, GET /api/tasks/:id, PATCH /api/tasks/:id, DELETE /api/tasks/:id) - depends on T035
-- [ ] T037 [P] [US2] Implement task status transition integration tests in `packages/api/test/integration/tasks.test.ts` (POST /api/tasks/:id/close, POST /api/tasks/:id/cancel, POST /api/tasks/:id/reopen) - depends on T035
-- [ ] T038 [P] [US2] Implement task bookmark integration tests in `packages/api/test/integration/tasks.test.ts` (POST /api/tasks/:id/bookmark, POST /api/tasks/:id/unbookmark) - depends on T035
-- [ ] T039 [P] [US2] Implement task comment integration tests in `packages/api/test/integration/comments.test.ts` (GET/POST/PATCH/DELETE task comments) - depends on T035
+- [X] T036 [US2] Implement task CRUD integration tests in `packages/api/test/integration/tasks.test.ts` (POST /api/tasks, GET /api/tasks with status filter, GET /api/tasks/:id, PATCH /api/tasks/:id, DELETE /api/tasks/:id) - depends on T035
+- [X] T037 [P] [US2] Implement task status transition integration tests in `packages/api/test/integration/tasks.test.ts` (POST /api/tasks/:id/close, POST /api/tasks/:id/cancel, POST /api/tasks/:id/reopen) - depends on T035
+- [X] T038 [P] [US2] Implement task bookmark integration tests in `packages/api/test/integration/tasks.test.ts` (POST /api/tasks/:id/bookmark, POST /api/tasks/:id/unbookmark) - depends on T035
+- [X] T039 [P] [US2] Implement task comment integration tests in `packages/api/test/integration/comments.test.ts` (GET/POST/PATCH/DELETE task comments) - depends on T035
 
 **Checkpoint**: User Story 2 complete - tasks fully manageable via HTTP API
 
