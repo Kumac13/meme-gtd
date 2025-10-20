@@ -14,7 +14,7 @@ export async function listMemoCommentsHandler(
   reply: FastifyReply
 ) {
   const memoId = parseInt(request.params.memoId, 10);
-  const memoService = new MemoService({ config: request.server.config });
+  const memoService = new MemoService({ db: request.server.db });
 
   try {
     const comments = memoService.listComments(memoId);
@@ -39,7 +39,7 @@ export async function createMemoCommentHandler(
 ) {
   const memoId = parseInt(request.params.memoId, 10);
   const { bodyMd } = request.body;
-  const memoService = new MemoService({ config: request.server.config });
+  const memoService = new MemoService({ db: request.server.db });
 
   try {
     const comment = memoService.addComment(memoId, bodyMd);
@@ -68,7 +68,7 @@ export async function updateMemoCommentHandler(
 ) {
   const commentId = parseInt(request.params.commentId, 10);
   const { bodyMd } = request.body;
-  const memoService = new MemoService({ config: request.server.config });
+  const memoService = new MemoService({ db: request.server.db });
 
   try {
     const comment = memoService.updateComment(commentId, bodyMd);
@@ -91,7 +91,7 @@ export async function deleteMemoCommentHandler(
   reply: FastifyReply
 ) {
   const commentId = parseInt(request.params.commentId, 10);
-  const memoService = new MemoService({ config: request.server.config });
+  const memoService = new MemoService({ db: request.server.db });
 
   try {
     memoService.deleteComment(commentId);

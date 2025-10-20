@@ -6,6 +6,8 @@ import {
   type ZodTypeProvider
 } from 'fastify-type-provider-zod';
 import type { MgtdConfig } from 'meme-gtd-config';
+import { ensureDatabase } from 'meme-gtd-db';
+import type Database from 'better-sqlite3';
 
 export interface BuildAppOptions {
   config: MgtdConfig;
@@ -45,8 +47,17 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
-  // Store config in app context for handlers to access
+  // Open database connection once and share across all requests
+  const db = ensureDatabase(config);
+
+  // Store config and db in app context for handlers to access
   app.decorate('config', config);
+  app.decorate('db', db);
+
+  // Close database connection when server shuts down
+  app.addHook('onClose', async () => {
+    db.close();
+  });
 
   // Register CORS middleware
   const { registerCors } = await import('./middleware/cors.js');
@@ -112,5 +123,6 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 declare module 'fastify' {
   interface FastifyInstance {
     config: MgtdConfig;
+    db: Database.Database;
   }
 }

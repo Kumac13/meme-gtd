@@ -15,7 +15,7 @@ export async function createMemoHandler(
   reply: FastifyReply
 ) {
   const { bodyMd } = request.body;
-  const memoService = new MemoService({ config: request.server.config });
+  const memoService = new MemoService({ db: request.server.db });
 
   try {
     const memo = memoService.create({ bodyMd });
@@ -34,7 +34,7 @@ export async function listMemosHandler(
   }>,
   reply: FastifyReply
 ) {
-  const memoService = new MemoService({ config: request.server.config });
+  const memoService = new MemoService({ db: request.server.db });
   const { bookmarked } = request.query;
 
   const filters = bookmarked === 'true' ? { isBookmarked: true } : {};
@@ -55,7 +55,7 @@ export async function getMemoHandler(
   reply: FastifyReply
 ) {
   const memoId = parseInt(request.params.id, 10);
-  const memoService = new MemoService({ config: request.server.config });
+  const memoService = new MemoService({ db: request.server.db });
 
   try {
     const memo = memoService.show(memoId);
@@ -84,7 +84,7 @@ export async function updateMemoHandler(
   reply: FastifyReply
 ) {
   const memoId = parseInt(request.params.id, 10);
-  const memoService = new MemoService({ config: request.server.config });
+  const memoService = new MemoService({ db: request.server.db });
 
   try {
     const memo = memoService.edit({
@@ -109,7 +109,7 @@ export async function deleteMemoHandler(
   reply: FastifyReply
 ) {
   const memoId = parseInt(request.params.id, 10);
-  const memoService = new MemoService({ config: request.server.config });
+  const memoService = new MemoService({ db: request.server.db });
 
   try {
     memoService.remove(memoId);
@@ -134,8 +134,8 @@ export async function promoteMemoHandler(
 ) {
   const memoId = parseInt(request.params.id, 10);
   const { title, status = 'open' } = request.body;
-  const memoService = new MemoService({ config: request.server.config });
-  const taskService = new TaskService({ config: request.server.config });
+  const memoService = new MemoService({ db: request.server.db });
+  const taskService = new TaskService({ db: request.server.db });
 
   try {
     const { taskId } = memoService.promote({
@@ -162,7 +162,7 @@ export async function bookmarkMemoHandler(
   reply: FastifyReply
 ) {
   const memoId = parseInt(request.params.id, 10);
-  const memoService = new MemoService({ config: request.server.config });
+  const memoService = new MemoService({ db: request.server.db });
 
   try {
     memoService.setBookmark(memoId, true);
@@ -184,7 +184,7 @@ export async function unbookmarkMemoHandler(
   reply: FastifyReply
 ) {
   const memoId = parseInt(request.params.id, 10);
-  const memoService = new MemoService({ config: request.server.config });
+  const memoService = new MemoService({ db: request.server.db });
 
   try {
     memoService.setBookmark(memoId, false);
