@@ -138,7 +138,7 @@ export async function closeTaskHandler(
   const taskService = new TaskService({ db: request.server.db });
 
   try {
-    taskService.setStatus(taskId, 'done');
+    taskService.close(taskId);
     const task = taskService.show(taskId);
     return reply.status(200).send(task);
   } catch (error) {
@@ -160,7 +160,7 @@ export async function cancelTaskHandler(
   const taskService = new TaskService({ db: request.server.db });
 
   try {
-    taskService.setStatus(taskId, 'canceled');
+    taskService.cancel(taskId);
     const task = taskService.show(taskId);
     return reply.status(200).send(task);
   } catch (error) {
@@ -182,7 +182,7 @@ export async function reopenTaskHandler(
   const taskService = new TaskService({ db: request.server.db });
 
   try {
-    taskService.setStatus(taskId, 'open');
+    taskService.reopen(taskId);
     const task = taskService.show(taskId);
     return reply.status(200).send(task);
   } catch (error) {
