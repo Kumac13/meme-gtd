@@ -37,6 +37,7 @@
   },
   "devDependencies": {
     "@redocly/cli": "^1.25.14",
+    "@types/better-sqlite3": "^7.6.8",
     "@types/node": "^22.0.0",
     "supertest": "^7.0.0",
     "tsx": "^4.19.2",

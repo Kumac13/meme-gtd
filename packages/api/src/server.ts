@@ -119,6 +119,12 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   const { taskRoutes } = await import('./routes/tasks.js');
   await app.register(taskRoutes);
 
+  const { labelRoutes } = await import('./routes/labels.js');
+  await app.register(labelRoutes);
+
+  const { linkRoutes } = await import('./routes/links.js');
+  await app.register(linkRoutes);
+
   return app;
 }
 

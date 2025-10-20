@@ -17,7 +17,12 @@ export async function createTaskHandler(
   const taskService = new TaskService({ db: request.server.db });
 
   try {
-    const task = taskService.create({ title, bodyMd, status, scheduledOn });
+    const task = taskService.create({
+      title,
+      bodyMd: bodyMd ?? '', // Default to empty string if undefined
+      status,
+      scheduledOn
+    });
     return reply.status(201).send(task);
   } catch (error) {
     throw error;

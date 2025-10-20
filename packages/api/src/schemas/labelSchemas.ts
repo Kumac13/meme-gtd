@@ -5,7 +5,7 @@ import { z } from 'zod';
  */
 export const CreateLabelRequestSchema = z.object({
   name: z.string().min(1, 'Label name is required'),
-  description: z.string().nullable().optional(),
+  description: z.string().optional(),
 });
 
 export type CreateLabelRequest = z.infer<typeof CreateLabelRequestSchema>;
