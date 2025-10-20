@@ -37,9 +37,9 @@ export async function createLabelHandler(
     const label = labelService.create(name, description);
     return reply.status(201).send(label);
   } catch (error) {
-    // Handle UNIQUE constraint violation
-    if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
-      throw new ConflictError(`Label "${name}" already exists`);
+    // Handle duplicate label error
+    if (error instanceof Error && error.message.includes('already exists')) {
+      throw new ConflictError(error.message);
     }
     throw error;
   }
