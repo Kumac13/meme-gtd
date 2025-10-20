@@ -63,7 +63,7 @@ export default function MemosList() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-2">
       <div className="flex items-center justify-end mb-3">
         <Link
           to="/memos/new"

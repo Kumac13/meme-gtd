@@ -55,7 +55,7 @@ export default function TaskEdit() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-2">
       <div className="mb-6">
         <Link
           to={`/tasks/${task.id}`}
