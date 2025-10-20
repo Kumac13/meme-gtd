@@ -100,11 +100,11 @@ export default function ItemDetail({
           </button>
         </div>
         {item.labels && item.labels.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap mt-3">
+          <div className="flex items-center gap-2 flex-wrap mt-2">
             {item.labels.map((label, idx) => (
               <span
                 key={idx}
-                className="px-3 py-1 text-sm font-medium rounded"
+                className="px-2 py-0.5 text-xs font-medium rounded"
                 style={{
                   backgroundColor: getLabelColor(label),
                   color: '#000',
