@@ -71,14 +71,14 @@ export default function ItemDetail({
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Header */}
-      <div className="mb-6">
+      <div>
         <Link
           to={basePath}
           className="text-blue-600 hover:text-blue-800 text-sm font-medium mb-4 inline-block"
         >
           ← Back to {itemType === 'memo' ? 'memos' : 'tasks'}
         </Link>
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between mb-3">
           <h1 className="text-3xl font-bold text-gray-900">
             {item.title || `${itemType === 'memo' ? 'Memo' : 'Task'} #${item.id}`}
           </h1>
@@ -100,7 +100,7 @@ export default function ItemDetail({
           </button>
         </div>
         {item.labels && item.labels.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap mt-2">
+          <div className="flex items-center gap-2 flex-wrap mb-3">
             {item.labels.map((label, idx) => (
               <span
                 key={idx}
