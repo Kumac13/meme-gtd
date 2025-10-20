@@ -116,6 +116,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   const { memoRoutes } = await import('./routes/memos.js');
   await app.register(memoRoutes);
 
+  const { taskRoutes } = await import('./routes/tasks.js');
+  await app.register(taskRoutes);
+
   return app;
 }
 
