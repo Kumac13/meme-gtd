@@ -64,7 +64,8 @@ export async function getMemoHandler(
       throw new NotFoundError('Memo', memoId);
     }
 
-    return reply.status(200).send(memo);
+    const labels = memoService.listLabels(memoId);
+    return reply.status(200).send({ ...memo, labels });
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
       throw new NotFoundError('Memo', memoId);

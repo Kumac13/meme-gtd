@@ -1,0 +1,128 @@
+import { useState, useEffect } from 'react';
+import { CommentsService } from '../api/services/CommentsService';
+import EditableContent from './EditableContent';
+
+interface Comment {
+  id: number;
+  issueId: number;
+  bodyMd: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface CommentSectionProps {
+  itemId: number;
+  itemType: 'memo' | 'task';
+}
+
+export default function CommentSection({ itemId, itemType }: CommentSectionProps) {
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newCommentBody, setNewCommentBody] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchComments = async () => {
+    try {
+      setLoading(true);
+      const response =
+        itemType === 'memo'
+          ? await CommentsService.listMemoComments(String(itemId))
+          : await CommentsService.listTaskComments(String(itemId));
+      setComments(response);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchComments();
+  }, [itemId, itemType]);
+
+  const handleSubmitNewComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCommentBody.trim()) return;
+
+    try {
+      setSubmitting(true);
+      const newComment =
+        itemType === 'memo'
+          ? await CommentsService.createMemoComment(String(itemId), { bodyMd: newCommentBody })
+          : await CommentsService.createTaskComment(String(itemId), { bodyMd: newCommentBody });
+      setComments([...comments, newComment]);
+      setNewCommentBody('');
+    } catch (error) {
+      console.error('Error creating comment:', error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUpdateComment = async (commentId: number, newBody: string) => {
+    const updatedComment =
+      itemType === 'memo'
+        ? await CommentsService.updateMemoComment(String(itemId), String(commentId), {
+            bodyMd: newBody,
+          })
+        : await CommentsService.updateTaskComment(String(itemId), String(commentId), {
+            bodyMd: newBody,
+          });
+    setComments(comments.map((c) => (c.id === commentId ? updatedComment : c)));
+  };
+
+  const handleDeleteComment = async (commentId: number) => {
+    if (itemType === 'memo') {
+      await CommentsService.deleteMemoComment(String(itemId), String(commentId));
+    } else {
+      await CommentsService.deleteTaskComment(String(itemId), String(commentId));
+    }
+    setComments(comments.filter((c) => c.id !== commentId));
+  };
+
+  return (
+    <div className="mt-8">
+      <h2 className="text-xl font-bold text-gray-900 mb-4">
+        Comments ({comments.length})
+      </h2>
+
+      {/* Comments List */}
+      {loading ? (
+        <p className="text-gray-500">Loading comments...</p>
+      ) : (
+        <div className="space-y-4 mb-6">
+          {comments.map((comment) => (
+            <EditableContent
+              key={comment.id}
+              content={comment.bodyMd}
+              createdAt={comment.createdAt}
+              updatedAt={comment.updatedAt}
+              onSave={(newBody) => handleUpdateComment(comment.id, newBody)}
+              onDelete={() => handleDeleteComment(comment.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* New Comment Form */}
+      <form onSubmit={handleSubmitNewComment} className="bg-white border border-gray-200 rounded-lg p-4">
+        <textarea
+          value={newCommentBody}
+          onChange={(e) => setNewCommentBody(e.target.value)}
+          placeholder="Write a comment..."
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500 min-h-[100px]"
+          disabled={submitting}
+        />
+        <div className="mt-2 flex justify-end">
+          <button
+            type="submit"
+            disabled={submitting || !newCommentBody.trim()}
+            className="px-4 py-2 bg-github-green-600 text-white rounded-md hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submitting ? 'Commenting...' : 'Comment'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}

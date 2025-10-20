@@ -205,15 +205,6 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   const { errorHandler } = await import('./middleware/errorHandler.js');
   app.setErrorHandler(errorHandler);
 
-  // Register 404 handler
-  app.setNotFoundHandler((request, reply) => {
-    reply.status(404).send({
-      error: 'Not Found',
-      code: 'NOT_FOUND',
-      message: `Route ${request.method} ${request.url} not found`,
-    });
-  });
-
   // Register routes
   const { memoRoutes } = await import('./routes/memos.js');
   await app.register(memoRoutes);
@@ -226,6 +217,25 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   const { linkRoutes } = await import('./routes/links.js');
   await app.register(linkRoutes);
+
+  // Register static file serving for Web UI (after API routes)
+  await app.register(import('@fastify/static'), {
+    root: new URL('../../web/dist', import.meta.url).pathname,
+    prefix: '/',
+  });
+
+  // SPA fallback: serve index.html for all non-API routes
+  app.setNotFoundHandler((request, reply) => {
+    if (!request.url.startsWith('/api')) {
+      reply.sendFile('index.html');
+    } else {
+      reply.status(404).send({
+        error: 'Not Found',
+        code: 'NOT_FOUND',
+        message: `Route ${request.method} ${request.url} not found`,
+      });
+    }
+  });
 
   return app;
 }

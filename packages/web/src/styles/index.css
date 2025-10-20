@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+@theme {
+  --color-github-green-500: #2da44e;
+  --color-github-green-600: #238636;
+  --color-github-green-700: #1a7f37;
+  --color-github-green-800: #116329;
+}
