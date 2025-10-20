@@ -6,8 +6,10 @@ interface EditableContentProps {
   content: string;
   createdAt: string;
   updatedAt: string;
-  onSave: (content: string) => Promise<void>;
+  onSave: (content: string, title?: string) => Promise<void>;
   onDelete: () => Promise<void>;
+  title?: string | null;
+  showTitleEdit?: boolean;
 }
 
 export default function EditableContent({
@@ -16,20 +18,25 @@ export default function EditableContent({
   updatedAt,
   onSave,
   onDelete,
+  title,
+  showTitleEdit = false,
 }: EditableContentProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editingContent, setEditingContent] = useState(content);
+  const [editingTitle, setEditingTitle] = useState(title || '');
   const [saving, setSaving] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleStartEdit = () => {
     setIsEditing(true);
     setEditingContent(content);
+    setEditingTitle(title || '');
   };
 
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditingContent(content);
+    setEditingTitle(title || '');
   };
 
   const handleSaveEdit = async () => {
@@ -37,7 +44,7 @@ export default function EditableContent({
 
     try {
       setSaving(true);
-      await onSave(editingContent);
+      await onSave(editingContent, showTitleEdit ? editingTitle : undefined);
       setIsEditing(false);
     } catch (error) {
       console.error('Error saving content:', error);
@@ -52,11 +59,11 @@ export default function EditableContent({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-200">
+    <div className="bg-white border border-gray-200 rounded-lg py-1 px-4">
+      <div className="flex items-center justify-between py-1 border-b border-gray-200">
         <div className="text-xs text-gray-500">
           <span title={updatedAt}>{formatRelativeTime(updatedAt)}</span>
-          {updatedAt !== createdAt && <span className="ml-2">(edited)</span>}
+          {updatedAt !== createdAt && <span className="ml-2 text-gray-500">(edited)</span>}
         </div>
         {!isEditing && (
           <div className="relative">
@@ -97,6 +104,20 @@ export default function EditableContent({
 
       {isEditing ? (
         <div>
+          {showTitleEdit && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Title
+              </label>
+              <input
+                type="text"
+                value={editingTitle}
+                onChange={(e) => setEditingTitle(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Task title"
+              />
+            </div>
+          )}
           <textarea
             value={editingContent}
             onChange={(e) => setEditingContent(e.target.value)}

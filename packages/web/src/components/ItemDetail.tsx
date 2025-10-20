@@ -1,9 +1,7 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import { TasksService } from '../api/services/TasksService';
-import { formatRelativeTime } from '../utils/dates';
-import { MarkdownRenderer } from '../utils/markdown';
+import EditableContent from './EditableContent';
 import CommentSection from './CommentSection';
 
 export interface Label {
@@ -46,56 +44,24 @@ export default function ItemDetail({
   onDelete,
   onBookmarkToggle,
   onUpdate,
-  deleting,
   bookmarking,
 }: ItemDetailProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingTitle, setEditingTitle] = useState(item.title || '');
-  const [editingBody, setEditingBody] = useState(item.bodyMd);
-  const [saving, setSaving] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const handleDelete = async () => {
-    const confirmDelete = window.confirm(
-      `Are you sure you want to delete "${item.title || `${itemType === 'memo' ? 'Memo' : 'Task'} #${item.id}`}"? This action cannot be undone.`
-    );
+  const handleUpdateBody = async (newBody: string, newTitle?: string) => {
+    const updatedItem =
+      itemType === 'memo'
+        ? await MemosService.updateMemo(String(item.id), {
+            bodyMd: newBody,
+          })
+        : await TasksService.updateTask(String(item.id), {
+            title: newTitle !== undefined ? newTitle : item.title || undefined,
+            bodyMd: newBody,
+          });
+    onUpdate(updatedItem as Item);
+  };
 
-    if (!confirmDelete) return;
-
+  const handleDeleteBody = async () => {
     await onDelete();
-  };
-
-  const handleStartEdit = () => {
-    setIsEditing(true);
-    setEditingTitle(item.title || '');
-    setEditingBody(item.bodyMd);
-  };
-
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-    setEditingTitle(item.title || '');
-    setEditingBody(item.bodyMd);
-  };
-
-  const handleSaveEdit = async () => {
-    try {
-      setSaving(true);
-      const updatedItem =
-        itemType === 'memo'
-          ? await MemosService.updateMemo(String(item.id), {
-              bodyMd: editingBody,
-            })
-          : await TasksService.updateTask(String(item.id), {
-              title: editingTitle,
-              bodyMd: editingBody,
-            });
-      onUpdate(updatedItem as Item);
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Error updating item:', error);
-    } finally {
-      setSaving(false);
-    }
   };
 
   return (
@@ -150,101 +116,15 @@ export default function ItemDetail({
       </div>
 
       {/* Body content */}
-      <div className="bg-white rounded-lg border border-gray-200 p-2">
-        <div className="flex items-center justify-between py-1 border-b border-gray-200">
-          <div className="text-xs text-gray-500">
-            {formatRelativeTime(item.updatedAt)}
-            {item.updatedAt !== item.createdAt && <span className="ml-2 text-gray-500">(edited)</span>}
-          </div>
-          {!isEditing && (
-            <div className="relative">
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
-                aria-label="More options"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                  <path d="M8 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"></path>
-                </svg>
-              </button>
-              {isMenuOpen && (
-                <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                  <button
-                    onClick={() => {
-                      handleStartEdit();
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleDelete();
-                      setIsMenuOpen(false);
-                    }}
-                    disabled={deleting}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {deleting ? 'Deleting...' : 'Delete'}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-        {isEditing ? (
-          <div>
-            {itemType === 'task' && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  value={editingTitle}
-                  onChange={(e) => setEditingTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Task title"
-                />
-              </div>
-            )}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {itemType === 'memo' ? 'Content' : 'Description'}
-              </label>
-              <textarea
-                value={editingBody}
-                onChange={(e) => setEditingBody(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[200px]"
-                placeholder={`${itemType === 'memo' ? 'Memo' : 'Task'} content in Markdown`}
-              />
-            </div>
-            <div className="flex justify-end space-x-2">
-              <button
-                onClick={handleCancelEdit}
-                disabled={saving}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                disabled={saving || !editingBody.trim()}
-                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {saving ? 'Saving...' : 'Save'}
-              </button>
-            </div>
-          </div>
-        ) : item.bodyMd ? (
-          <div className="prose prose-sm max-w-none mt-2">
-            <MarkdownRenderer content={item.bodyMd} />
-          </div>
-        ) : (
-          <p className="text-gray-400 italic">No {itemType === 'memo' ? 'content' : 'description'}</p>
-        )}
-      </div>
+      <EditableContent
+        content={item.bodyMd}
+        createdAt={item.createdAt}
+        updatedAt={item.updatedAt}
+        onSave={handleUpdateBody}
+        onDelete={handleDeleteBody}
+        title={item.title}
+        showTitleEdit={itemType === 'task'}
+      />
 
       {/* Comments section */}
       <CommentSection itemId={item.id} itemType={itemType} />
