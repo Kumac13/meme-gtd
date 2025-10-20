@@ -8,7 +8,7 @@ import type {
 } from '../schemas/memoSchemas.js';
 
 /**
- * Create a new memo
+ * Create a new memo using the request payload.
  */
 export async function createMemoHandler(
   request: FastifyRequest<{ Body: CreateMemoRequest }>,
@@ -26,7 +26,7 @@ export async function createMemoHandler(
 }
 
 /**
- * List all memos with optional filters
+ * Return a list of memos with optional filter parameters.
  */
 export async function listMemosHandler(
   request: FastifyRequest<{
@@ -48,7 +48,7 @@ export async function listMemosHandler(
 }
 
 /**
- * Get a memo by ID
+ * Retrieve a single memo by numeric identifier.
  */
 export async function getMemoHandler(
   request: FastifyRequest<{ Params: { id: string } }>,
@@ -74,7 +74,7 @@ export async function getMemoHandler(
 }
 
 /**
- * Update a memo
+ * Update memo fields based on the provided payload.
  */
 export async function updateMemoHandler(
   request: FastifyRequest<{
@@ -102,7 +102,7 @@ export async function updateMemoHandler(
 }
 
 /**
- * Delete a memo (soft delete)
+ * Soft-delete a memo so it no longer appears in listings.
  */
 export async function deleteMemoHandler(
   request: FastifyRequest<{ Params: { id: string } }>,
@@ -123,7 +123,7 @@ export async function deleteMemoHandler(
 }
 
 /**
- * Promote a memo to a task
+ * Promote an existing memo to a task.
  */
 export async function promoteMemoHandler(
   request: FastifyRequest<{
@@ -155,7 +155,7 @@ export async function promoteMemoHandler(
 }
 
 /**
- * Bookmark a memo
+ * Mark a memo as bookmarked.
  */
 export async function bookmarkMemoHandler(
   request: FastifyRequest<{ Params: { id: string } }>,
@@ -177,7 +177,7 @@ export async function bookmarkMemoHandler(
 }
 
 /**
- * Unbookmark a memo
+ * Remove the bookmarked flag from a memo.
  */
 export async function unbookmarkMemoHandler(
   request: FastifyRequest<{ Params: { id: string } }>,

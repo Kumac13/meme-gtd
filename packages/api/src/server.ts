@@ -18,6 +18,7 @@ export interface BuildAppOptions {
         level?: string;
         prettyPrint?: boolean;
       };
+  requestTimeoutMs?: number;
 }
 
 /**
@@ -26,7 +27,7 @@ export interface BuildAppOptions {
  * @returns Configured Fastify instance with ZodTypeProvider
  */
 export async function buildApp(options: BuildAppOptions): Promise<FastifyInstance> {
-  const { config, corsAllowedOrigins = ['*'], logger } = options;
+  const { config, corsAllowedOrigins = ['*'], logger, requestTimeoutMs } = options;
 
   let fastifyLogger: FastifyServerOptions['logger'];
   if (logger && typeof (logger as any).info === 'function') {
@@ -54,6 +55,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     logger: fastifyLogger,
     // Request body size limit: 10MB (sufficient for large memo/task bodies)
     bodyLimit: 10 * 1024 * 1024, // 10MB in bytes
+    requestTimeout: requestTimeoutMs ?? 30_000,
   }).withTypeProvider<ZodTypeProvider>();
 
   // Register Zod validator and serializer compilers

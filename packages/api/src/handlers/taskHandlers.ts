@@ -7,7 +7,7 @@ import type {
 } from '../schemas/taskSchemas.js';
 
 /**
- * Create a new task
+ * Create a new task from the supplied payload.
  */
 export async function createTaskHandler(
   request: FastifyRequest<{ Body: CreateTaskRequest }>,
@@ -30,7 +30,7 @@ export async function createTaskHandler(
 }
 
 /**
- * List all tasks with optional filters
+ * Return a filtered list of tasks.
  */
 export async function listTasksHandler(
   request: FastifyRequest<{
@@ -58,7 +58,7 @@ export async function listTasksHandler(
 }
 
 /**
- * Get a task by ID
+ * Retrieve a single task by numeric identifier.
  */
 export async function getTaskHandler(
   request: FastifyRequest<{ Params: { id: string } }>,
@@ -84,7 +84,7 @@ export async function getTaskHandler(
 }
 
 /**
- * Update a task
+ * Update task fields based on the provided payload.
  */
 export async function updateTaskHandler(
   request: FastifyRequest<{
@@ -112,7 +112,7 @@ export async function updateTaskHandler(
 }
 
 /**
- * Delete a task (soft delete)
+ * Soft-delete a task so it is excluded from active listings.
  */
 export async function deleteTaskHandler(
   request: FastifyRequest<{ Params: { id: string } }>,
@@ -133,7 +133,7 @@ export async function deleteTaskHandler(
 }
 
 /**
- * Close a task (set status to 'done')
+ * Transition a task to the `done` status.
  */
 export async function closeTaskHandler(
   request: FastifyRequest<{ Params: { id: string } }>,
@@ -155,7 +155,7 @@ export async function closeTaskHandler(
 }
 
 /**
- * Cancel a task (set status to 'canceled')
+ * Transition a task to the `canceled` status.
  */
 export async function cancelTaskHandler(
   request: FastifyRequest<{ Params: { id: string } }>,
@@ -177,7 +177,7 @@ export async function cancelTaskHandler(
 }
 
 /**
- * Reopen a task (set status to 'open')
+ * Transition a task back to the `open` status.
  */
 export async function reopenTaskHandler(
   request: FastifyRequest<{ Params: { id: string } }>,
@@ -199,7 +199,7 @@ export async function reopenTaskHandler(
 }
 
 /**
- * Bookmark a task
+ * Mark a task as bookmarked.
  */
 export async function bookmarkTaskHandler(
   request: FastifyRequest<{ Params: { id: string } }>,
@@ -221,7 +221,7 @@ export async function bookmarkTaskHandler(
 }
 
 /**
- * Unbookmark a task
+ * Remove the bookmarked flag from a task.
  */
 export async function unbookmarkTaskHandler(
   request: FastifyRequest<{ Params: { id: string } }>,

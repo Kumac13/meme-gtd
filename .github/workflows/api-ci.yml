@@ -1,0 +1,47 @@
+name: API CI
+
+on:
+  push:
+    paths:
+      - 'packages/api/**'
+      - 'specs/009-https-github-com/**'
+      - '.github/workflows/api-ci.yml'
+  pull_request:
+    paths:
+      - 'packages/api/**'
+      - 'specs/009-https-github-com/**'
+      - '.github/workflows/api-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run lint
+        run: pnpm --filter meme-gtd-api lint
+
+      - name: Run tests
+        run: pnpm --filter meme-gtd-api test
+
+      - name: Generate OpenAPI spec
+        run: pnpm --filter meme-gtd-api openapi:generate
+
+      - name: Validate OpenAPI spec
+        run: pnpm --filter meme-gtd-api openapi:validate

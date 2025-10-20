@@ -30,6 +30,17 @@ describe('Error Handling', () => {
     assert.ok(error.message.includes('Route'));
   });
 
+  it('should return canonical not found message for missing memo', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos/99999',
+    });
+
+    assert.strictEqual(response.statusCode, 404);
+    const error = JSON.parse(response.body);
+    assert.strictEqual(error.message, 'Memo #99999 not found');
+  });
+
   it('should return 404 for non-existent resource', async () => {
     const response = await app.inject({
       method: 'GET',

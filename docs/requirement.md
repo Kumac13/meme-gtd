@@ -198,6 +198,18 @@ stateDiagram-v2
 - Google カレンダー連携（`task` の期限をカレンダーに登録）。現状は非対応、将来要件として記載。
 - GUI クライアント（Web など）の提供は現行スコープ外。必要になれば別計画で検討。
 - 添付ファイル・画像管理。必要になった段階で別ストレージ戦略を検討。
+
+## 9. HTTP API サーバー概要
+
+- **目的**: CLI と同等の機能を REST API として公開し、自動化や外部クライアント（MCP ベースのエージェント等）から利用できるようにする。
+- **構成**: `packages/api` 配下に Fastify 5 系で実装。既存の `meme-gtd-core` / `meme-gtd-db` サービスを再利用し、CLI と同じビジネスロジックを共有する。
+- **エンドポイント分類**:
+  - Memos: `/api/memos`（CRUD、bookmark、promote、comments）
+  - Tasks: `/api/tasks`（CRUD、status 遷移、bookmark、comments）
+  - Labels: `/api/labels`, `/api/issues/{id}/labels`
+  - Links: `/api/links`, `/api/issues/{id}/links`
+- **ドキュメント**: `pnpm openapi:generate` で `packages/api/docs/api/openapi.yaml` を生成。Swagger UI は `/api-docs` で提供。`pnpm openapi:validate` で Redocly 検証を実施。
+- **運用想定**: 単一ユーザー／閉域ネットワーク（TailScale 等）上で稼働。アプリケーションレベルの認証は今後の拡張事項とする。
 - マルチユーザー・共有機能。単一ユーザーを前提とする。- MCP (Model Context Protocol) の採用検討。AI クライアントが CLI/API を安全に操作できるように、運用ポリシーと制御チャンネルを設計する（将来計画）。
 
 
