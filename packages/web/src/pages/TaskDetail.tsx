@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
-import ItemDetail from '../components/ItemDetail';
+import ItemDetail, { type Item } from '../components/ItemDetail';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 
@@ -96,6 +96,10 @@ export default function TaskDetail() {
     return <ErrorState error={error || 'Task not found'} title="Error loading task" />;
   }
 
+  const handleUpdate = (updatedItem: Item) => {
+    setTask(updatedItem as Task);
+  };
+
   return (
     <ItemDetail
       item={task}
@@ -103,6 +107,7 @@ export default function TaskDetail() {
       basePath="/tasks"
       onDelete={handleDelete}
       onBookmarkToggle={handleBookmarkToggle}
+      onUpdate={handleUpdate}
       deleting={deleting}
       bookmarking={bookmarking}
     />

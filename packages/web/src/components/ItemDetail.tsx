@@ -1,14 +1,17 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { MemosService } from '../api/services/MemosService';
+import { TasksService } from '../api/services/TasksService';
 import { formatDateTime } from '../utils/dates';
 import { MarkdownRenderer } from '../utils/markdown';
 import CommentSection from './CommentSection';
 
-interface Label {
+export interface Label {
   name: string;
   color: string;
 }
 
-interface BaseItem {
+export interface BaseItem {
   id: number;
   title: string | null;
   bodyMd: string;
@@ -18,12 +21,12 @@ interface BaseItem {
   updatedAt: string;
 }
 
-interface Task extends BaseItem {
+export interface Task extends BaseItem {
   status: string | null;
   scheduledOn: string | null;
 }
 
-type Item = BaseItem | Task;
+export type Item = BaseItem | Task;
 
 interface ItemDetailProps {
   item: Item;
@@ -31,6 +34,7 @@ interface ItemDetailProps {
   basePath: string;
   onDelete: () => Promise<void>;
   onBookmarkToggle: () => Promise<void>;
+  onUpdate: (updatedItem: Item) => void;
   deleting: boolean;
   bookmarking: boolean;
 }
@@ -45,9 +49,15 @@ export default function ItemDetail({
   basePath,
   onDelete,
   onBookmarkToggle,
+  onUpdate,
   deleting,
   bookmarking,
 }: ItemDetailProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(item.title || '');
+  const [editingBody, setEditingBody] = useState(item.bodyMd);
+  const [saving, setSaving] = useState(false);
+
   const handleDelete = async () => {
     const confirmDelete = window.confirm(
       `Are you sure you want to delete "${item.title || `${itemType === 'memo' ? 'Memo' : 'Task'} #${item.id}`}"? This action cannot be undone.`
@@ -56,6 +66,39 @@ export default function ItemDetail({
     if (!confirmDelete) return;
 
     await onDelete();
+  };
+
+  const handleStartEdit = () => {
+    setIsEditing(true);
+    setEditingTitle(item.title || '');
+    setEditingBody(item.bodyMd);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditingTitle(item.title || '');
+    setEditingBody(item.bodyMd);
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      setSaving(true);
+      const updatedItem =
+        itemType === 'memo'
+          ? await MemosService.updateMemo(String(item.id), {
+              bodyMd: editingBody,
+            })
+          : await TasksService.updateTask(String(item.id), {
+              title: editingTitle,
+              bodyMd: editingBody,
+            });
+      onUpdate(updatedItem as Item);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating item:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -109,12 +152,14 @@ export default function ItemDetail({
                 </svg>
               )}
             </button>
-            <Link
-              to={`${basePath}/${item.id}/edit`}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Edit
-            </Link>
+            {!isEditing && (
+              <button
+                onClick={handleStartEdit}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Edit
+              </button>
+            )}
             <button
               onClick={handleDelete}
               disabled={deleting}
@@ -141,7 +186,51 @@ export default function ItemDetail({
 
       {/* Body content */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        {item.bodyMd ? (
+        {isEditing ? (
+          <div>
+            {itemType === 'task' && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={editingTitle}
+                  onChange={(e) => setEditingTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Task title"
+                />
+              </div>
+            )}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {itemType === 'memo' ? 'Content' : 'Description'}
+              </label>
+              <textarea
+                value={editingBody}
+                onChange={(e) => setEditingBody(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[200px]"
+                placeholder={`${itemType === 'memo' ? 'Memo' : 'Task'} content in Markdown`}
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={handleCancelEdit}
+                disabled={saving}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={saving || !editingBody.trim()}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        ) : item.bodyMd ? (
           <div className="prose prose-sm max-w-none">
             <MarkdownRenderer content={item.bodyMd} />
           </div>

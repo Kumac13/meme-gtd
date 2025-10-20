@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
-import ItemDetail from '../components/ItemDetail';
+import ItemDetail, { type Item } from '../components/ItemDetail';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 
@@ -94,6 +94,10 @@ export default function MemoDetail() {
     return <ErrorState error={error || 'Memo not found'} title="Error loading memo" />;
   }
 
+  const handleUpdate = (updatedItem: Item) => {
+    setMemo(updatedItem as Memo);
+  };
+
   return (
     <ItemDetail
       item={memo}
@@ -101,6 +105,7 @@ export default function MemoDetail() {
       basePath="/memos"
       onDelete={handleDelete}
       onBookmarkToggle={handleBookmarkToggle}
+      onUpdate={handleUpdate}
       deleting={deleting}
       bookmarking={bookmarking}
     />
