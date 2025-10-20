@@ -20,6 +20,7 @@ paths:
                 bodyMd:
                   type: string
                   minLength: 1
+                  description: Memo content in Markdown format
               required:
                 - bodyMd
               additionalProperties: false
@@ -36,35 +37,46 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique memo ID
                   type:
                     type: string
                     enum:
                       - memo
+                    description: Issue type (always "memo")
                   title:
                     type: string
                     nullable: true
+                    description: Title (always null for memos)
                   bodyMd:
                     type: string
+                    description: Memo content in Markdown format
                   status:
                     type: string
                     nullable: true
+                    description: Status (always null for memos)
                   scheduledOn:
                     type: string
                     format: date-time
                     nullable: true
+                    description: Scheduled date (always null for memos)
                   meta:
                     type: object
                     additionalProperties: {}
+                    description: Metadata object
                   isBookmarked:
                     type: boolean
+                    description: Whether the memo is bookmarked
                   isDeleted:
                     type: boolean
+                    description: Whether the memo is soft-deleted
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
                     format: date-time
+                    description: Last update timestamp
                 required:
                   - id
                   - type
@@ -87,12 +99,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -110,6 +126,7 @@ paths:
           in: query
           name: bookmarked
           required: false
+          description: Filter by bookmark status
       responses:
         "200":
           description: Default Response
@@ -124,35 +141,46 @@ paths:
                       type: integer
                       exclusiveMinimum: true
                       minimum: 0
+                      description: Unique memo ID
                     type:
                       type: string
                       enum:
                         - memo
+                      description: Issue type (always "memo")
                     title:
                       type: string
                       nullable: true
+                      description: Title (always null for memos)
                     bodyMd:
                       type: string
+                      description: Memo content in Markdown format
                     status:
                       type: string
                       nullable: true
+                      description: Status (always null for memos)
                     scheduledOn:
                       type: string
                       format: date-time
                       nullable: true
+                      description: Scheduled date (always null for memos)
                     meta:
                       type: object
                       additionalProperties: {}
+                      description: Metadata object
                     isBookmarked:
                       type: boolean
+                      description: Whether the memo is bookmarked
                     isDeleted:
                       type: boolean
+                      description: Whether the memo is soft-deleted
                     createdAt:
                       type: string
                       format: date-time
+                      description: Creation timestamp
                     updatedAt:
                       type: string
                       format: date-time
+                      description: Last update timestamp
                   required:
                     - id
                     - type
@@ -178,6 +206,7 @@ paths:
           in: path
           name: id
           required: true
+          description: Memo ID
       responses:
         "200":
           description: Default Response
@@ -190,42 +219,55 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique memo ID
                   type:
                     type: string
                     enum:
                       - memo
+                    description: Issue type (always "memo")
                   title:
                     type: string
                     nullable: true
+                    description: Title (always null for memos)
                   bodyMd:
                     type: string
+                    description: Memo content in Markdown format
                   status:
                     type: string
                     nullable: true
+                    description: Status (always null for memos)
                   scheduledOn:
                     type: string
                     format: date-time
                     nullable: true
+                    description: Scheduled date (always null for memos)
                   meta:
                     type: object
                     additionalProperties: {}
+                    description: Metadata object
                   isBookmarked:
                     type: boolean
+                    description: Whether the memo is bookmarked
                   isDeleted:
                     type: boolean
+                    description: Whether the memo is soft-deleted
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
                     format: date-time
+                    description: Last update timestamp
                   labels:
                     type: array
                     items:
                       type: string
+                    description: Array of label names assigned to this memo
                   commentsCount:
                     type: integer
                     minimum: 0
+                    description: Number of comments on this memo
                 required:
                   - id
                   - type
@@ -248,12 +290,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -271,8 +317,10 @@ paths:
                 bodyMd:
                   type: string
                   minLength: 1
+                  description: Updated memo content in Markdown format
                 isBookmarked:
                   type: boolean
+                  description: Bookmark status
               additionalProperties: false
       parameters:
         - schema:
@@ -281,6 +329,7 @@ paths:
           in: path
           name: id
           required: true
+          description: Memo ID
       responses:
         "200":
           description: Default Response
@@ -293,35 +342,46 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique memo ID
                   type:
                     type: string
                     enum:
                       - memo
+                    description: Issue type (always "memo")
                   title:
                     type: string
                     nullable: true
+                    description: Title (always null for memos)
                   bodyMd:
                     type: string
+                    description: Memo content in Markdown format
                   status:
                     type: string
                     nullable: true
+                    description: Status (always null for memos)
                   scheduledOn:
                     type: string
                     format: date-time
                     nullable: true
+                    description: Scheduled date (always null for memos)
                   meta:
                     type: object
                     additionalProperties: {}
+                    description: Metadata object
                   isBookmarked:
                     type: boolean
+                    description: Whether the memo is bookmarked
                   isDeleted:
                     type: boolean
+                    description: Whether the memo is soft-deleted
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
                     format: date-time
+                    description: Last update timestamp
                 required:
                   - id
                   - type
@@ -344,12 +404,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -363,12 +427,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -384,6 +452,7 @@ paths:
           in: path
           name: id
           required: true
+          description: Memo ID
       responses:
         "204":
           description: Default Response
@@ -396,12 +465,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -420,6 +493,7 @@ paths:
                 title:
                   type: string
                   minLength: 1
+                  description: Title for the new task
                 status:
                   type: string
                   enum:
@@ -427,6 +501,7 @@ paths:
                     - next
                     - waiting
                     - scheduled
+                  description: Initial status for the task
               required:
                 - title
               additionalProperties: false
@@ -438,6 +513,7 @@ paths:
           in: path
           name: id
           required: true
+          description: Memo ID
       responses:
         "200":
           description: Promoted task
@@ -454,12 +530,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -476,6 +556,7 @@ paths:
           in: path
           name: id
           required: true
+          description: Memo ID
       responses:
         "200":
           description: Default Response
@@ -488,35 +569,46 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique memo ID
                   type:
                     type: string
                     enum:
                       - memo
+                    description: Issue type (always "memo")
                   title:
                     type: string
                     nullable: true
+                    description: Title (always null for memos)
                   bodyMd:
                     type: string
+                    description: Memo content in Markdown format
                   status:
                     type: string
                     nullable: true
+                    description: Status (always null for memos)
                   scheduledOn:
                     type: string
                     format: date-time
                     nullable: true
+                    description: Scheduled date (always null for memos)
                   meta:
                     type: object
                     additionalProperties: {}
+                    description: Metadata object
                   isBookmarked:
                     type: boolean
+                    description: Whether the memo is bookmarked
                   isDeleted:
                     type: boolean
+                    description: Whether the memo is soft-deleted
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
                     format: date-time
+                    description: Last update timestamp
                 required:
                   - id
                   - type
@@ -539,12 +631,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -561,6 +657,7 @@ paths:
           in: path
           name: id
           required: true
+          description: Memo ID
       responses:
         "200":
           description: Default Response
@@ -573,35 +670,46 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique memo ID
                   type:
                     type: string
                     enum:
                       - memo
+                    description: Issue type (always "memo")
                   title:
                     type: string
                     nullable: true
+                    description: Title (always null for memos)
                   bodyMd:
                     type: string
+                    description: Memo content in Markdown format
                   status:
                     type: string
                     nullable: true
+                    description: Status (always null for memos)
                   scheduledOn:
                     type: string
                     format: date-time
                     nullable: true
+                    description: Scheduled date (always null for memos)
                   meta:
                     type: object
                     additionalProperties: {}
+                    description: Metadata object
                   isBookmarked:
                     type: boolean
+                    description: Whether the memo is bookmarked
                   isDeleted:
                     type: boolean
+                    description: Whether the memo is soft-deleted
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
                     format: date-time
+                    description: Last update timestamp
                 required:
                   - id
                   - type
@@ -624,12 +732,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -646,12 +758,14 @@ paths:
           in: path
           name: memoId
           required: true
+          description: Memo ID (if commenting on a memo)
         - schema:
             type: string
             pattern: ^\d+$
           in: path
           name: taskId
           required: true
+          description: Task ID (if commenting on a task)
       responses:
         "200":
           description: Default Response
@@ -666,18 +780,23 @@ paths:
                       type: integer
                       exclusiveMinimum: true
                       minimum: 0
+                      description: Unique comment ID
                     issueId:
                       type: integer
                       exclusiveMinimum: true
                       minimum: 0
+                      description: ID of the parent issue (memo or task)
                     bodyMd:
                       type: string
+                      description: Comment content in Markdown format
                     createdAt:
                       type: string
                       format: date-time
+                      description: Creation timestamp
                     updatedAt:
                       type: string
                       format: date-time
+                      description: Last update timestamp
                   required:
                     - id
                     - issueId
@@ -698,6 +817,7 @@ paths:
                 bodyMd:
                   type: string
                   minLength: 1
+                  description: Comment content in Markdown format
               required:
                 - bodyMd
               additionalProperties: false
@@ -709,12 +829,14 @@ paths:
           in: path
           name: memoId
           required: true
+          description: Memo ID (if commenting on a memo)
         - schema:
             type: string
             pattern: ^\d+$
           in: path
           name: taskId
           required: true
+          description: Task ID (if commenting on a task)
       responses:
         "201":
           description: Default Response
@@ -727,18 +849,23 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique comment ID
                   issueId:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: ID of the parent issue (memo or task)
                   bodyMd:
                     type: string
+                    description: Comment content in Markdown format
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
                     format: date-time
+                    description: Last update timestamp
                 required:
                   - id
                   - issueId
@@ -755,12 +882,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -774,12 +905,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -798,6 +933,7 @@ paths:
                 bodyMd:
                   type: string
                   minLength: 1
+                  description: Updated comment content in Markdown format
               required:
                 - bodyMd
               additionalProperties: false
@@ -809,18 +945,21 @@ paths:
           in: path
           name: memoId
           required: true
+          description: Memo ID (if comment is on a memo)
         - schema:
             type: string
             pattern: ^\d+$
           in: path
           name: taskId
           required: true
+          description: Task ID (if comment is on a task)
         - schema:
             type: string
             pattern: ^\d+$
           in: path
           name: commentId
           required: true
+          description: Comment ID
       responses:
         "200":
           description: Default Response
@@ -833,18 +972,23 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique comment ID
                   issueId:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: ID of the parent issue (memo or task)
                   bodyMd:
                     type: string
+                    description: Comment content in Markdown format
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
                     format: date-time
+                    description: Last update timestamp
                 required:
                   - id
                   - issueId
@@ -861,12 +1005,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -880,12 +1028,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -901,18 +1053,21 @@ paths:
           in: path
           name: memoId
           required: true
+          description: Memo ID (if comment is on a memo)
         - schema:
             type: string
             pattern: ^\d+$
           in: path
           name: taskId
           required: true
+          description: Task ID (if comment is on a task)
         - schema:
             type: string
             pattern: ^\d+$
           in: path
           name: commentId
           required: true
+          description: Comment ID
       responses:
         "204":
           description: Default Response
@@ -925,12 +1080,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -949,8 +1108,10 @@ paths:
                 title:
                   type: string
                   minLength: 1
+                  description: Task title
                 bodyMd:
                   type: string
+                  description: Task description in Markdown format
                 status:
                   type: string
                   enum:
@@ -960,9 +1121,11 @@ paths:
                     - scheduled
                     - done
                     - canceled
+                  description: Task status (defaults to "open")
                 scheduledOn:
                   type: string
                   format: date-time
+                  description: Scheduled date/time for the task
               required:
                 - title
               additionalProperties: false
@@ -979,14 +1142,18 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique task ID
                   type:
                     type: string
                     enum:
                       - task
+                    description: Issue type (always "task")
                   title:
                     type: string
+                    description: Task title
                   bodyMd:
                     type: string
+                    description: Task description in Markdown format
                   status:
                     type: string
                     enum:
@@ -996,23 +1163,30 @@ paths:
                       - scheduled
                       - done
                       - canceled
+                    description: Current task status
                   scheduledOn:
                     type: string
                     format: date-time
                     nullable: true
+                    description: Scheduled date/time for the task (null if not scheduled)
                   meta:
                     type: object
                     additionalProperties: {}
+                    description: Metadata object
                   isBookmarked:
                     type: boolean
+                    description: Whether the task is bookmarked
                   isDeleted:
                     type: boolean
+                    description: Whether the task is soft-deleted
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
                     format: date-time
+                    description: Last update timestamp
                 required:
                   - id
                   - type
@@ -1035,12 +1209,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -1062,6 +1240,7 @@ paths:
           in: query
           name: status
           required: false
+          description: Filter by task status
         - schema:
             type: string
             enum:
@@ -1070,6 +1249,7 @@ paths:
           in: query
           name: bookmarked
           required: false
+          description: Filter by bookmark status
       responses:
         "200":
           description: Default Response
@@ -1084,14 +1264,18 @@ paths:
                       type: integer
                       exclusiveMinimum: true
                       minimum: 0
+                      description: Unique task ID
                     type:
                       type: string
                       enum:
                         - task
+                      description: Issue type (always "task")
                     title:
                       type: string
+                      description: Task title
                     bodyMd:
                       type: string
+                      description: Task description in Markdown format
                     status:
                       type: string
                       enum:
@@ -1101,23 +1285,30 @@ paths:
                         - scheduled
                         - done
                         - canceled
+                      description: Current task status
                     scheduledOn:
                       type: string
                       format: date-time
                       nullable: true
+                      description: Scheduled date/time for the task (null if not scheduled)
                     meta:
                       type: object
                       additionalProperties: {}
+                      description: Metadata object
                     isBookmarked:
                       type: boolean
+                      description: Whether the task is bookmarked
                     isDeleted:
                       type: boolean
+                      description: Whether the task is soft-deleted
                     createdAt:
                       type: string
                       format: date-time
+                      description: Creation timestamp
                     updatedAt:
                       type: string
                       format: date-time
+                      description: Last update timestamp
                   required:
                     - id
                     - type
@@ -1143,6 +1334,7 @@ paths:
           in: path
           name: id
           required: true
+          description: Task ID
       responses:
         "200":
           description: Default Response
@@ -1155,14 +1347,18 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique task ID
                   type:
                     type: string
                     enum:
                       - task
+                    description: Issue type (always "task")
                   title:
                     type: string
+                    description: Task title
                   bodyMd:
                     type: string
+                    description: Task description in Markdown format
                   status:
                     type: string
                     enum:
@@ -1172,30 +1368,39 @@ paths:
                       - scheduled
                       - done
                       - canceled
+                    description: Current task status
                   scheduledOn:
                     type: string
                     format: date-time
                     nullable: true
+                    description: Scheduled date/time for the task (null if not scheduled)
                   meta:
                     type: object
                     additionalProperties: {}
+                    description: Metadata object
                   isBookmarked:
                     type: boolean
+                    description: Whether the task is bookmarked
                   isDeleted:
                     type: boolean
+                    description: Whether the task is soft-deleted
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
                     format: date-time
+                    description: Last update timestamp
                   labels:
                     type: array
                     items:
                       type: string
+                    description: Array of label names assigned to this task
                   commentsCount:
                     type: integer
                     minimum: 0
+                    description: Number of comments on this task
                 required:
                   - id
                   - type
@@ -1218,12 +1423,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -1241,8 +1450,10 @@ paths:
                 title:
                   type: string
                   minLength: 1
+                  description: Updated task title
                 bodyMd:
                   type: string
+                  description: Updated task description in Markdown format
                 status:
                   type: string
                   enum:
@@ -1252,10 +1463,12 @@ paths:
                     - scheduled
                     - done
                     - canceled
+                  description: Updated task status
                 scheduledOn:
                   type: string
                   format: date-time
                   nullable: true
+                  description: Updated scheduled date/time (null to clear)
               additionalProperties: false
       parameters:
         - schema:
@@ -1264,6 +1477,7 @@ paths:
           in: path
           name: id
           required: true
+          description: Task ID
       responses:
         "200":
           description: Default Response
@@ -1276,14 +1490,18 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique task ID
                   type:
                     type: string
                     enum:
                       - task
+                    description: Issue type (always "task")
                   title:
                     type: string
+                    description: Task title
                   bodyMd:
                     type: string
+                    description: Task description in Markdown format
                   status:
                     type: string
                     enum:
@@ -1293,23 +1511,30 @@ paths:
                       - scheduled
                       - done
                       - canceled
+                    description: Current task status
                   scheduledOn:
                     type: string
                     format: date-time
                     nullable: true
+                    description: Scheduled date/time for the task (null if not scheduled)
                   meta:
                     type: object
                     additionalProperties: {}
+                    description: Metadata object
                   isBookmarked:
                     type: boolean
+                    description: Whether the task is bookmarked
                   isDeleted:
                     type: boolean
+                    description: Whether the task is soft-deleted
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
                     format: date-time
+                    description: Last update timestamp
                 required:
                   - id
                   - type
@@ -1332,12 +1557,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -1351,12 +1580,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -1372,6 +1605,7 @@ paths:
           in: path
           name: id
           required: true
+          description: Task ID
       responses:
         "204":
           description: Default Response
@@ -1384,12 +1618,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -1406,6 +1644,7 @@ paths:
           in: path
           name: id
           required: true
+          description: Task ID
       responses:
         "200":
           description: Default Response
@@ -1418,14 +1657,18 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique task ID
                   type:
                     type: string
                     enum:
                       - task
+                    description: Issue type (always "task")
                   title:
                     type: string
+                    description: Task title
                   bodyMd:
                     type: string
+                    description: Task description in Markdown format
                   status:
                     type: string
                     enum:
@@ -1435,23 +1678,30 @@ paths:
                       - scheduled
                       - done
                       - canceled
+                    description: Current task status
                   scheduledOn:
                     type: string
                     format: date-time
                     nullable: true
+                    description: Scheduled date/time for the task (null if not scheduled)
                   meta:
                     type: object
                     additionalProperties: {}
+                    description: Metadata object
                   isBookmarked:
                     type: boolean
+                    description: Whether the task is bookmarked
                   isDeleted:
                     type: boolean
+                    description: Whether the task is soft-deleted
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
                     format: date-time
+                    description: Last update timestamp
                 required:
                   - id
                   - type
@@ -1474,12 +1724,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -1496,6 +1750,7 @@ paths:
           in: path
           name: id
           required: true
+          description: Task ID
       responses:
         "200":
           description: Default Response
@@ -1508,14 +1763,18 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique task ID
                   type:
                     type: string
                     enum:
                       - task
+                    description: Issue type (always "task")
                   title:
                     type: string
+                    description: Task title
                   bodyMd:
                     type: string
+                    description: Task description in Markdown format
                   status:
                     type: string
                     enum:
@@ -1525,23 +1784,30 @@ paths:
                       - scheduled
                       - done
                       - canceled
+                    description: Current task status
                   scheduledOn:
                     type: string
                     format: date-time
                     nullable: true
+                    description: Scheduled date/time for the task (null if not scheduled)
                   meta:
                     type: object
                     additionalProperties: {}
+                    description: Metadata object
                   isBookmarked:
                     type: boolean
+                    description: Whether the task is bookmarked
                   isDeleted:
                     type: boolean
+                    description: Whether the task is soft-deleted
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
                     format: date-time
+                    description: Last update timestamp
                 required:
                   - id
                   - type
@@ -1564,12 +1830,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -1586,6 +1856,7 @@ paths:
           in: path
           name: id
           required: true
+          description: Task ID
       responses:
         "200":
           description: Default Response
@@ -1598,14 +1869,18 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique task ID
                   type:
                     type: string
                     enum:
                       - task
+                    description: Issue type (always "task")
                   title:
                     type: string
+                    description: Task title
                   bodyMd:
                     type: string
+                    description: Task description in Markdown format
                   status:
                     type: string
                     enum:
@@ -1615,23 +1890,30 @@ paths:
                       - scheduled
                       - done
                       - canceled
+                    description: Current task status
                   scheduledOn:
                     type: string
                     format: date-time
                     nullable: true
+                    description: Scheduled date/time for the task (null if not scheduled)
                   meta:
                     type: object
                     additionalProperties: {}
+                    description: Metadata object
                   isBookmarked:
                     type: boolean
+                    description: Whether the task is bookmarked
                   isDeleted:
                     type: boolean
+                    description: Whether the task is soft-deleted
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
                     format: date-time
+                    description: Last update timestamp
                 required:
                   - id
                   - type
@@ -1654,12 +1936,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -1676,6 +1962,7 @@ paths:
           in: path
           name: id
           required: true
+          description: Task ID
       responses:
         "200":
           description: Default Response
@@ -1688,14 +1975,18 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique task ID
                   type:
                     type: string
                     enum:
                       - task
+                    description: Issue type (always "task")
                   title:
                     type: string
+                    description: Task title
                   bodyMd:
                     type: string
+                    description: Task description in Markdown format
                   status:
                     type: string
                     enum:
@@ -1705,23 +1996,30 @@ paths:
                       - scheduled
                       - done
                       - canceled
+                    description: Current task status
                   scheduledOn:
                     type: string
                     format: date-time
                     nullable: true
+                    description: Scheduled date/time for the task (null if not scheduled)
                   meta:
                     type: object
                     additionalProperties: {}
+                    description: Metadata object
                   isBookmarked:
                     type: boolean
+                    description: Whether the task is bookmarked
                   isDeleted:
                     type: boolean
+                    description: Whether the task is soft-deleted
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
                     format: date-time
+                    description: Last update timestamp
                 required:
                   - id
                   - type
@@ -1744,12 +2042,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -1766,6 +2068,7 @@ paths:
           in: path
           name: id
           required: true
+          description: Task ID
       responses:
         "200":
           description: Default Response
@@ -1778,14 +2081,18 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique task ID
                   type:
                     type: string
                     enum:
                       - task
+                    description: Issue type (always "task")
                   title:
                     type: string
+                    description: Task title
                   bodyMd:
                     type: string
+                    description: Task description in Markdown format
                   status:
                     type: string
                     enum:
@@ -1795,23 +2102,30 @@ paths:
                       - scheduled
                       - done
                       - canceled
+                    description: Current task status
                   scheduledOn:
                     type: string
                     format: date-time
                     nullable: true
+                    description: Scheduled date/time for the task (null if not scheduled)
                   meta:
                     type: object
                     additionalProperties: {}
+                    description: Metadata object
                   isBookmarked:
                     type: boolean
+                    description: Whether the task is bookmarked
                   isDeleted:
                     type: boolean
+                    description: Whether the task is soft-deleted
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
                     format: date-time
+                    description: Last update timestamp
                 required:
                   - id
                   - type
@@ -1834,12 +2148,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -1856,12 +2174,14 @@ paths:
           in: path
           name: memoId
           required: true
+          description: Memo ID (if commenting on a memo)
         - schema:
             type: string
             pattern: ^\d+$
           in: path
           name: taskId
           required: true
+          description: Task ID (if commenting on a task)
       responses:
         "200":
           description: Default Response
@@ -1876,18 +2196,23 @@ paths:
                       type: integer
                       exclusiveMinimum: true
                       minimum: 0
+                      description: Unique comment ID
                     issueId:
                       type: integer
                       exclusiveMinimum: true
                       minimum: 0
+                      description: ID of the parent issue (memo or task)
                     bodyMd:
                       type: string
+                      description: Comment content in Markdown format
                     createdAt:
                       type: string
                       format: date-time
+                      description: Creation timestamp
                     updatedAt:
                       type: string
                       format: date-time
+                      description: Last update timestamp
                   required:
                     - id
                     - issueId
@@ -1908,6 +2233,7 @@ paths:
                 bodyMd:
                   type: string
                   minLength: 1
+                  description: Comment content in Markdown format
               required:
                 - bodyMd
               additionalProperties: false
@@ -1919,12 +2245,14 @@ paths:
           in: path
           name: memoId
           required: true
+          description: Memo ID (if commenting on a memo)
         - schema:
             type: string
             pattern: ^\d+$
           in: path
           name: taskId
           required: true
+          description: Task ID (if commenting on a task)
       responses:
         "201":
           description: Default Response
@@ -1937,18 +2265,23 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique comment ID
                   issueId:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: ID of the parent issue (memo or task)
                   bodyMd:
                     type: string
+                    description: Comment content in Markdown format
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
                     format: date-time
+                    description: Last update timestamp
                 required:
                   - id
                   - issueId
@@ -1965,12 +2298,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -1984,12 +2321,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2008,6 +2349,7 @@ paths:
                 bodyMd:
                   type: string
                   minLength: 1
+                  description: Updated comment content in Markdown format
               required:
                 - bodyMd
               additionalProperties: false
@@ -2019,18 +2361,21 @@ paths:
           in: path
           name: memoId
           required: true
+          description: Memo ID (if comment is on a memo)
         - schema:
             type: string
             pattern: ^\d+$
           in: path
           name: taskId
           required: true
+          description: Task ID (if comment is on a task)
         - schema:
             type: string
             pattern: ^\d+$
           in: path
           name: commentId
           required: true
+          description: Comment ID
       responses:
         "200":
           description: Default Response
@@ -2043,18 +2388,23 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique comment ID
                   issueId:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: ID of the parent issue (memo or task)
                   bodyMd:
                     type: string
+                    description: Comment content in Markdown format
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
                     format: date-time
+                    description: Last update timestamp
                 required:
                   - id
                   - issueId
@@ -2071,12 +2421,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2090,12 +2444,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2111,18 +2469,21 @@ paths:
           in: path
           name: memoId
           required: true
+          description: Memo ID (if comment is on a memo)
         - schema:
             type: string
             pattern: ^\d+$
           in: path
           name: taskId
           required: true
+          description: Task ID (if comment is on a task)
         - schema:
             type: string
             pattern: ^\d+$
           in: path
           name: commentId
           required: true
+          description: Comment ID
       responses:
         "204":
           description: Default Response
@@ -2135,12 +2496,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2164,14 +2529,18 @@ paths:
                       type: integer
                       exclusiveMinimum: true
                       minimum: 0
+                      description: Unique label ID
                     name:
                       type: string
+                      description: Label name
                     description:
                       type: string
                       nullable: true
+                      description: Label description (null if not set)
                     createdAt:
                       type: string
                       format: date-time
+                      description: Creation timestamp
                   required:
                     - id
                     - name
@@ -2187,12 +2556,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2210,8 +2583,10 @@ paths:
                 name:
                   type: string
                   minLength: 1
+                  description: Label name (unique identifier)
                 description:
                   type: string
+                  description: Optional label description
               required:
                 - name
               additionalProperties: false
@@ -2228,14 +2603,18 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique label ID
                   name:
                     type: string
+                    description: Label name
                   description:
                     type: string
                     nullable: true
+                    description: Label description (null if not set)
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                 required:
                   - id
                   - name
@@ -2251,12 +2630,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2270,12 +2653,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2289,12 +2676,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2314,6 +2705,7 @@ paths:
                   type: integer
                   exclusiveMinimum: true
                   minimum: 0
+                  description: ID of the label to assign
               required:
                 - labelId
               additionalProperties: false
@@ -2325,6 +2717,7 @@ paths:
           in: path
           name: issueId
           required: true
+          description: Issue ID (memo or task)
       responses:
         "200":
           description: Default Response
@@ -2347,12 +2740,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2366,12 +2763,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2385,12 +2786,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2407,6 +2812,7 @@ paths:
           in: path
           name: name
           required: true
+          description: Label name
       responses:
         "204":
           description: Default Response
@@ -2422,12 +2828,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2441,12 +2851,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2466,10 +2880,12 @@ paths:
                   type: integer
                   exclusiveMinimum: true
                   minimum: 0
+                  description: Source issue ID
                 targetIssueId:
                   type: integer
                   exclusiveMinimum: true
                   minimum: 0
+                  description: Target issue ID
                 linkType:
                   type: string
                   enum:
@@ -2477,6 +2893,7 @@ paths:
                     - child
                     - relates
                     - derived_from
+                  description: Type of relationship between issues
               required:
                 - sourceIssueId
                 - targetIssueId
@@ -2495,14 +2912,17 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Unique link ID
                   sourceIssueId:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Source issue ID
                   targetIssueId:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
+                    description: Target issue ID
                   linkType:
                     type: string
                     enum:
@@ -2510,9 +2930,11 @@ paths:
                       - child
                       - relates
                       - derived_from
+                    description: Type of relationship
                   createdAt:
                     type: string
                     format: date-time
+                    description: Creation timestamp
                 required:
                   - id
                   - sourceIssueId
@@ -2529,12 +2951,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2548,12 +2974,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2567,12 +2997,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2589,6 +3023,7 @@ paths:
           in: path
           name: id
           required: true
+          description: Issue ID
       responses:
         "200":
           description: Default Response
@@ -2603,14 +3038,17 @@ paths:
                       type: integer
                       exclusiveMinimum: true
                       minimum: 0
+                      description: Unique link ID
                     sourceIssueId:
                       type: integer
                       exclusiveMinimum: true
                       minimum: 0
+                      description: Source issue ID
                     targetIssueId:
                       type: integer
                       exclusiveMinimum: true
                       minimum: 0
+                      description: Target issue ID
                     linkType:
                       type: string
                       enum:
@@ -2618,14 +3056,17 @@ paths:
                         - child
                         - relates
                         - derived_from
+                      description: Type of relationship
                     createdAt:
                       type: string
                       format: date-time
+                      description: Creation timestamp
                     direction:
                       type: string
                       enum:
                         - outgoing
                         - incoming
+                      description: Link direction relative to the queried issue
                   required:
                     - id
                     - sourceIssueId
@@ -2643,12 +3084,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2665,6 +3110,7 @@ paths:
           in: path
           name: id
           required: true
+          description: Link ID
       responses:
         "204":
           description: Default Response
@@ -2680,12 +3126,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
@@ -2699,12 +3149,16 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
                   code:
                     type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
                   stack:
                     type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
                   - message
