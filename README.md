@@ -98,3 +98,6 @@ pnpm test
 | `mgtd label create` | 新規ラベル作成（`--description`, `--json` など） |
 | `mgtd label set` | issueにラベル割り当て（memo/task共通、`<issue-id> <label-id>`） |
 | `mgtd label delete` | ラベル削除（CASCADE、`--json` など） |
+| `mgtd link add` | issue間のリンク作成（`--type`, `--source`, `--target`, `--json` など） |
+| `mgtd link list` | 指定issueのリンク一覧表示（`--type`, `--json` など） |
+| `mgtd link remove` | リンク削除（確認プロンプト、`--yes`, `--json` など） |

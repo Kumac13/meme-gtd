@@ -326,10 +326,72 @@ sequenceDiagram
 | ---------- | ---- |
 | `--json` | JSON形式で出力。 |
 
-#### project / link / context
+#### link
+
+タスク・メモ間の関係性を管理するコマンド。4つのリンクタイプをサポート。
+
+##### link add
+
+* 目的: 2つのissue（task/memo）間にリンクを作成する。
+* 入力: `--type`, `--source <id>`, `--target <id>`（すべて必須）。
+* リンクタイプ:
+  - `parent`: 親子タスク階層（source=子, target=親）
+  - `child`: 親子タスク階層の逆方向（source=親, target=子）
+  - `relates`: 一般的な関連性（双方向）
+  - `derived_from`: タスクがメモから派生したことを示す（`memo promote`で自動作成）
+* 出力: 既定は `Link created: #<id> (<source> --<type>--> <target>)`。`--json` では作成されたLinkオブジェクト。
+* バリデーション:
+  - 自己参照エラー: `Cannot link issue to itself (ID: <id>)`
+  - Issue不存在エラー: `Issue #<id> not found`
+  - 重複リンクエラー: `Link already exists (source: <s>, target: <t>, type: <type>)`
+* オプション:
+
+| オプション | 説明 |
+| ---------- | ---- |
+| `--type`, `-t TYPE` | リンクタイプ（parent/child/relates/derived_from）。必須。 |
+| `--source`, `-s ID` | ソースissue ID。必須。 |
+| `--target`, `-T ID` | ターゲットissue ID。必須。 |
+| `--json`, `-j` | JSON形式で出力。 |
+
+##### link list
+
+* 目的: 指定issueに関連するすべてのリンクを一覧表示する。
+* 入力: `<issue-id>`（必須）。
+* 挙動: sourceまたはtargetとして関連するリンクを双方向検索し、方向（outgoing/incoming）を付与して表示。
+* 出力: 既定は方向矢印付き表形式（`#<id>  #<source> --<type>--> #<target>`）。`--json` では `direction`フィールド付きLink配列。
+* オプション:
+
+| オプション | 説明 |
+| ---------- | ---- |
+| `--type`, `-t TYPE` | 指定タイプのリンクのみ表示（parent/child/relates/derived_from）。 |
+| `--json`, `-j` | JSON形式で出力（`direction: "outgoing"|"incoming"`フィールド付き）。 |
+
+* リンクなし時の出力: `No links found for issue #<id>`
+
+##### link remove
+
+* 目的: リンクをIDで削除する。
+* 入力: `<link-id>`（必須）。
+* 既定挙動: 対話的な確認プロンプトを表示。
+  - リンクIDと内容プレビュー（`#<source> --<type>--> #<target>`）を表示
+  - `Delete link #<id> (<preview>)? (y/N):` と入力を求める
+  - `y` / `yes` で削除実行、`n` / `no` / 空入力でキャンセル（大文字小文字を区別しない）
+  - 無効な入力時はエラーメッセージを表示してキャンセル
+  - Ctrl+C で優雅にキャンセル（終了コード130）
+* 出力: 既定は `Link #<id> deleted` または `Cancelled`。`--json` では `{deleted: true/false, linkId: ..., reason?: ...}`。
+* エラー: Link不存在時は `Link #<id> not found`。
+* オプション:
+
+| オプション | 説明 |
+| ---------- | ---- |
+| `--yes`, `-y` | 確認プロンプトをスキップして即座に削除（自動化・スクリプト用）。 |
+| `--json`, `-j` | JSON形式で出力。`--yes`フラグ必須。 |
+
+* 非TTY環境（パイプ、リダイレクト）: `--yes` フラグが必須。フラグなしの場合はエラーメッセージを表示。
+
+#### project / context
 
 * `project create`: GitHub Projects 互換（名前、`--view board|table`、`--json`）。`project add` で issue を列に配置（`--column` 指定）。`project move` は既存アイテムの並び替え。
-* `link add`: `--type {parent,child,relates,derived_from}`、`--target ID`。`memo promote` 以外でも任意リンクを許可。
 * `context set`: `context set --db PATH` でローカル SQLite のファイルパスを登録。設定後は `context show` で確認でき、`--json` で現在値を返す。
 
 ---

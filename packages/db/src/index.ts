@@ -84,3 +84,14 @@ export {
   attachLabelToIssue,
   deleteLabel
 } from './labelRepository.js';
+
+// Link repository exports
+export {
+  createLink,
+  getLinkById,
+  listLinks,
+  deleteLink,
+  findLink,
+  type CreateLinkInput,
+  type ListLinksFilters
+} from './linkRepository.js';
