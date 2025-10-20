@@ -56,6 +56,14 @@ export const loadConfig = async (
 
   const raw = await fs.readFile(configPath, 'utf-8');
   const parsed = configSchema.parse(JSON.parse(raw));
+
+  // Resolve relative dbPath to absolute path
+  // If dbPath is relative, resolve it from the current working directory
+  // This ensures consistent behavior regardless of where the process is started
+  if (!path.isAbsolute(parsed.dbPath)) {
+    parsed.dbPath = path.resolve(process.cwd(), parsed.dbPath);
+  }
+
   return { config: parsed, path: configPath };
 };
 
