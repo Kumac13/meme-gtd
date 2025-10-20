@@ -150,9 +150,9 @@ export default function ItemDetail({
       </div>
 
       {/* Body content */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
         <div className="flex items-center justify-between pb-2 mb-3 border-b border-gray-200">
-          <div className="text-sm text-gray-600">
+          <div className="text-xs text-gray-500">
             {formatRelativeTime(item.updatedAt)}
             {item.updatedAt !== item.createdAt && <span className="ml-2 text-gray-500">(edited)</span>}
           </div>
