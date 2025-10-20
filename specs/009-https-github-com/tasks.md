@@ -143,25 +143,25 @@
 
 ### Schemas for User Story 3
 
-- [ ] T040 [P] [US3] Define Label schemas in `packages/api/src/schemas/labelSchemas.ts` (CreateLabelRequestSchema, LabelSchema, AssignLabelRequestSchema)
-- [ ] T041 [P] [US3] Define Link schemas in `packages/api/src/schemas/linkSchemas.ts` (CreateLinkRequestSchema, LinkSchema, LinkWithDirectionSchema, LinkTypeSchema)
+- [x] T040 [P] [US3] Define Label schemas in `packages/api/src/schemas/labelSchemas.ts` (CreateLabelRequestSchema, LabelSchema, AssignLabelRequestSchema)
+- [x] T041 [P] [US3] Define Link schemas in `packages/api/src/schemas/linkSchemas.ts` (CreateLinkRequestSchema, LinkSchema, LinkWithDirectionSchema, LinkTypeSchema)
 
 ### Handlers for User Story 3
 
-- [ ] T042 [US3] Implement label handlers in `packages/api/src/handlers/labelHandlers.ts` (listLabelsHandler, createLabelHandler, deleteLabelHandler, assignLabelHandler) - depends on T040
-- [ ] T043 [P] [US3] Implement link handlers in `packages/api/src/handlers/linkHandlers.ts` (createLinkHandler, deleteLinkHandler, listLinksHandler) - depends on T041
+- [x] T042 [US3] Implement label handlers in `packages/api/src/handlers/labelHandlers.ts` (listLabelsHandler, createLabelHandler, deleteLabelHandler, assignLabelHandler) - depends on T040
+- [x] T043 [P] [US3] Implement link handlers in `packages/api/src/handlers/linkHandlers.ts` (createLinkHandler, deleteLinkHandler, listLinksHandler) - depends on T041
 
 ### Routes for User Story 3
 
-- [ ] T044 [US3] Implement label routes in `packages/api/src/routes/labels.ts` (GET/POST /api/labels, DELETE /api/labels/:name, POST /api/issues/:issueId/labels) - depends on T042
-- [ ] T045 [P] [US3] Implement link routes in `packages/api/src/routes/links.ts` (POST /api/links, DELETE /api/links/:id, GET /api/issues/:id/links) - depends on T043
-- [ ] T046 [US3] Register label routes in `server.ts` (app.register(labelRoutes)) - depends on T044
-- [ ] T047 [US3] Register link routes in `server.ts` (app.register(linkRoutes)) - depends on T045
+- [x] T044 [US3] Implement label routes in `packages/api/src/routes/labels.ts` (GET/POST /api/labels, DELETE /api/labels/:name, POST /api/issues/:issueId/labels) - depends on T042
+- [x] T045 [P] [US3] Implement link routes in `packages/api/src/routes/links.ts` (POST /api/links, DELETE /api/links/:id, GET /api/issues/:id/links) - depends on T043
+- [x] T046 [US3] Register label routes in `server.ts` (app.register(labelRoutes)) - depends on T044
+- [x] T047 [US3] Register link routes in `server.ts` (app.register(linkRoutes)) - depends on T045
 
 ### Integration Tests for User Story 3
 
-- [ ] T048 [US3] Implement label integration tests in `packages/api/test/integration/labels.test.ts` (GET /api/labels, POST /api/labels with UNIQUE constraint test, DELETE /api/labels/:name, POST /api/issues/:id/labels idempotent test) - depends on T046
-- [ ] T049 [P] [US3] Implement link integration tests in `packages/api/test/integration/links.test.ts` (POST /api/links, DELETE /api/links/:id, GET /api/issues/:id/links, self-reference error test, duplicate link error test) - depends on T047
+- [x] T048 [US3] Implement label integration tests in `packages/api/test/integration/labels.test.ts` (GET /api/labels, POST /api/labels with UNIQUE constraint test, DELETE /api/labels/:name, POST /api/issues/:id/labels idempotent test) - depends on T046
+- [x] T049 [P] [US3] Implement link integration tests in `packages/api/test/integration/links.test.ts` (POST /api/links, DELETE /api/links/:id, GET /api/issues/:id/links, self-reference error test, duplicate link error test) - depends on T047
 
 **Checkpoint**: User Story 3 complete - labels and links fully manageable via HTTP API
 

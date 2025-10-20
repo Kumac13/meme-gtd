@@ -222,7 +222,7 @@ N/A - No violations. This implementation follows monorepo patterns and reuses ex
 
 ---
 
-### Phase 5: User Story 3 - Label/Link Management (T040-T049) ⏳ PENDING
+### Phase 5: User Story 3 - Label/Link Management (T040-T049) ✅ COMPLETE
 **Goal**: Implement label and link APIs
 
 **Approach**:
@@ -233,10 +233,11 @@ N/A - No violations. This implementation follows monorepo patterns and reuses ex
 - Write integration tests for both label and link operations
 
 **Deliverables**:
-- Label endpoints: GET/POST/DELETE /api/labels, POST /api/issues/:id/labels
-- Link endpoints: POST/DELETE /api/links, GET /api/issues/:id/links
+- Label endpoints: GET/POST/DELETE /api/labels, POST /api/issues/:id/labels (4 endpoints)
+- Link endpoints: POST/DELETE /api/links, GET /api/issues/:id/links (3 endpoints)
+- 17 integration tests (7 label tests + 10 link tests)
 
-**Checkpoint**: Labels enforce UNIQUE constraint, links prevent self-references, bidirectional creation works
+**Checkpoint**: ✅ Labels enforce UNIQUE constraint (409 CONFLICT), links prevent self-references, direction field added, all tests passing (64/64)
 
 ---
 
@@ -301,12 +302,14 @@ N/A - No violations. This implementation follows monorepo patterns and reuses ex
 
 ## Current Status
 
-**Completed**: Phases 1-4 (39/87 tasks = 45%)
+**Completed**: Phases 1-5 (49/87 tasks = 56%)
 - ✅ Phase 1: Setup
 - ✅ Phase 2: Foundational infrastructure
-- ✅ Phase 3: Memo API (12 endpoints)
-- ✅ Phase 4: Task API (14 endpoints)
+- ✅ Phase 3: Memo API (12 endpoints, 23 tests)
+- ✅ Phase 4: Task API (14 endpoints, 25 tests)
+- ✅ Phase 5: Label/Link API (7 endpoints, 17 tests)
 
-**Next**: Phase 5 (Label/Link Management)
+**Total Endpoints**: 33 endpoints implemented
+**Test Status**: 64/64 integration tests passing (100%)
 
-**Test Status**: 48/48 integration tests passing
+**Next**: Phase 6 (Config/Deploy) or Phase 7 (OpenAPI Enhancement)
