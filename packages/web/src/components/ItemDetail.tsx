@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { formatDateTime } from '../utils/dates';
 import { MarkdownRenderer } from '../utils/markdown';
+import CommentSection from './CommentSection';
 
 interface Label {
   name: string;
@@ -148,6 +149,9 @@ export default function ItemDetail({
           <p className="text-gray-400 italic">No {itemType === 'memo' ? 'content' : 'description'}</p>
         )}
       </div>
+
+      {/* Comments section */}
+      <CommentSection itemId={item.id} itemType={itemType} />
     </div>
   );
 }
