@@ -74,7 +74,8 @@ export async function getTaskHandler(
       throw new NotFoundError('Task', taskId);
     }
 
-    return reply.status(200).send(task);
+    const labels = taskService.listLabels(taskId);
+    return reply.status(200).send({ ...task, labels });
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
       throw new NotFoundError('Task', taskId);
