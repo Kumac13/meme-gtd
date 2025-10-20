@@ -1,16 +1,22 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
+import ErrorBoundary from './components/ErrorBoundary';
+import MemosList from './pages/MemosList';
+import MemoDetail from './pages/MemoDetail';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<div className="p-4"><h1 className="text-2xl font-bold">meme-gtd Web UI</h1><p className="mt-2 text-gray-600">Phase 2 setup complete. User story pages will be added in Phase 3+.</p></div>} />
-          {/* User Story routes will be added in Phase 3+ */}
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Navigate to="/memos" replace />} />
+            <Route path="memos" element={<MemosList />} />
+            <Route path="memos/:id" element={<MemoDetail />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 
