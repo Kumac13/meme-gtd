@@ -9,6 +9,7 @@ interface Task {
   title: string | null;
   bodyMd: string;
   status: string | null;
+  isBookmarked: boolean;
   scheduledOn: string | null;
   createdAt: string;
   updatedAt: string;
@@ -130,7 +131,10 @@ export default function TasksList() {
               to={`/tasks/${task.id}`}
               className="block p-4 hover:bg-gray-50 transition-colors"
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start gap-3">
+                {task.isBookmarked && (
+                  <span className="text-yellow-500 text-lg" title="Bookmarked">★</span>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h2 className="text-base font-semibold text-gray-900">

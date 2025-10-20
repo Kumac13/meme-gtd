@@ -8,6 +8,7 @@ interface Memo {
   id: number;
   title: string | null;
   bodyMd: string;
+  isBookmarked: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -88,16 +89,14 @@ export default function MemosList() {
               to={`/memos/${memo.id}`}
               className="block p-4 hover:bg-gray-50 transition-colors"
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start gap-3">
+                {memo.isBookmarked && (
+                  <span className="text-yellow-500 text-lg" title="Bookmarked">★</span>
+                )}
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-base font-semibold text-gray-900 mb-1">
-                    {memo.title || truncateMarkdown(memo.bodyMd, 60)}
-                  </h2>
-                  {memo.bodyMd && (
-                    <p className="text-gray-600 text-sm mb-2">
-                      {truncateMarkdown(memo.bodyMd, 100)}
-                    </p>
-                  )}
+                  <p className="text-gray-900 text-sm mb-2">
+                    {truncateMarkdown(memo.bodyMd, 150)}
+                  </p>
                   <div className="flex items-center text-xs text-gray-500 space-x-3">
                     <span>#{memo.id}</span>
                     <span title={formatDateTime(memo.createdAt)}>
