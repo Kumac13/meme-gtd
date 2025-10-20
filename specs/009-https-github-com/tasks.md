@@ -238,7 +238,7 @@
 ### Documentation
 
 - [ ] T070 [P] [Polish] Update `docs/requirement.md` with HTTP API server overview (endpoints, deployment, TailScale setup)
-- [ ] T071 [P] [Polish] Create `packages/api/README.md` with detailed startup instructions, environment variables, testing guide
+- [X] T071 [P] [Polish] Create `packages/api/README.md` with detailed startup instructions, environment variables, testing guide
 - [ ] T072 [P] [Polish] Validate all steps in `specs/009-https-github-com/quickstart.md` work correctly
 
 ### Code Quality
