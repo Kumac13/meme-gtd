@@ -1,4 +1,4 @@
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import {
   serializerCompiler,
   validatorCompiler,
@@ -12,10 +12,12 @@ import type Database from 'better-sqlite3';
 export interface BuildAppOptions {
   config: MgtdConfig;
   corsAllowedOrigins?: string[];
-  logger?: {
-    level?: string;
-    prettyPrint?: boolean;
-  };
+  logger?:
+    | FastifyServerOptions['logger']
+    | {
+        level?: string;
+        prettyPrint?: boolean;
+      };
 }
 
 /**
@@ -26,11 +28,15 @@ export interface BuildAppOptions {
 export async function buildApp(options: BuildAppOptions): Promise<FastifyInstance> {
   const { config, corsAllowedOrigins = ['*'], logger } = options;
 
-  // Initialize Fastify with logger configuration
-  const app = Fastify({
-    logger: {
-      level: logger?.level ?? 'info',
-      ...(logger?.prettyPrint && {
+  let fastifyLogger: FastifyServerOptions['logger'];
+  if (logger && typeof (logger as any).info === 'function') {
+    fastifyLogger = logger as FastifyServerOptions['logger'];
+  } else {
+    const loggerOptions = (logger as { level?: string; prettyPrint?: boolean; stream?: NodeJS.WritableStream }) ?? {};
+    fastifyLogger = {
+      level: loggerOptions.level ?? 'info',
+      ...(loggerOptions.stream ? { stream: loggerOptions.stream } : {}),
+      ...(loggerOptions.prettyPrint && {
         transport: {
           target: 'pino-pretty',
           options: {
@@ -40,7 +46,12 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
           },
         },
       }),
-    },
+    };
+  }
+
+  // Initialize Fastify with logger configuration
+  const app = Fastify({
+    logger: fastifyLogger,
     // Request body size limit: 10MB (sufficient for large memo/task bodies)
     bodyLimit: 10 * 1024 * 1024, // 10MB in bytes
   }).withTypeProvider<ZodTypeProvider>();
@@ -54,25 +65,31 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     // Store request start time for response time calculation
     (request as any).startTime = Date.now();
 
-    request.log.info({
-      requestId: request.id,
-      method: request.method,
-      url: request.url,
-      userAgent: request.headers['user-agent'],
-    }, 'Incoming request');
+    request.log.info(
+      {
+        requestId: request.id,
+        method: request.method,
+        url: request.url,
+        userAgent: request.headers['user-agent'],
+      },
+      'Incoming request'
+    );
   });
 
   app.addHook('onResponse', async (request, reply) => {
     const startTime = (request as any).startTime;
     const responseTime = startTime ? Date.now() - startTime : 0;
 
-    request.log.info({
-      requestId: request.id,
-      method: request.method,
-      url: request.url,
-      statusCode: reply.statusCode,
-      responseTime: `${responseTime}ms`,
-    }, 'Request completed');
+    request.log.info(
+      {
+        requestId: request.id,
+        method: request.method,
+        url: request.url,
+        statusCode: reply.statusCode,
+        responseTime: `${responseTime}ms`,
+      },
+      'Request completed'
+    );
   });
 
   // Open database connection once and share across all requests
