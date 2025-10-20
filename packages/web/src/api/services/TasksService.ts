@@ -28,7 +28,7 @@ export class TasksService {
              */
             status?: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
             /**
-             * Scheduled date/time for the task
+             * Scheduled date for the task (YYYY-MM-DD)
              */
             scheduledOn?: string;
         },
@@ -54,7 +54,7 @@ export class TasksService {
          */
         status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
         /**
-         * Scheduled date/time for the task (null if not scheduled)
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
         /**
@@ -121,7 +121,7 @@ export class TasksService {
          */
         status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
         /**
-         * Scheduled date/time for the task (null if not scheduled)
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
         /**
@@ -188,7 +188,7 @@ export class TasksService {
          */
         status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
         /**
-         * Scheduled date/time for the task (null if not scheduled)
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
         /**
@@ -255,7 +255,7 @@ export class TasksService {
              */
             status?: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
             /**
-             * Updated scheduled date/time (null to clear)
+             * Updated scheduled date (YYYY-MM-DD, null to clear)
              */
             scheduledOn?: string | null;
         },
@@ -281,7 +281,7 @@ export class TasksService {
          */
         status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
         /**
-         * Scheduled date/time for the task (null if not scheduled)
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
         /**
@@ -371,7 +371,7 @@ export class TasksService {
          */
         status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
         /**
-         * Scheduled date/time for the task (null if not scheduled)
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
         /**
@@ -437,7 +437,7 @@ export class TasksService {
          */
         status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
         /**
-         * Scheduled date/time for the task (null if not scheduled)
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
         /**
@@ -503,7 +503,7 @@ export class TasksService {
          */
         status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
         /**
-         * Scheduled date/time for the task (null if not scheduled)
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
         /**
@@ -569,7 +569,7 @@ export class TasksService {
          */
         status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
         /**
-         * Scheduled date/time for the task (null if not scheduled)
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
         /**
@@ -635,7 +635,7 @@ export class TasksService {
          */
         status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
         /**
-         * Scheduled date/time for the task (null if not scheduled)
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
         /**

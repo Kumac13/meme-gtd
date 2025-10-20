@@ -14,7 +14,7 @@ export const CreateTaskRequestSchema = z.object({
   title: z.string().min(1, 'Task title is required').describe('Task title'),
   bodyMd: z.string().optional().describe('Task description in Markdown format'),
   status: TaskStatusSchema.optional().describe('Task status (defaults to "open")'),
-  scheduledOn: z.string().datetime().optional().describe('Scheduled date/time for the task'),
+  scheduledOn: z.string().date().optional().describe('Scheduled date for the task (YYYY-MM-DD)'),
 });
 
 export type CreateTaskRequest = z.infer<typeof CreateTaskRequestSchema>;
@@ -26,7 +26,7 @@ export const UpdateTaskRequestSchema = z.object({
   title: z.string().min(1, 'Task title cannot be empty').optional().describe('Updated task title'),
   bodyMd: z.string().optional().describe('Updated task description in Markdown format'),
   status: TaskStatusSchema.optional().describe('Updated task status'),
-  scheduledOn: z.string().datetime().nullish().describe('Updated scheduled date/time (null to clear)'),
+  scheduledOn: z.string().date().nullish().describe('Updated scheduled date (YYYY-MM-DD, null to clear)'),
 });
 
 export type UpdateTaskRequest = z.infer<typeof UpdateTaskRequestSchema>;
@@ -40,7 +40,7 @@ export const TaskSchema = z.object({
   title: z.string().describe('Task title'),
   bodyMd: z.string().describe('Task description in Markdown format'),
   status: TaskStatusSchema.describe('Current task status'),
-  scheduledOn: z.string().datetime().nullable().describe('Scheduled date/time for the task (null if not scheduled)'),
+  scheduledOn: z.string().date().nullable().describe('Scheduled date for the task (YYYY-MM-DD, null if not scheduled)'),
   meta: z.record(z.any()).describe('Metadata object'),
   isBookmarked: z.boolean().describe('Whether the task is bookmarked'),
   isDeleted: z.boolean().describe('Whether the task is soft-deleted'),

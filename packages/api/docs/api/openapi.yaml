@@ -58,7 +58,7 @@ paths:
                     description: Status (always null for memos)
                   scheduledOn:
                     type: string
-                    format: date-time
+                    format: date
                     nullable: true
                     description: Scheduled date (always null for memos)
                   meta:
@@ -164,7 +164,7 @@ paths:
                       description: Status (always null for memos)
                     scheduledOn:
                       type: string
-                      format: date-time
+                      format: date
                       nullable: true
                       description: Scheduled date (always null for memos)
                     meta:
@@ -267,7 +267,7 @@ paths:
                     description: Status (always null for memos)
                   scheduledOn:
                     type: string
-                    format: date-time
+                    format: date
                     nullable: true
                     description: Scheduled date (always null for memos)
                   meta:
@@ -392,7 +392,7 @@ paths:
                     description: Status (always null for memos)
                   scheduledOn:
                     type: string
-                    format: date-time
+                    format: date
                     nullable: true
                     description: Scheduled date (always null for memos)
                   meta:
@@ -625,7 +625,7 @@ paths:
                     description: Status (always null for memos)
                   scheduledOn:
                     type: string
-                    format: date-time
+                    format: date
                     nullable: true
                     description: Scheduled date (always null for memos)
                   meta:
@@ -728,7 +728,7 @@ paths:
                     description: Status (always null for memos)
                   scheduledOn:
                     type: string
-                    format: date-time
+                    format: date
                     nullable: true
                     description: Scheduled date (always null for memos)
                   meta:
@@ -1168,8 +1168,8 @@ paths:
                   description: Task status (defaults to "open")
                 scheduledOn:
                   type: string
-                  format: date-time
-                  description: Scheduled date/time for the task
+                  format: date
+                  description: Scheduled date for the task (YYYY-MM-DD)
               required:
                 - title
               additionalProperties: false
@@ -1210,9 +1210,9 @@ paths:
                     description: Current task status
                   scheduledOn:
                     type: string
-                    format: date-time
+                    format: date
                     nullable: true
-                    description: Scheduled date/time for the task (null if not scheduled)
+                    description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
                   meta:
                     type: object
                     additionalProperties: {}
@@ -1334,9 +1334,9 @@ paths:
                       description: Current task status
                     scheduledOn:
                       type: string
-                      format: date-time
+                      format: date
                       nullable: true
-                      description: Scheduled date/time for the task (null if not scheduled)
+                      description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
                     meta:
                       type: object
                       additionalProperties: {}
@@ -1442,9 +1442,9 @@ paths:
                     description: Current task status
                   scheduledOn:
                     type: string
-                    format: date-time
+                    format: date
                     nullable: true
-                    description: Scheduled date/time for the task (null if not scheduled)
+                    description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
                   meta:
                     type: object
                     additionalProperties: {}
@@ -1539,9 +1539,9 @@ paths:
                   description: Updated task status
                 scheduledOn:
                   type: string
-                  format: date-time
+                  format: date
                   nullable: true
-                  description: Updated scheduled date/time (null to clear)
+                  description: Updated scheduled date (YYYY-MM-DD, null to clear)
               additionalProperties: false
       parameters:
         - schema:
@@ -1587,9 +1587,9 @@ paths:
                     description: Current task status
                   scheduledOn:
                     type: string
-                    format: date-time
+                    format: date
                     nullable: true
-                    description: Scheduled date/time for the task (null if not scheduled)
+                    description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
                   meta:
                     type: object
                     additionalProperties: {}
@@ -1758,9 +1758,9 @@ paths:
                     description: Current task status
                   scheduledOn:
                     type: string
-                    format: date-time
+                    format: date
                     nullable: true
-                    description: Scheduled date/time for the task (null if not scheduled)
+                    description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
                   meta:
                     type: object
                     additionalProperties: {}
@@ -1866,9 +1866,9 @@ paths:
                     description: Current task status
                   scheduledOn:
                     type: string
-                    format: date-time
+                    format: date
                     nullable: true
-                    description: Scheduled date/time for the task (null if not scheduled)
+                    description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
                   meta:
                     type: object
                     additionalProperties: {}
@@ -1974,9 +1974,9 @@ paths:
                     description: Current task status
                   scheduledOn:
                     type: string
-                    format: date-time
+                    format: date
                     nullable: true
-                    description: Scheduled date/time for the task (null if not scheduled)
+                    description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
                   meta:
                     type: object
                     additionalProperties: {}
@@ -2082,9 +2082,9 @@ paths:
                     description: Current task status
                   scheduledOn:
                     type: string
-                    format: date-time
+                    format: date
                     nullable: true
-                    description: Scheduled date/time for the task (null if not scheduled)
+                    description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
                   meta:
                     type: object
                     additionalProperties: {}
@@ -2190,9 +2190,9 @@ paths:
                     description: Current task status
                   scheduledOn:
                     type: string
-                    format: date-time
+                    format: date
                     nullable: true
-                    description: Scheduled date/time for the task (null if not scheduled)
+                    description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
                   meta:
                     type: object
                     additionalProperties: {}
