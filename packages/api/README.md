@@ -27,33 +27,77 @@ pnpm build
 
 ## Usage
 
+### Quick Start
+
+```bash
+# From repository root
+cd /path/to/meme-gtd
+
+# Install dependencies (if not done)
+pnpm install
+
+# Start development server with hot reload
+pnpm --filter meme-gtd-api dev
+
+# Server starts at http://localhost:3000
+# Access Swagger UI at http://localhost:3000/api-docs
+```
+
 ### Development Mode
 
 ```bash
-# Start server with hot reload
+# From repository root
+pnpm --filter meme-gtd-api dev
+
+# Or from packages/api directory
+cd packages/api
 pnpm dev
 ```
+
+Server will start with hot reload. Any changes to source files will automatically restart the server.
 
 ### Production Mode
 
 ```bash
-# Build and start
+# From repository root
+pnpm --filter meme-gtd-api build
+pnpm --filter meme-gtd-api start
+
+# Or from packages/api directory
+cd packages/api
 pnpm build
 pnpm start
+```
+
+### Verify Server is Running
+
+```bash
+# Test API endpoint
+curl http://localhost:3000/api/memos
+
+# Expected response: []
+
+# Or test with creating a memo
+curl -X POST http://localhost:3000/api/memos \
+  -H 'Content-Type: application/json' \
+  -d '{"bodyMd":"Hello API"}'
+
+# Get all memos
+curl http://localhost:3000/api/memos
 ```
 
 ### Custom Configuration
 
 ```bash
 # Specify port and database path
-node dist/index.js --port 4000 --db ~/data/issues.db
+pnpm --filter meme-gtd-api start -- --port 4000 --db ~/data/issues.db
 
-# Environment variables
+# Or with environment variables
 PORT=4000 \
 DB_PATH=~/data/issues.db \
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080 \
 LOG_LEVEL=debug \
-node dist/index.js
+pnpm --filter meme-gtd-api start
 ```
 
 ## API Documentation
