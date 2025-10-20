@@ -99,6 +99,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     });
   });
 
+  // Register routes
+  await app.register(import('./routes/memos.js'));
+
   return app;
 }
 
