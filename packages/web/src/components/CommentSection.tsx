@@ -23,6 +23,7 @@ export default function CommentSection({ itemId, itemType }: CommentSectionProps
   const [submitting, setSubmitting] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingBody, setEditingBody] = useState('');
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
   const fetchComments = async () => {
     try {
@@ -120,7 +121,7 @@ export default function CommentSection({ itemId, itemType }: CommentSectionProps
         <div className="space-y-4 mb-6">
           {comments.map((comment) => (
             <div key={comment.id} className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-start justify-between mb-2">
                 <div className="text-xs text-gray-500">
                   <span title={formatDateTime(comment.createdAt)}>
                     {formatRelativeTime(comment.createdAt)}
@@ -130,19 +131,38 @@ export default function CommentSection({ itemId, itemType }: CommentSectionProps
                   )}
                 </div>
                 {editingCommentId !== comment.id && (
-                  <div className="flex space-x-2">
+                  <div className="relative">
                     <button
-                      onClick={() => handleStartEdit(comment)}
-                      className="text-sm text-gray-600 hover:text-gray-800"
+                      onClick={() => setOpenMenuId(openMenuId === comment.id ? null : comment.id)}
+                      className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
+                      aria-label="Comment options"
                     >
-                      Edit
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"></path>
+                      </svg>
                     </button>
-                    <button
-                      onClick={() => handleDelete(comment.id)}
-                      className="text-sm text-red-600 hover:text-red-800"
-                    >
-                      Delete
-                    </button>
+                    {openMenuId === comment.id && (
+                      <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                        <button
+                          onClick={() => {
+                            handleStartEdit(comment);
+                            setOpenMenuId(null);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleDelete(comment.id);
+                            setOpenMenuId(null);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
