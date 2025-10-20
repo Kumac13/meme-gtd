@@ -49,14 +49,21 @@ import {
 } from 'meme-gtd-db';
 
 export interface MemoServiceOptions {
-  config: MgtdConfig;
+  config?: MgtdConfig;
+  db?: Database.Database;
 }
 
 export class MemoService {
   private readonly db: Database.Database;
 
   constructor(private readonly options: MemoServiceOptions) {
-    this.db = ensureDatabase(options.config);
+    if (options.db) {
+      this.db = options.db;
+    } else if (options.config) {
+      this.db = ensureDatabase(options.config);
+    } else {
+      throw new Error('MemoService requires either db or config option');
+    }
   }
 
   public create(input: CreateMemoInput) {
@@ -113,14 +120,21 @@ export class MemoService {
 }
 
 export interface TaskServiceOptions {
-  config: MgtdConfig;
+  config?: MgtdConfig;
+  db?: Database.Database;
 }
 
 export class TaskService {
   private readonly db: Database.Database;
 
   constructor(private readonly options: TaskServiceOptions) {
-    this.db = ensureDatabase(options.config);
+    if (options.db) {
+      this.db = options.db;
+    } else if (options.config) {
+      this.db = ensureDatabase(options.config);
+    } else {
+      throw new Error('TaskService requires either db or config option');
+    }
   }
 
   public create(input: CreateTaskInput) {
@@ -193,14 +207,21 @@ export class TaskService {
 }
 
 export interface LabelServiceOptions {
-  config: MgtdConfig;
+  config?: MgtdConfig;
+  db?: Database.Database;
 }
 
 export class LabelService {
   private readonly db: Database.Database;
 
   constructor(private readonly options: LabelServiceOptions) {
-    this.db = ensureDatabase(options.config);
+    if (options.db) {
+      this.db = options.db;
+    } else if (options.config) {
+      this.db = ensureDatabase(options.config);
+    } else {
+      throw new Error('LabelService requires either db or config option');
+    }
   }
 
   public list() {

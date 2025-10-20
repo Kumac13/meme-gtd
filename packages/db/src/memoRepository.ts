@@ -69,7 +69,7 @@ export const createMemo = (db: Database.Database, input: CreateMemoInput): Memo 
 export const getMemo = (db: Database.Database, id: number): Memo => {
   const row = db
     .prepare(
-      `SELECT * FROM issues WHERE id = @id AND type = 'memo'`
+      `SELECT * FROM issues WHERE id = @id AND type = 'memo' AND is_deleted = 0`
     )
     .get({ id });
 

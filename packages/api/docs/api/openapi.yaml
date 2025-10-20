@@ -1,0 +1,3327 @@
+openapi: 3.0.3
+info:
+  title: meme-gtd API
+  description: HTTP REST API for meme-gtd CLI operations
+  version: 0.6.0
+components:
+  schemas: {}
+paths:
+  /api/memos:
+    post:
+      operationId: createMemo
+      summary: Create memo
+      tags:
+        - Memos
+      description: Create a new memo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bodyMd:
+                  type: string
+                  minLength: 1
+                  description: Memo content in Markdown format
+              required:
+                - bodyMd
+              additionalProperties: false
+        required: true
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique memo ID
+                  type:
+                    type: string
+                    enum:
+                      - memo
+                    description: Issue type (always "memo")
+                  title:
+                    type: string
+                    nullable: true
+                    description: Title (always null for memos)
+                  bodyMd:
+                    type: string
+                    description: Memo content in Markdown format
+                  status:
+                    type: string
+                    nullable: true
+                    description: Status (always null for memos)
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: Scheduled date (always null for memos)
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                    description: Metadata object
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the memo is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the memo is soft-deleted
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    get:
+      operationId: listMemos
+      summary: List memos
+      tags:
+        - Memos
+      description: List all memos with optional filters
+      parameters:
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          in: query
+          name: bookmarked
+          required: false
+          description: Filter by bookmark status
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Unique memo ID
+                    type:
+                      type: string
+                      enum:
+                        - memo
+                      description: Issue type (always "memo")
+                    title:
+                      type: string
+                      nullable: true
+                      description: Title (always null for memos)
+                    bodyMd:
+                      type: string
+                      description: Memo content in Markdown format
+                    status:
+                      type: string
+                      nullable: true
+                      description: Status (always null for memos)
+                    scheduledOn:
+                      type: string
+                      format: date-time
+                      nullable: true
+                      description: Scheduled date (always null for memos)
+                    meta:
+                      type: object
+                      additionalProperties: {}
+                      description: Metadata object
+                    isBookmarked:
+                      type: boolean
+                      description: Whether the memo is bookmarked
+                    isDeleted:
+                      type: boolean
+                      description: Whether the memo is soft-deleted
+                    createdAt:
+                      type: string
+                      format: date-time
+                      description: Creation timestamp
+                    updatedAt:
+                      type: string
+                      format: date-time
+                      description: Last update timestamp
+                  required:
+                    - id
+                    - type
+                    - title
+                    - bodyMd
+                    - status
+                    - scheduledOn
+                    - meta
+                    - isBookmarked
+                    - isDeleted
+                    - createdAt
+                    - updatedAt
+                  additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/memos/{id}:
+    get:
+      operationId: getMemo
+      summary: Get memo
+      tags:
+        - Memos
+      description: Get memo by ID
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Memo ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique memo ID
+                  type:
+                    type: string
+                    enum:
+                      - memo
+                    description: Issue type (always "memo")
+                  title:
+                    type: string
+                    nullable: true
+                    description: Title (always null for memos)
+                  bodyMd:
+                    type: string
+                    description: Memo content in Markdown format
+                  status:
+                    type: string
+                    nullable: true
+                    description: Status (always null for memos)
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: Scheduled date (always null for memos)
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                    description: Metadata object
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the memo is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the memo is soft-deleted
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this memo
+                  commentsCount:
+                    type: integer
+                    minimum: 0
+                    description: Number of comments on this memo
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    patch:
+      operationId: updateMemo
+      summary: Update memo
+      tags:
+        - Memos
+      description: Update memo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bodyMd:
+                  type: string
+                  minLength: 1
+                  description: Updated memo content in Markdown format
+                isBookmarked:
+                  type: boolean
+                  description: Bookmark status
+              additionalProperties: false
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Memo ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique memo ID
+                  type:
+                    type: string
+                    enum:
+                      - memo
+                    description: Issue type (always "memo")
+                  title:
+                    type: string
+                    nullable: true
+                    description: Title (always null for memos)
+                  bodyMd:
+                    type: string
+                    description: Memo content in Markdown format
+                  status:
+                    type: string
+                    nullable: true
+                    description: Status (always null for memos)
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: Scheduled date (always null for memos)
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                    description: Metadata object
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the memo is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the memo is soft-deleted
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    delete:
+      operationId: deleteMemo
+      summary: Delete memo
+      tags:
+        - Memos
+      description: Delete memo (soft delete)
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Memo ID
+      responses:
+        "204":
+          description: Default Response
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/memos/{id}/promote:
+    post:
+      operationId: promoteMemo
+      summary: Promote memo to task
+      tags:
+        - Memos
+      description: Promote memo to task
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  description: Title for the new task
+                status:
+                  type: string
+                  enum:
+                    - open
+                    - next
+                    - waiting
+                    - scheduled
+                  description: Initial status for the task
+              required:
+                - title
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Memo ID
+      responses:
+        "200":
+          description: Promoted task
+          content:
+            application/json:
+              schema:
+                description: Promoted task
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/memos/{id}/bookmark:
+    post:
+      operationId: bookmarkMemo
+      summary: Bookmark memo
+      tags:
+        - Memos
+      description: Bookmark memo
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Memo ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique memo ID
+                  type:
+                    type: string
+                    enum:
+                      - memo
+                    description: Issue type (always "memo")
+                  title:
+                    type: string
+                    nullable: true
+                    description: Title (always null for memos)
+                  bodyMd:
+                    type: string
+                    description: Memo content in Markdown format
+                  status:
+                    type: string
+                    nullable: true
+                    description: Status (always null for memos)
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: Scheduled date (always null for memos)
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                    description: Metadata object
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the memo is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the memo is soft-deleted
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/memos/{id}/unbookmark:
+    post:
+      operationId: unbookmarkMemo
+      summary: Unbookmark memo
+      tags:
+        - Memos
+      description: Unbookmark memo
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Memo ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique memo ID
+                  type:
+                    type: string
+                    enum:
+                      - memo
+                    description: Issue type (always "memo")
+                  title:
+                    type: string
+                    nullable: true
+                    description: Title (always null for memos)
+                  bodyMd:
+                    type: string
+                    description: Memo content in Markdown format
+                  status:
+                    type: string
+                    nullable: true
+                    description: Status (always null for memos)
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: Scheduled date (always null for memos)
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                    description: Metadata object
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the memo is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the memo is soft-deleted
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/memos/{memoId}/comments:
+    get:
+      operationId: listMemoComments
+      summary: List memo comments
+      tags:
+        - Comments
+      description: List all comments for a memo
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: memoId
+          required: true
+          description: Memo ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Unique comment ID
+                    issueId:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: ID of the parent issue (memo or task)
+                    bodyMd:
+                      type: string
+                      description: Comment content in Markdown format
+                    createdAt:
+                      type: string
+                      format: date-time
+                      description: Creation timestamp
+                    updatedAt:
+                      type: string
+                      format: date-time
+                      description: Last update timestamp
+                  required:
+                    - id
+                    - issueId
+                    - bodyMd
+                    - createdAt
+                    - updatedAt
+                  additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    post:
+      operationId: createMemoComment
+      summary: Create memo comment
+      tags:
+        - Comments
+      description: Create comment on memo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bodyMd:
+                  type: string
+                  minLength: 1
+                  description: Comment content in Markdown format
+              required:
+                - bodyMd
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: memoId
+          required: true
+          description: Memo ID
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique comment ID
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: ID of the parent issue (memo or task)
+                  bodyMd:
+                    type: string
+                    description: Comment content in Markdown format
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - issueId
+                  - bodyMd
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/memos/{memoId}/comments/{commentId}:
+    patch:
+      operationId: updateMemoComment
+      summary: Update memo comment
+      tags:
+        - Comments
+      description: Update comment on memo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bodyMd:
+                  type: string
+                  minLength: 1
+                  description: Updated comment content in Markdown format
+              required:
+                - bodyMd
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: memoId
+          required: true
+          description: Memo ID
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: commentId
+          required: true
+          description: Comment ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique comment ID
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: ID of the parent issue (memo or task)
+                  bodyMd:
+                    type: string
+                    description: Comment content in Markdown format
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - issueId
+                  - bodyMd
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    delete:
+      operationId: deleteMemoComment
+      summary: Delete memo comment
+      tags:
+        - Comments
+      description: Delete comment from memo
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: memoId
+          required: true
+          description: Memo ID
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: commentId
+          required: true
+          description: Comment ID
+      responses:
+        "204":
+          description: Default Response
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks:
+    post:
+      operationId: createTask
+      summary: Create task
+      tags:
+        - Tasks
+      description: Create a new task
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  description: Task title
+                bodyMd:
+                  type: string
+                  description: Task description in Markdown format
+                status:
+                  type: string
+                  enum:
+                    - open
+                    - next
+                    - waiting
+                    - scheduled
+                    - done
+                    - canceled
+                  description: Task status (defaults to "open")
+                scheduledOn:
+                  type: string
+                  format: date-time
+                  description: Scheduled date/time for the task
+              required:
+                - title
+              additionalProperties: false
+        required: true
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique task ID
+                  type:
+                    type: string
+                    enum:
+                      - task
+                    description: Issue type (always "task")
+                  title:
+                    type: string
+                    description: Task title
+                  bodyMd:
+                    type: string
+                    description: Task description in Markdown format
+                  status:
+                    type: string
+                    enum:
+                      - open
+                      - next
+                      - waiting
+                      - scheduled
+                      - done
+                      - canceled
+                    description: Current task status
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: Scheduled date/time for the task (null if not scheduled)
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                    description: Metadata object
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the task is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the task is soft-deleted
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    get:
+      operationId: listTasks
+      summary: List tasks
+      tags:
+        - Tasks
+      description: List all tasks with optional filters
+      parameters:
+        - schema:
+            type: string
+            enum:
+              - open
+              - next
+              - waiting
+              - scheduled
+              - done
+              - canceled
+          in: query
+          name: status
+          required: false
+          description: Filter by task status
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          in: query
+          name: bookmarked
+          required: false
+          description: Filter by bookmark status
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Unique task ID
+                    type:
+                      type: string
+                      enum:
+                        - task
+                      description: Issue type (always "task")
+                    title:
+                      type: string
+                      description: Task title
+                    bodyMd:
+                      type: string
+                      description: Task description in Markdown format
+                    status:
+                      type: string
+                      enum:
+                        - open
+                        - next
+                        - waiting
+                        - scheduled
+                        - done
+                        - canceled
+                      description: Current task status
+                    scheduledOn:
+                      type: string
+                      format: date-time
+                      nullable: true
+                      description: Scheduled date/time for the task (null if not scheduled)
+                    meta:
+                      type: object
+                      additionalProperties: {}
+                      description: Metadata object
+                    isBookmarked:
+                      type: boolean
+                      description: Whether the task is bookmarked
+                    isDeleted:
+                      type: boolean
+                      description: Whether the task is soft-deleted
+                    createdAt:
+                      type: string
+                      format: date-time
+                      description: Creation timestamp
+                    updatedAt:
+                      type: string
+                      format: date-time
+                      description: Last update timestamp
+                  required:
+                    - id
+                    - type
+                    - title
+                    - bodyMd
+                    - status
+                    - scheduledOn
+                    - meta
+                    - isBookmarked
+                    - isDeleted
+                    - createdAt
+                    - updatedAt
+                  additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks/{id}:
+    get:
+      operationId: getTask
+      summary: Get task
+      tags:
+        - Tasks
+      description: Get task by ID
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Task ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique task ID
+                  type:
+                    type: string
+                    enum:
+                      - task
+                    description: Issue type (always "task")
+                  title:
+                    type: string
+                    description: Task title
+                  bodyMd:
+                    type: string
+                    description: Task description in Markdown format
+                  status:
+                    type: string
+                    enum:
+                      - open
+                      - next
+                      - waiting
+                      - scheduled
+                      - done
+                      - canceled
+                    description: Current task status
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: Scheduled date/time for the task (null if not scheduled)
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                    description: Metadata object
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the task is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the task is soft-deleted
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this task
+                  commentsCount:
+                    type: integer
+                    minimum: 0
+                    description: Number of comments on this task
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    patch:
+      operationId: updateTask
+      summary: Update task
+      tags:
+        - Tasks
+      description: Update task
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  description: Updated task title
+                bodyMd:
+                  type: string
+                  description: Updated task description in Markdown format
+                status:
+                  type: string
+                  enum:
+                    - open
+                    - next
+                    - waiting
+                    - scheduled
+                    - done
+                    - canceled
+                  description: Updated task status
+                scheduledOn:
+                  type: string
+                  format: date-time
+                  nullable: true
+                  description: Updated scheduled date/time (null to clear)
+              additionalProperties: false
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Task ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique task ID
+                  type:
+                    type: string
+                    enum:
+                      - task
+                    description: Issue type (always "task")
+                  title:
+                    type: string
+                    description: Task title
+                  bodyMd:
+                    type: string
+                    description: Task description in Markdown format
+                  status:
+                    type: string
+                    enum:
+                      - open
+                      - next
+                      - waiting
+                      - scheduled
+                      - done
+                      - canceled
+                    description: Current task status
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: Scheduled date/time for the task (null if not scheduled)
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                    description: Metadata object
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the task is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the task is soft-deleted
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    delete:
+      operationId: deleteTask
+      summary: Delete task
+      tags:
+        - Tasks
+      description: Delete task (soft delete)
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Task ID
+      responses:
+        "204":
+          description: Default Response
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks/{id}/close:
+    post:
+      operationId: closeTask
+      summary: Close task
+      tags:
+        - Tasks
+      description: Close task (set status to done)
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Task ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique task ID
+                  type:
+                    type: string
+                    enum:
+                      - task
+                    description: Issue type (always "task")
+                  title:
+                    type: string
+                    description: Task title
+                  bodyMd:
+                    type: string
+                    description: Task description in Markdown format
+                  status:
+                    type: string
+                    enum:
+                      - open
+                      - next
+                      - waiting
+                      - scheduled
+                      - done
+                      - canceled
+                    description: Current task status
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: Scheduled date/time for the task (null if not scheduled)
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                    description: Metadata object
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the task is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the task is soft-deleted
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks/{id}/cancel:
+    post:
+      operationId: cancelTask
+      summary: Cancel task
+      tags:
+        - Tasks
+      description: Cancel task (set status to canceled)
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Task ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique task ID
+                  type:
+                    type: string
+                    enum:
+                      - task
+                    description: Issue type (always "task")
+                  title:
+                    type: string
+                    description: Task title
+                  bodyMd:
+                    type: string
+                    description: Task description in Markdown format
+                  status:
+                    type: string
+                    enum:
+                      - open
+                      - next
+                      - waiting
+                      - scheduled
+                      - done
+                      - canceled
+                    description: Current task status
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: Scheduled date/time for the task (null if not scheduled)
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                    description: Metadata object
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the task is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the task is soft-deleted
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks/{id}/reopen:
+    post:
+      operationId: reopenTask
+      summary: Reopen task
+      tags:
+        - Tasks
+      description: Reopen task (set status to open)
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Task ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique task ID
+                  type:
+                    type: string
+                    enum:
+                      - task
+                    description: Issue type (always "task")
+                  title:
+                    type: string
+                    description: Task title
+                  bodyMd:
+                    type: string
+                    description: Task description in Markdown format
+                  status:
+                    type: string
+                    enum:
+                      - open
+                      - next
+                      - waiting
+                      - scheduled
+                      - done
+                      - canceled
+                    description: Current task status
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: Scheduled date/time for the task (null if not scheduled)
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                    description: Metadata object
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the task is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the task is soft-deleted
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks/{id}/bookmark:
+    post:
+      operationId: bookmarkTask
+      summary: Bookmark task
+      tags:
+        - Tasks
+      description: Bookmark task
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Task ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique task ID
+                  type:
+                    type: string
+                    enum:
+                      - task
+                    description: Issue type (always "task")
+                  title:
+                    type: string
+                    description: Task title
+                  bodyMd:
+                    type: string
+                    description: Task description in Markdown format
+                  status:
+                    type: string
+                    enum:
+                      - open
+                      - next
+                      - waiting
+                      - scheduled
+                      - done
+                      - canceled
+                    description: Current task status
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: Scheduled date/time for the task (null if not scheduled)
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                    description: Metadata object
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the task is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the task is soft-deleted
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks/{id}/unbookmark:
+    post:
+      operationId: unbookmarkTask
+      summary: Unbookmark task
+      tags:
+        - Tasks
+      description: Unbookmark task
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Task ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique task ID
+                  type:
+                    type: string
+                    enum:
+                      - task
+                    description: Issue type (always "task")
+                  title:
+                    type: string
+                    description: Task title
+                  bodyMd:
+                    type: string
+                    description: Task description in Markdown format
+                  status:
+                    type: string
+                    enum:
+                      - open
+                      - next
+                      - waiting
+                      - scheduled
+                      - done
+                      - canceled
+                    description: Current task status
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: Scheduled date/time for the task (null if not scheduled)
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                    description: Metadata object
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the task is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the task is soft-deleted
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks/{taskId}/comments:
+    get:
+      operationId: listTaskComments
+      summary: List task comments
+      tags:
+        - Comments
+      description: List all comments for a task
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: taskId
+          required: true
+          description: Task ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Unique comment ID
+                    issueId:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: ID of the parent issue (memo or task)
+                    bodyMd:
+                      type: string
+                      description: Comment content in Markdown format
+                    createdAt:
+                      type: string
+                      format: date-time
+                      description: Creation timestamp
+                    updatedAt:
+                      type: string
+                      format: date-time
+                      description: Last update timestamp
+                  required:
+                    - id
+                    - issueId
+                    - bodyMd
+                    - createdAt
+                    - updatedAt
+                  additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    post:
+      operationId: createTaskComment
+      summary: Create task comment
+      tags:
+        - Comments
+      description: Create comment on task
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bodyMd:
+                  type: string
+                  minLength: 1
+                  description: Comment content in Markdown format
+              required:
+                - bodyMd
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: taskId
+          required: true
+          description: Task ID
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique comment ID
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: ID of the parent issue (memo or task)
+                  bodyMd:
+                    type: string
+                    description: Comment content in Markdown format
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - issueId
+                  - bodyMd
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks/{taskId}/comments/{commentId}:
+    patch:
+      operationId: updateTaskComment
+      summary: Update task comment
+      tags:
+        - Comments
+      description: Update comment on task
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bodyMd:
+                  type: string
+                  minLength: 1
+                  description: Updated comment content in Markdown format
+              required:
+                - bodyMd
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: taskId
+          required: true
+          description: Task ID
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: commentId
+          required: true
+          description: Comment ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique comment ID
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: ID of the parent issue (memo or task)
+                  bodyMd:
+                    type: string
+                    description: Comment content in Markdown format
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - issueId
+                  - bodyMd
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    delete:
+      operationId: deleteTaskComment
+      summary: Delete task comment
+      tags:
+        - Comments
+      description: Delete comment from task
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: taskId
+          required: true
+          description: Task ID
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: commentId
+          required: true
+          description: Comment ID
+      responses:
+        "204":
+          description: Default Response
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/labels:
+    get:
+      operationId: listLabels
+      summary: List labels
+      tags:
+        - Labels
+      description: List all labels
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Unique label ID
+                    name:
+                      type: string
+                      description: Label name
+                    description:
+                      type: string
+                      nullable: true
+                      description: Label description (null if not set)
+                    createdAt:
+                      type: string
+                      format: date-time
+                      description: Creation timestamp
+                  required:
+                    - id
+                    - name
+                    - description
+                    - createdAt
+                  additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    post:
+      operationId: createLabel
+      summary: Create label
+      tags:
+        - Labels
+      description: Create a new label
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: Label name (unique identifier)
+                description:
+                  type: string
+                  description: Optional label description
+              required:
+                - name
+              additionalProperties: false
+        required: true
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique label ID
+                  name:
+                    type: string
+                    description: Label name
+                  description:
+                    type: string
+                    nullable: true
+                    description: Label description (null if not set)
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                required:
+                  - id
+                  - name
+                  - description
+                  - createdAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/issues/{issueId}/labels:
+    post:
+      operationId: assignLabelToIssue
+      summary: Assign label to issue
+      tags:
+        - Labels
+      description: Assign a label to an issue (idempotent)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                labelId:
+                  type: integer
+                  exclusiveMinimum: true
+                  minimum: 0
+                  description: ID of the label to assign
+              required:
+                - labelId
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: issueId
+          required: true
+          description: Issue ID (memo or task)
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/labels/{name}:
+    delete:
+      operationId: deleteLabel
+      summary: Delete label
+      tags:
+        - Labels
+      description: Delete a label by name
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: name
+          required: true
+          description: Label name
+      responses:
+        "204":
+          description: Default Response
+          content:
+            application/json:
+              schema: {}
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/links:
+    post:
+      operationId: createLink
+      summary: Create link
+      tags:
+        - Links
+      description: Create a link between two issues
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sourceIssueId:
+                  type: integer
+                  exclusiveMinimum: true
+                  minimum: 0
+                  description: Source issue ID
+                targetIssueId:
+                  type: integer
+                  exclusiveMinimum: true
+                  minimum: 0
+                  description: Target issue ID
+                linkType:
+                  type: string
+                  enum:
+                    - parent
+                    - child
+                    - relates
+                    - derived_from
+                  description: Type of relationship between issues
+              required:
+                - sourceIssueId
+                - targetIssueId
+                - linkType
+              additionalProperties: false
+        required: true
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique link ID
+                  sourceIssueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Source issue ID
+                  targetIssueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Target issue ID
+                  linkType:
+                    type: string
+                    enum:
+                      - parent
+                      - child
+                      - relates
+                      - derived_from
+                    description: Type of relationship
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                required:
+                  - id
+                  - sourceIssueId
+                  - targetIssueId
+                  - linkType
+                  - createdAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/issues/{id}/links:
+    get:
+      operationId: listIssueLinks
+      summary: List issue links
+      tags:
+        - Links
+      description: List all links for a given issue with direction
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Issue ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Unique link ID
+                    sourceIssueId:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Source issue ID
+                    targetIssueId:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Target issue ID
+                    linkType:
+                      type: string
+                      enum:
+                        - parent
+                        - child
+                        - relates
+                        - derived_from
+                      description: Type of relationship
+                    createdAt:
+                      type: string
+                      format: date-time
+                      description: Creation timestamp
+                    direction:
+                      type: string
+                      enum:
+                        - outgoing
+                        - incoming
+                      description: Link direction relative to the queried issue
+                  required:
+                    - id
+                    - sourceIssueId
+                    - targetIssueId
+                    - linkType
+                    - createdAt
+                    - direction
+                  additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/links/{id}:
+    delete:
+      operationId: deleteLink
+      summary: Delete link
+      tags:
+        - Links
+      description: Delete a link by ID
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Link ID
+      responses:
+        "204":
+          description: Default Response
+          content:
+            application/json:
+              schema: {}
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+servers:
+  - url: http://localhost:3000
+    description: Development server
+tags:
+  - name: Memos
+    description: Memo management endpoints
+  - name: Tasks
+    description: Task management endpoints
+  - name: Labels
+    description: Label management endpoints
+  - name: Links
+    description: Link management endpoints
+  - name: Comments
+    description: Comment management endpoints

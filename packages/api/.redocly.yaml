@@ -1,0 +1,28 @@
+# Redocly configuration for OpenAPI validation
+# See: https://redocly.com/docs/cli/configuration/
+
+apis:
+  main:
+    root: docs/api/openapi.yaml
+
+rules:
+  # Treat operation-summary as warning instead of error
+  # Descriptions are present, summaries can be added later
+  operation-summary: warn
+
+  # Treat operation-operationId as warning instead of error
+  # operationIds can be added later for code generation
+  operation-operationId: warn
+
+  # Treat operation-4xx-response as warning
+  # Not all operations need explicit 4xx responses documented
+  operation-4xx-response: warn
+
+  # Disable security-defined rule
+  # This API runs behind Tailscale network security, no app-level auth in v1
+  security-defined: off
+
+  # Strict rules that should remain errors:
+  path-parameters-defined: error
+  operation-2xx-response: error
+  no-invalid-media-type-examples: error
