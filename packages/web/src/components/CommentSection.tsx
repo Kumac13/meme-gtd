@@ -110,14 +110,14 @@ export default function CommentSection({ itemId, itemType }: CommentSectionProps
           value={newCommentBody}
           onChange={(e) => setNewCommentBody(e.target.value)}
           placeholder="Write a comment..."
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500 min-h-[100px]"
           disabled={submitting}
         />
         <div className="mt-2 flex justify-end">
           <button
             type="submit"
             disabled={submitting || !newCommentBody.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-github-green-600 text-white rounded-md hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? 'Commenting...' : 'Comment'}
           </button>

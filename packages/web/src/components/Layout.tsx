@@ -19,7 +19,7 @@ export default function Layout() {
                   to="/memos"
                   className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                     isMemosActive
-                      ? 'border-blue-500 text-gray-900'
+                      ? 'border-github-green-500 text-gray-900'
                       : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                   }`}
                 >
@@ -29,7 +29,7 @@ export default function Layout() {
                   to="/tasks"
                   className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                     isTasksActive
-                      ? 'border-blue-500 text-gray-900'
+                      ? 'border-github-green-500 text-gray-900'
                       : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                   }`}
                 >

@@ -113,7 +113,7 @@ export default function EditableContent({
                 type="text"
                 value={editingTitle}
                 onChange={(e) => setEditingTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500"
                 placeholder="Task title"
               />
             </div>
@@ -121,7 +121,7 @@ export default function EditableContent({
           <textarea
             value={editingContent}
             onChange={(e) => setEditingContent(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500 min-h-[100px]"
           />
           <div className="mt-2 flex justify-end space-x-2">
             <button
@@ -134,14 +134,14 @@ export default function EditableContent({
             <button
               onClick={handleSaveEdit}
               disabled={saving || !editingContent.trim()}
-              className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm bg-github-green-600 text-white rounded-md hover:bg-github-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>
       ) : (
-        <div className="prose prose-sm max-w-none mt-0">
+        <div className="prose prose-sm max-w-none mt-1">
           <MarkdownRenderer content={content} />
         </div>
       )}

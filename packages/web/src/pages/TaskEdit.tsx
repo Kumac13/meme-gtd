@@ -59,7 +59,7 @@ export default function TaskEdit() {
       <div className="mb-6">
         <Link
           to={`/tasks/${task.id}`}
-          className="text-blue-600 hover:text-blue-800 text-sm font-medium mb-4 inline-block"
+          className="text-github-green-600 hover:text-github-green-800 text-sm font-medium mb-4 inline-block"
         >
           ← Back to task
         </Link>

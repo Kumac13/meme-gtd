@@ -29,7 +29,7 @@ export default function FilterBar({
         onClick={() => onBookmarkFilterChange(!bookmarkFilter)}
         className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
           bookmarkFilter
-            ? 'bg-blue-600 text-white'
+            ? 'bg-github-green-600 text-white'
             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
         }`}
       >
@@ -45,7 +45,7 @@ export default function FilterBar({
               onClick={() => onStatusFilterChange(status)}
               className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                 statusFilter === status
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-github-green-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
