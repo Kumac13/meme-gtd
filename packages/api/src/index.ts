@@ -31,20 +31,40 @@ async function start() {
     app.log.info(`API documentation available at http://${config.host}:${config.port}/api-docs`);
 
     // Graceful shutdown handler
+    let isShuttingDown = false;
     const signals = ['SIGINT', 'SIGTERM'] as const;
+
+    const shutdown = async (signal: string) => {
+      if (isShuttingDown) {
+        return;
+      }
+      isShuttingDown = true;
+
+      app.log.info(`Received ${signal}, starting graceful shutdown...`);
+      try {
+        await app.close();
+        app.log.info('Server closed successfully');
+        process.exit(0);
+      } catch (err) {
+        app.log.error({ err }, 'Error during shutdown');
+        process.exit(1);
+      }
+    };
+
     for (const signal of signals) {
-      process.on(signal, async () => {
-        app.log.info(`Received ${signal}, starting graceful shutdown...`);
-        try {
-          await app.close();
-          app.log.info('Server closed successfully');
-          process.exit(0);
-        } catch (err) {
-          app.log.error({ err }, 'Error during shutdown');
-          process.exit(1);
-        }
-      });
+      process.on(signal, () => shutdown(signal));
     }
+
+    // Handle uncaught exceptions and rejections
+    process.on('uncaughtException', (err) => {
+      app.log.error({ err }, 'Uncaught exception');
+      shutdown('uncaughtException');
+    });
+
+    process.on('unhandledRejection', (reason) => {
+      app.log.error({ reason }, 'Unhandled rejection');
+      shutdown('unhandledRejection');
+    });
   } catch (err) {
     console.error('Failed to start server:', err);
     process.exit(1);
