@@ -113,33 +113,11 @@ export default function CommentSection({ itemId, itemType }: CommentSectionProps
         Comments ({comments.length})
       </h2>
 
-      {/* New Comment Form */}
-      <form onSubmit={handleSubmitNewComment} className="mb-6">
-        <textarea
-          value={newCommentBody}
-          onChange={(e) => setNewCommentBody(e.target.value)}
-          placeholder="Write a comment..."
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
-          disabled={submitting}
-        />
-        <div className="mt-2 flex justify-end">
-          <button
-            type="submit"
-            disabled={submitting || !newCommentBody.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {submitting ? 'Commenting...' : 'Comment'}
-          </button>
-        </div>
-      </form>
-
       {/* Comments List */}
       {loading ? (
         <p className="text-gray-500">Loading comments...</p>
-      ) : comments.length === 0 ? (
-        <p className="text-gray-500">No comments yet</p>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 mb-6">
           {comments.map((comment) => (
             <div key={comment.id} className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
@@ -201,6 +179,26 @@ export default function CommentSection({ itemId, itemType }: CommentSectionProps
           ))}
         </div>
       )}
+
+      {/* New Comment Form */}
+      <form onSubmit={handleSubmitNewComment} className="mt-6">
+        <textarea
+          value={newCommentBody}
+          onChange={(e) => setNewCommentBody(e.target.value)}
+          placeholder="Write a comment..."
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+          disabled={submitting}
+        />
+        <div className="mt-2 flex justify-end">
+          <button
+            type="submit"
+            disabled={submitting || !newCommentBody.trim()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submitting ? 'Commenting...' : 'Comment'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
