@@ -6,45 +6,11 @@ info:
 components:
   schemas: {}
 paths:
-  /api-docs/:
-    get:
-      responses:
-        "200":
-          description: Default Response
-  /api-docs/static/index.html:
-    get:
-      responses:
-        "200":
-          description: Default Response
-  /api-docs/static/swagger-initializer.js:
-    get:
-      responses:
-        "200":
-          description: Default Response
-  /api-docs/json:
-    get:
-      responses:
-        "200":
-          description: Default Response
-  /api-docs/yaml:
-    get:
-      responses:
-        "200":
-          description: Default Response
-  /api-docs/static/{*}:
-    head: &a1
-      parameters:
-        - schema:
-            type: string
-          in: path
-          name: "*"
-          required: true
-      responses:
-        "200":
-          description: Default Response
-    get: *a1
   /api/memos:
     post:
+      tags:
+        - Memos
+      description: Create a new memo
       requestBody:
         content:
           application/json:
@@ -74,8 +40,18 @@ paths:
                     type: string
                     enum:
                       - memo
+                  title:
+                    type: string
+                    nullable: true
                   bodyMd:
                     type: string
+                  status:
+                    type: string
+                    nullable: true
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
                   meta:
                     type: object
                     additionalProperties: {}
@@ -92,7 +68,10 @@ paths:
                 required:
                   - id
                   - type
+                  - title
                   - bodyMd
+                  - status
+                  - scheduledOn
                   - meta
                   - isBookmarked
                   - isDeleted
@@ -119,6 +98,9 @@ paths:
                   - message
                 additionalProperties: false
     get:
+      tags:
+        - Memos
+      description: List all memos with optional filters
       parameters:
         - schema:
             type: string
@@ -146,8 +128,18 @@ paths:
                       type: string
                       enum:
                         - memo
+                    title:
+                      type: string
+                      nullable: true
                     bodyMd:
                       type: string
+                    status:
+                      type: string
+                      nullable: true
+                    scheduledOn:
+                      type: string
+                      format: date-time
+                      nullable: true
                     meta:
                       type: object
                       additionalProperties: {}
@@ -164,7 +156,10 @@ paths:
                   required:
                     - id
                     - type
+                    - title
                     - bodyMd
+                    - status
+                    - scheduledOn
                     - meta
                     - isBookmarked
                     - isDeleted
@@ -173,6 +168,9 @@ paths:
                   additionalProperties: false
   /api/memos/{id}:
     get:
+      tags:
+        - Memos
+      description: Get memo by ID
       parameters:
         - schema:
             type: string
@@ -196,8 +194,18 @@ paths:
                     type: string
                     enum:
                       - memo
+                  title:
+                    type: string
+                    nullable: true
                   bodyMd:
                     type: string
+                  status:
+                    type: string
+                    nullable: true
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
                   meta:
                     type: object
                     additionalProperties: {}
@@ -221,7 +229,10 @@ paths:
                 required:
                   - id
                   - type
+                  - title
                   - bodyMd
+                  - status
+                  - scheduledOn
                   - meta
                   - isBookmarked
                   - isDeleted
@@ -248,6 +259,9 @@ paths:
                   - message
                 additionalProperties: false
     patch:
+      tags:
+        - Memos
+      description: Update memo
       requestBody:
         content:
           application/json:
@@ -283,8 +297,18 @@ paths:
                     type: string
                     enum:
                       - memo
+                  title:
+                    type: string
+                    nullable: true
                   bodyMd:
                     type: string
+                  status:
+                    type: string
+                    nullable: true
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
                   meta:
                     type: object
                     additionalProperties: {}
@@ -301,7 +325,10 @@ paths:
                 required:
                   - id
                   - type
+                  - title
                   - bodyMd
+                  - status
+                  - scheduledOn
                   - meta
                   - isBookmarked
                   - isDeleted
@@ -347,6 +374,9 @@ paths:
                   - message
                 additionalProperties: false
     delete:
+      tags:
+        - Memos
+      description: Delete memo (soft delete)
       parameters:
         - schema:
             type: string
@@ -355,6 +385,8 @@ paths:
           name: id
           required: true
       responses:
+        "204":
+          description: Default Response
         "404":
           description: Default Response
           content:
@@ -376,6 +408,9 @@ paths:
                 additionalProperties: false
   /api/memos/{id}/promote:
     post:
+      tags:
+        - Memos
+      description: Promote memo to task
       requestBody:
         content:
           application/json:
@@ -431,6 +466,9 @@ paths:
                 additionalProperties: false
   /api/memos/{id}/bookmark:
     post:
+      tags:
+        - Memos
+      description: Bookmark memo
       parameters:
         - schema:
             type: string
@@ -454,8 +492,18 @@ paths:
                     type: string
                     enum:
                       - memo
+                  title:
+                    type: string
+                    nullable: true
                   bodyMd:
                     type: string
+                  status:
+                    type: string
+                    nullable: true
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
                   meta:
                     type: object
                     additionalProperties: {}
@@ -472,7 +520,10 @@ paths:
                 required:
                   - id
                   - type
+                  - title
                   - bodyMd
+                  - status
+                  - scheduledOn
                   - meta
                   - isBookmarked
                   - isDeleted
@@ -500,6 +551,9 @@ paths:
                 additionalProperties: false
   /api/memos/{id}/unbookmark:
     post:
+      tags:
+        - Memos
+      description: Unbookmark memo
       parameters:
         - schema:
             type: string
@@ -523,8 +577,18 @@ paths:
                     type: string
                     enum:
                       - memo
+                  title:
+                    type: string
+                    nullable: true
                   bodyMd:
                     type: string
+                  status:
+                    type: string
+                    nullable: true
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
                   meta:
                     type: object
                     additionalProperties: {}
@@ -541,7 +605,10 @@ paths:
                 required:
                   - id
                   - type
+                  - title
                   - bodyMd
+                  - status
+                  - scheduledOn
                   - meta
                   - isBookmarked
                   - isDeleted
@@ -569,6 +636,9 @@ paths:
                 additionalProperties: false
   /api/memos/{memoId}/comments:
     get:
+      tags:
+        - Comments
+      description: List all comments for a memo
       parameters:
         - schema:
             type: string
@@ -616,6 +686,9 @@ paths:
                     - updatedAt
                   additionalProperties: false
     post:
+      tags:
+        - Comments
+      description: Create comment on memo
       requestBody:
         content:
           application/json:
@@ -713,6 +786,9 @@ paths:
                 additionalProperties: false
   /api/memos/{memoId}/comments/{commentId}:
     patch:
+      tags:
+        - Comments
+      description: Update comment on memo
       requestBody:
         content:
           application/json:
@@ -815,6 +891,9 @@ paths:
                   - message
                 additionalProperties: false
     delete:
+      tags:
+        - Comments
+      description: Delete comment from memo
       parameters:
         - schema:
             type: string
@@ -835,6 +914,8 @@ paths:
           name: commentId
           required: true
       responses:
+        "204":
+          description: Default Response
         "404":
           description: Default Response
           content:
@@ -856,6 +937,9 @@ paths:
                 additionalProperties: false
   /api/tasks:
     post:
+      tags:
+        - Tasks
+      description: Create a new task
       requestBody:
         content:
           application/json:
@@ -962,6 +1046,9 @@ paths:
                   - message
                 additionalProperties: false
     get:
+      tags:
+        - Tasks
+      description: List all tasks with optional filters
       parameters:
         - schema:
             type: string
@@ -1046,6 +1133,9 @@ paths:
                   additionalProperties: false
   /api/tasks/{id}:
     get:
+      tags:
+        - Tasks
+      description: Get task by ID
       parameters:
         - schema:
             type: string
@@ -1139,6 +1229,9 @@ paths:
                   - message
                 additionalProperties: false
     patch:
+      tags:
+        - Tasks
+      description: Update task
       requestBody:
         content:
           application/json:
@@ -1269,6 +1362,9 @@ paths:
                   - message
                 additionalProperties: false
     delete:
+      tags:
+        - Tasks
+      description: Delete task (soft delete)
       parameters:
         - schema:
             type: string
@@ -1277,6 +1373,8 @@ paths:
           name: id
           required: true
       responses:
+        "204":
+          description: Default Response
         "404":
           description: Default Response
           content:
@@ -1298,6 +1396,9 @@ paths:
                 additionalProperties: false
   /api/tasks/{id}/close:
     post:
+      tags:
+        - Tasks
+      description: Close task (set status to done)
       parameters:
         - schema:
             type: string
@@ -1385,6 +1486,9 @@ paths:
                 additionalProperties: false
   /api/tasks/{id}/cancel:
     post:
+      tags:
+        - Tasks
+      description: Cancel task (set status to canceled)
       parameters:
         - schema:
             type: string
@@ -1472,6 +1576,9 @@ paths:
                 additionalProperties: false
   /api/tasks/{id}/reopen:
     post:
+      tags:
+        - Tasks
+      description: Reopen task (set status to open)
       parameters:
         - schema:
             type: string
@@ -1559,6 +1666,9 @@ paths:
                 additionalProperties: false
   /api/tasks/{id}/bookmark:
     post:
+      tags:
+        - Tasks
+      description: Bookmark task
       parameters:
         - schema:
             type: string
@@ -1646,6 +1756,9 @@ paths:
                 additionalProperties: false
   /api/tasks/{id}/unbookmark:
     post:
+      tags:
+        - Tasks
+      description: Unbookmark task
       parameters:
         - schema:
             type: string
@@ -1733,6 +1846,9 @@ paths:
                 additionalProperties: false
   /api/tasks/{taskId}/comments:
     get:
+      tags:
+        - Comments
+      description: List all comments for a task
       parameters:
         - schema:
             type: string
@@ -1780,6 +1896,9 @@ paths:
                     - updatedAt
                   additionalProperties: false
     post:
+      tags:
+        - Comments
+      description: Create comment on task
       requestBody:
         content:
           application/json:
@@ -1877,6 +1996,9 @@ paths:
                 additionalProperties: false
   /api/tasks/{taskId}/comments/{commentId}:
     patch:
+      tags:
+        - Comments
+      description: Update comment on task
       requestBody:
         content:
           application/json:
@@ -1979,6 +2101,9 @@ paths:
                   - message
                 additionalProperties: false
     delete:
+      tags:
+        - Comments
+      description: Delete comment from task
       parameters:
         - schema:
             type: string
@@ -1999,6 +2124,8 @@ paths:
           name: commentId
           required: true
       responses:
+        "204":
+          description: Default Response
         "404":
           description: Default Response
           content:
@@ -2020,6 +2147,9 @@ paths:
                 additionalProperties: false
   /api/labels:
     get:
+      tags:
+        - Labels
+      description: List all labels
       responses:
         "200":
           description: Default Response
@@ -2068,6 +2198,9 @@ paths:
                   - message
                 additionalProperties: false
     post:
+      tags:
+        - Labels
+      description: Create a new label
       requestBody:
         content:
           application/json:
@@ -2168,6 +2301,9 @@ paths:
                 additionalProperties: false
   /api/issues/{issueId}/labels:
     post:
+      tags:
+        - Labels
+      description: Assign a label to an issue (idempotent)
       requestBody:
         content:
           application/json:
@@ -2261,6 +2397,9 @@ paths:
                 additionalProperties: false
   /api/labels/{name}:
     delete:
+      tags:
+        - Labels
+      description: Delete a label by name
       parameters:
         - schema:
             type: string
@@ -2314,6 +2453,9 @@ paths:
                 additionalProperties: false
   /api/links:
     post:
+      tags:
+        - Links
+      description: Create a link between two issues
       requestBody:
         content:
           application/json:
@@ -2437,6 +2579,9 @@ paths:
                 additionalProperties: false
   /api/issues/{id}/links:
     get:
+      tags:
+        - Links
+      description: List all links for a given issue with direction
       parameters:
         - schema:
             type: string
@@ -2510,6 +2655,9 @@ paths:
                 additionalProperties: false
   /api/links/{id}:
     delete:
+      tags:
+        - Links
+      description: Delete a link by ID
       parameters:
         - schema:
             type: string

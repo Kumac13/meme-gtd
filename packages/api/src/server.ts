@@ -114,37 +114,47 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
       return { schema: undefined, url };
     }
 
-    // Transform each part of the schema (body, params, querystring, response, headers)
-    const transformed: any = {};
+    const transformed: any = { ...schema };
+    const transformZodSchema = (value: any) =>
+      zodToJsonSchema(value, {
+        target: 'openApi3',
+        $refStrategy: 'none',
+      });
 
-    for (const [key, value] of Object.entries(schema)) {
+    const keysToTransform = ['body', 'querystring', 'params', 'headers'];
+
+    for (const key of keysToTransform) {
+      const value = schema[key];
       if (!value) continue;
-
-      try {
-        if (key === 'response' && typeof value === 'object') {
-          // Response is an object of status codes to schemas
-          transformed.response = {};
-          for (const [statusCode, responseSchema] of Object.entries(value as Record<string, any>)) {
-            if (responseSchema && (responseSchema as any)._def) {
-              // Only transform if it's a Zod schema
-              transformed.response[statusCode] = zodToJsonSchema(responseSchema, {
-                target: 'openApi3',
-                $refStrategy: 'none',
-              });
-            }
-          }
-        } else if ((value as any)._def) {
-          // Only transform if it's a Zod schema (has _def property)
-          transformed[key] = zodToJsonSchema(value as any, {
-            target: 'openApi3',
-            $refStrategy: 'none',
-          });
+      if (value && value._def) {
+        try {
+          transformed[key] = transformZodSchema(value);
+        } catch (error) {
+          console.error(`Error transforming schema for ${key} at ${url}:`, error);
+          throw error;
         }
-      } catch (error) {
-        console.error(`Error transforming schema for ${key} at ${url}:`, error);
-        console.error('Value:', value);
-        throw error;
       }
+    }
+
+    if (schema.response && typeof schema.response === 'object') {
+      const responses: Record<string, any> = {};
+
+      for (const [statusCode, responseSchema] of Object.entries(schema.response as Record<string, any>)) {
+        if (!responseSchema) continue;
+
+        if (responseSchema._def) {
+          try {
+            responses[statusCode] = transformZodSchema(responseSchema);
+          } catch (error) {
+            console.error(`Error transforming response schema for status ${statusCode} at ${url}:`, error);
+            throw error;
+          }
+        } else {
+          responses[statusCode] = responseSchema;
+        }
+      }
+
+      transformed.response = responses;
     }
 
     return {
