@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import {
   createMemoHandler,
   listMemosHandler,
@@ -22,11 +23,15 @@ import {
   PromoteMemoRequestSchema,
   MemoSchema,
   MemoDetailSchema,
+  MemoIdParamsSchema,
+  MemoQuerySchema,
 } from '../schemas/memoSchemas.js';
 import {
   CreateCommentRequestSchema,
   UpdateCommentRequestSchema,
   CommentSchema,
+  IssueIdParamsSchema,
+  CommentIdParamsSchema,
 } from '../schemas/commentSchemas.js';
 import { ErrorResponseSchema } from '../schemas/errorSchemas.js';
 
@@ -61,17 +66,9 @@ export async function memoRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Memos'],
         description: 'List all memos with optional filters',
-        querystring: {
-          type: 'object',
-          properties: {
-            bookmarked: { type: 'string', enum: ['true', 'false'] },
-          },
-        },
+        querystring: MemoQuerySchema,
         response: {
-          200: {
-            type: 'array',
-            items: MemoSchema,
-          },
+          200: z.array(MemoSchema),
         },
       },
     },
@@ -85,13 +82,7 @@ export async function memoRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Memos'],
         description: 'Get memo by ID',
-        params: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', pattern: '^[0-9]+$' },
-          },
-          required: ['id'],
-        },
+        params: MemoIdParamsSchema,
         response: {
           200: MemoDetailSchema,
           404: ErrorResponseSchema,
@@ -108,13 +99,7 @@ export async function memoRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Memos'],
         description: 'Update memo',
-        params: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', pattern: '^[0-9]+$' },
-          },
-          required: ['id'],
-        },
+        params: MemoIdParamsSchema,
         body: UpdateMemoRequestSchema,
         response: {
           200: MemoSchema,
@@ -133,13 +118,7 @@ export async function memoRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Memos'],
         description: 'Delete memo (soft delete)',
-        params: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', pattern: '^[0-9]+$' },
-          },
-          required: ['id'],
-        },
+        params: MemoIdParamsSchema,
         response: {
           204: { type: 'null' },
           404: ErrorResponseSchema,
@@ -156,19 +135,10 @@ export async function memoRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Memos'],
         description: 'Promote memo to task',
-        params: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', pattern: '^[0-9]+$' },
-          },
-          required: ['id'],
-        },
+        params: MemoIdParamsSchema,
         body: PromoteMemoRequestSchema,
         response: {
-          200: {
-            type: 'object',
-            description: 'Promoted task',
-          },
+          200: z.unknown().describe('Promoted task'),
           404: ErrorResponseSchema,
         },
       },
@@ -183,13 +153,7 @@ export async function memoRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Memos'],
         description: 'Bookmark memo',
-        params: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', pattern: '^[0-9]+$' },
-          },
-          required: ['id'],
-        },
+        params: MemoIdParamsSchema,
         response: {
           200: MemoSchema,
           404: ErrorResponseSchema,
@@ -206,13 +170,7 @@ export async function memoRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Memos'],
         description: 'Unbookmark memo',
-        params: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', pattern: '^[0-9]+$' },
-          },
-          required: ['id'],
-        },
+        params: MemoIdParamsSchema,
         response: {
           200: MemoSchema,
           404: ErrorResponseSchema,
@@ -229,18 +187,9 @@ export async function memoRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Comments'],
         description: 'List all comments for a memo',
-        params: {
-          type: 'object',
-          properties: {
-            memoId: { type: 'string', pattern: '^[0-9]+$' },
-          },
-          required: ['memoId'],
-        },
+        params: IssueIdParamsSchema,
         response: {
-          200: {
-            type: 'array',
-            items: CommentSchema,
-          },
+          200: z.array(CommentSchema),
         },
       },
     },
@@ -254,13 +203,7 @@ export async function memoRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Comments'],
         description: 'Create comment on memo',
-        params: {
-          type: 'object',
-          properties: {
-            memoId: { type: 'string', pattern: '^[0-9]+$' },
-          },
-          required: ['memoId'],
-        },
+        params: IssueIdParamsSchema,
         body: CreateCommentRequestSchema,
         response: {
           201: CommentSchema,
@@ -279,14 +222,7 @@ export async function memoRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Comments'],
         description: 'Update comment on memo',
-        params: {
-          type: 'object',
-          properties: {
-            memoId: { type: 'string', pattern: '^[0-9]+$' },
-            commentId: { type: 'string', pattern: '^[0-9]+$' },
-          },
-          required: ['memoId', 'commentId'],
-        },
+        params: CommentIdParamsSchema,
         body: UpdateCommentRequestSchema,
         response: {
           200: CommentSchema,
@@ -305,14 +241,7 @@ export async function memoRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Comments'],
         description: 'Delete comment from memo',
-        params: {
-          type: 'object',
-          properties: {
-            memoId: { type: 'string', pattern: '^[0-9]+$' },
-            commentId: { type: 'string', pattern: '^[0-9]+$' },
-          },
-          required: ['memoId', 'commentId'],
-        },
+        params: CommentIdParamsSchema,
         response: {
           204: { type: 'null' },
           404: ErrorResponseSchema,

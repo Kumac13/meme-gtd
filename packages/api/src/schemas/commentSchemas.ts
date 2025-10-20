@@ -30,3 +30,24 @@ export const CommentSchema = z.object({
 });
 
 export type Comment = z.infer<typeof CommentSchema>;
+
+/**
+ * Schema for memo/task ID params (for comment endpoints)
+ */
+export const IssueIdParamsSchema = z.object({
+  memoId: z.string().regex(/^\d+$/, 'Memo ID must be a number').optional(),
+  taskId: z.string().regex(/^\d+$/, 'Task ID must be a number').optional(),
+});
+
+export type IssueIdParams = z.infer<typeof IssueIdParamsSchema>;
+
+/**
+ * Schema for comment ID params
+ */
+export const CommentIdParamsSchema = z.object({
+  memoId: z.string().regex(/^\d+$/).optional(),
+  taskId: z.string().regex(/^\d+$/).optional(),
+  commentId: z.string().regex(/^\d+$/, 'Comment ID must be a number'),
+});
+
+export type CommentIdParams = z.infer<typeof CommentIdParamsSchema>;

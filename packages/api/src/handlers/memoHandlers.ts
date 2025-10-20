@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { MemoService } from 'meme-gtd-core';
+import { MemoService, TaskService } from 'meme-gtd-core';
 import { NotFoundError } from '../errors/index.js';
 import type {
   CreateMemoRequest,
@@ -66,6 +66,9 @@ export async function getMemoHandler(
 
     return reply.status(200).send(memo);
   } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw new NotFoundError('Memo', memoId);
+    }
     throw error;
   }
 }
@@ -91,6 +94,9 @@ export async function updateMemoHandler(
 
     return reply.status(200).send(memo);
   } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw new NotFoundError('Memo', memoId);
+    }
     throw error;
   }
 }
@@ -109,6 +115,9 @@ export async function deleteMemoHandler(
     memoService.remove(memoId);
     return reply.status(204).send();
   } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw new NotFoundError('Memo', memoId);
+    }
     throw error;
   }
 }
@@ -126,16 +135,21 @@ export async function promoteMemoHandler(
   const memoId = parseInt(request.params.id, 10);
   const { title, status = 'open' } = request.body;
   const memoService = new MemoService({ config: request.server.config });
+  const taskService = new TaskService({ config: request.server.config });
 
   try {
-    const task = memoService.promote({
+    const { taskId } = memoService.promote({
       memoId,
       title,
       status,
     });
 
+    const task = taskService.show(taskId);
     return reply.status(200).send(task);
   } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw new NotFoundError('Memo', memoId);
+    }
     throw error;
   }
 }
@@ -151,9 +165,13 @@ export async function bookmarkMemoHandler(
   const memoService = new MemoService({ config: request.server.config });
 
   try {
-    const memo = memoService.setBookmark(memoId, true);
+    memoService.setBookmark(memoId, true);
+    const memo = memoService.show(memoId);
     return reply.status(200).send(memo);
   } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw new NotFoundError('Memo', memoId);
+    }
     throw error;
   }
 }
@@ -169,9 +187,13 @@ export async function unbookmarkMemoHandler(
   const memoService = new MemoService({ config: request.server.config });
 
   try {
-    const memo = memoService.setBookmark(memoId, false);
+    memoService.setBookmark(memoId, false);
+    const memo = memoService.show(memoId);
     return reply.status(200).send(memo);
   } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw new NotFoundError('Memo', memoId);
+    }
     throw error;
   }
 }

@@ -1,5 +1,10 @@
 import Fastify, { type FastifyInstance } from 'fastify';
-import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from 'fastify-type-provider-zod';
+import {
+  serializerCompiler,
+  validatorCompiler,
+  jsonSchemaTransform,
+  type ZodTypeProvider
+} from 'fastify-type-provider-zod';
 import type { MgtdConfig } from 'meme-gtd-config';
 
 export interface BuildAppOptions {
@@ -69,10 +74,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
         { name: 'Comments', description: 'Comment management endpoints' },
       ],
     },
-    transform: ({ schema, url }) => {
-      // Transform Zod schemas to JSON Schema for OpenAPI
-      return { schema, url };
-    },
+    transform: jsonSchemaTransform,
   });
 
   // Register Swagger UI

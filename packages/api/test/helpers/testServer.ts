@@ -36,8 +36,8 @@ export async function createTestServer(
     config,
     corsAllowedOrigins: options.corsAllowedOrigins ?? ['*'],
     logger: {
-      level: 'silent', // Disable logging in tests
-      prettyPrint: false,
+      level: 'error', // Show errors in tests
+      prettyPrint: true,
     },
   });
 

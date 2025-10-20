@@ -20,6 +20,9 @@ export async function listMemoCommentsHandler(
     const comments = memoService.listComments(memoId);
     return reply.status(200).send(comments);
   } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw new NotFoundError('Memo', memoId);
+    }
     throw error;
   }
 }
@@ -42,6 +45,13 @@ export async function createMemoCommentHandler(
     const comment = memoService.addComment(memoId, bodyMd);
     return reply.status(201).send(comment);
   } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw new NotFoundError('Memo', memoId);
+    }
+    // Handle FOREIGN KEY constraint errors (memo doesn't exist)
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') {
+      throw new NotFoundError('Memo', memoId);
+    }
     throw error;
   }
 }
@@ -64,6 +74,9 @@ export async function updateMemoCommentHandler(
     const comment = memoService.updateComment(commentId, bodyMd);
     return reply.status(200).send(comment);
   } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw new NotFoundError('Comment', commentId);
+    }
     throw error;
   }
 }
@@ -84,6 +97,9 @@ export async function deleteMemoCommentHandler(
     memoService.deleteComment(commentId);
     return reply.status(204).send();
   } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw new NotFoundError('Comment', commentId);
+    }
     throw error;
   }
 }

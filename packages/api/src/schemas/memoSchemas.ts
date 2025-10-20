@@ -61,3 +61,21 @@ export const BookmarkRequestSchema = z.object({
 });
 
 export type BookmarkRequest = z.infer<typeof BookmarkRequestSchema>;
+
+/**
+ * Schema for memo ID params
+ */
+export const MemoIdParamsSchema = z.object({
+  id: z.string().regex(/^\d+$/, 'ID must be a number'),
+});
+
+export type MemoIdParams = z.infer<typeof MemoIdParamsSchema>;
+
+/**
+ * Schema for memo query filters
+ */
+export const MemoQuerySchema = z.object({
+  bookmarked: z.enum(['true', 'false']).optional(),
+});
+
+export type MemoQuery = z.infer<typeof MemoQuerySchema>;
