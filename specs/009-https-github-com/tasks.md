@@ -175,25 +175,25 @@
 
 ### Enhanced Configuration
 
-- [ ] T050 [US4] Add command-line argument parsing in `packages/api/src/index.ts` (--port, --db, --config flags using minimist or commander)
-- [ ] T051 [US4] Enhance environment config in `packages/api/src/config.ts` to merge CLI flags > env vars > defaults
-- [ ] T052 [P] [US4] Implement graceful shutdown handler in `packages/api/src/index.ts` (SIGINT, SIGTERM, close DB connections)
+- [x] T050 [US4] Add command-line argument parsing in `packages/api/src/index.ts` (--port, --db, --config flags using minimist or commander)
+- [x] T051 [US4] Enhance environment config in `packages/api/src/config.ts` to merge CLI flags > env vars > defaults
+- [x] T052 [P] [US4] Implement graceful shutdown handler in `packages/api/src/index.ts` (SIGINT, SIGTERM, close DB connections)
 
 ### CORS Enhancement
 
-- [ ] T053 [US4] Update CORS middleware in `packages/api/src/middleware/cors.ts` to use CORS_ALLOWED_ORIGINS from config (comma-separated list)
-- [ ] T054 [P] [US4] Add CORS preflight OPTIONS handling test in `packages/api/test/integration/cors.test.ts`
+- [x] T053 [US4] Update CORS middleware in `packages/api/src/middleware/cors.ts` to use CORS_ALLOWED_ORIGINS from config (comma-separated list)
+- [x] T054 [P] [US4] Add CORS preflight OPTIONS handling test in `packages/api/test/integration/cors.test.ts`
 
 ### Error Handling Enhancement
 
-- [ ] T055 [US4] Verify global error handler catches all SQLite errors (SQLITE_BUSY → 503, SQLITE_CONSTRAINT_UNIQUE → 409, etc.) in `packages/api/src/middleware/errorHandler.ts`
-- [ ] T056 [P] [US4] Implement request size limit middleware and test 413 response for large payloads
-- [ ] T057 [P] [US4] Add comprehensive error handling integration tests in `packages/api/test/integration/errors.test.ts` (404, 400 validation, 409 conflict, 500 internal, 503 unavailable)
+- [x] T055 [US4] Verify global error handler catches all SQLite errors (SQLITE_BUSY → 503, SQLITE_CONSTRAINT_UNIQUE → 409, etc.) in `packages/api/src/middleware/errorHandler.ts`
+- [x] T056 [P] [US4] Implement request size limit middleware and test 413 response for large payloads
+- [x] T057 [P] [US4] Add comprehensive error handling integration tests in `packages/api/test/integration/errors.test.ts` (404, 400 validation, 409 conflict, 500 internal, 503 unavailable)
 
 ### Logging Enhancement
 
-- [ ] T058 [P] [US4] Add request/response logging hooks in `server.ts` (onRequest, onResponse with requestId, method, url, statusCode, responseTime)
-- [ ] T059 [P] [US4] Add structured error logging test in `packages/api/test/integration/logging.test.ts` (verify log format, level, stack traces for 5xx only)
+- [x] T058 [P] [US4] Add request/response logging hooks in `server.ts` (onRequest, onResponse with requestId, method, url, statusCode, responseTime)
+- [x] T059 [P] [US4] Add structured error logging test in `packages/api/test/integration/logging.test.ts` (verify log format, level, stack traces for 5xx only)
 
 **Checkpoint**: User Story 4 complete - server fully configurable and production-ready
 
