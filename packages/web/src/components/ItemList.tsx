@@ -2,25 +2,25 @@ import { Link } from 'react-router-dom';
 import { formatDateTime, formatRelativeTime } from '../utils/dates';
 import { truncateMarkdown } from '../utils/markdown';
 
+interface Label {
+  name: string;
+  color: string;
+}
+
 interface BaseItem {
   id: number;
   title: string | null;
   bodyMd: string;
   isBookmarked: boolean;
   commentCount?: number;
+  labels?: Label[];
   createdAt: string;
   updatedAt: string;
-}
-
-interface Label {
-  name: string;
-  color: string;
 }
 
 interface Task extends BaseItem {
   status: string | null;
   scheduledOn: string | null;
-  labels?: Label[];
 }
 
 type Item = BaseItem | Task;
@@ -52,7 +52,7 @@ export default function ItemList({ items, itemType, basePath }: ItemListProps) {
                     <h2 className="text-base font-semibold text-gray-900">
                       {item.title || `Task #${item.id}`}
                     </h2>
-                    {isTask(item) && item.labels && item.labels.length > 0 && (
+                    {item.labels && item.labels.length > 0 && (
                       <>
                         {item.labels.map((label, idx) => (
                           <span
@@ -76,9 +76,29 @@ export default function ItemList({ items, itemType, basePath }: ItemListProps) {
                   )}
                 </>
               ) : (
-                <p className="text-gray-900 text-sm mb-2">
-                  {truncateMarkdown(item.bodyMd, 150)}
-                </p>
+                <>
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <p className="text-gray-900 text-sm">
+                      {truncateMarkdown(item.bodyMd, 150)}
+                    </p>
+                  </div>
+                  {item.labels && item.labels.length > 0 && (
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      {item.labels.map((label, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 text-xs font-medium rounded"
+                          style={{
+                            backgroundColor: `#${label.color}`,
+                            color: '#000',
+                          }}
+                        >
+                          {label.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
               <div className="flex items-center text-xs text-gray-500 space-x-3">
                 <span>#{item.id}</span>

@@ -5,11 +5,17 @@ import ItemDetail from '../components/ItemDetail';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 
+interface Label {
+  name: string;
+  color: string;
+}
+
 interface Memo {
   id: number;
   title: string | null;
   bodyMd: string;
   isBookmarked: boolean;
+  labels?: Label[];
   createdAt: string;
   updatedAt: string;
 }

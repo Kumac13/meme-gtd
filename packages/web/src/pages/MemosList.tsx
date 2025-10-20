@@ -7,12 +7,18 @@ import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
 
+interface Label {
+  name: string;
+  color: string;
+}
+
 interface Memo {
   id: number;
   title: string | null;
   bodyMd: string;
   isBookmarked: boolean;
   commentCount?: number;
+  labels?: Label[];
   createdAt: string;
   updatedAt: string;
 }

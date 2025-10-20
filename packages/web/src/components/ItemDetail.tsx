@@ -12,6 +12,7 @@ interface BaseItem {
   title: string | null;
   bodyMd: string;
   isBookmarked: boolean;
+  labels?: Label[];
   createdAt: string;
   updatedAt: string;
 }
@@ -19,7 +20,6 @@ interface BaseItem {
 interface Task extends BaseItem {
   status: string | null;
   scheduledOn: string | null;
-  labels?: Label[];
 }
 
 type Item = BaseItem | Task;
@@ -73,7 +73,7 @@ export default function ItemDetail({
               <h1 className="text-3xl font-bold text-gray-900">
                 {item.title || `${itemType === 'memo' ? 'Memo' : 'Task'} #${item.id}`}
               </h1>
-              {isTask(item) && item.labels && item.labels.length > 0 && (
+              {item.labels && item.labels.length > 0 && (
                 <>
                   {item.labels.map((label, idx) => (
                     <span
