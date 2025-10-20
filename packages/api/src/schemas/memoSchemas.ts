@@ -38,7 +38,7 @@ export const MemoSchema = z.object({
   title: z.string().nullable().describe('Title (always null for memos)'),
   bodyMd: z.string().describe('Memo content in Markdown format'),
   status: z.string().nullable().describe('Status (always null for memos)'),
-  scheduledOn: z.string().datetime().nullable().describe('Scheduled date (always null for memos)'),
+  scheduledOn: z.string().date().nullable().describe('Scheduled date (always null for memos)'),
   meta: z.record(z.any()).describe('Metadata object'),
   isBookmarked: z.boolean().describe('Whether the memo is bookmarked'),
   isDeleted: z.boolean().describe('Whether the memo is soft-deleted'),
