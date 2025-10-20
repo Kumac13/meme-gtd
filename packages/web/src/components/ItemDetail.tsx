@@ -84,22 +84,38 @@ export default function ItemDetail({
           <h1 className="text-3xl font-bold text-gray-900">
             {item.title || `${itemType === 'memo' ? 'Memo' : 'Task'} #${item.id}`}
           </h1>
-          <button
-            onClick={onBookmarkToggle}
-            disabled={bookmarking}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            title={item.isBookmarked ? 'Unbookmark' : 'Bookmark'}
-          >
-            {item.isBookmarked ? (
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Z"></path>
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.91l3.023-2.489a.75.75 0 0 1 .954 0l3.023 2.49V2.75a.25.25 0 0 0-.25-.25Z"></path>
-              </svg>
+          <div className="flex items-center gap-2">
+            {itemType === 'task' && 'status' in item && onStatusChange && (
+              <select
+                value={item.status || 'open'}
+                onChange={(e) => onStatusChange(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500"
+              >
+                <option value="open">Open</option>
+                <option value="next">Next</option>
+                <option value="waiting">Waiting</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="done">Done</option>
+                <option value="canceled">Canceled</option>
+              </select>
             )}
-          </button>
+            <button
+              onClick={onBookmarkToggle}
+              disabled={bookmarking}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={item.isBookmarked ? 'Unbookmark' : 'Bookmark'}
+            >
+              {item.isBookmarked ? (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Z"></path>
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.91l3.023-2.489a.75.75 0 0 1 .954 0l3.023 2.49V2.75a.25.25 0 0 0-.25-.25Z"></path>
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
         {item.labels && item.labels.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap mb-3">
@@ -115,26 +131,6 @@ export default function ItemDetail({
                 {label}
               </span>
             ))}
-          </div>
-        )}
-        {itemType === 'task' && 'status' in item && onStatusChange && (
-          <div className="mb-4">
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
-            <select
-              id="status"
-              value={item.status || 'open'}
-              onChange={(e) => onStatusChange(e.target.value)}
-              className="px-3 py-1 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500"
-            >
-              <option value="open">Open</option>
-              <option value="next">Next</option>
-              <option value="waiting">Waiting</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="done">Done</option>
-              <option value="canceled">Canceled</option>
-            </select>
           </div>
         )}
       </div>
