@@ -48,7 +48,9 @@ export async function memoRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Memos'],
+        summary: 'Create memo',
         description: 'Create a new memo',
+        operationId: 'createMemo',
         body: CreateMemoRequestSchema,
         response: {
           201: MemoSchema,
@@ -65,10 +67,13 @@ export async function memoRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Memos'],
+        summary: 'List memos',
         description: 'List all memos with optional filters',
+        operationId: 'listMemos',
         querystring: MemoQuerySchema,
         response: {
           200: z.array(MemoSchema),
+          400: ErrorResponseSchema,
         },
       },
     },
@@ -81,7 +86,9 @@ export async function memoRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Memos'],
+        summary: 'Get memo',
         description: 'Get memo by ID',
+        operationId: 'getMemo',
         params: MemoIdParamsSchema,
         response: {
           200: MemoDetailSchema,
@@ -98,7 +105,9 @@ export async function memoRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Memos'],
+        summary: 'Update memo',
         description: 'Update memo',
+        operationId: 'updateMemo',
         params: MemoIdParamsSchema,
         body: UpdateMemoRequestSchema,
         response: {
@@ -117,7 +126,9 @@ export async function memoRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Memos'],
+        summary: 'Delete memo',
         description: 'Delete memo (soft delete)',
+        operationId: 'deleteMemo',
         params: MemoIdParamsSchema,
         response: {
           204: { type: 'null' },
@@ -134,7 +145,9 @@ export async function memoRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Memos'],
+        summary: 'Promote memo to task',
         description: 'Promote memo to task',
+        operationId: 'promoteMemo',
         params: MemoIdParamsSchema,
         body: PromoteMemoRequestSchema,
         response: {
@@ -152,7 +165,9 @@ export async function memoRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Memos'],
+        summary: 'Bookmark memo',
         description: 'Bookmark memo',
+        operationId: 'bookmarkMemo',
         params: MemoIdParamsSchema,
         response: {
           200: MemoSchema,
@@ -169,7 +184,9 @@ export async function memoRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Memos'],
+        summary: 'Unbookmark memo',
         description: 'Unbookmark memo',
+        operationId: 'unbookmarkMemo',
         params: MemoIdParamsSchema,
         response: {
           200: MemoSchema,
@@ -186,10 +203,13 @@ export async function memoRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Comments'],
+        summary: 'List memo comments',
         description: 'List all comments for a memo',
+        operationId: 'listMemoComments',
         params: MemoCommentParamsSchema,
         response: {
           200: z.array(CommentSchema),
+          400: ErrorResponseSchema,
         },
       },
     },
@@ -202,7 +222,9 @@ export async function memoRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Comments'],
+        summary: 'Create memo comment',
         description: 'Create comment on memo',
+        operationId: 'createMemoComment',
         params: MemoCommentParamsSchema,
         body: CreateCommentRequestSchema,
         response: {
@@ -221,7 +243,9 @@ export async function memoRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Comments'],
+        summary: 'Update memo comment',
         description: 'Update comment on memo',
+        operationId: 'updateMemoComment',
         params: MemoCommentIdParamsSchema,
         body: UpdateCommentRequestSchema,
         response: {
@@ -240,7 +264,9 @@ export async function memoRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Comments'],
+        summary: 'Delete memo comment',
         description: 'Delete comment from memo',
+        operationId: 'deleteMemoComment',
         params: MemoCommentIdParamsSchema,
         response: {
           204: { type: 'null' },

@@ -28,7 +28,9 @@ export async function linkRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Links'],
+        summary: 'Create link',
         description: 'Create a link between two issues',
+        operationId: 'createLink',
         body: CreateLinkRequestSchema,
         response: {
           201: LinkSchema,
@@ -47,10 +49,13 @@ export async function linkRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Links'],
+        summary: 'List issue links',
         description: 'List all links for a given issue with direction',
+        operationId: 'listIssueLinks',
         params: IssueIdForLinksParamsSchema,
         response: {
           200: z.array(LinkWithDirectionSchema),
+          404: ErrorResponseSchema,
           500: ErrorResponseSchema,
         },
       },
@@ -64,7 +69,9 @@ export async function linkRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Links'],
+        summary: 'Delete link',
         description: 'Delete a link by ID',
+        operationId: 'deleteLink',
         params: LinkIdParamsSchema,
         response: {
           204: z.void(),

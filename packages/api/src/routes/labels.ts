@@ -29,9 +29,12 @@ export async function labelRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Labels'],
+        summary: 'List labels',
         description: 'List all labels',
+        operationId: 'listLabels',
         response: {
           200: z.array(LabelSchema),
+          400: ErrorResponseSchema,
           500: ErrorResponseSchema,
         },
       },
@@ -45,7 +48,9 @@ export async function labelRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Labels'],
+        summary: 'Create label',
         description: 'Create a new label',
+        operationId: 'createLabel',
         body: CreateLabelRequestSchema,
         response: {
           201: LabelSchema,
@@ -64,7 +69,9 @@ export async function labelRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Labels'],
+        summary: 'Assign label to issue',
         description: 'Assign a label to an issue (idempotent)',
+        operationId: 'assignLabelToIssue',
         params: IssueIdParamsSchema,
         body: AssignLabelRequestSchema,
         response: {
@@ -84,7 +91,9 @@ export async function labelRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Labels'],
+        summary: 'Delete label',
         description: 'Delete a label by name',
+        operationId: 'deleteLabel',
         params: LabelNameParamsSchema,
         response: {
           204: z.void(),

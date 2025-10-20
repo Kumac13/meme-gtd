@@ -49,7 +49,9 @@ export async function taskRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Tasks'],
+        summary: 'Create task',
         description: 'Create a new task',
+        operationId: 'createTask',
         body: CreateTaskRequestSchema,
         response: {
           201: TaskSchema,
@@ -66,10 +68,13 @@ export async function taskRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Tasks'],
+        summary: 'List tasks',
         description: 'List all tasks with optional filters',
+        operationId: 'listTasks',
         querystring: TaskQuerySchema,
         response: {
           200: z.array(TaskSchema),
+          400: ErrorResponseSchema,
         },
       },
     },
@@ -82,7 +87,9 @@ export async function taskRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Tasks'],
+        summary: 'Get task',
         description: 'Get task by ID',
+        operationId: 'getTask',
         params: TaskIdParamsSchema,
         response: {
           200: TaskDetailSchema,
@@ -99,7 +106,9 @@ export async function taskRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Tasks'],
+        summary: 'Update task',
         description: 'Update task',
+        operationId: 'updateTask',
         params: TaskIdParamsSchema,
         body: UpdateTaskRequestSchema,
         response: {
@@ -118,7 +127,9 @@ export async function taskRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Tasks'],
+        summary: 'Delete task',
         description: 'Delete task (soft delete)',
+        operationId: 'deleteTask',
         params: TaskIdParamsSchema,
         response: {
           204: { type: 'null' },
@@ -135,7 +146,9 @@ export async function taskRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Tasks'],
+        summary: 'Close task',
         description: 'Close task (set status to done)',
+        operationId: 'closeTask',
         params: TaskIdParamsSchema,
         response: {
           200: TaskSchema,
@@ -152,7 +165,9 @@ export async function taskRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Tasks'],
+        summary: 'Cancel task',
         description: 'Cancel task (set status to canceled)',
+        operationId: 'cancelTask',
         params: TaskIdParamsSchema,
         response: {
           200: TaskSchema,
@@ -169,7 +184,9 @@ export async function taskRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Tasks'],
+        summary: 'Reopen task',
         description: 'Reopen task (set status to open)',
+        operationId: 'reopenTask',
         params: TaskIdParamsSchema,
         response: {
           200: TaskSchema,
@@ -186,7 +203,9 @@ export async function taskRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Tasks'],
+        summary: 'Bookmark task',
         description: 'Bookmark task',
+        operationId: 'bookmarkTask',
         params: TaskIdParamsSchema,
         response: {
           200: TaskSchema,
@@ -203,7 +222,9 @@ export async function taskRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Tasks'],
+        summary: 'Unbookmark task',
         description: 'Unbookmark task',
+        operationId: 'unbookmarkTask',
         params: TaskIdParamsSchema,
         response: {
           200: TaskSchema,
@@ -220,10 +241,13 @@ export async function taskRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Comments'],
+        summary: 'List task comments',
         description: 'List all comments for a task',
+        operationId: 'listTaskComments',
         params: TaskCommentParamsSchema,
         response: {
           200: z.array(CommentSchema),
+          400: ErrorResponseSchema,
         },
       },
     },
@@ -236,7 +260,9 @@ export async function taskRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Comments'],
+        summary: 'Create task comment',
         description: 'Create comment on task',
+        operationId: 'createTaskComment',
         params: TaskCommentParamsSchema,
         body: CreateCommentRequestSchema,
         response: {
@@ -255,7 +281,9 @@ export async function taskRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Comments'],
+        summary: 'Update task comment',
         description: 'Update comment on task',
+        operationId: 'updateTaskComment',
         params: TaskCommentIdParamsSchema,
         body: UpdateCommentRequestSchema,
         response: {
@@ -274,7 +302,9 @@ export async function taskRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Comments'],
+        summary: 'Delete task comment',
         description: 'Delete comment from task',
+        operationId: 'deleteTaskComment',
         params: TaskCommentIdParamsSchema,
         response: {
           204: { type: 'null' },

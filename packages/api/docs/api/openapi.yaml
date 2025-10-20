@@ -8,6 +8,8 @@ components:
 paths:
   /api/memos:
     post:
+      operationId: createMemo
+      summary: Create memo
       tags:
         - Memos
       description: Create a new memo
@@ -114,6 +116,8 @@ paths:
                   - message
                 additionalProperties: false
     get:
+      operationId: listMemos
+      summary: List memos
       tags:
         - Memos
       description: List all memos with optional filters
@@ -194,8 +198,33 @@ paths:
                     - createdAt
                     - updatedAt
                   additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
   /api/memos/{id}:
     get:
+      operationId: getMemo
+      summary: Get memo
       tags:
         - Memos
       description: Get memo by ID
@@ -305,6 +334,8 @@ paths:
                   - message
                 additionalProperties: false
     patch:
+      operationId: updateMemo
+      summary: Update memo
       tags:
         - Memos
       description: Update memo
@@ -442,6 +473,8 @@ paths:
                   - message
                 additionalProperties: false
     delete:
+      operationId: deleteMemo
+      summary: Delete memo
       tags:
         - Memos
       description: Delete memo (soft delete)
@@ -481,6 +514,8 @@ paths:
                 additionalProperties: false
   /api/memos/{id}/promote:
     post:
+      operationId: promoteMemo
+      summary: Promote memo to task
       tags:
         - Memos
       description: Promote memo to task
@@ -546,6 +581,8 @@ paths:
                 additionalProperties: false
   /api/memos/{id}/bookmark:
     post:
+      operationId: bookmarkMemo
+      summary: Bookmark memo
       tags:
         - Memos
       description: Bookmark memo
@@ -647,6 +684,8 @@ paths:
                 additionalProperties: false
   /api/memos/{id}/unbookmark:
     post:
+      operationId: unbookmarkMemo
+      summary: Unbookmark memo
       tags:
         - Memos
       description: Unbookmark memo
@@ -748,6 +787,8 @@ paths:
                 additionalProperties: false
   /api/memos/{memoId}/comments:
     get:
+      operationId: listMemoComments
+      summary: List memo comments
       tags:
         - Comments
       description: List all comments for a memo
@@ -797,7 +838,32 @@ paths:
                     - createdAt
                     - updatedAt
                   additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
     post:
+      operationId: createMemoComment
+      summary: Create memo comment
       tags:
         - Comments
       description: Create comment on memo
@@ -907,6 +973,8 @@ paths:
                 additionalProperties: false
   /api/memos/{memoId}/comments/{commentId}:
     patch:
+      operationId: updateMemoComment
+      summary: Update memo comment
       tags:
         - Comments
       description: Update comment on memo
@@ -1022,6 +1090,8 @@ paths:
                   - message
                 additionalProperties: false
     delete:
+      operationId: deleteMemoComment
+      summary: Delete memo comment
       tags:
         - Comments
       description: Delete comment from memo
@@ -1068,6 +1138,8 @@ paths:
                 additionalProperties: false
   /api/tasks:
     post:
+      operationId: createTask
+      summary: Create task
       tags:
         - Tasks
       description: Create a new task
@@ -1196,6 +1268,8 @@ paths:
                   - message
                 additionalProperties: false
     get:
+      operationId: listTasks
+      summary: List tasks
       tags:
         - Tasks
       description: List all tasks with optional filters
@@ -1294,8 +1368,33 @@ paths:
                     - createdAt
                     - updatedAt
                   additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
   /api/tasks/{id}:
     get:
+      operationId: getTask
+      summary: Get task
       tags:
         - Tasks
       description: Get task by ID
@@ -1410,6 +1509,8 @@ paths:
                   - message
                 additionalProperties: false
     patch:
+      operationId: updateTask
+      summary: Update task
       tags:
         - Tasks
       description: Update task
@@ -1567,6 +1668,8 @@ paths:
                   - message
                 additionalProperties: false
     delete:
+      operationId: deleteTask
+      summary: Delete task
       tags:
         - Tasks
       description: Delete task (soft delete)
@@ -1606,6 +1709,8 @@ paths:
                 additionalProperties: false
   /api/tasks/{id}/close:
     post:
+      operationId: closeTask
+      summary: Close task
       tags:
         - Tasks
       description: Close task (set status to done)
@@ -1712,6 +1817,8 @@ paths:
                 additionalProperties: false
   /api/tasks/{id}/cancel:
     post:
+      operationId: cancelTask
+      summary: Cancel task
       tags:
         - Tasks
       description: Cancel task (set status to canceled)
@@ -1818,6 +1925,8 @@ paths:
                 additionalProperties: false
   /api/tasks/{id}/reopen:
     post:
+      operationId: reopenTask
+      summary: Reopen task
       tags:
         - Tasks
       description: Reopen task (set status to open)
@@ -1924,6 +2033,8 @@ paths:
                 additionalProperties: false
   /api/tasks/{id}/bookmark:
     post:
+      operationId: bookmarkTask
+      summary: Bookmark task
       tags:
         - Tasks
       description: Bookmark task
@@ -2030,6 +2141,8 @@ paths:
                 additionalProperties: false
   /api/tasks/{id}/unbookmark:
     post:
+      operationId: unbookmarkTask
+      summary: Unbookmark task
       tags:
         - Tasks
       description: Unbookmark task
@@ -2136,6 +2249,8 @@ paths:
                 additionalProperties: false
   /api/tasks/{taskId}/comments:
     get:
+      operationId: listTaskComments
+      summary: List task comments
       tags:
         - Comments
       description: List all comments for a task
@@ -2185,7 +2300,32 @@ paths:
                     - createdAt
                     - updatedAt
                   additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
     post:
+      operationId: createTaskComment
+      summary: Create task comment
       tags:
         - Comments
       description: Create comment on task
@@ -2295,6 +2435,8 @@ paths:
                 additionalProperties: false
   /api/tasks/{taskId}/comments/{commentId}:
     patch:
+      operationId: updateTaskComment
+      summary: Update task comment
       tags:
         - Comments
       description: Update comment on task
@@ -2410,6 +2552,8 @@ paths:
                   - message
                 additionalProperties: false
     delete:
+      operationId: deleteTaskComment
+      summary: Delete task comment
       tags:
         - Comments
       description: Delete comment from task
@@ -2456,6 +2600,8 @@ paths:
                 additionalProperties: false
   /api/labels:
     get:
+      operationId: listLabels
+      summary: List labels
       tags:
         - Labels
       description: List all labels
@@ -2491,6 +2637,29 @@ paths:
                     - description
                     - createdAt
                   additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
         "500":
           description: Default Response
           content:
@@ -2515,6 +2684,8 @@ paths:
                   - message
                 additionalProperties: false
     post:
+      operationId: createLabel
+      summary: Create label
       tags:
         - Labels
       description: Create a new label
@@ -2636,6 +2807,8 @@ paths:
                 additionalProperties: false
   /api/issues/{issueId}/labels:
     post:
+      operationId: assignLabelToIssue
+      summary: Assign label to issue
       tags:
         - Labels
       description: Assign a label to an issue (idempotent)
@@ -2746,6 +2919,8 @@ paths:
                 additionalProperties: false
   /api/labels/{name}:
     delete:
+      operationId: deleteLabel
+      summary: Delete label
       tags:
         - Labels
       description: Delete a label by name
@@ -2811,6 +2986,8 @@ paths:
                 additionalProperties: false
   /api/links:
     post:
+      operationId: createLink
+      summary: Create link
       tags:
         - Links
       description: Create a link between two issues
@@ -2957,6 +3134,8 @@ paths:
                 additionalProperties: false
   /api/issues/{id}/links:
     get:
+      operationId: listIssueLinks
+      summary: List issue links
       tags:
         - Links
       description: List all links for a given issue with direction
@@ -3019,6 +3198,29 @@ paths:
                     - createdAt
                     - direction
                   additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
         "500":
           description: Default Response
           content:
@@ -3044,6 +3246,8 @@ paths:
                 additionalProperties: false
   /api/links/{id}:
     delete:
+      operationId: deleteLink
+      summary: Delete link
       tags:
         - Links
       description: Delete a link by ID
