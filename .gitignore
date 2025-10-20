@@ -8,3 +8,32 @@ dist/
 .tmp/
 .claude/
 .specify/
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.development
+!.env.production
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Build artifacts
+build/
+*.tsbuildinfo
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# Editor directories
+.vscode/
+.idea/
+*.sublime-*
+
+# OS files
+Thumbs.db
