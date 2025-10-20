@@ -6,7 +6,7 @@ import { createMemoFixture } from '../helpers/fixtures.js';
 
 describe('Memo Comment Operations', () => {
   let app: FastifyInstance;
-  let cleanup: () => void;
+  let cleanup: () => Promise<void>;
 
   beforeEach(async () => {
     const testServer = await createTestServer();
@@ -14,8 +14,8 @@ describe('Memo Comment Operations', () => {
     cleanup = testServer.cleanup;
   });
 
-  afterEach(() => {
-    cleanup();
+  afterEach(async () => {
+    await cleanup();
   });
 
   it('should create comment on memo (POST /api/memos/:memoId/comments)', async () => {

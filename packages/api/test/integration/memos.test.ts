@@ -6,7 +6,7 @@ import { createMemoFixture } from '../helpers/fixtures.js';
 
 describe('Memo CRUD Operations', () => {
   let app: FastifyInstance;
-  let cleanup: () => void;
+  let cleanup: () => Promise<void>;
 
   beforeEach(async () => {
     const testServer = await createTestServer();
@@ -14,8 +14,8 @@ describe('Memo CRUD Operations', () => {
     cleanup = testServer.cleanup;
   });
 
-  afterEach(() => {
-    cleanup();
+  afterEach(async () => {
+    await cleanup();
   });
 
   it('should create a new memo (POST /api/memos)', async () => {
@@ -185,7 +185,7 @@ describe('Memo CRUD Operations', () => {
 
 describe('Memo Promote Operation', () => {
   let app: FastifyInstance;
-  let cleanup: () => void;
+  let cleanup: () => Promise<void>;
 
   beforeEach(async () => {
     const testServer = await createTestServer();
@@ -193,8 +193,8 @@ describe('Memo Promote Operation', () => {
     cleanup = testServer.cleanup;
   });
 
-  afterEach(() => {
-    cleanup();
+  afterEach(async () => {
+    await cleanup();
   });
 
   it('should promote memo to task (POST /api/memos/:id/promote)', async () => {
@@ -249,7 +249,7 @@ describe('Memo Promote Operation', () => {
 
 describe('Memo Bookmark Operations', () => {
   let app: FastifyInstance;
-  let cleanup: () => void;
+  let cleanup: () => Promise<void>;
 
   beforeEach(async () => {
     const testServer = await createTestServer();
@@ -257,8 +257,8 @@ describe('Memo Bookmark Operations', () => {
     cleanup = testServer.cleanup;
   });
 
-  afterEach(() => {
-    cleanup();
+  afterEach(async () => {
+    await cleanup();
   });
 
   it('should bookmark a memo (POST /api/memos/:id/bookmark)', async () => {

@@ -16,7 +16,7 @@ export interface TestServerOptions {
  */
 export async function createTestServer(
   options: TestServerOptions = {}
-): Promise<{ app: FastifyInstance; cleanup: () => void }> {
+): Promise<{ app: FastifyInstance; cleanup: () => Promise<void> }> {
   // Create temporary directory for test database
   const tmpDir = mkdtempSync(join(tmpdir(), 'mgtd-api-test-'));
   const dbPath = join(tmpDir, 'test.db');
@@ -42,8 +42,8 @@ export async function createTestServer(
   });
 
   // Cleanup function to close server and remove temp directory
-  const cleanup = () => {
-    app.close();
+  const cleanup = async () => {
+    await app.close();
     // Note: In a real implementation, you might want to recursively delete tmpDir
     // For simplicity, we're leaving it to the OS to clean up /tmp
   };
