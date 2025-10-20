@@ -30,7 +30,7 @@ pnpm build
 ### Quick Start
 
 ```bash
-# IMPORTANT: Always run from repository root to use the same database as CLI
+# From repository root
 cd /path/to/meme-gtd
 
 # Install dependencies (if not done)
@@ -42,8 +42,6 @@ pnpm --filter meme-gtd-api dev
 # Server starts at http://localhost:3000
 # Access Swagger UI at http://localhost:3000/api-docs
 ```
-
-**Note**: The API server must be started from the repository root directory to access the same database as the CLI. If your `dbPath` in `~/.config/mgtd/context.json` is a relative path (e.g., `.tmp/issues.db`), the server needs to run from the same directory as your CLI commands.
 
 ### Development Mode
 
