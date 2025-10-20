@@ -38,6 +38,30 @@ corepack prepare pnpm@9.0.0 --activate
      mgtd memo comment --help
      ```
 
+## Web UI
+
+### 起動方法
+1. 全パッケージをビルド
+   ```bash
+   pnpm install
+   pnpm -r build
+   ```
+
+2. APIサーバーを起動
+   ```bash
+   pnpm run server:start
+   ```
+
+3. ブラウザで `http://localhost:3000` にアクセス
+
+### 機能
+- Memo/Task一覧表示（フィルター機能付き）
+- Memo/Task詳細表示（Markdown表示）
+- Memo/Task作成・編集・削除
+- コメント投稿・編集・削除
+- Bookmark機能
+- Task Status変更
+
 ## テスト実行
 ```bash
 pnpm test
