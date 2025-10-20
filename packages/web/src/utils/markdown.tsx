@@ -4,6 +4,7 @@
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import type { Components } from 'react-markdown';
 
 /**
@@ -124,7 +125,7 @@ export function MarkdownRenderer({ content, components, className = '' }: Markdo
   return (
     <div className={`markdown-content ${className}`}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkBreaks]}
         components={{ ...defaultComponents, ...components }}
       >
         {content}
