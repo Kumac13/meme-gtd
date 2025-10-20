@@ -141,7 +141,7 @@ export default function EditableContent({
           </div>
         </div>
       ) : (
-        <div className="prose prose-sm max-w-none">
+        <div className="prose prose-sm max-w-none mt-0">
           <MarkdownRenderer content={content} />
         </div>
       )}
