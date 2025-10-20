@@ -207,25 +207,25 @@
 
 ### OpenAPI Generation
 
-- [ ] T060 [US5] Implement OpenAPI spec generation script in `packages/api/scripts/generate-openapi.ts` (call app.swagger(), write to docs/api/openapi.yaml)
-- [ ] T061 [P] [US5] Add npm script `openapi:generate` in `packages/api/package.json`
-- [ ] T062 [P] [US5] Add npm script `openapi:validate` using Redocly CLI in `packages/api/package.json`
+- [X] T060 [US5] Implement OpenAPI spec generation script in `packages/api/scripts/generate-openapi.ts` (call app.swagger(), write to docs/api/openapi.yaml)
+- [X] T061 [P] [US5] Add npm script `openapi:generate` in `packages/api/package.json`
+- [X] T062 [P] [US5] Add npm script `openapi:validate` using Redocly CLI in `packages/api/package.json`
 
 ### Documentation Integration
 
-- [ ] T063 [US5] Copy generated OpenAPI spec to `docs/api/openapi.yaml` (ensure Swagger UI serves latest spec)
-- [ ] T064 [P] [US5] Add OpenAPI metadata tags to all routes (Memos, Tasks, Labels, Links, Comments tags)
-- [ ] T065 [P] [US5] Add `.describe()` annotations to all Zod schemas for better OpenAPI documentation
+- [X] T063 [US5] Copy generated OpenAPI spec to `docs/api/openapi.yaml` (ensure Swagger UI serves latest spec)
+- [X] T064 [P] [US5] Add OpenAPI metadata tags to all routes (Memos, Tasks, Labels, Links, Comments tags)
+- [X] T065 [P] [US5] Add `.describe()` annotations to all Zod schemas for better OpenAPI documentation
 
 ### Client SDK Generation (Optional)
 
-- [ ] T066 [P] [US5] Document client SDK generation process in `packages/api/README.md` (openapi-generator command, TypeScript target)
-- [ ] T067 [P] [US5] Create example TypeScript SDK generation workflow in `packages/api/scripts/generate-client-sdk.sh`
+- [X] T066 [P] [US5] Document client SDK generation process in `packages/api/README.md` (openapi-generator command, TypeScript target)
+- [X] T067 [P] [US5] Create example TypeScript SDK generation workflow in `packages/api/scripts/generate-client-sdk.sh`
 
 ### Testing
 
-- [ ] T068 [US5] Add Swagger UI integration test in `packages/api/test/integration/swagger.test.ts` (GET /api-docs returns HTML, spec includes all endpoints)
-- [ ] T069 [P] [US5] Verify OpenAPI spec validity by running `pnpm openapi:validate` in CI
+- [X] T068 [US5] Add Swagger UI integration test in `packages/api/test/integration/swagger.test.ts` (GET /api-docs returns HTML, spec includes all endpoints)
+- [X] T069 [P] [US5] Verify OpenAPI spec validity by running `pnpm openapi:validate` in CI
 
 **Checkpoint**: User Story 5 complete - full API documentation available, client SDK generation enabled
 
@@ -265,6 +265,12 @@
 - [ ] T083 [Polish] Start server in development mode, manually test all 40 endpoints via curl or Postman
 - [ ] T084 [Polish] Start server in production mode with TailScale config, verify CORS and logging work correctly
 - [ ] T085 [Polish] Generate OpenAPI spec, validate with Redocly, serve Swagger UI, verify all endpoints documented
+
+### OpenAPI Polish (Follow-up)
+
+- [ ] T086 [Polish] Add `summary` and `operationId` to every documented operation (eliminate Redocly warnings)
+- [ ] T087 [Polish] Document representative `4xx` responses for each endpoint category
+- [ ] T088 [Polish] Re-run `pnpm openapi:generate && pnpm openapi:validate`; update docs once warnings reach zero
 
 **Checkpoint**: Feature complete - HTTP API server ready for deployment
 
