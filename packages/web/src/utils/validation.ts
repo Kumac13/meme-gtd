@@ -103,7 +103,7 @@ export function validateCommentBody(body: string): { isValid: boolean; error?: s
  * @returns Validation result
  */
 export function validateTaskStatus(status: string): { isValid: boolean; error?: string } {
-  const validStatuses = ['open', 'in_progress', 'done', 'cancelled'];
+  const validStatuses = ['open', 'next', 'waiting', 'scheduled', 'done', 'canceled'];
   if (!validStatuses.includes(status)) {
     return { isValid: false, error: `Status must be one of: ${validStatuses.join(', ')}` };
   }
