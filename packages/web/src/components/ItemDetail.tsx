@@ -151,12 +151,12 @@ export default function ItemDetail({
 
       {/* Body content */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        {!isEditing && (
-          <div className="flex items-start justify-between mb-4">
-            <div className="text-xs text-gray-500">
-              {formatRelativeTime(item.updatedAt)}
-              {item.updatedAt !== item.createdAt && <span className="ml-2">(edited)</span>}
-            </div>
+        <div className="flex items-center justify-between pb-4 mb-4 border-b border-gray-200">
+          <div className="text-xs text-gray-500">
+            {formatRelativeTime(item.updatedAt)}
+            {item.updatedAt !== item.createdAt && <span className="ml-2">(edited)</span>}
+          </div>
+          {!isEditing && (
             <div className="relative">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -191,8 +191,8 @@ export default function ItemDetail({
                 </div>
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
         {isEditing ? (
           <div>
             {itemType === 'task' && (
