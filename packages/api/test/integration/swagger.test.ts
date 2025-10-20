@@ -79,15 +79,16 @@ describe('Swagger UI and OpenAPI Documentation', () => {
   it('should include nullable field support in schemas', async () => {
     const spec = app.swagger();
 
-    // Find a schema with nullable fields (e.g., task scheduledOn)
-    // The actual schema structure depends on how it's referenced in paths
-    // Let's check the /api/tasks POST response schema
-    const taskCreatePath = spec.paths['/api/tasks']?.post;
-    assert.ok(taskCreatePath, 'Should have POST /api/tasks endpoint');
+    const taskCreateResponse =
+      spec.paths['/api/tasks']?.post?.responses?.['201']?.content?.['application/json']?.schema;
+    assert.ok(taskCreateResponse, 'Should have 201 response schema for POST /api/tasks');
 
-    // Verify response exists
-    assert.ok(taskCreatePath.responses, 'Should have responses');
-    assert.ok(taskCreatePath.responses['201'], 'Should have 201 response');
+    const { properties } = taskCreateResponse;
+    assert.ok(properties, 'Response schema should have properties');
+
+    const scheduledOn = properties.scheduledOn;
+    assert.ok(scheduledOn, 'Task response should include scheduledOn property');
+    assert.strictEqual(scheduledOn.nullable, true, 'scheduledOn should be marked nullable');
   });
 
   it('should include 204 No Content responses for DELETE endpoints', async () => {
