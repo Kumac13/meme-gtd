@@ -79,27 +79,9 @@ export default function ItemDetail({
           ← Back to {itemType === 'memo' ? 'memos' : 'tasks'}
         </Link>
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-3xl font-bold text-gray-900">
-              {item.title || `${itemType === 'memo' ? 'Memo' : 'Task'} #${item.id}`}
-            </h1>
-            {item.labels && item.labels.length > 0 && (
-              <>
-                {item.labels.map((label, idx) => (
-                  <span
-                    key={idx}
-                    className="px-3 py-1 text-sm font-medium rounded"
-                    style={{
-                      backgroundColor: getLabelColor(label),
-                      color: '#000',
-                    }}
-                  >
-                    {label}
-                  </span>
-                ))}
-              </>
-            )}
-          </div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {item.title || `${itemType === 'memo' ? 'Memo' : 'Task'} #${item.id}`}
+          </h1>
           <button
             onClick={onBookmarkToggle}
             disabled={bookmarking}
@@ -117,6 +99,22 @@ export default function ItemDetail({
             )}
           </button>
         </div>
+        {item.labels && item.labels.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap mt-3">
+            {item.labels.map((label, idx) => (
+              <span
+                key={idx}
+                className="px-3 py-1 text-sm font-medium rounded"
+                style={{
+                  backgroundColor: getLabelColor(label),
+                  color: '#000',
+                }}
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Body content */}
