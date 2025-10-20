@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
 import { formatDateTime } from '../utils/dates';
 import { MarkdownRenderer } from '../utils/markdown';
@@ -34,9 +34,11 @@ const statusLabels: Record<string, string> = {
 
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     async function fetchTask() {
@@ -61,6 +63,26 @@ export default function TaskDetail() {
 
     fetchTask();
   }, [id]);
+
+  const handleDelete = async () => {
+    if (!id || !task) return;
+
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete "${task.title || `Task #${task.id}`}"? This action cannot be undone.`
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      setDeleting(true);
+      await TasksService.deleteTask(id);
+      navigate('/tasks');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete task');
+      console.error('Error deleting task:', err);
+      setDeleting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -149,6 +171,13 @@ export default function TaskDetail() {
             >
               Edit
             </Link>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="inline-flex items-center px-3 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </button>
           </div>
         </div>
       </div>

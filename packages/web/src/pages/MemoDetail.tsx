@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import { formatDateTime } from '../utils/dates';
 import { MarkdownRenderer } from '../utils/markdown';
@@ -14,9 +14,11 @@ interface Memo {
 
 export default function MemoDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [memo, setMemo] = useState<Memo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     async function fetchMemo() {
@@ -41,6 +43,26 @@ export default function MemoDetail() {
 
     fetchMemo();
   }, [id]);
+
+  const handleDelete = async () => {
+    if (!id || !memo) return;
+
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete "${memo.title || `Memo #${memo.id}`}"? This action cannot be undone.`
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      setDeleting(true);
+      await MemosService.deleteMemo(id);
+      navigate('/memos');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete memo');
+      console.error('Error deleting memo:', err);
+      setDeleting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -114,6 +136,13 @@ export default function MemoDetail() {
             >
               Edit
             </Link>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="inline-flex items-center px-3 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </button>
           </div>
         </div>
       </div>
