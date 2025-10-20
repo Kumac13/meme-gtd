@@ -9,8 +9,8 @@
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "test": "node --test test/**/*.test.ts",
-    "test:watch": "node --test --watch test/**/*.test.ts",
+    "test": "tsx --test test/**/*.test.ts",
+    "test:watch": "tsx --test --watch test/**/*.test.ts",
     "openapi:generate": "tsx scripts/generate-openapi.ts",
     "openapi:validate": "redocly lint docs/api/openapi.yaml"
   },

@@ -23,8 +23,9 @@ export async function createTestServer(
 
   // Initialize database
   const config: MgtdConfig = {
-    version: '1',
     dbPath,
+    mode: 'local',
+    schemaVersion: '001_init',
   };
 
   const db = ensureDatabase(config);
