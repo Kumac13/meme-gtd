@@ -121,7 +121,7 @@ export default function CommentSection({ itemId, itemType }: CommentSectionProps
         <div className="space-y-4 mb-6">
           {comments.map((comment) => (
             <div key={comment.id} className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="flex items-start justify-between pb-1 mb-2 border-b border-gray-200">
+              <div className="flex items-start justify-between pb-1 mb-1 border-b border-gray-200">
                 <div className="text-xs text-gray-500">
                   <span title={formatDateTime(comment.createdAt)}>
                     {formatRelativeTime(comment.createdAt)}
