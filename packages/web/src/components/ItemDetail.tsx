@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import { TasksService } from '../api/services/TasksService';
-import { formatDateTime } from '../utils/dates';
+import { formatRelativeTime } from '../utils/dates';
 import { MarkdownRenderer } from '../utils/markdown';
 import CommentSection from './CommentSection';
 
@@ -37,10 +37,6 @@ interface ItemDetailProps {
   onUpdate: (updatedItem: Item) => void;
   deleting: boolean;
   bookmarking: boolean;
-}
-
-function isTask(item: Item): item is Task {
-  return 'scheduledOn' in item;
 }
 
 export default function ItemDetail({
@@ -153,24 +149,14 @@ export default function ItemDetail({
         </div>
       </div>
 
-      {/* Metadata */}
-      <div className="mb-6 flex items-center text-sm text-gray-500 space-x-4 border-b border-gray-200 pb-4">
-        {isTask(item) && item.scheduledOn && (
-          <span className="font-medium text-gray-700">
-            Scheduled: {formatDateTime(item.scheduledOn).split(' ')[0]}
-          </span>
-        )}
-        <span>Created: {formatDateTime(item.createdAt)}</span>
-        {item.updatedAt !== item.createdAt && (
-          <span>Updated: {formatDateTime(item.updatedAt)}</span>
-        )}
-      </div>
-
       {/* Body content */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         {!isEditing && (
           <div className="flex items-start justify-between mb-4">
-            <div className="text-xs text-gray-500"></div>
+            <div className="text-xs text-gray-500">
+              {formatRelativeTime(item.updatedAt)}
+              {item.updatedAt !== item.createdAt && <span className="ml-2">(edited)</span>}
+            </div>
             <div className="relative">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
