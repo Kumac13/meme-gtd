@@ -12,6 +12,7 @@ async function start() {
     // Build Fastify application
     const app = await buildApp({
       config: config.mgtdConfig,
+      corsAllowedOrigins: config.corsAllowedOrigins,
       logger: {
         level: config.logLevel,
         prettyPrint: config.nodeEnv === 'development',

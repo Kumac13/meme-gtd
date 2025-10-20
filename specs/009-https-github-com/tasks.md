@@ -40,32 +40,32 @@
 
 ### Core Server Infrastructure
 
-- [ ] T006 [Foundation] Implement Fastify server initialization in `packages/api/src/server.ts` (buildApp function)
-- [ ] T007 [Foundation] Implement server entry point in `packages/api/src/index.ts` (start function with port/host config)
-- [ ] T008 [Foundation] Implement environment configuration in `packages/api/src/config.ts` (env vars, port, DB path, CORS origins)
-- [ ] T009 [Foundation] Register Zod validator and serializer compiler in `server.ts` (setValidatorCompiler, setSerializerCompiler)
+- [X] T006 [Foundation] Implement Fastify server initialization in `packages/api/src/server.ts` (buildApp function)
+- [X] T007 [Foundation] Implement server entry point in `packages/api/src/index.ts` (start function with port/host config)
+- [X] T008 [Foundation] Implement environment configuration in `packages/api/src/config.ts` (env vars, port, DB path, CORS origins)
+- [X] T009 [Foundation] Register Zod validator and serializer compiler in `server.ts` (setValidatorCompiler, setSerializerCompiler)
 
 ### Error Handling Infrastructure
 
-- [ ] T010 [P] [Foundation] Define custom error classes in `packages/api/src/errors/index.ts` (AppError, NotFoundError, ConflictError, ValidationError)
-- [ ] T011 [Foundation] Implement global error handler in `packages/api/src/middleware/errorHandler.ts` (Zod errors → 400, SQLite errors → appropriate status, AppError → specified status)
-- [ ] T012 [Foundation] Register error handler and 404 handler in `server.ts` (setErrorHandler, setNotFoundHandler)
+- [X] T010 [P] [Foundation] Define custom error classes in `packages/api/src/errors/index.ts` (AppError, NotFoundError, ConflictError, ValidationError)
+- [X] T011 [Foundation] Implement global error handler in `packages/api/src/middleware/errorHandler.ts` (Zod errors → 400, SQLite errors → appropriate status, AppError → specified status)
+- [X] T012 [Foundation] Register error handler and 404 handler in `server.ts` (setErrorHandler, setNotFoundHandler)
 
 ### Middleware & Cross-Cutting
 
-- [ ] T013 [P] [Foundation] Implement CORS middleware in `packages/api/src/middleware/cors.ts` (development/production origin config)
-- [ ] T014 [P] [Foundation] Register @fastify/cors plugin in `server.ts`
-- [ ] T015 [P] [Foundation] Configure pino logger in `server.ts` (log level, pretty print for dev)
+- [X] T013 [P] [Foundation] Implement CORS middleware in `packages/api/src/middleware/cors.ts` (development/production origin config)
+- [X] T014 [P] [Foundation] Register @fastify/cors plugin in `server.ts`
+- [X] T015 [P] [Foundation] Configure pino logger in `server.ts` (log level, pretty print for dev)
 
 ### OpenAPI/Swagger Infrastructure
 
-- [ ] T016 [Foundation] Register @fastify/swagger plugin in `server.ts` (OpenAPI 3.0.3 info, servers, jsonSchemaTransform)
-- [ ] T017 [Foundation] Register @fastify/swagger-ui plugin in `server.ts` (routePrefix: /api-docs, UI config)
+- [X] T016 [Foundation] Register @fastify/swagger plugin in `packages/api/src/server.ts` (OpenAPI 3.0.3 info, servers, jsonSchemaTransform)
+- [X] T017 [Foundation] Register @fastify/swagger-ui plugin in `server.ts` (routePrefix: /api-docs, UI config)
 
 ### Testing Infrastructure
 
-- [ ] T018 [P] [Foundation] Create test server helper in `packages/api/test/helpers/testServer.ts` (buildApp with temp DB)
-- [ ] T019 [P] [Foundation] Create test fixtures helper in `packages/api/test/helpers/fixtures.ts` (sample data generation)
+- [X] T018 [P] [Foundation] Create test server helper in `packages/api/test/helpers/testServer.ts` (buildApp with temp DB)
+- [X] T019 [P] [Foundation] Create test fixtures helper in `packages/api/test/helpers/fixtures.ts` (sample data generation)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 

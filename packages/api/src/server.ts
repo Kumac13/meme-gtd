@@ -4,6 +4,7 @@ import type { MgtdConfig } from 'meme-gtd-config';
 
 export interface BuildAppOptions {
   config: MgtdConfig;
+  corsAllowedOrigins?: string[];
   logger?: {
     level?: string;
     prettyPrint?: boolean;
@@ -16,7 +17,7 @@ export interface BuildAppOptions {
  * @returns Configured Fastify instance with ZodTypeProvider
  */
 export async function buildApp(options: BuildAppOptions): Promise<FastifyInstance> {
-  const { config, logger } = options;
+  const { config, corsAllowedOrigins = ['*'], logger } = options;
 
   // Initialize Fastify with logger configuration
   const app = Fastify({
@@ -41,6 +42,49 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   // Store config in app context for handlers to access
   app.decorate('config', config);
+
+  // Register CORS middleware
+  const { registerCors } = await import('./middleware/cors.js');
+  await registerCors(app, { allowedOrigins: corsAllowedOrigins });
+
+  // Register Swagger OpenAPI plugin
+  await app.register(import('@fastify/swagger'), {
+    openapi: {
+      info: {
+        title: 'meme-gtd API',
+        description: 'HTTP REST API for meme-gtd CLI operations',
+        version: '0.6.0',
+      },
+      servers: [
+        {
+          url: 'http://localhost:3000',
+          description: 'Development server',
+        },
+      ],
+      tags: [
+        { name: 'Memos', description: 'Memo management endpoints' },
+        { name: 'Tasks', description: 'Task management endpoints' },
+        { name: 'Labels', description: 'Label management endpoints' },
+        { name: 'Links', description: 'Link management endpoints' },
+        { name: 'Comments', description: 'Comment management endpoints' },
+      ],
+    },
+    transform: ({ schema, url }) => {
+      // Transform Zod schemas to JSON Schema for OpenAPI
+      return { schema, url };
+    },
+  });
+
+  // Register Swagger UI
+  await app.register(import('@fastify/swagger-ui'), {
+    routePrefix: '/api-docs',
+    uiConfig: {
+      docExpansion: 'list',
+      deepLinking: true,
+    },
+    staticCSP: true,
+    transformStaticCSP: (header) => header,
+  });
 
   // Register global error handler (must be imported after app is created)
   const { errorHandler } = await import('./middleware/errorHandler.js');
