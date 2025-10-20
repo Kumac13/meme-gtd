@@ -74,16 +74,65 @@ pnpm start
 ```bash
 # Test API endpoint
 curl http://localhost:3000/api/memos
-
 # Expected response: []
 
-# Or test with creating a memo
+# Create a memo
 curl -X POST http://localhost:3000/api/memos \
   -H 'Content-Type: application/json' \
-  -d '{"bodyMd":"Hello API"}'
+  -d '{"bodyMd":"Meeting notes from today"}'
 
-# Get all memos
-curl http://localhost:3000/api/memos
+# Create a task
+curl -X POST http://localhost:3000/api/tasks \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Review PR","bodyMd":"Check the API implementation"}'
+
+# List all tasks
+curl http://localhost:3000/api/tasks
+
+# Filter tasks by status
+curl 'http://localhost:3000/api/tasks?status=next'
+
+# Get a specific task
+curl http://localhost:3000/api/tasks/1
+
+# Update a task
+curl -X PATCH http://localhost:3000/api/tasks/1 \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Review PR - Updated"}'
+
+# Close a task
+curl -X POST http://localhost:3000/api/tasks/1/close
+
+# Create a label
+curl -X POST http://localhost:3000/api/labels \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"bug","description":"Bug reports"}'
+
+# Assign label to a task
+curl -X POST http://localhost:3000/api/issues/1/labels \
+  -H 'Content-Type: application/json' \
+  -d '{"labelName":"bug"}'
+
+# Create a link between issues
+curl -X POST http://localhost:3000/api/links \
+  -H 'Content-Type: application/json' \
+  -d '{"fromIssueId":1,"toIssueId":2,"linkType":"blocks"}'
+
+# Add a comment to a task
+curl -X POST http://localhost:3000/api/tasks/1/comments \
+  -H 'Content-Type: application/json' \
+  -d '{"bodyMd":"This looks good to me"}'
+
+# Promote a memo to a task
+curl -X POST http://localhost:3000/api/memos/1/promote \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Follow up on meeting","scheduledOn":"2025-10-21T10:00:00Z"}'
+
+# Bookmark a task
+curl -X POST http://localhost:3000/api/tasks/1/bookmark
+
+# Delete a memo
+curl -X DELETE http://localhost:3000/api/memos/1
 ```
 
 ### Custom Configuration
