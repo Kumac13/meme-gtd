@@ -2,6 +2,8 @@ name: API CI
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'packages/api/**'
       - 'specs/009-https-github-com/**'
