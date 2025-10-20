@@ -90,7 +90,7 @@ export default function MemosList() {
               to={`/memos/${memo.id}`}
               className="block p-4 hover:bg-gray-50 transition-colors"
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="text-gray-900 text-sm mb-2">
                     {truncateMarkdown(memo.bodyMd, 150)}
@@ -112,8 +112,8 @@ export default function MemosList() {
                 </div>
                 {memo.isBookmarked && (
                   <div className="flex-shrink-0">
-                    <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 16 16">
-                      <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.91l3.023-2.489a.75.75 0 0 1 .954 0l3.023 2.49V2.75a.25.25 0 0 0-.25-.25Z"></path>
+                    <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Z"></path>
                     </svg>
                   </div>
                 )}
