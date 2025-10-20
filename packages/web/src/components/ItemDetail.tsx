@@ -29,6 +29,7 @@ interface ItemDetailProps {
   onDelete: () => Promise<void>;
   onBookmarkToggle: () => Promise<void>;
   onUpdate: (updatedItem: Item) => void;
+  onStatusChange?: (status: string) => Promise<void>;
   deleting: boolean;
   bookmarking: boolean;
 }
@@ -40,6 +41,7 @@ export default function ItemDetail({
   onDelete,
   onBookmarkToggle,
   onUpdate,
+  onStatusChange,
   bookmarking,
 }: ItemDetailProps) {
   const getLabelColor = (label: string): string => {
@@ -113,6 +115,26 @@ export default function ItemDetail({
                 {label}
               </span>
             ))}
+          </div>
+        )}
+        {itemType === 'task' && 'status' in item && onStatusChange && (
+          <div className="mb-4">
+            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+              Status
+            </label>
+            <select
+              id="status"
+              value={item.status || 'open'}
+              onChange={(e) => onStatusChange(e.target.value)}
+              className="px-3 py-1 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500"
+            >
+              <option value="open">Open</option>
+              <option value="next">Next</option>
+              <option value="waiting">Waiting</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="done">Done</option>
+              <option value="canceled">Canceled</option>
+            </select>
           </div>
         )}
       </div>

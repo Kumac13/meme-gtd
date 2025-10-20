@@ -95,6 +95,20 @@ export default function TaskDetail() {
     setTask(updatedItem as Task);
   };
 
+  const handleStatusChange = async (status: string) => {
+    if (!id) return;
+
+    try {
+      const updatedTask = await TasksService.updateTask(id, {
+        status: status as 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled'
+      });
+      setTask(updatedTask as Task);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update status');
+      console.error('Error updating status:', err);
+    }
+  };
+
   return (
     <ItemDetail
       item={task}
@@ -103,6 +117,7 @@ export default function TaskDetail() {
       onDelete={handleDelete}
       onBookmarkToggle={handleBookmarkToggle}
       onUpdate={handleUpdate}
+      onStatusChange={handleStatusChange}
       deleting={deleting}
       bookmarking={bookmarking}
     />
