@@ -151,6 +151,16 @@ The generated spec is output to `docs/api/openapi.yaml` and includes:
 - Nullable field support (OpenAPI 3.0 compatible)
 - Error response schemas
 
+### Validation
+
+OpenAPI validation is configured via `.redocly.yaml` and uses [@redocly/cli](https://redocly.com/docs/cli/):
+- Validates spec structure and compliance with OpenAPI 3.0.3
+- Checks for required fields (2xx responses, valid parameters)
+- Warnings for missing summaries and operationIds (non-blocking)
+- Security validation disabled (API relies on Tailscale network security)
+
+Run `pnpm openapi:validate` before committing changes to catch specification errors early.
+
 ## SDK Generation
 
 You can generate type-safe client SDKs from the OpenAPI specification using tools like:
