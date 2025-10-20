@@ -1,37 +1,46 @@
-# Implementation Plan: [FEATURE]
+# Implementation Plan: HTTP REST API Server for meme-gtd
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+**Branch**: `009-https-github-com` | **Date**: 2025-01-20 | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `/specs/009-https-github-com/spec.md`
 
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
+**Note**: This document tracks the implementation plan for the HTTP REST API server feature.
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Implement a production-ready HTTP REST API server that exposes all meme-gtd CLI functionality (memos, tasks, labels, links, comments) via RESTful endpoints. The API server will:
+- Reuse existing `packages/core` services (MemoService, TaskService, LabelService, LinkService)
+- Use Fastify 5.x with Zod for type-safe routing and validation
+- Generate OpenAPI 3.0.3 documentation automatically via @fastify/swagger
+- Support local development and Tailscale deployment modes
+- Maintain 100% feature parity with CLI operations
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
-
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: TypeScript 5.6.3 (Node.js 22.x)
+**Primary Dependencies**: Fastify 5.2.0, fastify-type-provider-zod 4.0.2, Zod 3.23.8, @fastify/swagger, @fastify/swagger-ui, @fastify/cors
+**Storage**: SQLite (via better-sqlite3, reusing existing meme-gtd-db)
+**Testing**: Node.js test runner with tsx, Fastify inject for integration tests
+**Target Platform**: Node.js server (Linux/macOS), local development + Tailscale deployment
+**Project Type**: Web API server (monorepo package)
+**Performance Goals**:
+- 100+ requests/second for typical operations (memo/task CRUD)
+- <50ms p95 latency for simple queries
+- <200ms p95 latency for complex operations (promote, link creation)
+**Constraints**:
+- Single DB connection reuse (no connection pooling needed for SQLite)
+- JSON-only responses (no HTML/XML)
+- CORS configurable for development/production
+- Compatible with existing CLI JSON output format
+**Scale/Scope**:
+- ~40 HTTP endpoints (memos, tasks, labels, links, comments)
+- Personal/small team use (1-10 concurrent users)
+- Existing database schema (no migrations needed)
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+✅ **Passed** - This feature adds a new package (`packages/api`) to the existing monorepo without modifying core business logic. Reuses existing services from `packages/core`.
 
 ## Project Structure
 
@@ -141,7 +150,163 @@ Monorepo構造を維持し、`packages/api`として新規パッケージを追�
 
 *Fill ONLY if Constitution Check has violations that must be justified*
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+N/A - No violations. This implementation follows monorepo patterns and reuses existing packages.
+
+---
+
+## Implementation Phases
+
+### Phase 1: Setup (T001-T005) ✅ COMPLETE
+**Goal**: Initialize `packages/api` structure and dependencies
+
+**Approach**:
+- Create package directory with standard TypeScript setup
+- Install Fastify, Zod, testing dependencies
+- Configure tsconfig, package.json scripts
+- Create basic README and .env.example
+
+**Checkpoint**: `pnpm install` succeeds, TypeScript compiles without errors
+
+---
+
+### Phase 2: Foundational (T006-T019) ✅ COMPLETE
+**Goal**: Build server infrastructure and testing foundation
+
+**Approach**:
+- Implement Fastify server initialization (`server.ts`)
+- Configure DB connection lifecycle (single shared connection via decorate)
+- Create error handling middleware (convert DB/Zod errors to HTTP responses)
+- Implement CORS middleware with environment-based configuration
+- Create custom error classes (NotFoundError, ValidationError, etc.)
+- Build test helpers (testServer.ts with temporary DB)
+
+**Checkpoint**: Server starts successfully, error middleware catches and formats errors correctly, test infrastructure ready
+
+---
+
+### Phase 3: User Story 1 - Memo Operations (T020-T030) ✅ COMPLETE
+**Goal**: Implement HTTP API for all memo operations (MVP)
+
+**Approach**:
+- Define Zod schemas for memos and comments (aligned with DB layer types)
+- Implement memo handlers (create, list, get, update, delete, promote, bookmark, unbookmark)
+- Implement comment handlers for memos
+- Register memo routes in server.ts
+- Write integration tests (23 tests covering all endpoints)
+
+**Deliverables**:
+- 12 memo endpoints fully functional
+- All tests passing (23/23)
+- Schemas match DB layer structure (includes all fields: meta, isDeleted, etc.)
+
+**Checkpoint**: `pnpm test` passes all memo tests, manual testing via `curl` confirms JSON format matches CLI
+
+---
+
+### Phase 4: User Story 2 - Task Management (T031-T039) ✅ COMPLETE
+**Goal**: Implement HTTP API for task operations (MVP)
+
+**Approach**:
+- Define Zod schemas for tasks (TaskStatus enum, all fields from DB layer)
+- Implement task handlers (create, list, get, update, delete, close, cancel, reopen, bookmark, unbookmark)
+- Implement comment handlers for tasks
+- Register task routes in server.ts
+- Write integration tests (25 tests covering CRUD, status transitions, bookmarks, comments)
+
+**Deliverables**:
+- 14 task endpoints fully functional
+- All tests passing (25/25, total 48/48)
+- Status transition logic working (open → next → done, cancel, reopen)
+
+**Checkpoint**: `pnpm test` shows 48/48 tests passing, task status filtering works via query params
+
+---
+
+### Phase 5: User Story 3 - Label/Link Management (T040-T049) ⏳ PENDING
+**Goal**: Implement label and link APIs
+
+**Approach**:
+- Define Zod schemas for labels and links
+- Implement label handlers (list, create, delete, assign to issues)
+- Implement link handlers (create bidirectional links, delete, list with direction)
+- Handle UNIQUE constraints (label names) and validation (no self-links)
+- Write integration tests for both label and link operations
+
+**Deliverables**:
+- Label endpoints: GET/POST/DELETE /api/labels, POST /api/issues/:id/labels
+- Link endpoints: POST/DELETE /api/links, GET /api/issues/:id/links
+
+**Checkpoint**: Labels enforce UNIQUE constraint, links prevent self-references, bidirectional creation works
+
+---
+
+### Phase 6: User Story 4 - Config/Deploy (T050-T059) ⏳ PENDING
+**Goal**: Production configuration and deployment setup
+
+**Approach**:
+- Add CLI argument parsing for port, host, DB path, CORS origins
+- Create deployment documentation (systemd, Docker, Tailscale)
+- Implement startup script with graceful shutdown
+- Add health check endpoint (GET /health)
+- Configure production logging (pino, JSON format)
+
+**Deliverables**:
+- Environment-based configuration (development vs production)
+- Tailscale deployment guide
+- Health check for monitoring
+
+**Checkpoint**: Server starts with custom config, graceful shutdown works, health endpoint responds
+
+---
+
+### Phase 7: User Story 5 - OpenAPI Enhancement (T060-T069) ⏳ PENDING
+**Goal**: Complete OpenAPI documentation
+
+**Approach**:
+- Verify all Zod schemas generate correct OpenAPI specs
+- Add operation descriptions, tags, examples
+- Configure Swagger UI theme and branding
+- Generate static openapi.yaml file
+- Add redoc alternative documentation
+
+**Deliverables**:
+- /api-docs serves Swagger UI with all 40 endpoints
+- openapi.yaml validates with Redocly
+- Examples included for all request/response types
+
+**Checkpoint**: Swagger UI loads successfully, all endpoints documented, examples work
+
+---
+
+### Phase 8: Polish (T070-T085) ⏳ PENDING
+**Goal**: Final validation and quality improvements
+
+**Approach**:
+- Run ESLint and fix warnings
+- Add JSDoc comments to all public functions
+- Verify error messages match CLI format exactly
+- Add API tests to CI/CD pipeline
+- Performance testing (100+ req/s target)
+- Security audit (no stack traces in production, request timeout)
+
+**Deliverables**:
+- Clean lint output
+- Complete inline documentation
+- CI integration
+- Performance validated
+
+**Checkpoint**: All 85 tasks complete, feature ready for deployment
+
+---
+
+## Current Status
+
+**Completed**: Phases 1-4 (39/87 tasks = 45%)
+- ✅ Phase 1: Setup
+- ✅ Phase 2: Foundational infrastructure
+- ✅ Phase 3: Memo API (12 endpoints)
+- ✅ Phase 4: Task API (14 endpoints)
+
+**Next**: Phase 5 (Label/Link Management)
+
+**Test Status**: 48/48 integration tests passing
