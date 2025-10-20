@@ -31,8 +31,8 @@ import {
   CreateCommentRequestSchema,
   UpdateCommentRequestSchema,
   CommentSchema,
-  IssueIdParamsSchema,
-  CommentIdParamsSchema,
+  TaskCommentParamsSchema,
+  TaskCommentIdParamsSchema,
 } from '../schemas/commentSchemas.js';
 import { ErrorResponseSchema } from '../schemas/errorSchemas.js';
 
@@ -221,7 +221,7 @@ export async function taskRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Comments'],
         description: 'List all comments for a task',
-        params: IssueIdParamsSchema,
+        params: TaskCommentParamsSchema,
         response: {
           200: z.array(CommentSchema),
         },
@@ -237,7 +237,7 @@ export async function taskRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Comments'],
         description: 'Create comment on task',
-        params: IssueIdParamsSchema,
+        params: TaskCommentParamsSchema,
         body: CreateCommentRequestSchema,
         response: {
           201: CommentSchema,
@@ -256,7 +256,7 @@ export async function taskRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Comments'],
         description: 'Update comment on task',
-        params: CommentIdParamsSchema,
+        params: TaskCommentIdParamsSchema,
         body: UpdateCommentRequestSchema,
         response: {
           200: CommentSchema,
@@ -275,7 +275,7 @@ export async function taskRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Comments'],
         description: 'Delete comment from task',
-        params: CommentIdParamsSchema,
+        params: TaskCommentIdParamsSchema,
         response: {
           204: { type: 'null' },
           404: ErrorResponseSchema,

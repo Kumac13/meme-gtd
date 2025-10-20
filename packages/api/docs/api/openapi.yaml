@@ -758,14 +758,7 @@ paths:
           in: path
           name: memoId
           required: true
-          description: Memo ID (if commenting on a memo)
-        - schema:
-            type: string
-            pattern: ^\d+$
-          in: path
-          name: taskId
-          required: true
-          description: Task ID (if commenting on a task)
+          description: Memo ID
       responses:
         "200":
           description: Default Response
@@ -829,14 +822,7 @@ paths:
           in: path
           name: memoId
           required: true
-          description: Memo ID (if commenting on a memo)
-        - schema:
-            type: string
-            pattern: ^\d+$
-          in: path
-          name: taskId
-          required: true
-          description: Task ID (if commenting on a task)
+          description: Memo ID
       responses:
         "201":
           description: Default Response
@@ -945,14 +931,7 @@ paths:
           in: path
           name: memoId
           required: true
-          description: Memo ID (if comment is on a memo)
-        - schema:
-            type: string
-            pattern: ^\d+$
-          in: path
-          name: taskId
-          required: true
-          description: Task ID (if comment is on a task)
+          description: Memo ID
         - schema:
             type: string
             pattern: ^\d+$
@@ -1053,14 +1032,7 @@ paths:
           in: path
           name: memoId
           required: true
-          description: Memo ID (if comment is on a memo)
-        - schema:
-            type: string
-            pattern: ^\d+$
-          in: path
-          name: taskId
-          required: true
-          description: Task ID (if comment is on a task)
+          description: Memo ID
         - schema:
             type: string
             pattern: ^\d+$
@@ -2172,16 +2144,9 @@ paths:
             type: string
             pattern: ^\d+$
           in: path
-          name: memoId
-          required: true
-          description: Memo ID (if commenting on a memo)
-        - schema:
-            type: string
-            pattern: ^\d+$
-          in: path
           name: taskId
           required: true
-          description: Task ID (if commenting on a task)
+          description: Task ID
       responses:
         "200":
           description: Default Response
@@ -2243,16 +2208,9 @@ paths:
             type: string
             pattern: ^\d+$
           in: path
-          name: memoId
-          required: true
-          description: Memo ID (if commenting on a memo)
-        - schema:
-            type: string
-            pattern: ^\d+$
-          in: path
           name: taskId
           required: true
-          description: Task ID (if commenting on a task)
+          description: Task ID
       responses:
         "201":
           description: Default Response
@@ -2359,16 +2317,9 @@ paths:
             type: string
             pattern: ^\d+$
           in: path
-          name: memoId
-          required: true
-          description: Memo ID (if comment is on a memo)
-        - schema:
-            type: string
-            pattern: ^\d+$
-          in: path
           name: taskId
           required: true
-          description: Task ID (if comment is on a task)
+          description: Task ID
         - schema:
             type: string
             pattern: ^\d+$
@@ -2467,16 +2418,9 @@ paths:
             type: string
             pattern: ^\d+$
           in: path
-          name: memoId
-          required: true
-          description: Memo ID (if comment is on a memo)
-        - schema:
-            type: string
-            pattern: ^\d+$
-          in: path
           name: taskId
           required: true
-          description: Task ID (if comment is on a task)
+          description: Task ID
         - schema:
             type: string
             pattern: ^\d+$

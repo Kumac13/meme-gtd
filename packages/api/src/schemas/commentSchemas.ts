@@ -34,20 +34,26 @@ export type Comment = z.infer<typeof CommentSchema>;
 /**
  * Schema for memo/task ID params (for comment endpoints)
  */
-export const IssueIdParamsSchema = z.object({
-  memoId: z.string().regex(/^\d+$/, 'Memo ID must be a number').optional().describe('Memo ID (if commenting on a memo)'),
-  taskId: z.string().regex(/^\d+$/, 'Task ID must be a number').optional().describe('Task ID (if commenting on a task)'),
+export const MemoCommentParamsSchema = z.object({
+  memoId: z.string().regex(/^\d+$/, 'Memo ID must be a number').describe('Memo ID'),
 });
 
-export type IssueIdParams = z.infer<typeof IssueIdParamsSchema>;
+export type MemoCommentParams = z.infer<typeof MemoCommentParamsSchema>;
 
-/**
- * Schema for comment ID params
- */
-export const CommentIdParamsSchema = z.object({
-  memoId: z.string().regex(/^\d+$/).optional().describe('Memo ID (if comment is on a memo)'),
-  taskId: z.string().regex(/^\d+$/).optional().describe('Task ID (if comment is on a task)'),
+export const TaskCommentParamsSchema = z.object({
+  taskId: z.string().regex(/^\d+$/, 'Task ID must be a number').describe('Task ID'),
+});
+
+export type TaskCommentParams = z.infer<typeof TaskCommentParamsSchema>;
+
+export const MemoCommentIdParamsSchema = MemoCommentParamsSchema.extend({
   commentId: z.string().regex(/^\d+$/, 'Comment ID must be a number').describe('Comment ID'),
 });
 
-export type CommentIdParams = z.infer<typeof CommentIdParamsSchema>;
+export type MemoCommentIdParams = z.infer<typeof MemoCommentIdParamsSchema>;
+
+export const TaskCommentIdParamsSchema = TaskCommentParamsSchema.extend({
+  commentId: z.string().regex(/^\d+$/, 'Comment ID must be a number').describe('Comment ID'),
+});
+
+export type TaskCommentIdParams = z.infer<typeof TaskCommentIdParamsSchema>;

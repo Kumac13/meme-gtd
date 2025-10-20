@@ -30,8 +30,8 @@ import {
   CreateCommentRequestSchema,
   UpdateCommentRequestSchema,
   CommentSchema,
-  IssueIdParamsSchema,
-  CommentIdParamsSchema,
+  MemoCommentParamsSchema,
+  MemoCommentIdParamsSchema,
 } from '../schemas/commentSchemas.js';
 import { ErrorResponseSchema } from '../schemas/errorSchemas.js';
 
@@ -187,7 +187,7 @@ export async function memoRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Comments'],
         description: 'List all comments for a memo',
-        params: IssueIdParamsSchema,
+        params: MemoCommentParamsSchema,
         response: {
           200: z.array(CommentSchema),
         },
@@ -203,7 +203,7 @@ export async function memoRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Comments'],
         description: 'Create comment on memo',
-        params: IssueIdParamsSchema,
+        params: MemoCommentParamsSchema,
         body: CreateCommentRequestSchema,
         response: {
           201: CommentSchema,
@@ -222,7 +222,7 @@ export async function memoRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Comments'],
         description: 'Update comment on memo',
-        params: CommentIdParamsSchema,
+        params: MemoCommentIdParamsSchema,
         body: UpdateCommentRequestSchema,
         response: {
           200: CommentSchema,
@@ -241,7 +241,7 @@ export async function memoRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Comments'],
         description: 'Delete comment from memo',
-        params: CommentIdParamsSchema,
+        params: MemoCommentIdParamsSchema,
         response: {
           204: { type: 'null' },
           404: ErrorResponseSchema,
