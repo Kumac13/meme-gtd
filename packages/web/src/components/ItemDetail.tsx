@@ -57,6 +57,7 @@ export default function ItemDetail({
   const [editingTitle, setEditingTitle] = useState(item.title || '');
   const [editingBody, setEditingBody] = useState(item.bodyMd);
   const [saving, setSaving] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleDelete = async () => {
     const confirmDelete = window.confirm(
@@ -135,7 +136,7 @@ export default function ItemDetail({
               )}
             </div>
           </div>
-          <div className="flex space-x-2">
+          <div className="flex items-center space-x-2">
             <button
               onClick={onBookmarkToggle}
               disabled={bookmarking}
@@ -153,20 +154,41 @@ export default function ItemDetail({
               )}
             </button>
             {!isEditing && (
-              <button
-                onClick={handleStartEdit}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Edit
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
+                  aria-label="More options"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M8 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"></path>
+                  </svg>
+                </button>
+                {isMenuOpen && (
+                  <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                    <button
+                      onClick={() => {
+                        handleStartEdit();
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleDelete();
+                        setIsMenuOpen(false);
+                      }}
+                      disabled={deleting}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {deleting ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="inline-flex items-center px-3 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {deleting ? 'Deleting...' : 'Delete'}
-            </button>
           </div>
         </div>
       </div>
