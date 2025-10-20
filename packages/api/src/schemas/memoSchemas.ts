@@ -35,11 +35,8 @@ export type PromoteMemoRequest = z.infer<typeof PromoteMemoRequestSchema>;
 export const MemoSchema = z.object({
   id: z.number().int().positive(),
   type: z.literal('memo'),
-  title: z.null(),
   bodyMd: z.string(),
-  status: z.null(),
-  scheduledOn: z.null(),
-  meta: z.unknown(),
+  meta: z.record(z.any()),
   isBookmarked: z.boolean(),
   isDeleted: z.boolean(),
   createdAt: z.string().datetime(),

@@ -26,7 +26,7 @@ export const UpdateTaskRequestSchema = z.object({
   title: z.string().min(1, 'Task title cannot be empty').optional(),
   bodyMd: z.string().optional(),
   status: TaskStatusSchema.optional(),
-  scheduledOn: z.string().datetime().nullable().optional(),
+  scheduledOn: z.string().datetime().nullish(),
 });
 
 export type UpdateTaskRequest = z.infer<typeof UpdateTaskRequestSchema>;
@@ -41,7 +41,7 @@ export const TaskSchema = z.object({
   bodyMd: z.string(),
   status: TaskStatusSchema,
   scheduledOn: z.string().datetime().nullable(),
-  meta: z.unknown(),
+  meta: z.record(z.any()),
   isBookmarked: z.boolean(),
   isDeleted: z.boolean(),
   createdAt: z.string().datetime(),

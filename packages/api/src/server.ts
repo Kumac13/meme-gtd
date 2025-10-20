@@ -2,9 +2,9 @@ import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastif
 import {
   serializerCompiler,
   validatorCompiler,
-  jsonSchemaTransform,
   type ZodTypeProvider
 } from 'fastify-type-provider-zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { MgtdConfig } from 'meme-gtd-config';
 import { ensureDatabase } from 'meme-gtd-db';
 import type Database from 'better-sqlite3';
@@ -108,6 +108,51 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   const { registerCors } = await import('./middleware/cors.js');
   await registerCors(app, { allowedOrigins: corsAllowedOrigins });
 
+  // Custom transform using zod-to-json-schema with OpenAPI 3 target
+  const openApiTransform = ({ schema, url }: { schema: any; url: string }) => {
+    if (!schema) {
+      return { schema: undefined, url };
+    }
+
+    // Transform each part of the schema (body, params, querystring, response, headers)
+    const transformed: any = {};
+
+    for (const [key, value] of Object.entries(schema)) {
+      if (!value) continue;
+
+      try {
+        if (key === 'response' && typeof value === 'object') {
+          // Response is an object of status codes to schemas
+          transformed.response = {};
+          for (const [statusCode, responseSchema] of Object.entries(value as Record<string, any>)) {
+            if (responseSchema && (responseSchema as any)._def) {
+              // Only transform if it's a Zod schema
+              transformed.response[statusCode] = zodToJsonSchema(responseSchema, {
+                target: 'openApi3',
+                $refStrategy: 'none',
+              });
+            }
+          }
+        } else if ((value as any)._def) {
+          // Only transform if it's a Zod schema (has _def property)
+          transformed[key] = zodToJsonSchema(value as any, {
+            target: 'openApi3',
+            $refStrategy: 'none',
+          });
+        }
+      } catch (error) {
+        console.error(`Error transforming schema for ${key} at ${url}:`, error);
+        console.error('Value:', value);
+        throw error;
+      }
+    }
+
+    return {
+      schema: transformed,
+      url,
+    };
+  };
+
   // Register Swagger OpenAPI plugin
   await app.register(import('@fastify/swagger'), {
     openapi: {
@@ -130,7 +175,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
         { name: 'Comments', description: 'Comment management endpoints' },
       ],
     },
-    transform: jsonSchemaTransform,
+    transform: openApiTransform,
   });
 
   // Register Swagger UI

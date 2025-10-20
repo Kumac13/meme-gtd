@@ -1,0 +1,2577 @@
+openapi: 3.0.3
+info:
+  title: meme-gtd API
+  description: HTTP REST API for meme-gtd CLI operations
+  version: 0.6.0
+components:
+  schemas: {}
+paths:
+  /api-docs/:
+    get:
+      responses:
+        "200":
+          description: Default Response
+  /api-docs/static/index.html:
+    get:
+      responses:
+        "200":
+          description: Default Response
+  /api-docs/static/swagger-initializer.js:
+    get:
+      responses:
+        "200":
+          description: Default Response
+  /api-docs/json:
+    get:
+      responses:
+        "200":
+          description: Default Response
+  /api-docs/yaml:
+    get:
+      responses:
+        "200":
+          description: Default Response
+  /api-docs/static/{*}:
+    head: &a1
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: "*"
+          required: true
+      responses:
+        "200":
+          description: Default Response
+    get: *a1
+  /api/memos:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bodyMd:
+                  type: string
+                  minLength: 1
+              required:
+                - bodyMd
+              additionalProperties: false
+        required: true
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  type:
+                    type: string
+                    enum:
+                      - memo
+                  bodyMd:
+                    type: string
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                  isBookmarked:
+                    type: boolean
+                  isDeleted:
+                    type: boolean
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - type
+                  - bodyMd
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    get:
+      parameters:
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          in: query
+          name: bookmarked
+          required: false
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                    type:
+                      type: string
+                      enum:
+                        - memo
+                    bodyMd:
+                      type: string
+                    meta:
+                      type: object
+                      additionalProperties: {}
+                    isBookmarked:
+                      type: boolean
+                    isDeleted:
+                      type: boolean
+                    createdAt:
+                      type: string
+                      format: date-time
+                    updatedAt:
+                      type: string
+                      format: date-time
+                  required:
+                    - id
+                    - type
+                    - bodyMd
+                    - meta
+                    - isBookmarked
+                    - isDeleted
+                    - createdAt
+                    - updatedAt
+                  additionalProperties: false
+  /api/memos/{id}:
+    get:
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  type:
+                    type: string
+                    enum:
+                      - memo
+                  bodyMd:
+                    type: string
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                  isBookmarked:
+                    type: boolean
+                  isDeleted:
+                    type: boolean
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                  commentsCount:
+                    type: integer
+                    minimum: 0
+                required:
+                  - id
+                  - type
+                  - bodyMd
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bodyMd:
+                  type: string
+                  minLength: 1
+                isBookmarked:
+                  type: boolean
+              additionalProperties: false
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  type:
+                    type: string
+                    enum:
+                      - memo
+                  bodyMd:
+                    type: string
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                  isBookmarked:
+                    type: boolean
+                  isDeleted:
+                    type: boolean
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - type
+                  - bodyMd
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    delete:
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/memos/{id}/promote:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                status:
+                  type: string
+                  enum:
+                    - open
+                    - next
+                    - waiting
+                    - scheduled
+              required:
+                - title
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Promoted task
+          content:
+            application/json:
+              schema:
+                description: Promoted task
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/memos/{id}/bookmark:
+    post:
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  type:
+                    type: string
+                    enum:
+                      - memo
+                  bodyMd:
+                    type: string
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                  isBookmarked:
+                    type: boolean
+                  isDeleted:
+                    type: boolean
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - type
+                  - bodyMd
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/memos/{id}/unbookmark:
+    post:
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  type:
+                    type: string
+                    enum:
+                      - memo
+                  bodyMd:
+                    type: string
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                  isBookmarked:
+                    type: boolean
+                  isDeleted:
+                    type: boolean
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - type
+                  - bodyMd
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/memos/{memoId}/comments:
+    get:
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: memoId
+          required: true
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: taskId
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                    issueId:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                    bodyMd:
+                      type: string
+                    createdAt:
+                      type: string
+                      format: date-time
+                    updatedAt:
+                      type: string
+                      format: date-time
+                  required:
+                    - id
+                    - issueId
+                    - bodyMd
+                    - createdAt
+                    - updatedAt
+                  additionalProperties: false
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bodyMd:
+                  type: string
+                  minLength: 1
+              required:
+                - bodyMd
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: memoId
+          required: true
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: taskId
+          required: true
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  bodyMd:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - issueId
+                  - bodyMd
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/memos/{memoId}/comments/{commentId}:
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bodyMd:
+                  type: string
+                  minLength: 1
+              required:
+                - bodyMd
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: memoId
+          required: true
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: taskId
+          required: true
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: commentId
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  bodyMd:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - issueId
+                  - bodyMd
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    delete:
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: memoId
+          required: true
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: taskId
+          required: true
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: commentId
+          required: true
+      responses:
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                bodyMd:
+                  type: string
+                status:
+                  type: string
+                  enum:
+                    - open
+                    - next
+                    - waiting
+                    - scheduled
+                    - done
+                    - canceled
+                scheduledOn:
+                  type: string
+                  format: date-time
+              required:
+                - title
+              additionalProperties: false
+        required: true
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  type:
+                    type: string
+                    enum:
+                      - task
+                  title:
+                    type: string
+                  bodyMd:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                      - open
+                      - next
+                      - waiting
+                      - scheduled
+                      - done
+                      - canceled
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                  isBookmarked:
+                    type: boolean
+                  isDeleted:
+                    type: boolean
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    get:
+      parameters:
+        - schema:
+            type: string
+            enum:
+              - open
+              - next
+              - waiting
+              - scheduled
+              - done
+              - canceled
+          in: query
+          name: status
+          required: false
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          in: query
+          name: bookmarked
+          required: false
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                    type:
+                      type: string
+                      enum:
+                        - task
+                    title:
+                      type: string
+                    bodyMd:
+                      type: string
+                    status:
+                      type: string
+                      enum:
+                        - open
+                        - next
+                        - waiting
+                        - scheduled
+                        - done
+                        - canceled
+                    scheduledOn:
+                      type: string
+                      format: date-time
+                      nullable: true
+                    meta:
+                      type: object
+                      additionalProperties: {}
+                    isBookmarked:
+                      type: boolean
+                    isDeleted:
+                      type: boolean
+                    createdAt:
+                      type: string
+                      format: date-time
+                    updatedAt:
+                      type: string
+                      format: date-time
+                  required:
+                    - id
+                    - type
+                    - title
+                    - bodyMd
+                    - status
+                    - scheduledOn
+                    - meta
+                    - isBookmarked
+                    - isDeleted
+                    - createdAt
+                    - updatedAt
+                  additionalProperties: false
+  /api/tasks/{id}:
+    get:
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  type:
+                    type: string
+                    enum:
+                      - task
+                  title:
+                    type: string
+                  bodyMd:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                      - open
+                      - next
+                      - waiting
+                      - scheduled
+                      - done
+                      - canceled
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                  isBookmarked:
+                    type: boolean
+                  isDeleted:
+                    type: boolean
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                  commentsCount:
+                    type: integer
+                    minimum: 0
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                bodyMd:
+                  type: string
+                status:
+                  type: string
+                  enum:
+                    - open
+                    - next
+                    - waiting
+                    - scheduled
+                    - done
+                    - canceled
+                scheduledOn:
+                  type: string
+                  format: date-time
+                  nullable: true
+              additionalProperties: false
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  type:
+                    type: string
+                    enum:
+                      - task
+                  title:
+                    type: string
+                  bodyMd:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                      - open
+                      - next
+                      - waiting
+                      - scheduled
+                      - done
+                      - canceled
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                  isBookmarked:
+                    type: boolean
+                  isDeleted:
+                    type: boolean
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    delete:
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks/{id}/close:
+    post:
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  type:
+                    type: string
+                    enum:
+                      - task
+                  title:
+                    type: string
+                  bodyMd:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                      - open
+                      - next
+                      - waiting
+                      - scheduled
+                      - done
+                      - canceled
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                  isBookmarked:
+                    type: boolean
+                  isDeleted:
+                    type: boolean
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks/{id}/cancel:
+    post:
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  type:
+                    type: string
+                    enum:
+                      - task
+                  title:
+                    type: string
+                  bodyMd:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                      - open
+                      - next
+                      - waiting
+                      - scheduled
+                      - done
+                      - canceled
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                  isBookmarked:
+                    type: boolean
+                  isDeleted:
+                    type: boolean
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks/{id}/reopen:
+    post:
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  type:
+                    type: string
+                    enum:
+                      - task
+                  title:
+                    type: string
+                  bodyMd:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                      - open
+                      - next
+                      - waiting
+                      - scheduled
+                      - done
+                      - canceled
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                  isBookmarked:
+                    type: boolean
+                  isDeleted:
+                    type: boolean
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks/{id}/bookmark:
+    post:
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  type:
+                    type: string
+                    enum:
+                      - task
+                  title:
+                    type: string
+                  bodyMd:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                      - open
+                      - next
+                      - waiting
+                      - scheduled
+                      - done
+                      - canceled
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                  isBookmarked:
+                    type: boolean
+                  isDeleted:
+                    type: boolean
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks/{id}/unbookmark:
+    post:
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  type:
+                    type: string
+                    enum:
+                      - task
+                  title:
+                    type: string
+                  bodyMd:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                      - open
+                      - next
+                      - waiting
+                      - scheduled
+                      - done
+                      - canceled
+                  scheduledOn:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                  isBookmarked:
+                    type: boolean
+                  isDeleted:
+                    type: boolean
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks/{taskId}/comments:
+    get:
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: memoId
+          required: true
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: taskId
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                    issueId:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                    bodyMd:
+                      type: string
+                    createdAt:
+                      type: string
+                      format: date-time
+                    updatedAt:
+                      type: string
+                      format: date-time
+                  required:
+                    - id
+                    - issueId
+                    - bodyMd
+                    - createdAt
+                    - updatedAt
+                  additionalProperties: false
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bodyMd:
+                  type: string
+                  minLength: 1
+              required:
+                - bodyMd
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: memoId
+          required: true
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: taskId
+          required: true
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  bodyMd:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - issueId
+                  - bodyMd
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks/{taskId}/comments/{commentId}:
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bodyMd:
+                  type: string
+                  minLength: 1
+              required:
+                - bodyMd
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: memoId
+          required: true
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: taskId
+          required: true
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: commentId
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  bodyMd:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - issueId
+                  - bodyMd
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    delete:
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: memoId
+          required: true
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: taskId
+          required: true
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: commentId
+          required: true
+      responses:
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/labels:
+    get:
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                    name:
+                      type: string
+                    description:
+                      type: string
+                      nullable: true
+                    createdAt:
+                      type: string
+                      format: date-time
+                  required:
+                    - id
+                    - name
+                    - description
+                    - createdAt
+                  additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+              required:
+                - name
+              additionalProperties: false
+        required: true
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  name:
+                    type: string
+                  description:
+                    type: string
+                    nullable: true
+                  createdAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - name
+                  - description
+                  - createdAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/issues/{issueId}/labels:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                labelId:
+                  type: integer
+                  exclusiveMinimum: true
+                  minimum: 0
+              required:
+                - labelId
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: issueId
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/labels/{name}:
+    delete:
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: name
+          required: true
+      responses:
+        "204":
+          description: Default Response
+          content:
+            application/json:
+              schema: {}
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/links:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sourceIssueId:
+                  type: integer
+                  exclusiveMinimum: true
+                  minimum: 0
+                targetIssueId:
+                  type: integer
+                  exclusiveMinimum: true
+                  minimum: 0
+                linkType:
+                  type: string
+                  enum:
+                    - parent
+                    - child
+                    - relates
+                    - derived_from
+              required:
+                - sourceIssueId
+                - targetIssueId
+                - linkType
+              additionalProperties: false
+        required: true
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  sourceIssueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  targetIssueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  linkType:
+                    type: string
+                    enum:
+                      - parent
+                      - child
+                      - relates
+                      - derived_from
+                  createdAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - sourceIssueId
+                  - targetIssueId
+                  - linkType
+                  - createdAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/issues/{id}/links:
+    get:
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                    sourceIssueId:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                    targetIssueId:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                    linkType:
+                      type: string
+                      enum:
+                        - parent
+                        - child
+                        - relates
+                        - derived_from
+                    createdAt:
+                      type: string
+                      format: date-time
+                    direction:
+                      type: string
+                      enum:
+                        - outgoing
+                        - incoming
+                  required:
+                    - id
+                    - sourceIssueId
+                    - targetIssueId
+                    - linkType
+                    - createdAt
+                    - direction
+                  additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/links/{id}:
+    delete:
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "204":
+          description: Default Response
+          content:
+            application/json:
+              schema: {}
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  stack:
+                    type: string
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+servers:
+  - url: http://localhost:3000
+    description: Development server
+tags:
+  - name: Memos
+    description: Memo management endpoints
+  - name: Tasks
+    description: Task management endpoints
+  - name: Labels
+    description: Label management endpoints
+  - name: Links
+    description: Link management endpoints
+  - name: Comments
+    description: Comment management endpoints
