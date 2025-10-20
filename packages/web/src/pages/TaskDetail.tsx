@@ -4,6 +4,11 @@ import { TasksService } from '../api/services/TasksService';
 import { formatDateTime } from '../utils/dates';
 import { MarkdownRenderer } from '../utils/markdown';
 
+interface Label {
+  name: string;
+  color: string;
+}
+
 interface Task {
   id: number;
   title: string | null;
@@ -11,27 +16,10 @@ interface Task {
   status: string | null;
   isBookmarked: boolean;
   scheduledOn: string | null;
+  labels?: Label[];
   createdAt: string;
   updatedAt: string;
 }
-
-const statusColors: Record<string, string> = {
-  open: 'bg-blue-100 text-blue-800',
-  next: 'bg-purple-100 text-purple-800',
-  waiting: 'bg-orange-100 text-orange-800',
-  scheduled: 'bg-cyan-100 text-cyan-800',
-  done: 'bg-green-100 text-green-800',
-  canceled: 'bg-gray-100 text-gray-800',
-};
-
-const statusLabels: Record<string, string> = {
-  open: 'Open',
-  next: 'Next',
-  waiting: 'Waiting',
-  scheduled: 'Scheduled',
-  done: 'Done',
-  canceled: 'Canceled',
-};
 
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
@@ -171,18 +159,25 @@ export default function TaskDetail() {
         </Link>
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
               <h1 className="text-3xl font-bold text-gray-900">
                 {task.title || `Task #${task.id}`}
               </h1>
-              {task.status && (
-                <span
-                  className={`px-3 py-1 text-sm font-medium rounded ${
-                    statusColors[task.status] || 'bg-gray-100 text-gray-800'
-                  }`}
-                >
-                  {statusLabels[task.status] || task.status}
-                </span>
+              {task.labels && task.labels.length > 0 && (
+                <>
+                  {task.labels.map((label, idx) => (
+                    <span
+                      key={idx}
+                      className="px-3 py-1 text-sm font-medium rounded"
+                      style={{
+                        backgroundColor: `#${label.color}`,
+                        color: '#000',
+                      }}
+                    >
+                      {label.name}
+                    </span>
+                  ))}
+                </>
               )}
             </div>
           </div>
