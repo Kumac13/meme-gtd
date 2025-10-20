@@ -43,6 +43,8 @@ export function formatRelativeTime(isoString: string): string {
   const diffMin = Math.floor(diffSec / 60);
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
+  const diffMonth = Math.floor(diffDay / 30);
+  const diffYear = Math.floor(diffDay / 365);
 
   if (diffSec < 60) {
     return 'just now';
@@ -50,10 +52,12 @@ export function formatRelativeTime(isoString: string): string {
     return `${diffMin} minute${diffMin > 1 ? 's' : ''} ago`;
   } else if (diffHour < 24) {
     return `${diffHour} hour${diffHour > 1 ? 's' : ''} ago`;
-  } else if (diffDay < 7) {
+  } else if (diffDay < 30) {
     return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
+  } else if (diffMonth < 12) {
+    return `${diffMonth} month${diffMonth > 1 ? 's' : ''} ago`;
   } else {
-    return formatDate(isoString);
+    return `${diffYear} year${diffYear > 1 ? 's' : ''} ago`;
   }
 }
 
