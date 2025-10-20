@@ -10,6 +10,7 @@ interface Task {
   bodyMd: string;
   status: string | null;
   isBookmarked: boolean;
+  commentCount?: number;
   scheduledOn: string | null;
   createdAt: string;
   updatedAt: string;
@@ -132,9 +133,6 @@ export default function TasksList() {
               className="block p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-start gap-3">
-                {task.isBookmarked && (
-                  <span className="text-yellow-500 text-lg" title="Bookmarked">★</span>
-                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h2 className="text-base font-semibold text-gray-900">
@@ -165,6 +163,21 @@ export default function TasksList() {
                     <span title={formatDateTime(task.createdAt)}>
                       {formatRelativeTime(task.createdAt)}
                     </span>
+                    {(task.commentCount ?? 0) > 0 && (
+                      <span className="flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                          <path d="M1 2.75C1 1.784 1.784 1 2.75 1h10.5c.966 0 1.75.784 1.75 1.75v7.5A1.75 1.75 0 0 1 13.25 12H9.06l-2.573 2.573A1.458 1.458 0 0 1 4 13.543V12H2.75A1.75 1.75 0 0 1 1 10.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h4.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path>
+                        </svg>
+                        {task.commentCount ?? 0}
+                      </span>
+                    )}
+                    {task.isBookmarked && (
+                      <span className="flex items-center gap-1 text-yellow-600">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                          <path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"></path>
+                        </svg>
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
