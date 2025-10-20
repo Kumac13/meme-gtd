@@ -1,0 +1,44 @@
+{
+  "name": "meme-gtd-api",
+  "version": "0.6.0",
+  "description": "HTTP API server for meme-gtd CLI operations",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "test": "node --test test/**/*.test.ts",
+    "test:watch": "node --test --watch test/**/*.test.ts",
+    "openapi:generate": "tsx scripts/generate-openapi.ts",
+    "openapi:validate": "redocly lint docs/api/openapi.yaml"
+  },
+  "keywords": [
+    "gtd",
+    "api",
+    "fastify",
+    "rest"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@fastify/cors": "^10.0.1",
+    "@fastify/swagger": "^9.3.0",
+    "@fastify/swagger-ui": "^5.2.0",
+    "fastify": "^5.2.0",
+    "fastify-type-provider-zod": "^4.0.2",
+    "meme-gtd-core": "workspace:*",
+    "meme-gtd-db": "workspace:*",
+    "meme-gtd-shared": "workspace:*",
+    "pino": "^9.5.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@redocly/cli": "^1.25.14",
+    "@types/node": "^22.0.0",
+    "supertest": "^7.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.5.4"
+  }
+}
