@@ -47,34 +47,27 @@ export default function ItemList({ items, itemType, basePath }: ItemListProps) {
           <div className="flex items-center justify-between gap-3">
             <div className="flex-1 min-w-0">
               {itemType === 'task' ? (
-                <>
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <h2 className="text-base font-semibold text-gray-900">
-                      {item.title || `Task #${item.id}`}
-                    </h2>
-                    {item.labels && item.labels.length > 0 && (
-                      <>
-                        {item.labels.map((label, idx) => (
-                          <span
-                            key={idx}
-                            className="px-2 py-0.5 text-xs font-medium rounded"
-                            style={{
-                              backgroundColor: `#${label.color}`,
-                              color: '#000',
-                            }}
-                          >
-                            {label.name}
-                          </span>
-                        ))}
-                      </>
-                    )}
-                  </div>
-                  {item.bodyMd && (
-                    <p className="text-gray-600 text-sm mb-2">
-                      {truncateMarkdown(item.bodyMd, 100)}
-                    </p>
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <h2 className="text-base font-semibold text-gray-900">
+                    {item.title || `Task #${item.id}`}
+                  </h2>
+                  {item.labels && item.labels.length > 0 && (
+                    <>
+                      {item.labels.map((label, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 text-xs font-medium rounded"
+                          style={{
+                            backgroundColor: `#${label.color}`,
+                            color: '#000',
+                          }}
+                        >
+                          {label.name}
+                        </span>
+                      ))}
+                    </>
                   )}
-                </>
+                </div>
               ) : (
                 <>
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
