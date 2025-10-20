@@ -41,11 +41,39 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
         },
       }),
     },
+    // Request body size limit: 10MB (sufficient for large memo/task bodies)
+    bodyLimit: 10 * 1024 * 1024, // 10MB in bytes
   }).withTypeProvider<ZodTypeProvider>();
 
   // Register Zod validator and serializer compilers
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
+
+  // Add request/response logging hooks
+  app.addHook('onRequest', async (request) => {
+    // Store request start time for response time calculation
+    (request as any).startTime = Date.now();
+
+    request.log.info({
+      requestId: request.id,
+      method: request.method,
+      url: request.url,
+      userAgent: request.headers['user-agent'],
+    }, 'Incoming request');
+  });
+
+  app.addHook('onResponse', async (request, reply) => {
+    const startTime = (request as any).startTime;
+    const responseTime = startTime ? Date.now() - startTime : 0;
+
+    request.log.info({
+      requestId: request.id,
+      method: request.method,
+      url: request.url,
+      statusCode: reply.statusCode,
+      responseTime: `${responseTime}ms`,
+    }, 'Request completed');
+  });
 
   // Open database connection once and share across all requests
   const db = ensureDatabase(config);
