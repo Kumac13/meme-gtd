@@ -5,11 +5,6 @@ import ItemDetail, { type Item } from '../components/ItemDetail';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 
-interface Label {
-  name: string;
-  color: string;
-}
-
 interface Task {
   id: number;
   title: string | null;
@@ -17,7 +12,7 @@ interface Task {
   status: string | null;
   isBookmarked: boolean;
   scheduledOn: string | null;
-  labels?: Label[];
+  labels?: string[];
   createdAt: string;
   updatedAt: string;
 }
