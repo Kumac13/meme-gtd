@@ -1,0 +1,115 @@
+import { Link } from 'react-router-dom';
+import { formatDateTime, formatRelativeTime } from '../utils/dates';
+import { truncateMarkdown } from '../utils/markdown';
+
+interface BaseItem {
+  id: number;
+  title: string | null;
+  bodyMd: string;
+  isBookmarked: boolean;
+  commentCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Label {
+  name: string;
+  color: string;
+}
+
+interface Task extends BaseItem {
+  status: string | null;
+  scheduledOn: string | null;
+  labels?: Label[];
+}
+
+type Item = BaseItem | Task;
+
+interface ItemListProps {
+  items: Item[];
+  itemType: 'memo' | 'task';
+  basePath: string;
+}
+
+function isTask(item: Item): item is Task {
+  return 'scheduledOn' in item;
+}
+
+export default function ItemList({ items, itemType, basePath }: ItemListProps) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
+      {items.map((item) => (
+        <Link
+          key={item.id}
+          to={`${basePath}/${item.id}`}
+          className="block p-4 hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              {itemType === 'task' ? (
+                <>
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <h2 className="text-base font-semibold text-gray-900">
+                      {item.title || `Task #${item.id}`}
+                    </h2>
+                    {isTask(item) && item.labels && item.labels.length > 0 && (
+                      <>
+                        {item.labels.map((label, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2 py-0.5 text-xs font-medium rounded"
+                            style={{
+                              backgroundColor: `#${label.color}`,
+                              color: '#000',
+                            }}
+                          >
+                            {label.name}
+                          </span>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                  {item.bodyMd && (
+                    <p className="text-gray-600 text-sm mb-2">
+                      {truncateMarkdown(item.bodyMd, 100)}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="text-gray-900 text-sm mb-2">
+                  {truncateMarkdown(item.bodyMd, 150)}
+                </p>
+              )}
+              <div className="flex items-center text-xs text-gray-500 space-x-3">
+                <span>#{item.id}</span>
+                {isTask(item) && item.scheduledOn && (
+                  <span>
+                    Scheduled: {formatDateTime(item.scheduledOn).split(' ')[0]}
+                  </span>
+                )}
+                <span title={formatDateTime(item.createdAt)}>
+                  {formatRelativeTime(item.createdAt)}
+                </span>
+                {(item.commentCount ?? 0) > 0 && (
+                  <span className="flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M1 2.75C1 1.784 1.784 1 2.75 1h10.5c.966 0 1.75.784 1.75 1.75v7.5A1.75 1.75 0 0 1 13.25 12H9.06l-2.573 2.573A1.458 1.458 0 0 1 4 13.543V12H2.75A1.75 1.75 0 0 1 1 10.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h4.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path>
+                    </svg>
+                    {item.commentCount ?? 0}
+                  </span>
+                )}
+              </div>
+            </div>
+            {item.isBookmarked && (
+              <div className="flex-shrink-0">
+                <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Z"></path>
+                </svg>
+              </div>
+            )}
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
