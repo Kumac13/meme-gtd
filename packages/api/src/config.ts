@@ -1,4 +1,4 @@
-import { loadContext, type MgtdConfig } from 'meme-gtd-config';
+import { loadConfig as loadMgtdConfig, type MgtdConfig } from 'meme-gtd-config';
 import { parseArgs } from 'node:util';
 
 export interface ServerConfig {
@@ -39,10 +39,14 @@ export async function loadConfig(): Promise<ServerConfig> {
   });
 
   // Load mgtd config (database path and other settings)
-  const configPath = values.config ?? process.env.MGTD_CONFIG_PATH;
-  const dbPath = values.db ?? process.env.DB_PATH;
+  const configPath = typeof values.config === 'string' ? values.config : process.env.MGTD_CONFIG_PATH;
+  const dbPath = typeof values.db === 'string' ? values.db : process.env.DB_PATH;
 
-  const mgtdConfig = await loadContext(configPath);
+  const { config: mgtdConfig } = await loadMgtdConfig({
+    configPath,
+    createIfMissing: true,
+  });
+
   if (dbPath) {
     mgtdConfig.dbPath = dbPath;
   }
@@ -53,9 +57,12 @@ export async function loadConfig(): Promise<ServerConfig> {
     ? ['*']
     : corsOriginsEnv.split(',').map(o => o.trim());
 
+  const port = typeof values.port === 'string' ? values.port : process.env.PORT ?? '3000';
+  const host = typeof values.host === 'string' ? values.host : process.env.HOST ?? '0.0.0.0';
+
   return {
-    port: parseInt(values.port ?? process.env.PORT ?? '3000', 10),
-    host: values.host ?? process.env.HOST ?? '0.0.0.0',
+    port: parseInt(port, 10),
+    host,
     corsAllowedOrigins,
     logLevel: process.env.LOG_LEVEL ?? 'info',
     nodeEnv: process.env.NODE_ENV ?? 'development',

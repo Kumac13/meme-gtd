@@ -28,6 +28,7 @@
     "@fastify/swagger-ui": "^5.2.0",
     "fastify": "^5.2.0",
     "fastify-type-provider-zod": "^4.0.2",
+    "meme-gtd-config": "workspace:*",
     "meme-gtd-core": "workspace:*",
     "meme-gtd-db": "workspace:*",
     "meme-gtd-shared": "workspace:*",

@@ -100,7 +100,8 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   });
 
   // Register routes
-  await app.register(import('./routes/memos.js'));
+  const { memoRoutes } = await import('./routes/memos.js');
+  await app.register(memoRoutes);
 
   return app;
 }
