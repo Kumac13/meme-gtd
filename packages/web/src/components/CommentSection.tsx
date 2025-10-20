@@ -119,7 +119,7 @@ export default function CommentSection({ itemId, itemType }: CommentSectionProps
       ) : (
         <div className="space-y-4 mb-6">
           {comments.map((comment) => (
-            <div key={comment.id} className="border border-gray-200 rounded-lg p-4">
+            <div key={comment.id} className="bg-white border border-gray-200 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-xs text-gray-500">
                   <span title={formatDateTime(comment.createdAt)}>
@@ -181,7 +181,7 @@ export default function CommentSection({ itemId, itemType }: CommentSectionProps
       )}
 
       {/* New Comment Form */}
-      <form onSubmit={handleSubmitNewComment} className="mt-6">
+      <form onSubmit={handleSubmitNewComment} className="bg-white border border-gray-200 rounded-lg p-4">
         <textarea
           value={newCommentBody}
           onChange={(e) => setNewCommentBody(e.target.value)}
