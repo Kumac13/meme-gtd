@@ -132,7 +132,7 @@ export default function TasksList() {
               to={`/tasks/${task.id}`}
               className="block p-4 hover:bg-gray-50 transition-colors"
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h2 className="text-base font-semibold text-gray-900">
@@ -171,15 +171,15 @@ export default function TasksList() {
                         {task.commentCount ?? 0}
                       </span>
                     )}
-                    {task.isBookmarked && (
-                      <span className="flex items-center gap-1 text-yellow-600">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                          <path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"></path>
-                        </svg>
-                      </span>
-                    )}
                   </div>
                 </div>
+                {task.isBookmarked && (
+                  <div className="flex-shrink-0">
+                    <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v11.5A1.75 1.75 0 0 1 14.25 15H1.75A1.75 1.75 0 0 1 0 13.25Zm1.75-.25a.25.25 0 0 0-.25.25v11.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V1.75a.25.25 0 0 0-.25-.25ZM5 5.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 5 5.25ZM5.75 8a.75.75 0 0 0 0 1.5h2.5a.75.75 0 0 0 0-1.5Z"></path>
+                    </svg>
+                  </div>
+                )}
               </div>
             </Link>
           ))}
