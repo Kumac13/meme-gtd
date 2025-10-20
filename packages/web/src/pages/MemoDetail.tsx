@@ -8,6 +8,7 @@ interface Memo {
   id: number;
   title: string | null;
   bodyMd: string;
+  isBookmarked: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -19,6 +20,7 @@ export default function MemoDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [bookmarking, setBookmarking] = useState(false);
 
   useEffect(() => {
     async function fetchMemo() {
@@ -61,6 +63,26 @@ export default function MemoDetail() {
       setError(err instanceof Error ? err.message : 'Failed to delete memo');
       console.error('Error deleting memo:', err);
       setDeleting(false);
+    }
+  };
+
+  const handleBookmarkToggle = async () => {
+    if (!id || !memo) return;
+
+    try {
+      setBookmarking(true);
+      if (memo.isBookmarked) {
+        await MemosService.unbookmarkMemo(id);
+      } else {
+        await MemosService.bookmarkMemo(id);
+      }
+      // Update local state
+      setMemo({ ...memo, isBookmarked: !memo.isBookmarked });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update bookmark');
+      console.error('Error toggling bookmark:', err);
+    } finally {
+      setBookmarking(false);
     }
   };
 
@@ -130,6 +152,13 @@ export default function MemoDetail() {
         <div className="flex items-start justify-between">
           <h1 className="text-3xl font-bold text-gray-900">{memo.title || `Memo #${memo.id}`}</h1>
           <div className="flex space-x-2">
+            <button
+              onClick={handleBookmarkToggle}
+              disabled={bookmarking}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {bookmarking ? 'Loading...' : memo.isBookmarked ? 'Unbookmark' : 'Bookmark'}
+            </button>
             <Link
               to={`/memos/${memo.id}/edit`}
               className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
