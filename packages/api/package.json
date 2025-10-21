@@ -7,7 +7,7 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "cd ../.. && tsx packages/api/src/index.ts",
+    "dev": "cd ../.. && MGTD_DB_PATH=./test-data/test.db tsx packages/api/src/index.ts",
     "start": "cd ../.. && node packages/api/dist/index.js",
     "test": "tsx --test test/**/*.test.ts",
     "test:watch": "tsx --test --watch test/**/*.test.ts",
