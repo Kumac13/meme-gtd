@@ -397,4 +397,55 @@ describe('Memo Bookmark Operations', () => {
 
     assert.strictEqual(response.statusCode, 404);
   });
+
+  it('should include commentCount field in GET /api/memos response', async () => {
+    // Create memo with 2 comments
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Memo with comments' }),
+    });
+    assert.strictEqual(createResponse.statusCode, 201);
+    const memo = JSON.parse(createResponse.body);
+
+    await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/comments`,
+      payload: { bodyMd: 'First comment' },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/comments`,
+      payload: { bodyMd: 'Second comment' },
+    });
+
+    // List memos and verify commentCount
+    const listResponse = await app.inject({
+      method: 'GET',
+      url: '/api/memos',
+    });
+    assert.strictEqual(listResponse.statusCode, 200);
+    const memos = JSON.parse(listResponse.body);
+    const foundMemo = memos.find((m: any) => m.id === memo.id);
+    assert.ok(foundMemo);
+    assert.strictEqual(foundMemo.commentCount, 2);
+
+    // Create memo with 0 comments
+    const createResponse2 = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Memo without comments' }),
+    });
+    assert.strictEqual(createResponse2.statusCode, 201);
+
+    // List memos again and verify zero count
+    const listResponse2 = await app.inject({
+      method: 'GET',
+      url: '/api/memos',
+    });
+    const memos2 = JSON.parse(listResponse2.body);
+    const memo2 = memos2.find((m: any) => m.bodyMd === 'Memo without comments');
+    assert.ok(memo2);
+    assert.strictEqual(memo2.commentCount, 0);
+  });
 });
