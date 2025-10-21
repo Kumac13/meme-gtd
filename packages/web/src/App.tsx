@@ -6,6 +6,7 @@ import MemoDetail from './pages/MemoDetail';
 import MemoNew from './pages/MemoNew';
 import MemoEdit from './pages/MemoEdit';
 import TasksList from './pages/TasksList';
+import TasksKanban from './pages/TasksKanban';
 import TaskDetail from './pages/TaskDetail';
 import TaskNew from './pages/TaskNew';
 import TaskEdit from './pages/TaskEdit';
@@ -22,6 +23,7 @@ function App() {
             <Route path="memos/:id" element={<MemoDetail />} />
             <Route path="memos/:id/edit" element={<MemoEdit />} />
             <Route path="tasks" element={<TasksList />} />
+            <Route path="kanban" element={<TasksKanban />} />
             <Route path="tasks/new" element={<TaskNew />} />
             <Route path="tasks/:id" element={<TaskDetail />} />
             <Route path="tasks/:id/edit" element={<TaskEdit />} />
