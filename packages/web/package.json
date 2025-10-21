@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest",
+    "test": "vitest run --passWithNoTests",
     "test:e2e": "playwright test",
     "generate:api": "openapi-typescript-codegen --input ../api/docs/api/openapi.yaml --output ./src/api --client fetch"
   },
