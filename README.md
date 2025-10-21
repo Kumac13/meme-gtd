@@ -61,6 +61,7 @@ corepack prepare pnpm@9.0.0 --activate
 - コメント投稿・編集・削除
 - Bookmark機能
 - Task Status変更
+- **Kanbanボード表示** (`/kanban`) - GitHub Projects風のカンバンビューでタスクをステータス別（Open/Next/Waiting/Scheduled/Done/Canceled）に表示し、各カードから直接ステータスを変更可能
 
 ## テスト実行
 ```bash
