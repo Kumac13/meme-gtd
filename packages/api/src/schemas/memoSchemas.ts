@@ -44,6 +44,7 @@ export const MemoSchema = z.object({
   isDeleted: z.boolean().describe('Whether the memo is soft-deleted'),
   createdAt: z.string().datetime().describe('Creation timestamp'),
   updatedAt: z.string().datetime().describe('Last update timestamp'),
+  labels: z.array(z.string()).describe('Array of label names assigned to this memo'),
 });
 
 export type Memo = z.infer<typeof MemoSchema>;
@@ -52,7 +53,6 @@ export type Memo = z.infer<typeof MemoSchema>;
  * Schema for memo detail response (includes labels and comments count)
  */
 export const MemoDetailSchema = MemoSchema.extend({
-  labels: z.array(z.string()).optional().describe('Array of label names assigned to this memo'),
   commentsCount: z.number().int().nonnegative().optional().describe('Number of comments on this memo'),
 });
 
