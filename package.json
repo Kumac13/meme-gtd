@@ -10,6 +10,7 @@
     "build": "pnpm build:web && pnpm -r build",
     "build:web": "pnpm --filter meme-gtd-web build",
     "dev:web": "pnpm --filter meme-gtd-web dev",
+    "web:start": "pnpm --filter meme-gtd-web start",
     "server:start": "pnpm --filter meme-gtd-api start",
     "server:dev": "pnpm --filter meme-gtd-api dev",
     "lint": "pnpm -r lint",
