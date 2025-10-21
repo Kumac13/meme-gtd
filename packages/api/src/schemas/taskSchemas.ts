@@ -52,6 +52,15 @@ export const TaskSchema = z.object({
 export type Task = z.infer<typeof TaskSchema>;
 
 /**
+ * Schema for task list item response (includes commentCount)
+ */
+export const TaskListItemSchema = TaskSchema.extend({
+  commentCount: z.number().int().nonnegative().describe('Number of non-deleted comments on this task'),
+});
+
+export type TaskListItem = z.infer<typeof TaskListItemSchema>;
+
+/**
  * Schema for task detail response (includes labels and comments count)
  */
 export const TaskDetailSchema = TaskSchema.extend({

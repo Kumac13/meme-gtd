@@ -22,6 +22,7 @@ import {
   UpdateMemoRequestSchema,
   PromoteMemoRequestSchema,
   MemoSchema,
+  MemoListItemSchema,
   MemoDetailSchema,
   MemoIdParamsSchema,
   MemoQuerySchema,
@@ -72,7 +73,7 @@ export async function memoRoutes(app: FastifyInstance) {
         operationId: 'listMemos',
         querystring: MemoQuerySchema,
         response: {
-          200: z.array(MemoSchema),
+          200: z.array(MemoListItemSchema),
           400: ErrorResponseSchema,
         },
       },

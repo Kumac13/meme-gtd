@@ -23,6 +23,7 @@ import {
   CreateTaskRequestSchema,
   UpdateTaskRequestSchema,
   TaskSchema,
+  TaskListItemSchema,
   TaskDetailSchema,
   TaskIdParamsSchema,
   TaskQuerySchema,
@@ -73,7 +74,7 @@ export async function taskRoutes(app: FastifyInstance) {
         operationId: 'listTasks',
         querystring: TaskQuerySchema,
         response: {
-          200: z.array(TaskSchema),
+          200: z.array(TaskListItemSchema),
           400: ErrorResponseSchema,
         },
       },
