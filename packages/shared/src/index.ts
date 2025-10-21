@@ -30,12 +30,14 @@ export interface Memo extends IssueBase {
   title: null;
   status: null;
   scheduledOn: null;
+  commentCount?: number;
 }
 
 export interface Task extends IssueBase {
   type: 'task';
   title: string;
   status: TaskStatus;
+  commentCount?: number;
 }
 
 export type Issue = Memo | Task;

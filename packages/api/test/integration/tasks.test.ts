@@ -610,4 +610,61 @@ describe('Task Comment Operations', () => {
 
     assert.strictEqual(response.statusCode, 404);
   });
+
+  it('should include commentCount field in GET /api/tasks response', async () => {
+    // Create task with 3 comments
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task with comments', bodyMd: 'Body content' }),
+    });
+    assert.strictEqual(createResponse.statusCode, 201);
+    const task = JSON.parse(createResponse.body);
+
+    await app.inject({
+      method: 'POST',
+      url: `/api/tasks/${task.id}/comments`,
+      payload: { bodyMd: 'First comment' },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/api/tasks/${task.id}/comments`,
+      payload: { bodyMd: 'Second comment' },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/api/tasks/${task.id}/comments`,
+      payload: { bodyMd: 'Third comment' },
+    });
+
+    // List tasks and verify commentCount
+    const listResponse = await app.inject({
+      method: 'GET',
+      url: '/api/tasks',
+    });
+    assert.strictEqual(listResponse.statusCode, 200);
+    const tasks = JSON.parse(listResponse.body);
+    const foundTask = tasks.find((t: any) => t.id === task.id);
+    assert.ok(foundTask);
+    assert.strictEqual(foundTask.commentCount, 3);
+
+    // Create task with 0 comments
+    const createResponse2 = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task without comments', bodyMd: 'Body' }),
+    });
+    assert.strictEqual(createResponse2.statusCode, 201);
+
+    // List tasks with status filter and verify commentCount
+    const listResponse2 = await app.inject({
+      method: 'GET',
+      url: '/api/tasks?status=open',
+    });
+    const tasks2 = JSON.parse(listResponse2.body);
+    tasks2.forEach((t: any) => {
+      assert.ok(typeof t.commentCount === 'number');
+      assert.ok(t.commentCount >= 0);
+    });
+  });
 });

@@ -50,6 +50,15 @@ export const MemoSchema = z.object({
 export type Memo = z.infer<typeof MemoSchema>;
 
 /**
+ * Schema for memo list item response (includes commentCount)
+ */
+export const MemoListItemSchema = MemoSchema.extend({
+  commentCount: z.number().int().nonnegative().describe('Number of non-deleted comments on this memo'),
+});
+
+export type MemoListItem = z.infer<typeof MemoListItemSchema>;
+
+/**
  * Schema for memo detail response (includes labels and comments count)
  */
 export const MemoDetailSchema = MemoSchema.extend({

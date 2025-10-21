@@ -13,6 +13,7 @@ import {
   deleteTask,
   setTaskStatus,
   addComment as addTaskComment,
+  deleteComment as deleteTaskComment,
   listComments as listTaskComments,
   listTaskLabels,
   setTaskLabels,
@@ -362,6 +363,47 @@ test('setTaskBookmark() rejects memo ID', () => {
   assert.throws(() => {
     setTaskBookmark(db, memo.id, true);
   }, /not a task/);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('listTasks returns commentCount field', () => {
+  const { dir, db } = createTempDb();
+
+  // Test task with 0 comments
+  const task1 = createTask(db, { title: 'Task 1', bodyMd: 'task without comments' });
+  let tasks = listTasks(db, {});
+  assert.equal(tasks.length, 1);
+  assert.equal(tasks[0].commentCount, 0);
+
+  // Test task with N comments
+  const task2 = createTask(db, { title: 'Task 2', bodyMd: 'task with comments' });
+  addTaskComment(db, task2.id, 'comment 1');
+  addTaskComment(db, task2.id, 'comment 2');
+  addTaskComment(db, task2.id, 'comment 3');
+  tasks = listTasks(db, {});
+  const foundTask2 = tasks.find(t => t.id === task2.id);
+  assert.ok(foundTask2);
+  assert.equal(foundTask2.commentCount, 3);
+
+  // Test task with soft-deleted comments excludes them from count
+  const task3 = createTask(db, { title: 'Task 3', bodyMd: 'task with deleted comments' });
+  addTaskComment(db, task3.id, 'active comment 1');
+  addTaskComment(db, task3.id, 'active comment 2');
+  const deletedComment = addTaskComment(db, task3.id, 'to be deleted');
+  deleteTaskComment(db, deletedComment.id);
+  tasks = listTasks(db, {});
+  const foundTask3 = tasks.find(t => t.id === task3.id);
+  assert.ok(foundTask3);
+  assert.equal(foundTask3.commentCount, 2); // Only count active comments
+
+  // Test filtered results include accurate comment counts
+  const task4 = createTask(db, { title: 'Task 4', bodyMd: 'next status task', status: 'next' });
+  addTaskComment(db, task4.id, 'comment on next task');
+  const nextTasks = listTasks(db, { status: 'next' });
+  assert.equal(nextTasks.length, 1);
+  assert.equal(nextTasks[0].commentCount, 1);
 
   db.close();
   fs.removeSync(dir);

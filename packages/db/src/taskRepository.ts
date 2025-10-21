@@ -41,7 +41,8 @@ const taskRowToTask = (row: any): Task => ({
   createdAt: row.created_at,
   updatedAt: row.updated_at,
   isBookmarked: toBoolean(row.is_bookmarked),
-  isDeleted: toBoolean(row.is_deleted)
+  isDeleted: toBoolean(row.is_deleted),
+  commentCount: row.comment_count ?? 0
 });
 
 const commentRowToComment = (row: any): Comment => ({
@@ -127,7 +128,13 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
     orderBy = 'updated_at ASC';
   }
 
-  let sql = `SELECT * FROM issues WHERE ${conditions.join(' AND ')} ORDER BY ${orderBy}`;
+  let sql = `
+    SELECT i.*,
+      (SELECT COUNT(*) FROM comments c
+       WHERE c.issue_id = i.id AND c.is_deleted = 0) as comment_count
+    FROM issues i
+    WHERE ${conditions.join(' AND ')}
+    ORDER BY ${orderBy}`;
   if (filters.limit) {
     sql += ' LIMIT @limit';
     params.limit = filters.limit;
@@ -141,9 +148,14 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
     if (filters.isBookmarked !== undefined) {
       searchConditions.push('i.is_bookmarked = @isBookmarked');
     }
-    sql = `SELECT i.* FROM issues i JOIN issues_fts f ON f.issue_id = i.id
-            WHERE ${searchConditions.join(' AND ')}
-            ORDER BY i.updated_at ${filters.order === 'asc' ? 'ASC' : 'DESC'}`;
+    sql = `
+      SELECT i.*,
+        (SELECT COUNT(*) FROM comments c
+         WHERE c.issue_id = i.id AND c.is_deleted = 0) as comment_count
+      FROM issues i
+      JOIN issues_fts f ON f.issue_id = i.id
+      WHERE ${searchConditions.join(' AND ')}
+      ORDER BY i.updated_at ${filters.order === 'asc' ? 'ASC' : 'DESC'}`;
     params.search = filters.search;
     if (filters.limit) {
       sql += ' LIMIT @limit';
