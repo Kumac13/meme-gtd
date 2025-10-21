@@ -79,6 +79,11 @@ paths:
                     type: string
                     format: date-time
                     description: Last update timestamp
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this memo
                 required:
                   - id
                   - type
@@ -91,6 +96,7 @@ paths:
                   - isDeleted
                   - createdAt
                   - updatedAt
+                  - labels
                 additionalProperties: false
         "400":
           description: Default Response
@@ -185,6 +191,11 @@ paths:
                       type: string
                       format: date-time
                       description: Last update timestamp
+                    labels:
+                      type: array
+                      items:
+                        type: string
+                      description: Array of label names assigned to this memo
                   required:
                     - id
                     - type
@@ -197,6 +208,7 @@ paths:
                     - isDeleted
                     - createdAt
                     - updatedAt
+                    - labels
                   additionalProperties: false
         "400":
           description: Default Response
@@ -309,6 +321,7 @@ paths:
                   - isDeleted
                   - createdAt
                   - updatedAt
+                  - labels
                 additionalProperties: false
         "404":
           description: Default Response
@@ -413,6 +426,11 @@ paths:
                     type: string
                     format: date-time
                     description: Last update timestamp
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this memo
                 required:
                   - id
                   - type
@@ -425,6 +443,7 @@ paths:
                   - isDeleted
                   - createdAt
                   - updatedAt
+                  - labels
                 additionalProperties: false
         "400":
           description: Default Response
@@ -646,6 +665,11 @@ paths:
                     type: string
                     format: date-time
                     description: Last update timestamp
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this memo
                 required:
                   - id
                   - type
@@ -658,6 +682,7 @@ paths:
                   - isDeleted
                   - createdAt
                   - updatedAt
+                  - labels
                 additionalProperties: false
         "404":
           description: Default Response
@@ -749,6 +774,11 @@ paths:
                     type: string
                     format: date-time
                     description: Last update timestamp
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this memo
                 required:
                   - id
                   - type
@@ -761,6 +791,7 @@ paths:
                   - isDeleted
                   - createdAt
                   - updatedAt
+                  - labels
                 additionalProperties: false
         "404":
           description: Default Response
@@ -1231,6 +1262,11 @@ paths:
                     type: string
                     format: date-time
                     description: Last update timestamp
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this task
                 required:
                   - id
                   - type
@@ -1243,6 +1279,7 @@ paths:
                   - isDeleted
                   - createdAt
                   - updatedAt
+                  - labels
                 additionalProperties: false
         "400":
           description: Default Response
@@ -1355,6 +1392,11 @@ paths:
                       type: string
                       format: date-time
                       description: Last update timestamp
+                    labels:
+                      type: array
+                      items:
+                        type: string
+                      description: Array of label names assigned to this task
                   required:
                     - id
                     - type
@@ -1367,6 +1409,7 @@ paths:
                     - isDeleted
                     - createdAt
                     - updatedAt
+                    - labels
                   additionalProperties: false
         "400":
           description: Default Response
@@ -1484,6 +1527,7 @@ paths:
                   - isDeleted
                   - createdAt
                   - updatedAt
+                  - labels
                 additionalProperties: false
         "404":
           description: Default Response
@@ -1608,6 +1652,11 @@ paths:
                     type: string
                     format: date-time
                     description: Last update timestamp
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this task
                 required:
                   - id
                   - type
@@ -1620,6 +1669,7 @@ paths:
                   - isDeleted
                   - createdAt
                   - updatedAt
+                  - labels
                 additionalProperties: false
         "400":
           description: Default Response
@@ -1779,6 +1829,11 @@ paths:
                     type: string
                     format: date-time
                     description: Last update timestamp
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this task
                 required:
                   - id
                   - type
@@ -1791,6 +1846,7 @@ paths:
                   - isDeleted
                   - createdAt
                   - updatedAt
+                  - labels
                 additionalProperties: false
         "404":
           description: Default Response
@@ -1887,6 +1943,11 @@ paths:
                     type: string
                     format: date-time
                     description: Last update timestamp
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this task
                 required:
                   - id
                   - type
@@ -1899,6 +1960,7 @@ paths:
                   - isDeleted
                   - createdAt
                   - updatedAt
+                  - labels
                 additionalProperties: false
         "404":
           description: Default Response
@@ -1995,6 +2057,11 @@ paths:
                     type: string
                     format: date-time
                     description: Last update timestamp
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this task
                 required:
                   - id
                   - type
@@ -2007,6 +2074,7 @@ paths:
                   - isDeleted
                   - createdAt
                   - updatedAt
+                  - labels
                 additionalProperties: false
         "404":
           description: Default Response
@@ -2103,6 +2171,11 @@ paths:
                     type: string
                     format: date-time
                     description: Last update timestamp
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this task
                 required:
                   - id
                   - type
@@ -2115,6 +2188,7 @@ paths:
                   - isDeleted
                   - createdAt
                   - updatedAt
+                  - labels
                 additionalProperties: false
         "404":
           description: Default Response
@@ -2211,6 +2285,11 @@ paths:
                     type: string
                     format: date-time
                     description: Last update timestamp
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this task
                 required:
                   - id
                   - type
@@ -2223,6 +2302,7 @@ paths:
                   - isDeleted
                   - createdAt
                   - updatedAt
+                  - labels
                 additionalProperties: false
         "404":
           description: Default Response
