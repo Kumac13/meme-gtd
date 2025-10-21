@@ -15,30 +15,66 @@
 - コマンド・ファイルは全体を提示（部分的な省略禁止）
 - 実装前に`docs/requirements.md`を必ず参照
 
-## テストDBの使用（必須）
+## 本番環境とテスト環境の完全分離（厳守）
 
-**重要**: 手動検証・マニュアルテストは**必ずテストDB**を使用すること。本番DBには絶対に触れない。
+**🚨 絶対ルール**: 開発・検証・テストでは**必ずテスト環境**を使用。本番環境には**絶対に触れない**。
 
-### テストDBの作成方法
+### 環境定義
 
+#### 本番環境（Production）
+- **DB**: `~/.local/share/mgtd/issues.db`（172KB以上の実データ）
+- **Config**: `~/.config/mgtd/context.json`（本番DBパスを記載）
+- **APIサーバー**: ポート3000（`pnpm server:start`）
+- **Web UI**: http://localhost:3000（APIサーバーから配信）
+- **CLI**: デフォルト設定（環境変数なし）
+
+#### テスト環境（Test/Development）
+- **DB**: `./test-data/test.db`（プロジェクトルート配下）
+- **Config**: テスト用一時config（環境変数で指定）
+- **APIサーバー**: ポート3001（`pnpm server:dev`）
+- **Web UI**: http://localhost:3001（APIサーバーから配信）
+- **CLI**: 環境変数でテストDB指定
+
+### 厳守事項
+
+#### ✅ 必ず実行すること
+- 検証・テストは**必ずテスト環境**（ポート3001、test-data/test.db）を使用
+- API検証は `curl http://localhost:3001/api/...` を使用
+- CLI検証は環境変数でテストDBを指定
+- Web UI検証は http://localhost:3001 にアクセス
+
+#### ❌ 絶対禁止
+- **本番DB（~/.local/share/mgtd/issues.db）への読み書き**
+- **本番APIサーバー（ポート3000）へのアクセス**
+- **本番Web UI（http://localhost:3000）での検証**
+- 環境変数なしでの`mgtd`コマンド実行（デフォルトで本番DBを使用）
+
+### テスト環境の使用方法
+
+#### APIサーバー検証
 ```bash
-# 一時ディレクトリにテスト環境を作成
-TEST_DIR=$(mktemp -d)
-TEST_CONFIG="$TEST_DIR/context.json"
-TEST_DB="$TEST_DIR/issues.db"
+# テストAPIサーバー起動（ポート3001、test-data/test.db使用）
+pnpm server:dev
 
-# 環境変数でテストDBを指定してコマンド実行
-MGTD_CONFIG_PATH="$TEST_CONFIG" node dist/index.js init -d "$TEST_DB" -f -j
-
-# テスト実行例
-MGTD_CONFIG_PATH="$TEST_CONFIG" node dist/index.js task create -t "Test" -b "" --no-editor -j
-MGTD_CONFIG_PATH="$TEST_CONFIG" node dist/index.js task list -j
+# API検証（必ずポート3001を使用）
+curl http://localhost:3001/api/memos
+curl http://localhost:3001/api/tasks
 ```
 
-### 自動テスト内での使用
+#### Web UI検証
+```bash
+# テストAPIサーバーが起動していることを確認
+# ブラウザで http://localhost:3001 にアクセス
+```
 
-自動テスト（`test/**/*.test.js`）では既に一時DBを使用している。以下のパターンを参考にすること：
+#### CLI検証
+```bash
+# テストDBを指定してCLI実行
+DB_PATH=./test-data/test.db mgtd memo list --json
+DB_PATH=./test-data/test.db mgtd task create --title "Test" --body "Test"
+```
 
+#### 自動テスト（統合テスト）
 ```javascript
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mgtd-test-'));
 const configPath = path.join(tmp, 'context.json');
@@ -52,11 +88,14 @@ const env = {
 const init = runCli(['init', '-d', dbPath, '-f', '-j'], { env });
 ```
 
-### 禁止事項
+### 間違えた場合の対処
 
-- ❌ 環境変数なしで `node dist/index.js` を直接実行（本番DBを使ってしまう）
-- ❌ `mgtd` コマンドを直接実行してテスト（本番DBを使ってしまう）
-- ✅ 必ず `MGTD_CONFIG_PATH` を指定してテスト用DB環境を使用
+本番DBを誤って変更してしまった場合：
+1. **即座に作業を停止**
+2. 変更内容を報告
+3. ユーザーの指示を仰ぐ
+
+本番環境は実際のユーザーデータを含むため、一切の変更を加えてはならない。
 
 ## バージョン管理の自動実行
 
