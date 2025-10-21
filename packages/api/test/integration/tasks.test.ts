@@ -211,23 +211,31 @@ describe('Task CRUD Operations', () => {
     });
     const task = JSON.parse(createResponse.body);
 
-    // Create labels
-    await app.inject({
+    // Create labels and get their IDs
+    const label1Response = await app.inject({
       method: 'POST',
       url: '/api/labels',
       payload: { name: 'bug' },
     });
-    await app.inject({
+    const label1 = JSON.parse(label1Response.body);
+
+    const label2Response = await app.inject({
       method: 'POST',
       url: '/api/labels',
       payload: { name: 'urgent' },
     });
+    const label2 = JSON.parse(label2Response.body);
 
-    // Assign labels to task
+    // Assign labels to task (one at a time)
     await app.inject({
       method: 'POST',
       url: `/api/issues/${task.id}/labels`,
-      payload: { labels: ['bug', 'urgent'] },
+      payload: { labelId: label1.id },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/api/issues/${task.id}/labels`,
+      payload: { labelId: label2.id },
     });
 
     // Get task with labels

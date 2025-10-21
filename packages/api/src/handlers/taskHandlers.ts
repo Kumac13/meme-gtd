@@ -23,7 +23,8 @@ export async function createTaskHandler(
       status,
       scheduledOn
     });
-    return reply.status(201).send(task);
+    const labels = taskService.listLabels(task.id);
+    return reply.status(201).send({ ...task, labels });
   } catch (error) {
     throw error;
   }
@@ -103,7 +104,8 @@ export async function updateTaskHandler(
       ...request.body,
     });
 
-    return reply.status(200).send(task);
+    const labels = taskService.listLabels(taskId);
+    return reply.status(200).send({ ...task, labels });
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
       throw new NotFoundError('Task', taskId);

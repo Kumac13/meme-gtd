@@ -197,23 +197,31 @@ describe('Memo CRUD Operations', () => {
     });
     const memo = JSON.parse(createResponse.body);
 
-    // Create labels
-    await app.inject({
+    // Create labels and get their IDs
+    const label1Response = await app.inject({
       method: 'POST',
       url: '/api/labels',
       payload: { name: 'important' },
     });
-    await app.inject({
+    const label1 = JSON.parse(label1Response.body);
+
+    const label2Response = await app.inject({
       method: 'POST',
       url: '/api/labels',
       payload: { name: 'work' },
     });
+    const label2 = JSON.parse(label2Response.body);
 
-    // Assign labels to memo
+    // Assign labels to memo (one at a time)
     await app.inject({
       method: 'POST',
       url: `/api/issues/${memo.id}/labels`,
-      payload: { labels: ['important', 'work'] },
+      payload: { labelId: label1.id },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/api/issues/${memo.id}/labels`,
+      payload: { labelId: label2.id },
     });
 
     // Get memo with labels
