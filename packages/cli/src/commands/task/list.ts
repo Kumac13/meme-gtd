@@ -84,7 +84,8 @@ export default class TaskList extends Command {
     for (const task of tasks) {
       const indicator = task.isBookmarked ? '★' : ' ';
       const statusBadge = `[${task.status}]`;
-      this.log(`${indicator} #${task.id}\t${task.title}\t${statusBadge}\t${task.updatedAt}`);
+      const labelsStr = task.labels && task.labels.length > 0 ? `[${task.labels.join(', ')}]` : '';
+      this.log(`${indicator} #${task.id}\t${labelsStr}\t${task.title}\t${statusBadge}\t${task.updatedAt}`);
     }
   }
 }

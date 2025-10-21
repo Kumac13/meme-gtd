@@ -38,17 +38,16 @@ export default class MemoView extends Command {
     const service = new MemoService({ config });
 
     const memo = service.show(args.id);
-    const labels = service.listLabels(args.id);
     const comments = flags.comments ? service.listComments(args.id) : [];
 
     if (flags.json) {
-      this.log(JSON.stringify({ memo, labels, comments }, null, 2));
+      this.log(JSON.stringify({ memo, comments }, null, 2));
       return;
     }
 
     this.log(`Memo #${memo.id}`);
     this.log(`Updated: ${memo.updatedAt}`);
-    this.log(`Labels: ${labels.join(', ') || '(none)'}`);
+    this.log(`Labels: ${memo.labels && memo.labels.length > 0 ? memo.labels.join(', ') : '(none)'}`);
     this.log('---');
     this.log(memo.bodyMd);
 
