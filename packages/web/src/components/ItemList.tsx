@@ -2,18 +2,13 @@ import { Link } from 'react-router-dom';
 import { formatDateTime, formatRelativeTime } from '../utils/dates';
 import { truncateMarkdown } from '../utils/markdown';
 
-interface Label {
-  name: string;
-  color: string;
-}
-
 interface BaseItem {
   id: number;
   title: string | null;
   bodyMd: string;
   isBookmarked: boolean;
   commentCount?: number;
-  labels?: Label[];
+  labels?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -56,13 +51,9 @@ export default function ItemList({ items, itemType, basePath }: ItemListProps) {
                       {item.labels.map((label, idx) => (
                         <span
                           key={idx}
-                          className="px-2 py-0.5 text-xs font-medium rounded"
-                          style={{
-                            backgroundColor: `#${label.color}`,
-                            color: '#000',
-                          }}
+                          className="px-2 py-0.5 text-xs font-medium rounded bg-gray-200 text-gray-800"
                         >
-                          {label.name}
+                          {label}
                         </span>
                       ))}
                     </>
@@ -80,13 +71,9 @@ export default function ItemList({ items, itemType, basePath }: ItemListProps) {
                       {item.labels.map((label, idx) => (
                         <span
                           key={idx}
-                          className="px-2 py-0.5 text-xs font-medium rounded"
-                          style={{
-                            backgroundColor: `#${label.color}`,
-                            color: '#000',
-                          }}
+                          className="px-2 py-0.5 text-xs font-medium rounded bg-gray-200 text-gray-800"
                         >
-                          {label.name}
+                          {label}
                         </span>
                       ))}
                     </div>

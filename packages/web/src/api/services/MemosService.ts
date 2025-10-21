@@ -65,6 +65,10 @@ export class MemosService {
          * Last update timestamp
          */
         updatedAt: string;
+        /**
+         * Array of label names assigned to this memo
+         */
+        labels: Array<string>;
     }> {
         return __request(OpenAPI, {
             method: 'POST',
@@ -130,6 +134,10 @@ export class MemosService {
          * Last update timestamp
          */
         updatedAt: string;
+        /**
+         * Array of label names assigned to this memo
+         */
+        labels: Array<string>;
     }>> {
         return __request(OpenAPI, {
             method: 'GET',
@@ -199,7 +207,7 @@ export class MemosService {
         /**
          * Array of label names assigned to this memo
          */
-        labels?: Array<string>;
+        labels: Array<string>;
         /**
          * Number of comments on this memo
          */
@@ -281,6 +289,10 @@ export class MemosService {
          * Last update timestamp
          */
         updatedAt: string;
+        /**
+         * Array of label names assigned to this memo
+         */
+        labels: Array<string>;
     }> {
         return __request(OpenAPI, {
             method: 'PATCH',
@@ -405,6 +417,10 @@ export class MemosService {
          * Last update timestamp
          */
         updatedAt: string;
+        /**
+         * Array of label names assigned to this memo
+         */
+        labels: Array<string>;
     }> {
         return __request(OpenAPI, {
             method: 'POST',
@@ -471,6 +487,10 @@ export class MemosService {
          * Last update timestamp
          */
         updatedAt: string;
+        /**
+         * Array of label names assigned to this memo
+         */
+        labels: Array<string>;
     }> {
         return __request(OpenAPI, {
             method: 'POST',
