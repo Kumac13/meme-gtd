@@ -64,6 +64,11 @@ export const loadConfig = async (
     parsed.dbPath = path.resolve(process.cwd(), parsed.dbPath);
   }
 
+  // Override with DB_PATH environment variable if provided
+  if (env.DB_PATH && env.DB_PATH.trim().length > 0) {
+    parsed.dbPath = path.resolve(env.DB_PATH);
+  }
+
   return { config: parsed, path: configPath };
 };
 
