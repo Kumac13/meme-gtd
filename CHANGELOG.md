@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.0 - 2025-10-21
+
+### New Features
+
+- **Comment count in list endpoints**: Added `commentCount` field to GET /api/memos and GET /api/tasks responses
+  - List endpoints now include the number of non-deleted comments for each memo/task
+  - Individual endpoints (GET /api/memos/:id) do not include commentCount as comments are fetched separately
+  - Implemented using efficient SQL subquery aggregation to avoid N+1 queries
+  - Database layer: Updated `listMemos()` and `listTasks()` to calculate commentCount
+  - API layer: Created separate schemas (`MemoListItemSchema`, `TaskListItemSchema`) for list responses
+  - All tests passing (DB: 44, Core: 25, API: 101)
+
 ## 0.5.0 - 2025-10-18
 
 ### New Features
