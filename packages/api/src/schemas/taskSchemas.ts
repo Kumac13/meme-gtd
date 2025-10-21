@@ -46,6 +46,7 @@ export const TaskSchema = z.object({
   isDeleted: z.boolean().describe('Whether the task is soft-deleted'),
   createdAt: z.string().datetime().describe('Creation timestamp'),
   updatedAt: z.string().datetime().describe('Last update timestamp'),
+  labels: z.array(z.string()).describe('Array of label names assigned to this task'),
 });
 
 export type Task = z.infer<typeof TaskSchema>;
@@ -54,7 +55,6 @@ export type Task = z.infer<typeof TaskSchema>;
  * Schema for task detail response (includes labels and comments count)
  */
 export const TaskDetailSchema = TaskSchema.extend({
-  labels: z.array(z.string()).optional().describe('Array of label names assigned to this task'),
   commentsCount: z.number().int().nonnegative().optional().describe('Number of comments on this task'),
 });
 

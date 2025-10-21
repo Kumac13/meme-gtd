@@ -74,6 +74,10 @@ describe('Memo CRUD Operations', () => {
     const memos = JSON.parse(response.body);
     assert.ok(Array.isArray(memos));
     assert.strictEqual(memos.length, 2);
+    // T014: Assert labels field exists and is an array
+    memos.forEach((memo: any) => {
+      assert.ok(Array.isArray(memo.labels), 'labels should be an array');
+    });
   });
 
   it('should filter bookmarked memos (GET /api/memos?bookmarked=true)', async () => {
@@ -125,6 +129,8 @@ describe('Memo CRUD Operations', () => {
     const memo = JSON.parse(response.body);
     assert.strictEqual(memo.id, created.id);
     assert.strictEqual(memo.bodyMd, 'Specific memo');
+    // T015: Assert labels field exists
+    assert.ok(Array.isArray(memo.labels), 'labels should be an array');
   });
 
   it('should return 404 when memo not found (GET /api/memos/:id)', async () => {
@@ -180,6 +186,75 @@ describe('Memo CRUD Operations', () => {
     });
 
     assert.strictEqual(getResponse.statusCode, 404);
+  });
+
+  it('should return memo with labels (GET /api/memos/:id) - T016', async () => {
+    // Create a memo
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Memo with labels' }),
+    });
+    const memo = JSON.parse(createResponse.body);
+
+    // Create labels and get their IDs
+    const label1Response = await app.inject({
+      method: 'POST',
+      url: '/api/labels',
+      payload: { name: 'important' },
+    });
+    const label1 = JSON.parse(label1Response.body);
+
+    const label2Response = await app.inject({
+      method: 'POST',
+      url: '/api/labels',
+      payload: { name: 'work' },
+    });
+    const label2 = JSON.parse(label2Response.body);
+
+    // Assign labels to memo (one at a time)
+    await app.inject({
+      method: 'POST',
+      url: `/api/issues/${memo.id}/labels`,
+      payload: { labelId: label1.id },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/api/issues/${memo.id}/labels`,
+      payload: { labelId: label2.id },
+    });
+
+    // Get memo with labels
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/memos/${memo.id}`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.ok(Array.isArray(result.labels));
+    assert.strictEqual(result.labels.length, 2);
+    assert.ok(result.labels.includes('important'));
+    assert.ok(result.labels.includes('work'));
+  });
+
+  it('should return memo without labels (empty array) - T017', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Memo without labels' }),
+    });
+    const memo = JSON.parse(createResponse.body);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/memos/${memo.id}`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.ok(Array.isArray(result.labels));
+    assert.strictEqual(result.labels.length, 0);
   });
 });
 

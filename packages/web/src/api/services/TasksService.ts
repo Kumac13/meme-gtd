@@ -77,6 +77,10 @@ export class TasksService {
          * Last update timestamp
          */
         updatedAt: string;
+        /**
+         * Array of label names assigned to this task
+         */
+        labels: Array<string>;
     }> {
         return __request(OpenAPI, {
             method: 'POST',
@@ -144,6 +148,10 @@ export class TasksService {
          * Last update timestamp
          */
         updatedAt: string;
+        /**
+         * Array of label names assigned to this task
+         */
+        labels: Array<string>;
     }>> {
         return __request(OpenAPI, {
             method: 'GET',
@@ -214,7 +222,7 @@ export class TasksService {
         /**
          * Array of label names assigned to this task
          */
-        labels?: Array<string>;
+        labels: Array<string>;
         /**
          * Number of comments on this task
          */
@@ -304,6 +312,10 @@ export class TasksService {
          * Last update timestamp
          */
         updatedAt: string;
+        /**
+         * Array of label names assigned to this task
+         */
+        labels: Array<string>;
     }> {
         return __request(OpenAPI, {
             method: 'PATCH',
@@ -394,6 +406,10 @@ export class TasksService {
          * Last update timestamp
          */
         updatedAt: string;
+        /**
+         * Array of label names assigned to this task
+         */
+        labels: Array<string>;
     }> {
         return __request(OpenAPI, {
             method: 'POST',
@@ -460,6 +476,10 @@ export class TasksService {
          * Last update timestamp
          */
         updatedAt: string;
+        /**
+         * Array of label names assigned to this task
+         */
+        labels: Array<string>;
     }> {
         return __request(OpenAPI, {
             method: 'POST',
@@ -526,6 +546,10 @@ export class TasksService {
          * Last update timestamp
          */
         updatedAt: string;
+        /**
+         * Array of label names assigned to this task
+         */
+        labels: Array<string>;
     }> {
         return __request(OpenAPI, {
             method: 'POST',
@@ -592,6 +616,10 @@ export class TasksService {
          * Last update timestamp
          */
         updatedAt: string;
+        /**
+         * Array of label names assigned to this task
+         */
+        labels: Array<string>;
     }> {
         return __request(OpenAPI, {
             method: 'POST',
@@ -658,6 +686,10 @@ export class TasksService {
          * Last update timestamp
          */
         updatedAt: string;
+        /**
+         * Array of label names assigned to this task
+         */
+        labels: Array<string>;
     }> {
         return __request(OpenAPI, {
             method: 'POST',

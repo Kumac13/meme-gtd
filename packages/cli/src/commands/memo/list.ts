@@ -75,7 +75,9 @@ export default class MemoList extends Command {
 
     for (const memo of memos) {
       const indicator = memo.isBookmarked ? '★' : ' ';
-      this.log(`${indicator} #${memo.id}\t${memo.bodyMd.split('\n')[0].slice(0, 80)}\t${memo.updatedAt}`);
+      const labelsStr = memo.labels && memo.labels.length > 0 ? `[${memo.labels.join(', ')}]` : '';
+      const bodyPreview = memo.bodyMd.split('\n')[0].slice(0, 80);
+      this.log(`${indicator} #${memo.id}\t${labelsStr}\t${bodyPreview}\t${memo.updatedAt}`);
     }
   }
 }

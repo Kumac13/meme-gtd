@@ -38,11 +38,10 @@ export default class TaskView extends Command {
     const service = new TaskService({ config });
 
     const task = service.show(args.id);
-    const labels = service.listLabels(args.id);
     const comments = flags.comments ? service.listComments(args.id) : [];
 
     if (flags.json) {
-      this.log(JSON.stringify({ task, labels, comments }, null, 2));
+      this.log(JSON.stringify({ task, comments }, null, 2));
       return;
     }
 
@@ -53,7 +52,7 @@ export default class TaskView extends Command {
       this.log(`Scheduled: ${task.scheduledOn}`);
     }
     this.log(`Updated: ${task.updatedAt}`);
-    this.log(`Labels: ${labels.join(', ') || '(none)'}`);
+    this.log(`Labels: ${task.labels && task.labels.length > 0 ? task.labels.join(', ') : '(none)'}`);
     this.log('---');
     this.log(task.bodyMd || '(no body)');
 

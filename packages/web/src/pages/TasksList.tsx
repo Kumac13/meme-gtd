@@ -7,11 +7,6 @@ import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
 
-interface Label {
-  name: string;
-  color: string;
-}
-
 interface Task {
   id: number;
   title: string | null;
@@ -20,7 +15,7 @@ interface Task {
   isBookmarked: boolean;
   commentCount?: number;
   scheduledOn: string | null;
-  labels?: Label[];
+  labels?: string[];
   createdAt: string;
   updatedAt: string;
 }

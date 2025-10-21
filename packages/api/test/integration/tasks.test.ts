@@ -74,6 +74,10 @@ describe('Task CRUD Operations', () => {
     const tasks = JSON.parse(response.body);
     assert.ok(Array.isArray(tasks));
     assert.strictEqual(tasks.length, 2);
+    // T018: Assert labels field exists and is an array
+    tasks.forEach((task: any) => {
+      assert.ok(Array.isArray(task.labels), 'labels should be an array');
+    });
   });
 
   it('should filter tasks by status (GET /api/tasks?status=next)', async () => {
@@ -140,6 +144,8 @@ describe('Task CRUD Operations', () => {
     const task = JSON.parse(response.body);
     assert.strictEqual(task.id, created.id);
     assert.strictEqual(task.title, 'Specific Task');
+    // T019: Assert labels field exists
+    assert.ok(Array.isArray(task.labels), 'labels should be an array');
   });
 
   it('should return 404 when task not found (GET /api/tasks/:id)', async () => {
@@ -194,6 +200,75 @@ describe('Task CRUD Operations', () => {
     });
 
     assert.strictEqual(getResponse.statusCode, 404);
+  });
+
+  it('should return task with labels (GET /api/tasks/:id) - T020', async () => {
+    // Create a task
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task with labels' }),
+    });
+    const task = JSON.parse(createResponse.body);
+
+    // Create labels and get their IDs
+    const label1Response = await app.inject({
+      method: 'POST',
+      url: '/api/labels',
+      payload: { name: 'bug' },
+    });
+    const label1 = JSON.parse(label1Response.body);
+
+    const label2Response = await app.inject({
+      method: 'POST',
+      url: '/api/labels',
+      payload: { name: 'urgent' },
+    });
+    const label2 = JSON.parse(label2Response.body);
+
+    // Assign labels to task (one at a time)
+    await app.inject({
+      method: 'POST',
+      url: `/api/issues/${task.id}/labels`,
+      payload: { labelId: label1.id },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/api/issues/${task.id}/labels`,
+      payload: { labelId: label2.id },
+    });
+
+    // Get task with labels
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/tasks/${task.id}`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.ok(Array.isArray(result.labels));
+    assert.strictEqual(result.labels.length, 2);
+    assert.ok(result.labels.includes('bug'));
+    assert.ok(result.labels.includes('urgent'));
+  });
+
+  it('should return task without labels (empty array) - T021', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task without labels' }),
+    });
+    const task = JSON.parse(createResponse.body);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/tasks/${task.id}`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.ok(Array.isArray(result.labels));
+    assert.strictEqual(result.labels.length, 0);
   });
 });
 

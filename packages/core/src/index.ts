@@ -71,11 +71,19 @@ export class MemoService {
   }
 
   public list(filters: ListMemoFilters = {}) {
-    return listMemos(this.db, filters);
+    const memos = listMemos(this.db, filters);
+    return memos.map(memo => ({
+      ...memo,
+      labels: listMemoLabels(this.db, memo.id)
+    }));
   }
 
   public show(id: number) {
-    return getMemo(this.db, id);
+    const memo = getMemo(this.db, id);
+    return {
+      ...memo,
+      labels: listMemoLabels(this.db, id)
+    };
   }
 
   public edit(input: UpdateMemoInput) {
@@ -142,11 +150,19 @@ export class TaskService {
   }
 
   public list(filters: ListTaskFilters = {}) {
-    return listTasks(this.db, filters);
+    const tasks = listTasks(this.db, filters);
+    return tasks.map(task => ({
+      ...task,
+      labels: listTaskLabels(this.db, task.id)
+    }));
   }
 
   public show(id: number) {
-    return getTask(this.db, id);
+    const task = getTask(this.db, id);
+    return {
+      ...task,
+      labels: listTaskLabels(this.db, id)
+    };
   }
 
   public edit(input: UpdateTaskInput) {

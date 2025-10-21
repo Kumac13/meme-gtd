@@ -19,7 +19,8 @@ export async function createMemoHandler(
 
   try {
     const memo = memoService.create({ bodyMd });
-    return reply.status(201).send(memo);
+    const labels = memoService.listLabels(memo.id);
+    return reply.status(201).send({ ...memo, labels });
   } catch (error) {
     throw error;
   }
@@ -93,7 +94,8 @@ export async function updateMemoHandler(
       ...request.body,
     });
 
-    return reply.status(200).send(memo);
+    const labels = memoService.listLabels(memoId);
+    return reply.status(200).send({ ...memo, labels });
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
       throw new NotFoundError('Memo', memoId);
