@@ -4,8 +4,7 @@
   "description": "Web UI for meme-gtd",
   "type": "module",
   "scripts": {
-    "dev": "VITE_API_PORT=3001 VITE_WEB_PORT=5174 vite",
-    "start": "VITE_API_PORT=3000 VITE_WEB_PORT=5173 vite",
+    "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest",
