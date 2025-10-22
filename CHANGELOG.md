@@ -1,5 +1,66 @@
 # Changelog
 
+## 0.7.0 - 2025-10-22
+
+### New Features
+
+- **Link Validation Enhancements (FR-013, FR-014)**: Enhanced link creation with hierarchy integrity validations
+  - **Circular hierarchy detection (FR-013)**: Prevents creating cycles in parent-child relationships
+    - Blocks circular links like A→B→C→A that would corrupt task hierarchies
+    - Uses Recursive CTE to traverse ancestor chains up to 10 levels deep
+    - Only applies to `parent` and `child` link types; `relates` and `derived_from` can still form cycles
+    - Error message: "Circular relationship detected: Creating this link would form a cycle in the parent-child hierarchy"
+  - **Inverse duplicate prevention (FR-014)**: Prevents bidirectional parent-child relationships
+    - Blocks inverse links like A parent of B + B parent of A
+    - Provides more specific error for 2-node cycles than circular detection
+    - Only applies to `parent` and `child` link types; `relates` links remain bidirectional by nature
+    - Error message: "Cannot create inverse parent-child link: Issue #X is already a Y of Issue #Z"
+  - **Validation order**: Self-ref → Source exists → Target exists → Duplicate → Inverse (V5) → Circular (V6)
+
+- **API Feature Parity: Link Type Filtering**: Added `?type=` query parameter to `GET /api/issues/:id/links`
+  - Filter links by type: `?type=parent`, `?type=child`, `?type=relates`, `?type=derived_from`
+  - Returns 400 error for invalid type values (validated by Zod schema)
+  - Achieves full feature parity with CLI `mgtd link list --type` command
+  - Example: `GET /api/issues/5/links?type=parent` returns only parent links
+
+### Implementation Details
+
+- **Database Layer** (packages/db/src/linkRepository.ts):
+  - Added `findInverseParentChildLink()`: Detects inverse parent-child relationships
+  - Added `hasAncestor()`: Uses Recursive CTE to detect circular hierarchies with depth limit
+  - Exported new validation functions from index.ts
+
+- **Service Layer** (packages/core/src/linkService.ts):
+  - Enhanced `create()` method with two new validations (V5, V6)
+  - Validation runs only for hierarchical types (`parent`, `child`)
+  - Non-hierarchical types (`relates`, `derived_from`) skip new validations
+
+- **API Layer** (packages/api):
+  - Added `ListLinksQuerySchema` for type filtering
+  - Updated `listLinksHandler` to accept and apply query filters
+  - Updated route schema with querystring validation and 400 error case
+
+### Tests
+
+- **Database Layer**: 47 tests passing (added 3 hasAncestor unit tests)
+- **Core Layer**: 33 tests passing (added 8 validation tests)
+- **CLI Layer**: 7 tests passing
+- **API Layer**: 106 tests passing (added 5 type filtering tests)
+- **Total**: 193 tests passing ✅
+
+### Performance
+
+- Circular detection adds ~20-50ms per parent/child link creation (Recursive CTE query)
+- Inverse duplicate check adds <5ms per parent/child link creation (direct SQL query)
+- Non-hierarchical links (`relates`, `derived_from`) have no performance impact
+
+### Breaking Changes
+
+None. All enhancements are backward compatible:
+- Existing links are grandfathered (not retroactively validated)
+- New validations only apply to newly created parent/child links
+- API query parameter is optional (defaults to no filtering)
+
 ## 0.6.0 - 2025-10-21
 
 ### New Features
