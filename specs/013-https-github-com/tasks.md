@@ -35,20 +35,20 @@
 
 **⚠️ CRITICAL**: These functions must be complete before any validation logic can be implemented
 
-- [ ] T005 [V5+V6] Add `findInverseParentChildLink()` function to `packages/db/src/links.ts`
+- [x] T005 [V5+V6] Add `findInverseParentChildLink()` function to `packages/db/src/linkRepository.ts`
   - Accepts: sourceId, targetId, proposedType
   - Returns: Link | null (if inverse parent/child link exists)
   - Query: Check for (A→B or B→A) with parent/child types excluding exact match
   - Implementation: Use existing `findLink()` pattern as reference
 
-- [ ] T006 [V5+V6] Add `hasAncestor()` function to `packages/db/src/links.ts`
+- [x] T006 [V5+V6] Add `hasAncestor()` function to `packages/db/src/linkRepository.ts`
   - Accepts: descendantId, ancestorId
   - Returns: boolean (true if ancestorId is ancestor of descendantId)
   - Query: Recursive CTE to traverse parent-child hierarchy upward
   - Implementation: Use research.md Recursive CTE approach
   - Performance: Limit depth to 10 levels
 
-- [ ] T007 [V5+V6] Export new functions from `packages/db/src/index.ts`
+- [x] T007 [V5+V6] Export new functions from `packages/db/src/index.ts`
   - Add exports for `findInverseParentChildLink` and `hasAncestor`
 
 **Checkpoint**: Database layer ready - validation implementation can now begin
