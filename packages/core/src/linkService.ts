@@ -77,9 +77,19 @@ export class LinkService {
       );
     }
 
-    // Validation 5: Check for circular parent-child hierarchy (FR-013)
+    // Validation 5: Check for inverse parent-child link (FR-014)
     // Only applies to parent/child link types
-    // MUST run before inverse duplicate check to provide correct error for 2-node cycles
+    // MUST run before circular check to provide more specific error for 2-node inverse cases
+    const inverseLink = findInverseParentChildLink(this.db, sourceId, targetId, type);
+    if (inverseLink) {
+      throw new Error(
+        `Cannot create inverse parent-child link: Issue #${inverseLink.targetIssueId} is already a ${inverseLink.linkType} of Issue #${inverseLink.sourceIssueId}`
+      );
+    }
+
+    // Validation 6: Check for circular parent-child hierarchy (FR-013)
+    // Only applies to parent/child link types
+    // Runs after inverse check - catches 3+ node cycles that inverse check doesn't cover
     if (type === 'parent' || type === 'child') {
       // Determine which issue would become the ancestor and which the descendant
       let newAncestorId: number;
@@ -103,15 +113,6 @@ export class LinkService {
           `Circular relationship detected: Creating this link would form a cycle in the parent-child hierarchy (Issue #${newDescendantId} is already an ancestor of Issue #${newAncestorId})`
         );
       }
-    }
-
-    // Validation 6: Check for inverse parent-child link (FR-014)
-    // Only applies to parent/child link types
-    const inverseLink = findInverseParentChildLink(this.db, sourceId, targetId, type);
-    if (inverseLink) {
-      throw new Error(
-        `Cannot create inverse parent-child link: Issue #${inverseLink.targetIssueId} is already a ${inverseLink.linkType} of Issue #${inverseLink.sourceIssueId}`
-      );
     }
 
     // Create the link
