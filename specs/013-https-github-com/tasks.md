@@ -157,38 +157,38 @@
 
 ### Tests for API Type Filtering
 
-- [ ] T021 [P] [API] Add API test: Filter by parent type in `packages/api/test/integration/links.test.ts`
+- [x] T021 [P] [API] Add API test: Filter by parent type in `packages/api/test/integration/links.test.ts`
   - Test: Create links of all types, GET /api/issues/:id/links?type=parent
   - Expected: Returns only parent links
 
-- [ ] T022 [P] [API] Add API test: Filter by child type in `packages/api/test/integration/links.test.ts`
+- [x] T022 [P] [API] Add API test: Filter by child type in `packages/api/test/integration/links.test.ts`
   - Test: GET /api/issues/:id/links?type=child
   - Expected: Returns only child links
 
-- [ ] T023 [P] [API] Add API test: Filter by relates type in `packages/api/test/integration/links.test.ts`
+- [x] T023 [P] [API] Add API test: Filter by relates type in `packages/api/test/integration/links.test.ts`
   - Test: GET /api/issues/:id/links?type=relates
   - Expected: Returns only relates links
 
-- [ ] T024 [P] [API] Add API test: No filter returns all types in `packages/api/test/integration/links.test.ts`
+- [x] T024 [P] [API] Add API test: No filter returns all types in `packages/api/test/integration/links.test.ts`
   - Test: GET /api/issues/:id/links (no query param)
   - Expected: Returns all links
 
-- [ ] T025 [P] [API] Add API test: Invalid type returns 400 in `packages/api/test/integration/links.test.ts`
+- [x] T025 [P] [API] Add API test: Invalid type returns 400 in `packages/api/test/integration/links.test.ts`
   - Test: GET /api/issues/:id/links?type=invalid
-  - Expected: 400 VALIDATION_ERROR response
+  - Expected: 400 VALIDATION_ERROR response (validated by Zod schema)
 
 ### Implementation for API Type Filtering
 
-- [ ] T026 [P] [API] Add `ListLinksQuerySchema` to `packages/api/src/schemas/linkSchemas.ts`
+- [x] T026 [P] [API] Add `ListLinksQuerySchema` to `packages/api/src/schemas/linkSchemas.ts`
   - Schema: `{ type: LinkTypeSchema.optional() }`
   - Export type: `ListLinksQuery`
 
-- [ ] T027 [API] Update `listLinksHandler` signature in `packages/api/src/handlers/linkHandlers.ts`
+- [x] T027 [API] Update `listLinksHandler` signature in `packages/api/src/handlers/linkHandlers.ts`
   - Add: `Querystring: ListLinksQuery` to FastifyRequest type
   - Logic: Extract `request.query.type`, pass as filter to `linkService.list(issueId, { type })`
   - Note: LinkService.list() already supports filters parameter
 
-- [ ] T028 [API] Update route schema for `GET /api/issues/:id/links` in `packages/api/src/routes/links.ts`
+- [x] T028 [API] Update route schema for `GET /api/issues/:id/links` in `packages/api/src/routes/links.ts`
   - Add: `querystring: ListLinksQuerySchema` to schema
   - Update response: Add 400 error case for invalid type
   - Update description: Mention optional type filter

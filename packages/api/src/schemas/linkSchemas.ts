@@ -57,3 +57,12 @@ export const IssueIdForLinksParamsSchema = z.object({
 });
 
 export type IssueIdForLinksParams = z.infer<typeof IssueIdForLinksParamsSchema>;
+
+/**
+ * Schema for list links query parameters
+ */
+export const ListLinksQuerySchema = z.object({
+  type: LinkTypeSchema.optional().describe('Filter by link type'),
+});
+
+export type ListLinksQuery = z.infer<typeof ListLinksQuerySchema>;

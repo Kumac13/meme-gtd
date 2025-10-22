@@ -3,6 +3,7 @@ import { LinkService } from 'meme-gtd-core';
 import { NotFoundError, ValidationError } from '../errors/index.js';
 import type {
   CreateLinkRequest,
+  ListLinksQuery,
   LinkWithDirection,
 } from '../schemas/linkSchemas.js';
 
@@ -45,14 +46,22 @@ export async function createLinkHandler(
  * List all links for a given issue with direction
  */
 export async function listLinksHandler(
-  request: FastifyRequest<{ Params: { id: string } }>,
+  request: FastifyRequest<{
+    Params: { id: string };
+    Querystring: ListLinksQuery;
+  }>,
   reply: FastifyReply
 ) {
   const issueId = parseInt(request.params.id, 10);
   const linkService = new LinkService({ db: request.server.db });
 
   try {
-    const links = linkService.list(issueId);
+    // Apply optional type filter
+    const filters = request.query.type
+      ? { type: request.query.type }
+      : undefined;
+
+    const links = linkService.list(issueId, filters);
 
     // Add direction field to each link
     const linksWithDirection: LinkWithDirection[] = links.map((link) => ({
