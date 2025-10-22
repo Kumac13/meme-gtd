@@ -209,27 +209,32 @@ export const hasAncestor = (
   ancestorId: number
 ): boolean => {
   const sql = `
-    WITH RECURSIVE ancestors(ancestor_id, depth) AS (
+    WITH RECURSIVE ancestors(issue_id, depth) AS (
       -- Base case: start from the descendant issue
-      SELECT @descendantId, 0
+      SELECT @descendantId as issue_id, 0 as depth
 
       UNION ALL
 
       -- Recursive case: find ancestors by following parent/child links upward
+      -- For 'parent' links: source --parent--> target means source is parent of target
+      --   If current issue is TARGET, then SOURCE is the parent
+      -- For 'child' links: source --child--> target means source is child of target (i.e., target is parent)
+      --   If current issue is SOURCE, then TARGET is the parent
       SELECT
         CASE
-          WHEN l.link_type = 'parent' THEN l.target_issue_id
-          WHEN l.link_type = 'child' THEN l.source_issue_id
-        END as ancestor_id,
+          WHEN l.link_type = 'parent' AND l.target_issue_id = a.issue_id THEN l.source_issue_id
+          WHEN l.link_type = 'child' AND l.source_issue_id = a.issue_id THEN l.target_issue_id
+        END as issue_id,
         a.depth + 1
       FROM ancestors a
       JOIN links l ON (
-        (l.link_type = 'parent' AND l.source_issue_id = a.ancestor_id) OR
-        (l.link_type = 'child' AND l.target_issue_id = a.ancestor_id)
+        (l.link_type = 'parent' AND l.target_issue_id = a.issue_id) OR
+        (l.link_type = 'child' AND l.source_issue_id = a.issue_id)
       )
       WHERE a.depth < 10  -- Prevent infinite loops and limit depth
+        AND issue_id IS NOT NULL
     )
-    SELECT COUNT(*) as count FROM ancestors WHERE ancestor_id = @ancestorId
+    SELECT COUNT(*) as count FROM ancestors WHERE issue_id = @ancestorId
   `;
 
   const stmt = db.prepare(sql);

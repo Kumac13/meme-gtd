@@ -7,6 +7,8 @@ import {
   listLinks as dbListLinks,
   deleteLink as dbDeleteLink,
   findLink,
+  findInverseParentChildLink,
+  hasAncestor,
   getLinkById as dbGetLinkById,
   type CreateLinkInput,
   type ListLinksFilters
@@ -72,6 +74,43 @@ export class LinkService {
     if (existing) {
       throw new Error(
         `Link already exists (source: ${sourceId}, target: ${targetId}, type: ${type})`
+      );
+    }
+
+    // Validation 5: Check for circular parent-child hierarchy (FR-013)
+    // Only applies to parent/child link types
+    // MUST run before inverse duplicate check to provide correct error for 2-node cycles
+    if (type === 'parent' || type === 'child') {
+      // Determine which issue would become the ancestor and which the descendant
+      let newAncestorId: number;
+      let newDescendantId: number;
+
+      if (type === 'parent') {
+        // source --parent--> target means source is parent of target
+        newAncestorId = sourceId;
+        newDescendantId = targetId;
+      } else {
+        // type === 'child': source --child--> target means source is child of target
+        newAncestorId = targetId;
+        newDescendantId = sourceId;
+      }
+
+      // Check if newAncestor is already a descendant of newDescendant (would create cycle)
+      // hasAncestor(descendantId, ancestorId) checks if ancestorId is an ancestor of descendantId
+      // We want to check if newAncestorId has newDescendantId as an ancestor
+      if (hasAncestor(this.db, newAncestorId, newDescendantId)) {
+        throw new Error(
+          `Circular relationship detected: Creating this link would form a cycle in the parent-child hierarchy (Issue #${newDescendantId} is already an ancestor of Issue #${newAncestorId})`
+        );
+      }
+    }
+
+    // Validation 6: Check for inverse parent-child link (FR-014)
+    // Only applies to parent/child link types
+    const inverseLink = findInverseParentChildLink(this.db, sourceId, targetId, type);
+    if (inverseLink) {
+      throw new Error(
+        `Cannot create inverse parent-child link: Issue #${inverseLink.targetIssueId} is already a ${inverseLink.linkType} of Issue #${inverseLink.sourceIssueId}`
       );
     }
 

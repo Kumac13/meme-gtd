@@ -1,0 +1,142 @@
+# OpenAPI Schema: Memo with Comment Count
+# Feature: Add Comment Count to API List Responses
+# Endpoint: GET /api/memos
+
+MemoSchema:
+  type: object
+  required:
+    - id
+    - type
+    - title
+    - bodyMd
+    - status
+    - scheduledOn
+    - meta
+    - isBookmarked
+    - isDeleted
+    - createdAt
+    - updatedAt
+    - labels
+    - commentCount
+  properties:
+    id:
+      type: integer
+      format: int32
+      minimum: 1
+      description: Unique memo ID
+      example: 42
+
+    type:
+      type: string
+      enum: [memo]
+      description: Issue type (always "memo")
+      example: memo
+
+    title:
+      type: string
+      nullable: true
+      description: Title (always null for memos)
+      example: null
+
+    bodyMd:
+      type: string
+      description: Memo content in Markdown format
+      example: "Remember to review the API documentation"
+
+    status:
+      type: string
+      nullable: true
+      description: Status (always null for memos)
+      example: null
+
+    scheduledOn:
+      type: string
+      format: date
+      nullable: true
+      description: Scheduled date (always null for memos)
+      example: null
+
+    meta:
+      type: object
+      additionalProperties: true
+      description: Metadata object
+      example: {}
+
+    isBookmarked:
+      type: boolean
+      description: Whether the memo is bookmarked
+      example: false
+
+    isDeleted:
+      type: boolean
+      description: Whether the memo is soft-deleted
+      example: false
+
+    createdAt:
+      type: string
+      format: date-time
+      description: Creation timestamp (ISO 8601)
+      example: "2025-10-21T10:30:00Z"
+
+    updatedAt:
+      type: string
+      format: date-time
+      description: Last update timestamp (ISO 8601)
+      example: "2025-10-21T14:45:00Z"
+
+    labels:
+      type: array
+      items:
+        type: string
+      description: Array of label names assigned to this memo
+      example: ["inbox", "important"]
+
+    commentCount:
+      type: integer
+      format: int32
+      minimum: 0
+      description: Number of non-deleted comments on this memo
+      example: 3
+
+# Response Schema for GET /api/memos
+MemoListResponse:
+  type: array
+  items:
+    $ref: '#/MemoSchema'
+  example:
+    - id: 1
+      type: memo
+      title: null
+      bodyMd: "First memo content"
+      status: null
+      scheduledOn: null
+      meta: {}
+      isBookmarked: true
+      isDeleted: false
+      createdAt: "2025-10-20T10:00:00Z"
+      updatedAt: "2025-10-21T12:00:00Z"
+      labels: ["inbox"]
+      commentCount: 2
+    - id: 2
+      type: memo
+      title: null
+      bodyMd: "Second memo content"
+      status: null
+      scheduledOn: null
+      meta: {}
+      isBookmarked: false
+      isDeleted: false
+      createdAt: "2025-10-21T09:00:00Z"
+      updatedAt: "2025-10-21T09:00:00Z"
+      labels: []
+      commentCount: 0
+
+# Query Parameters for GET /api/memos
+MemoQueryParams:
+  type: object
+  properties:
+    bookmarked:
+      type: string
+      enum: [true, false]
+      description: Filter by bookmark status
+      example: "true"
