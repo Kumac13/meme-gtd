@@ -12,6 +12,7 @@ import {
   LinkWithDirectionSchema,
   LinkIdParamsSchema,
   IssueIdForLinksParamsSchema,
+  ListLinksQuerySchema,
 } from '../schemas/linkSchemas.js';
 import { ErrorResponseSchema } from '../schemas/errorSchemas.js';
 
@@ -50,11 +51,13 @@ export async function linkRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Links'],
         summary: 'List issue links',
-        description: 'List all links for a given issue with direction',
+        description: 'List all links for a given issue with direction. Optionally filter by link type using ?type= query parameter.',
         operationId: 'listIssueLinks',
         params: IssueIdForLinksParamsSchema,
+        querystring: ListLinksQuerySchema,
         response: {
           200: z.array(LinkWithDirectionSchema),
+          400: ErrorResponseSchema,
           404: ErrorResponseSchema,
           500: ErrorResponseSchema,
         },

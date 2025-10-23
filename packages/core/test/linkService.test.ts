@@ -236,3 +236,182 @@ test('LinkService.remove() throws error for non-existent link', () => {
 
   cleanup();
 });
+
+// --- Circular Detection Tests (FR-013) ---
+
+test('LinkService.create() rejects direct circular parent-child link (A->B, B->A)', () => {
+  const { config, cleanup } = createTempConfig();
+
+  const taskService = new TaskService({ config });
+  const linkService = new LinkService({ config });
+
+  const taskA = taskService.create({ title: 'Task A', bodyMd: '' });
+  const taskB = taskService.create({ title: 'Task B', bodyMd: '' });
+
+  // Create A -> B (A is parent of B)
+  linkService.create(taskA.id, taskB.id, 'parent');
+
+  // Attempt to create B -> A (B is parent of A) - should fail
+  // 2-node inverse is caught by inverse duplicate check (more specific error)
+  assert.throws(() => {
+    linkService.create(taskB.id, taskA.id, 'parent');
+  }, /Cannot create inverse parent-child link/);
+
+  cleanup();
+});
+
+test('LinkService.create() rejects 3-level circular parent-child link (A->B->C->A)', () => {
+  const { config, cleanup } = createTempConfig();
+
+  const taskService = new TaskService({ config });
+  const linkService = new LinkService({ config });
+
+  const taskA = taskService.create({ title: 'Task A', bodyMd: '' });
+  const taskB = taskService.create({ title: 'Task B', bodyMd: '' });
+  const taskC = taskService.create({ title: 'Task C', bodyMd: '' });
+
+  // Create A -> B -> C
+  linkService.create(taskA.id, taskB.id, 'parent');
+  linkService.create(taskB.id, taskC.id, 'parent');
+
+  // Attempt to create C -> A (would create cycle) - should fail
+  assert.throws(() => {
+    linkService.create(taskC.id, taskA.id, 'parent');
+  }, /Circular relationship detected: Creating this link would form a cycle in the parent-child hierarchy/);
+
+  cleanup();
+});
+
+test('LinkService.create() rejects multi-level circular parent-child link (A->B->C->D->A)', () => {
+  const { config, cleanup } = createTempConfig();
+
+  const taskService = new TaskService({ config });
+  const linkService = new LinkService({ config });
+
+  const taskA = taskService.create({ title: 'Task A', bodyMd: '' });
+  const taskB = taskService.create({ title: 'Task B', bodyMd: '' });
+  const taskC = taskService.create({ title: 'Task C', bodyMd: '' });
+  const taskD = taskService.create({ title: 'Task D', bodyMd: '' });
+
+  // Create A -> B -> C -> D
+  linkService.create(taskA.id, taskB.id, 'parent');
+  linkService.create(taskB.id, taskC.id, 'parent');
+  linkService.create(taskC.id, taskD.id, 'parent');
+
+  // Attempt to create D -> A (would create cycle) - should fail
+  assert.throws(() => {
+    linkService.create(taskD.id, taskA.id, 'parent');
+  }, /Circular relationship detected: Creating this link would form a cycle in the parent-child hierarchy/);
+
+  cleanup();
+});
+
+test('LinkService.create() allows circular relates links (not hierarchical)', () => {
+  const { config, cleanup } = createTempConfig();
+
+  const taskService = new TaskService({ config });
+  const linkService = new LinkService({ config });
+
+  const taskA = taskService.create({ title: 'Task A', bodyMd: '' });
+  const taskB = taskService.create({ title: 'Task B', bodyMd: '' });
+  const taskC = taskService.create({ title: 'Task C', bodyMd: '' });
+
+  // Create A -> B -> C with 'relates' type
+  linkService.create(taskA.id, taskB.id, 'relates');
+  linkService.create(taskB.id, taskC.id, 'relates');
+
+  // Creating C -> A with 'relates' should succeed (relates is not hierarchical)
+  const link = linkService.create(taskC.id, taskA.id, 'relates');
+
+  assert.ok(link.id > 0);
+  assert.equal(link.linkType, 'relates');
+
+  cleanup();
+});
+
+test('LinkService.create() allows circular derived_from links (not hierarchical)', () => {
+  const { config, cleanup } = createTempConfig();
+
+  const taskService = new TaskService({ config });
+  const linkService = new LinkService({ config });
+
+  const taskA = taskService.create({ title: 'Task A', bodyMd: '' });
+  const taskB = taskService.create({ title: 'Task B', bodyMd: '' });
+  const taskC = taskService.create({ title: 'Task C', bodyMd: '' });
+
+  // Create A -> B -> C with 'derived_from' type
+  linkService.create(taskA.id, taskB.id, 'derived_from');
+  linkService.create(taskB.id, taskC.id, 'derived_from');
+
+  // Creating C -> A with 'derived_from' should succeed (not hierarchical validation)
+  const link = linkService.create(taskC.id, taskA.id, 'derived_from');
+
+  assert.ok(link.id > 0);
+  assert.equal(link.linkType, 'derived_from');
+
+  cleanup();
+});
+
+// --- Inverse Duplicate Detection Tests (FR-014) ---
+
+test('LinkService.create() rejects inverse parent-child link (same type: parent)', () => {
+  const { config, cleanup } = createTempConfig();
+
+  const taskService = new TaskService({ config });
+  const linkService = new LinkService({ config });
+
+  const task1 = taskService.create({ title: 'Task 1', bodyMd: '' });
+  const task2 = taskService.create({ title: 'Task 2', bodyMd: '' });
+
+  // Create task1 --parent--> task2
+  linkService.create(task1.id, task2.id, 'parent');
+
+  // Attempt to create task2 --parent--> task1 (inverse) - should fail
+  assert.throws(() => {
+    linkService.create(task2.id, task1.id, 'parent');
+  }, /Cannot create inverse parent-child link/);
+
+  cleanup();
+});
+
+test('LinkService.create() rejects inverse parent-child link (mixed type: parent/child)', () => {
+  const { config, cleanup } = createTempConfig();
+
+  const taskService = new TaskService({ config });
+  const linkService = new LinkService({ config });
+
+  const taskA = taskService.create({ title: 'Task A', bodyMd: '' });
+  const taskB = taskService.create({ title: 'Task B', bodyMd: '' });
+
+  // Create A --parent--> B (A is parent of B)
+  linkService.create(taskA.id, taskB.id, 'parent');
+
+  // Attempt to create A --child--> B (A is child of B) - should fail
+  // This would mean A is both parent and child of B
+  assert.throws(() => {
+    linkService.create(taskA.id, taskB.id, 'child');
+  }, /Cannot create inverse parent-child link/);
+
+  cleanup();
+});
+
+test('LinkService.create() allows bidirectional relates links (not hierarchical)', () => {
+  const { config, cleanup } = createTempConfig();
+
+  const taskService = new TaskService({ config });
+  const linkService = new LinkService({ config });
+
+  const task1 = taskService.create({ title: 'Task 1', bodyMd: '' });
+  const task2 = taskService.create({ title: 'Task 2', bodyMd: '' });
+
+  // Create task1 --relates--> task2
+  linkService.create(task1.id, task2.id, 'relates');
+
+  // Create task2 --relates--> task1 (bidirectional) - should succeed
+  const link = linkService.create(task2.id, task1.id, 'relates');
+
+  assert.ok(link.id > 0);
+  assert.equal(link.linkType, 'relates');
+
+  cleanup();
+});

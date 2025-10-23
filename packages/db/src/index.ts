@@ -92,6 +92,8 @@ export {
   listLinks,
   deleteLink,
   findLink,
+  findInverseParentChildLink,
+  hasAncestor,
   type CreateLinkInput,
   type ListLinksFilters
 } from './linkRepository.js';

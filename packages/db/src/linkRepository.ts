@@ -153,3 +153,95 @@ export const findLink = (
 
   return row ? linkRowToLink(row) : null;
 };
+
+/**
+ * Find inverse parent-child link (for FR-014 validation)
+ * Checks if there's a parent/child link in either direction between two issues
+ * @param db Database instance
+ * @param sourceId Source issue ID
+ * @param targetId Target issue ID
+ * @param proposedType The type of link being created
+ * @returns Link object if inverse parent-child link exists, null otherwise
+ */
+export const findInverseParentChildLink = (
+  db: Database.Database,
+  sourceId: number,
+  targetId: number,
+  proposedType: 'parent' | 'child' | 'relates' | 'derived_from'
+): Link | null => {
+  // Only check for parent/child link types
+  if (proposedType !== 'parent' && proposedType !== 'child') {
+    return null;
+  }
+
+  const sql = `
+    SELECT * FROM links
+    WHERE (
+      (source_issue_id = @targetId AND target_issue_id = @sourceId) OR
+      (source_issue_id = @sourceId AND target_issue_id = @targetId)
+    )
+    AND link_type IN ('parent', 'child')
+    AND NOT (source_issue_id = @sourceId AND target_issue_id = @targetId AND link_type = @proposedType)
+    LIMIT 1
+  `;
+
+  const stmt = db.prepare(sql);
+  const row = stmt.get({
+    sourceId,
+    targetId,
+    proposedType,
+  }) as any | undefined;
+
+  return row ? linkRowToLink(row) : null;
+};
+
+/**
+ * Check if ancestorId is an ancestor of descendantId (for FR-013 circular detection)
+ * Uses recursive CTE to traverse parent-child hierarchy upward from descendant
+ * @param db Database instance
+ * @param descendantId ID of the descendant issue
+ * @param ancestorId ID to check if it's an ancestor
+ * @returns true if ancestorId is found in the ancestor chain, false otherwise
+ */
+export const hasAncestor = (
+  db: Database.Database,
+  descendantId: number,
+  ancestorId: number
+): boolean => {
+  const sql = `
+    WITH RECURSIVE ancestors(issue_id, depth) AS (
+      -- Base case: start from the descendant issue
+      SELECT @descendantId as issue_id, 0 as depth
+
+      UNION ALL
+
+      -- Recursive case: find ancestors by following parent/child links upward
+      -- For 'parent' links: source --parent--> target means source is parent of target
+      --   If current issue is TARGET, then SOURCE is the parent
+      -- For 'child' links: source --child--> target means source is child of target (i.e., target is parent)
+      --   If current issue is SOURCE, then TARGET is the parent
+      SELECT
+        CASE
+          WHEN l.link_type = 'parent' AND l.target_issue_id = a.issue_id THEN l.source_issue_id
+          WHEN l.link_type = 'child' AND l.source_issue_id = a.issue_id THEN l.target_issue_id
+        END as issue_id,
+        a.depth + 1
+      FROM ancestors a
+      JOIN links l ON (
+        (l.link_type = 'parent' AND l.target_issue_id = a.issue_id) OR
+        (l.link_type = 'child' AND l.source_issue_id = a.issue_id)
+      )
+      WHERE a.depth < 10  -- Prevent infinite loops and limit depth
+        AND issue_id IS NOT NULL
+    )
+    SELECT COUNT(*) as count FROM ancestors WHERE issue_id = @ancestorId
+  `;
+
+  const stmt = db.prepare(sql);
+  const result = stmt.get({
+    descendantId,
+    ancestorId,
+  }) as { count: number };
+
+  return result.count > 0;
+};

@@ -11,6 +11,7 @@ import {
   listLinks,
   deleteLink,
   findLink,
+  hasAncestor,
   type CreateLinkInput
 } from '../src/linkRepository';
 import { createTask } from '../src/taskRepository';
@@ -348,6 +349,71 @@ test('CASCADE DELETE: deleting issue removes associated links', () => {
   assert.throws(() => {
     getLinkById(db, link.id);
   }, /Link #.*not found/);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+// --- hasAncestor() tests ---
+
+test('hasAncestor() detects direct ancestor (A -> B)', () => {
+  const { dir, db } = createTempDb();
+
+  const taskA = createTask(db, { title: 'Task A', bodyMd: '' });
+  const taskB = createTask(db, { title: 'Task B', bodyMd: '' });
+
+  // Create A --parent--> B (A is parent of B)
+  createLink(db, {
+    sourceIssueId: taskA.id,
+    targetIssueId: taskB.id,
+    linkType: 'parent'
+  });
+
+  // B should have A as an ancestor
+  assert.strictEqual(hasAncestor(db, taskB.id, taskA.id), true);
+
+  // A should NOT have B as an ancestor (B is descendant)
+  assert.strictEqual(hasAncestor(db, taskA.id, taskB.id), false);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('hasAncestor() detects 3-level ancestor chain (A -> B -> C)', () => {
+  const { dir, db } = createTempDb();
+
+  const taskA = createTask(db, { title: 'Task A', bodyMd: '' });
+  const taskB = createTask(db, { title: 'Task B', bodyMd: '' });
+  const taskC = createTask(db, { title: 'Task C', bodyMd: '' });
+
+  // Create A -> B -> C
+  createLink(db, { sourceIssueId: taskA.id, targetIssueId: taskB.id, linkType: 'parent' });
+  createLink(db, { sourceIssueId: taskB.id, targetIssueId: taskC.id, linkType: 'parent' });
+
+  // C should have both A and B as ancestors
+  assert.strictEqual(hasAncestor(db, taskC.id, taskA.id), true);
+  assert.strictEqual(hasAncestor(db, taskC.id, taskB.id), true);
+
+  // B should have A as an ancestor
+  assert.strictEqual(hasAncestor(db, taskB.id, taskA.id), true);
+
+  // A should NOT have any ancestors
+  assert.strictEqual(hasAncestor(db, taskA.id, taskB.id), false);
+  assert.strictEqual(hasAncestor(db, taskA.id, taskC.id), false);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('hasAncestor() returns false when no relationship exists', () => {
+  const { dir, db } = createTempDb();
+
+  const taskA = createTask(db, { title: 'Task A', bodyMd: '' });
+  const taskB = createTask(db, { title: 'Task B', bodyMd: '' });
+
+  // No links between A and B
+  assert.strictEqual(hasAncestor(db, taskA.id, taskB.id), false);
+  assert.strictEqual(hasAncestor(db, taskB.id, taskA.id), false);
 
   db.close();
   fs.removeSync(dir);

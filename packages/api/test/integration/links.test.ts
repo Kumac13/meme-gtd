@@ -213,10 +213,20 @@ describe('Link Operations', () => {
     assert.ok(outgoingLink);
     assert.strictEqual(outgoingLink.sourceIssueId, task1.id);
     assert.strictEqual(outgoingLink.targetIssueId, task2.id);
+    // Check targetIssue field for outgoing link
+    assert.ok(outgoingLink.targetIssue);
+    assert.strictEqual(outgoingLink.targetIssue.id, task2.id);
+    assert.strictEqual(outgoingLink.targetIssue.type, 'task');
+    assert.strictEqual(outgoingLink.targetIssue.title, 'Task 2');
 
     assert.ok(incomingLink);
     assert.strictEqual(incomingLink.sourceIssueId, task3.id);
     assert.strictEqual(incomingLink.targetIssueId, task1.id);
+    // Check targetIssue field for incoming link
+    assert.ok(incomingLink.targetIssue);
+    assert.strictEqual(incomingLink.targetIssue.id, task3.id);
+    assert.strictEqual(incomingLink.targetIssue.type, 'task');
+    assert.strictEqual(incomingLink.targetIssue.title, 'Task 3');
   });
 
   it('should delete a link (DELETE /api/links/:id)', async () => {
@@ -336,5 +346,249 @@ describe('Link Operations', () => {
     assert.strictEqual(response.statusCode, 201);
     const link = JSON.parse(response.body);
     assert.strictEqual(link.linkType, 'derived_from');
+  });
+
+  // --- API Type Filtering Tests (FR-015: Feature Parity with CLI) ---
+
+  it('should filter links by type=parent (GET /api/issues/:id/links?type=parent)', async () => {
+    // Create tasks
+    const task1Response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task 1' }),
+    });
+    const task1 = JSON.parse(task1Response.body);
+
+    const task2Response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task 2' }),
+    });
+    const task2 = JSON.parse(task2Response.body);
+
+    const task3Response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task 3' }),
+    });
+    const task3 = JSON.parse(task3Response.body);
+
+    // Create links of different types
+    await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: { sourceIssueId: task1.id, targetIssueId: task2.id, linkType: 'parent' },
+    });
+
+    await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: { sourceIssueId: task1.id, targetIssueId: task3.id, linkType: 'relates' },
+    });
+
+    // Filter by parent type
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/issues/${task1.id}/links?type=parent`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const links = JSON.parse(response.body);
+    assert.strictEqual(links.length, 1);
+    assert.strictEqual(links[0].linkType, 'parent');
+  });
+
+  it('should filter links by type=child (GET /api/issues/:id/links?type=child)', async () => {
+    // Create tasks
+    const task1Response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Parent Task' }),
+    });
+    const task1 = JSON.parse(task1Response.body);
+
+    const task2Response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Child Task' }),
+    });
+    const task2 = JSON.parse(task2Response.body);
+
+    // Create child link (task1 --child--> task2)
+    await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: { sourceIssueId: task1.id, targetIssueId: task2.id, linkType: 'child' },
+    });
+
+    await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: { sourceIssueId: task1.id, targetIssueId: task2.id, linkType: 'relates' },
+    });
+
+    // Filter by child type
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/issues/${task1.id}/links?type=child`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const links = JSON.parse(response.body);
+    assert.strictEqual(links.length, 1);
+    assert.strictEqual(links[0].linkType, 'child');
+  });
+
+  it('should filter links by type=relates (GET /api/issues/:id/links?type=relates)', async () => {
+    const task1Response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task 1' }),
+    });
+    const task1 = JSON.parse(task1Response.body);
+
+    const task2Response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task 2' }),
+    });
+    const task2 = JSON.parse(task2Response.body);
+
+    const task3Response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task 3' }),
+    });
+    const task3 = JSON.parse(task3Response.body);
+
+    await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: { sourceIssueId: task1.id, targetIssueId: task2.id, linkType: 'parent' },
+    });
+
+    await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: { sourceIssueId: task1.id, targetIssueId: task3.id, linkType: 'relates' },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/issues/${task1.id}/links?type=relates`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const links = JSON.parse(response.body);
+    assert.strictEqual(links.length, 1);
+    assert.strictEqual(links[0].linkType, 'relates');
+  });
+
+  it('should return all link types when no filter specified (GET /api/issues/:id/links)', async () => {
+    const task1Response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task 1' }),
+    });
+    const task1 = JSON.parse(task1Response.body);
+
+    const task2Response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task 2' }),
+    });
+    const task2 = JSON.parse(task2Response.body);
+
+    const task3Response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task 3' }),
+    });
+    const task3 = JSON.parse(task3Response.body);
+
+    await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: { sourceIssueId: task1.id, targetIssueId: task2.id, linkType: 'parent' },
+    });
+
+    await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: { sourceIssueId: task1.id, targetIssueId: task3.id, linkType: 'relates' },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/issues/${task1.id}/links`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const links = JSON.parse(response.body);
+    assert.strictEqual(links.length, 2);
+    const linkTypes = links.map((l: any) => l.linkType).sort();
+    assert.deepStrictEqual(linkTypes, ['parent', 'relates']);
+  });
+
+  it('should return 400 for invalid type parameter (GET /api/issues/:id/links?type=invalid)', async () => {
+    const taskResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task 1' }),
+    });
+    const task = JSON.parse(taskResponse.body);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/issues/${task.id}/links?type=invalid`,
+    });
+
+    assert.strictEqual(response.statusCode, 400);
+  });
+
+  it('should include targetIssue information with correct type for tasks and memos', async () => {
+    // Create a task
+    const taskResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'My Task' }),
+    });
+    const task = JSON.parse(taskResponse.body);
+
+    // Create a memo
+    const memoResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'This is my memo content that should be truncated if too long' }),
+    });
+    const memo = JSON.parse(memoResponse.body);
+
+    // Create link from task to memo
+    await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: {
+        sourceIssueId: task.id,
+        targetIssueId: memo.id,
+        linkType: 'relates',
+      },
+    });
+
+    // Get links for task
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/issues/${task.id}/links`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const links = JSON.parse(response.body);
+    assert.strictEqual(links.length, 1);
+
+    // Verify targetIssue contains memo information
+    const link = links[0];
+    assert.ok(link.targetIssue);
+    assert.strictEqual(link.targetIssue.id, memo.id);
+    assert.strictEqual(link.targetIssue.type, 'memo');
+    assert.ok(link.targetIssue.title.includes('This is my memo content'));
   });
 });
