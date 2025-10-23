@@ -32,10 +32,15 @@ export const LinkSchema = z.object({
 export type Link = z.infer<typeof LinkSchema>;
 
 /**
- * Schema for link with direction information
+ * Schema for link with direction and target issue information
  */
 export const LinkWithDirectionSchema = LinkSchema.extend({
   direction: z.enum(['outgoing', 'incoming']).describe('Link direction relative to the queried issue'),
+  targetIssue: z.object({
+    id: z.number().int().positive().describe('Target issue ID'),
+    type: z.enum(['task', 'memo']).describe('Target issue type'),
+    title: z.string().describe('Target issue title (task title or memo body preview)'),
+  }).describe('Information about the target issue in this link'),
 });
 
 export type LinkWithDirection = z.infer<typeof LinkWithDirectionSchema>;

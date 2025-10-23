@@ -23,6 +23,14 @@
   - Achieves full feature parity with CLI `mgtd link list --type` command
   - Example: `GET /api/issues/5/links?type=parent` returns only parent links
 
+- **API Enhancement: Target Issue Information**: Enhanced `GET /api/issues/:id/links` to include target issue details
+  - Response now includes `targetIssue` object with `id`, `type`, and `title` fields
+  - Eliminates need for additional API calls to fetch target issue information
+  - Uses optimized single SQL query to fetch all target issues (avoids N+1 problem)
+  - For tasks: title is taken from the task's title field
+  - For memos: title is taken from first 100 characters of body_md
+  - Enables Web UI to display linked issues with titles without separate API calls
+
 ### Implementation Details
 
 - **Database Layer** (packages/db/src/linkRepository.ts):
@@ -39,14 +47,17 @@
   - Added `ListLinksQuerySchema` for type filtering
   - Updated `listLinksHandler` to accept and apply query filters
   - Updated route schema with querystring validation and 400 error case
+  - Enhanced `LinkWithDirectionSchema` to include `targetIssue` object
+  - Modified `listLinksHandler` to fetch target issue information in single SQL query
+  - SQL query uses `COALESCE(title, SUBSTR(body_md, 1, 100))` to handle both tasks and memos
 
 ### Tests
 
 - **Database Layer**: 47 tests passing (added 3 hasAncestor unit tests)
 - **Core Layer**: 33 tests passing (added 8 validation tests)
 - **CLI Layer**: 7 tests passing
-- **API Layer**: 106 tests passing (added 5 type filtering tests)
-- **Total**: 193 tests passing ✅
+- **API Layer**: 107 tests passing (added 5 type filtering tests, 1 targetIssue test)
+- **Total**: 194 tests passing ✅
 
 ### Performance
 

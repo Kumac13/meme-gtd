@@ -213,10 +213,20 @@ describe('Link Operations', () => {
     assert.ok(outgoingLink);
     assert.strictEqual(outgoingLink.sourceIssueId, task1.id);
     assert.strictEqual(outgoingLink.targetIssueId, task2.id);
+    // Check targetIssue field for outgoing link
+    assert.ok(outgoingLink.targetIssue);
+    assert.strictEqual(outgoingLink.targetIssue.id, task2.id);
+    assert.strictEqual(outgoingLink.targetIssue.type, 'task');
+    assert.strictEqual(outgoingLink.targetIssue.title, 'Task 2');
 
     assert.ok(incomingLink);
     assert.strictEqual(incomingLink.sourceIssueId, task3.id);
     assert.strictEqual(incomingLink.targetIssueId, task1.id);
+    // Check targetIssue field for incoming link
+    assert.ok(incomingLink.targetIssue);
+    assert.strictEqual(incomingLink.targetIssue.id, task3.id);
+    assert.strictEqual(incomingLink.targetIssue.type, 'task');
+    assert.strictEqual(incomingLink.targetIssue.title, 'Task 3');
   });
 
   it('should delete a link (DELETE /api/links/:id)', async () => {
@@ -534,5 +544,51 @@ describe('Link Operations', () => {
     });
 
     assert.strictEqual(response.statusCode, 400);
+  });
+
+  it('should include targetIssue information with correct type for tasks and memos', async () => {
+    // Create a task
+    const taskResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'My Task' }),
+    });
+    const task = JSON.parse(taskResponse.body);
+
+    // Create a memo
+    const memoResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'This is my memo content that should be truncated if too long' }),
+    });
+    const memo = JSON.parse(memoResponse.body);
+
+    // Create link from task to memo
+    await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: {
+        sourceIssueId: task.id,
+        targetIssueId: memo.id,
+        linkType: 'relates',
+      },
+    });
+
+    // Get links for task
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/issues/${task.id}/links`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const links = JSON.parse(response.body);
+    assert.strictEqual(links.length, 1);
+
+    // Verify targetIssue contains memo information
+    const link = links[0];
+    assert.ok(link.targetIssue);
+    assert.strictEqual(link.targetIssue.id, memo.id);
+    assert.strictEqual(link.targetIssue.type, 'memo');
+    assert.ok(link.targetIssue.title.includes('This is my memo content'));
   });
 });
