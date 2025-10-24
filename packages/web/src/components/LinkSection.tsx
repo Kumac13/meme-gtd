@@ -7,7 +7,8 @@
 
 import { useState, useEffect } from 'react';
 import LinkItem from './LinkItem';
-import type { LinkDisplayItem } from '../types/links';
+import AddLinkInline from './AddLinkInline';
+import type { LinkDisplayItem, LinkCreationState, LinkType } from '../types/links';
 import { LinksService } from '../api/services/LinksService';
 
 interface LinkSectionProps {
@@ -23,6 +24,13 @@ export default function LinkSection({ itemId, itemType }: LinkSectionProps) {
   const [error, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(true);
   const [deletingLinkId, setDeletingLinkId] = useState<number | null>(null);
+  const [creationState, setCreationState] = useState<LinkCreationState>({
+    isAdding: false,
+    selectedType: null,
+    targetId: '',
+    error: null,
+    isSubmitting: false,
+  });
 
   // Fetch links on mount and when itemId changes
   useEffect(() => {
@@ -71,6 +79,57 @@ export default function LinkSection({ itemId, itemType }: LinkSectionProps) {
     }
   };
 
+  const handleAddClick = () => {
+    setCreationState({
+      isAdding: true,
+      selectedType: null,
+      targetId: '',
+      error: null,
+      isSubmitting: false,
+    });
+  };
+
+  const handleCancelAdd = () => {
+    setCreationState({
+      isAdding: false,
+      selectedType: null,
+      targetId: '',
+      error: null,
+      isSubmitting: false,
+    });
+  };
+
+  const handleAddLink = async (targetId: number, linkType: LinkType) => {
+    setCreationState((prev) => ({ ...prev, isSubmitting: true, error: null }));
+    try {
+      await LinksService.createLink({
+        sourceIssueId: itemId,
+        targetIssueId: targetId,
+        linkType,
+      });
+      // Refresh links after creation
+      await fetchLinks();
+      // Close form and reset state
+      setCreationState({
+        isAdding: false,
+        selectedType: null,
+        targetId: '',
+        error: null,
+        isSubmitting: false,
+      });
+    } catch (err: any) {
+      console.error('Failed to create link:', err);
+      // Parse error message from API
+      let errorMessage = 'Failed to create link';
+      if (err?.body?.message) {
+        errorMessage = err.body.message;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      setCreationState((prev) => ({ ...prev, isSubmitting: false, error: errorMessage }));
+    }
+  };
+
   const toggleExpanded = () => {
     setIsExpanded(!isExpanded);
   };
@@ -99,15 +158,14 @@ export default function LinkSection({ itemId, itemType }: LinkSectionProps) {
           </h3>
         </div>
 
-        {/* Add button (placeholder for US2) */}
+        {/* Add button */}
         <button
           className="text-xs px-2 py-1 text-github-green-600 hover:text-github-green-800 hover:bg-github-green-50 rounded border border-github-green-300 disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={(e) => {
             e.stopPropagation();
-            // TODO: Implement in US2
-            alert('Add link feature coming in US2');
+            handleAddClick();
           }}
-          disabled={loading}
+          disabled={loading || creationState.isAdding}
         >
           + Add
         </button>
@@ -134,10 +192,21 @@ export default function LinkSection({ itemId, itemType }: LinkSectionProps) {
             </div>
           )}
 
-          {!loading && !error && links.length === 0 && (
+          {!loading && !error && links.length === 0 && !creationState.isAdding && (
             <div className="text-sm text-gray-500 py-2">
               No links yet
             </div>
+          )}
+
+          {/* Add link form */}
+          {creationState.isAdding && (
+            <AddLinkInline
+              sourceIssueId={itemId}
+              onAdd={handleAddLink}
+              onCancel={handleCancelAdd}
+              creationState={creationState}
+              setCreationState={setCreationState}
+            />
           )}
 
           {!loading && !error && links.length > 0 && (
