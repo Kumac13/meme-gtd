@@ -1,5 +1,67 @@
 # Changelog
 
+## 0.8.0 - 2025-10-24
+
+### New Features
+
+- **Link Management Web Interface (#43)**: Added complete link management UI to Web application
+  - **View existing links (US1)**: Display all links for tasks and memos inline with collapsible section
+    - Shows link type with icons (parent, child, related, derived from)
+    - Displays direction indicators (outgoing/incoming)
+    - Renders target issue titles as clickable links
+    - Handles deleted issues with grayed-out styling
+    - Auto-expand/collapse based on link count
+    - Loading states and error handling with retry button
+  - **Create new links (US2)**: Inline form for creating links without modal dialogs
+    - Multi-step flow: Select link type → Enter target issue ID
+    - Four link types: parent, child, relates, derived_from
+    - Client-side validation (numeric ID, no self-reference)
+    - API error handling with inline error messages
+    - Disabled state during submission with loading indicator
+  - **Delete links (US3)**: Inline confirmation for link deletion
+    - Click [×] button to show confirmation prompt
+    - Inline "Delete this link? [Confirm] [Cancel]" prompt
+    - Loading state during deletion
+    - Auto-refresh link list after deletion
+    - Updates link count in section header
+  - **Edge case handling**:
+    - Deleted target issues displayed in gray without navigation link
+    - Long titles truncated at 100 characters with hover tooltip
+    - Empty states with appropriate messaging
+    - Concurrent operation handling with disabled states
+
+### Implementation Details
+
+- **New Components** (packages/web/src/components/):
+  - `LinkSection.tsx`: Main container for link management
+  - `LinkItem.tsx`: Individual link display with delete functionality
+  - `AddLinkInline.tsx`: Multi-step inline form for link creation
+- **New Types** (packages/web/src/types/links.ts):
+  - `LinkDisplayItem`: Link data with target issue info and direction
+  - `LinkCreationState`: Form state management for creation flow
+  - `LinkType`, `Direction`: Type definitions for link types and directions
+- **New Utilities** (packages/web/src/utils/linkIcons.tsx):
+  - `getLinkIcon()`: SVG icon components for each link type and direction
+  - `getLinkLabel()`: Human-readable labels for link types
+  - `getDirectionArrow()`: Direction indicator arrows
+- **Integration** (packages/web/src/components/ItemDetail.tsx):
+  - Added `LinkSection` between Labels and Body sections
+  - Self-contained component following CommentSection pattern
+
+### User Experience
+
+- **GitHub-inspired UX**: Follows GitHub's sub-issues pattern with inline interactions
+- **No modals**: All operations (create, delete) use inline forms and confirmations
+- **Consistent styling**: Matches existing Web UI design with TailwindCSS
+- **Mobile responsive**: Responsive flex layouts for all screen sizes
+- **Performance**: Optimized with React hooks and minimal re-renders
+
+### API Requirements
+
+- Requires API server with link management endpoints (added in v0.6.0)
+- Uses `/api/issues/:id/links` with target issue information (v0.7.0)
+- Compatible with link type filtering and validation (v0.7.0)
+
 ## 0.7.0 - 2025-10-22
 
 ### New Features
