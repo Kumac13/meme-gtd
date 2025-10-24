@@ -18,7 +18,7 @@ interface LinkSectionProps {
   itemType: 'memo' | 'task';
 }
 
-export default function LinkSection({ itemId, itemType }: LinkSectionProps) {
+export default function LinkSection({ itemId, itemType: _itemType }: LinkSectionProps) {
   const [links, setLinks] = useState<LinkDisplayItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -6,7 +6,6 @@
  * Step 2: Enter target issue ID and submit
  */
 
-import { useState } from 'react';
 import type { LinkType, LinkCreationState } from '../types/links';
 
 interface AddLinkInlineProps {

@@ -52,9 +52,9 @@ export const IconDerivedFrom = () => (
  *
  * @param linkType - The type of link (parent, child, relates, derived_from)
  * @param direction - The direction of the link (outgoing, incoming)
- * @returns JSX element containing the appropriate SVG icon
+ * @returns React element containing the appropriate SVG icon
  */
-export function getLinkIcon(linkType: LinkType, direction: Direction): JSX.Element {
+export function getLinkIcon(linkType: LinkType, direction: Direction): React.ReactElement {
   switch (linkType) {
     case 'parent':
       return direction === 'outgoing' ? <IconParentOutgoing /> : <IconParentIncoming />;
