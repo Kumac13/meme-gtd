@@ -3,6 +3,7 @@ import { MemosService } from '../api/services/MemosService';
 import { TasksService } from '../api/services/TasksService';
 import EditableContent from './EditableContent';
 import CommentSection from './CommentSection';
+import LinkSection from './LinkSection';
 
 
 export interface BaseItem {
@@ -134,6 +135,9 @@ export default function ItemDetail({
           </div>
         )}
       </div>
+
+      {/* Links section */}
+      <LinkSection itemId={item.id} itemType={itemType} />
 
       {/* Body content */}
       <EditableContent
