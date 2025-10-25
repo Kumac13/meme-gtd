@@ -14,6 +14,7 @@
 - GitHub CLIのコマンド仕様は公式ドキュメントで必ず確認
 - コマンド・ファイルは全体を提示（部分的な省略禁止）
 - 実装前に`docs/requirements.md`を必ず参照
+- **新しいコマンド追加時は必ず`packages/cli/src/index.ts`の`MULTIWORD_COMMANDS`配列に登録する**（スペース区切り構文の必須要件）
 
 ## 本番環境とテスト環境の完全分離（厳守）
 
