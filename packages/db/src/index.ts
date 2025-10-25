@@ -97,3 +97,26 @@ export {
   type CreateLinkInput,
   type ListLinksFilters
 } from './linkRepository.js';
+
+// Project repository exports
+export {
+  createProject,
+  listProjects,
+  getProjectById,
+  deleteProject,
+  projectRowToProject,
+  type CreateProjectInput
+} from './projectRepository.js';
+
+// Project item repository exports
+export {
+  createProjectItem,
+  listProjectItems,
+  getProjectItem,
+  updateProjectItem,
+  deleteProjectItem,
+  calculateNextPosition,
+  projectItemRowToProjectItem,
+  type CreateProjectItemInput,
+  type UpdateProjectItemInput
+} from './projectItemRepository.js';
