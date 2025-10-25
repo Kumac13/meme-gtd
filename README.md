@@ -61,6 +61,8 @@ corepack prepare pnpm@9.0.0 --activate
 - コメント投稿・編集・削除
 - Bookmark機能
 - Task Status変更
+- Link管理（親子関係・関連付け）
+- Project管理（Board/Tableビュー対応）
 
 ## テスト実行
 ```bash

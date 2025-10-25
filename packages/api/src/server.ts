@@ -171,7 +171,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
       info: {
         title: 'meme-gtd API',
         description: 'HTTP REST API for meme-gtd CLI operations',
-        version: '0.6.0',
+        version: '0.9.0',
       },
       servers: [
         {
