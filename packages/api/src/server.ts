@@ -184,6 +184,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
         { name: 'Tasks', description: 'Task management endpoints' },
         { name: 'Labels', description: 'Label management endpoints' },
         { name: 'Links', description: 'Link management endpoints' },
+        { name: 'Projects', description: 'Project management endpoints' },
         { name: 'Comments', description: 'Comment management endpoints' },
       ],
     },
@@ -217,6 +218,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   const { linkRoutes } = await import('./routes/links.js');
   await app.register(linkRoutes);
+
+  const { projectRoutes } = await import('./routes/projects.js');
+  await app.register(projectRoutes);
 
   // Register static file serving for Web UI (after API routes)
   await app.register(import('@fastify/static'), {
