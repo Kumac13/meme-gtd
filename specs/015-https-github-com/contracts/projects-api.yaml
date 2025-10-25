@@ -1,0 +1,467 @@
+openapi: 3.1.0
+info:
+  title: Project Management API
+  version: 1.0.0
+  description: API endpoints for managing projects and project items
+
+paths:
+  /api/projects:
+    post:
+      tags:
+        - Projects
+      summary: Create project
+      description: Create a new project
+      operationId: createProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+            examples:
+              minimal:
+                value:
+                  name: "Sprint 1"
+              with_description:
+                value:
+                  name: "Q4 Goals"
+                  description: "Year-end objectives"
+              board_view:
+                value:
+                  name: "Marketing Campaign"
+                  view: "board"
+              table_view:
+                value:
+                  name: "Bug Tracker"
+                  view: "table"
+      responses:
+        '201':
+          description: Project created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: Project name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - Projects
+      summary: List projects
+      description: List all projects
+      operationId: listProjects
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+
+  /api/projects/{id}:
+    get:
+      tags:
+        - Projects
+      summary: Get project
+      description: Get project details with associated items
+      operationId: getProject
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Projects
+      summary: Delete project
+      description: Delete a project (cascades to project items, issues remain intact)
+      operationId: deleteProject
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '204':
+          description: Project deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{id}/items:
+    post:
+      tags:
+        - Projects
+      summary: Add item to project
+      description: Add an issue (task or memo) to a project
+      operationId: addProjectItem
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddProjectItemRequest'
+            examples:
+              basic:
+                value:
+                  issueId: 12
+              with_position:
+                value:
+                  issueId: 12
+                  position: 1.5
+              with_column:
+                value:
+                  issueId: 12
+                  column: "In Progress"
+              full:
+                value:
+                  issueId: 12
+                  position: 2.0
+                  column: "Done"
+      responses:
+        '201':
+          description: Item added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectItem'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          description: Project or issue not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Issue already exists in project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/projects/{id}/items/{issueId}:
+    patch:
+      tags:
+        - Projects
+      summary: Update project item
+      description: Move item to new position or column
+      operationId: updateProjectItem
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/IssueId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectItemRequest'
+            examples:
+              move_position:
+                value:
+                  position: 2.5
+              move_column:
+                value:
+                  column: "Done"
+              move_both:
+                value:
+                  position: 1.0
+                  column: "To Do"
+      responses:
+        '200':
+          description: Item updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectItem'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Projects
+      summary: Remove item from project
+      description: Remove an issue from a project (issue itself remains intact)
+      operationId: removeProjectItem
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/IssueId'
+      responses:
+        '204':
+          description: Item removed successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  parameters:
+    ProjectId:
+      name: id
+      in: path
+      required: true
+      description: Project ID
+      schema:
+        type: string
+        pattern: '^\d+$'
+
+    IssueId:
+      name: issueId
+      in: path
+      required: true
+      description: Issue ID
+      schema:
+        type: string
+        pattern: '^\d+$'
+
+  schemas:
+    ViewType:
+      type: string
+      enum: [board, table]
+      description: Project view type
+
+    ViewMeta:
+      type: object
+      required:
+        - viewType
+      properties:
+        viewType:
+          $ref: '#/components/schemas/ViewType'
+        columns:
+          type: array
+          items:
+            type: string
+          description: Column names for board view (only present for board type)
+      examples:
+        - viewType: "board"
+          columns: ["To Do", "In Progress", "Done"]
+        - viewType: "table"
+
+    CreateProjectRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Project name (must be unique)
+          example: "Sprint 1"
+        description:
+          type: string
+          description: Optional project description
+          example: "Q4 2025 sprint"
+        view:
+          $ref: '#/components/schemas/ViewType'
+          default: board
+          description: View type (defaults to board)
+
+    Project:
+      type: object
+      required:
+        - id
+        - name
+        - createdAt
+        - viewMeta
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique project ID
+          example: 5
+        name:
+          type: string
+          description: Project name
+          example: "Sprint 1"
+        description:
+          type: string
+          nullable: true
+          description: Project description
+          example: "Q4 2025 sprint"
+        viewMeta:
+          $ref: '#/components/schemas/ViewMeta'
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp (ISO 8601)
+          example: "2025-10-24T10:00:00Z"
+
+    AddProjectItemRequest:
+      type: object
+      required:
+        - issueId
+      properties:
+        issueId:
+          type: integer
+          format: int64
+          description: Issue ID to add to project
+          example: 12
+        position:
+          type: number
+          format: float
+          description: Position in project (defaults to end)
+          example: 1.5
+        column:
+          type: string
+          description: Board column name
+          example: "In Progress"
+
+    UpdateProjectItemRequest:
+      type: object
+      properties:
+        position:
+          type: number
+          format: float
+          description: New position in project
+          example: 2.5
+        column:
+          type: string
+          description: New board column name
+          example: "Done"
+
+    ProjectItem:
+      type: object
+      required:
+        - id
+        - projectId
+        - issueId
+        - position
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique project item ID
+          example: 10
+        projectId:
+          type: integer
+          format: int64
+          description: Project ID
+          example: 5
+        issueId:
+          type: integer
+          format: int64
+          description: Issue ID
+          example: 12
+        position:
+          type: number
+          format: float
+          description: Position in project
+          example: 1.0
+        viewMeta:
+          type: object
+          nullable: true
+          properties:
+            column:
+              type: string
+          example: { "column": "To Do" }
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2025-10-24T10:05:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2025-10-24T10:05:00Z"
+
+    ProjectItemWithIssue:
+      allOf:
+        - $ref: '#/components/schemas/ProjectItem'
+        - type: object
+          required:
+            - issue
+          properties:
+            issue:
+              type: object
+              required:
+                - id
+                - type
+                - title
+              properties:
+                id:
+                  type: integer
+                  format: int64
+                  example: 12
+                type:
+                  type: string
+                  enum: [task, memo]
+                  example: "task"
+                title:
+                  type: string
+                  example: "Implement feature X"
+
+    ProjectDetail:
+      allOf:
+        - $ref: '#/components/schemas/Project'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProjectItemWithIssue'
+              description: Project items with issue information
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type
+          example: "Validation Error"
+        code:
+          type: string
+          description: Error code
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Error message
+          example: "Request validation failed"
+        details:
+          type: object
+          description: Additional error details
+
+  responses:
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Validation Error"
+            code: "VALIDATION_ERROR"
+            message: "Request validation failed"
+            details: {}
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Not Found"
+            code: "NOT_FOUND"
+            message: "Project #5 not found"
