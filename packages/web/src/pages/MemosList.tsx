@@ -49,6 +49,11 @@ export default function MemosList() {
     });
   }, [memos, bookmarkFilter]);
 
+  const handleDelete = async (id: number) => {
+    await MemosService.deleteMemo(String(id));
+    setMemos(memos.filter((memo) => memo.id !== id));
+  };
+
   if (loading) {
     return <LoadingState message="Loading memos..." />;
   }
@@ -79,7 +84,7 @@ export default function MemosList() {
           submessage={!bookmarkFilter ? 'Create your first memo to get started' : undefined}
         />
       ) : (
-        <ItemList items={filteredMemos} itemType="memo" basePath="/memos" />
+        <ItemList items={filteredMemos} itemType="memo" basePath="/memos" onDelete={handleDelete} />
       )}
     </div>
   );

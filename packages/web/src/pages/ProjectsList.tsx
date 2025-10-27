@@ -36,6 +36,11 @@ export default function ProjectsList() {
     fetchProjects();
   }, []);
 
+  const handleDelete = async (id: number) => {
+    await ProjectsService.deleteProject(String(id));
+    setProjects(projects.filter((project) => project.id !== id));
+  };
+
   if (loading) {
     return <LoadingState message="Loading projects..." />;
   }
@@ -61,7 +66,7 @@ export default function ProjectsList() {
           submessage="Create your first project to get started"
         />
       ) : (
-        <ItemList items={projects} itemType="project" basePath="/projects" />
+        <ItemList items={projects} itemType="project" basePath="/projects" onDelete={handleDelete} />
       )}
     </div>
   );
