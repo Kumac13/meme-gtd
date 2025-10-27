@@ -12,7 +12,8 @@ interface KanbanBoardProps {
 export default function KanbanBoard({ project, onProjectUpdate }: KanbanBoardProps) {
   const [dragError, setDragError] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
-  // Task status columns (from TaskStatus type)
+  // Column order: Documents first, then task status columns
+  const allColumns = ['Documents', 'Open', 'Next', 'Waiting', 'Scheduled', 'Done', 'Canceled'];
   const taskStatusColumns = ['Open', 'Next', 'Waiting', 'Scheduled', 'Done', 'Canceled'];
 
   // Group items by column
@@ -54,8 +55,8 @@ export default function KanbanBoard({ project, onProjectUpdate }: KanbanBoardPro
   }, [project.items]);
 
   const columns = useMemo(() => {
-    // Always show all task status columns + Documents
-    return [...taskStatusColumns, 'Documents'];
+    // Always show all columns: Documents first, then task status columns
+    return allColumns;
   }, []);
 
   function handleDragStart(event: DragStartEvent) {
