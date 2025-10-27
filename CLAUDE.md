@@ -1,5 +1,20 @@
 # meme-gtd 開発ガイド
 
+## CLAUDE.md Writing Guidelines
+
+**When updating this file, apply these principles (based on Anthropic's official recommendations):**
+
+1. **Use emphasis for critical rules**: "IMPORTANT", "YOU MUST", "<critical-safety>" tags
+2. **Provide concrete examples**: Show exact commands, not abstract descriptions
+3. **Keep it concise**: CLAUDE.md becomes part of every prompt—avoid overwhelming content
+4. **Use structure**: XML-style tags, clear sections, bullet points over paragraphs
+5. **Iterate based on AI behavior**: Test what actually improves instruction-following
+
+**Critical safety rules belong in:**
+- Prominent position (early in file, impossible to miss)
+- Both positive examples (✅ do this) and negative examples (❌ never do this)
+- Clear explanation of consequences (e.g., "wipes production DB")
+
 ## 参照資料
 
 1. **`docs/gtd.md`** - GTDワークフローの概念図
@@ -15,6 +30,42 @@
 - コマンド・ファイルは全体を提示（部分的な省略禁止）
 - 実装前に`docs/requirements.md`を必ず参照
 - **新しいコマンド追加時は必ず`packages/cli/src/index.ts`の`MULTIWORD_COMMANDS`配列に登録する**（スペース区切り構文の必須要件）
+
+## <critical-safety>AI Safety: Test Environment Usage</critical-safety>
+
+**IMPORTANT - YOU MUST READ THIS BEFORE ANY CLI OPERATION**
+
+### Past Incident (Issue #48)
+AI accidentally **wiped production database** (172KB → 0KB) by executing `mgtd` commands directly during testing.
+
+### Absolute Rule
+
+**✅ CORRECT - Use test wrapper:**
+```bash
+pnpm mgtd:test task create -t "Test" --no-editor
+pnpm mgtd:test memo list --json
+pnpm mgtd:test project create "Test Project"
+```
+
+**❌ WRONG - Direct execution (DESTROYS PRODUCTION):**
+```bash
+mgtd task create -t "Test"        # 🚨 DANGER: Modifies production DB
+mgtd memo list                     # 🚨 DANGER: Reads production DB
+mgtd project create "Test Project" # 🚨 DANGER: Writes to production
+```
+
+### Why This Matters
+
+- `mgtd` defaults to production DB: `~/.local/share/mgtd/issues.db`
+- `pnpm mgtd:test` automatically sets test environment:
+  - `DB_PATH=$PWD/test-data/test.db`
+  - `MGTD_CONFIG_PATH=$PWD/test-data/context.json`
+- **One mistake = complete data loss**
+
+### YOU MUST
+1. Always use `pnpm mgtd:test` for CLI operations
+2. Never run `mgtd` directly
+3. Verify production DB unchanged after testing
 
 ## 本番環境とテスト環境の完全分離（厳守）
 
@@ -41,14 +92,14 @@
 #### ✅ 必ず実行すること
 - 検証・テストは**必ずテスト環境**（ポート3001、test-data/test.db）を使用
 - API検証は `curl http://localhost:3001/api/...` を使用
-- CLI検証は環境変数でテストDBを指定
+- **CLI検証は必ず `pnpm mgtd:test` を使用**（test wrapper - 上記「AI Safety」セクション参照）
 - Web UI検証は http://localhost:3001 にアクセス
 
 #### ❌ 絶対禁止
 - **本番DB（~/.local/share/mgtd/issues.db）への読み書き**
 - **本番APIサーバー（ポート3000）へのアクセス**
 - **本番Web UI（http://localhost:3000）での検証**
-- 環境変数なしでの`mgtd`コマンド実行（デフォルトで本番DBを使用）
+- **`mgtd`コマンドの直接実行**（デフォルトで本番DBを使用、必ず `pnpm mgtd:test` を使用）
 
 ### テスト環境の使用方法
 
@@ -69,10 +120,36 @@ curl http://localhost:3001/api/tasks
 ```
 
 #### CLI検証
+
+**<critical-safety>IMPORTANT: YOU MUST use test wrapper for ALL CLI operations</critical-safety>**
+
+**Past incident**: AI accidentally wiped production DB (172KB → 0KB) by running `mgtd` directly.
+
+**✅ ALWAYS use this wrapper:**
 ```bash
-# テストDBを指定してCLI実行
-DB_PATH=./test-data/test.db mgtd memo list --json
-DB_PATH=./test-data/test.db mgtd task create --title "Test" --body "Test"
+# Task operations (test DB)
+pnpm mgtd:test task create -t "Test Task" --no-editor
+pnpm mgtd:test task list --json
+
+# Memo operations (test DB)
+pnpm mgtd:test memo create --body "Test memo" --no-editor
+pnpm mgtd:test memo list --json
+
+# Project operations (test DB)
+pnpm mgtd:test project create "Test Project"
+pnpm mgtd:test project list --json
+```
+
+**Why `pnpm mgtd:test` is required**:
+- Automatically sets `DB_PATH=$PWD/test-data/test.db` (test database)
+- Automatically sets `MGTD_CONFIG_PATH=$PWD/test-data/context.json` (test config)
+- Prevents accidental production DB contamination
+
+**❌ NEVER run `mgtd` directly** (uses production DB by default)
+
+**First-time test DB initialization**:
+```bash
+pnpm mgtd:test init -d $PWD/test-data/test.db -f
 ```
 
 #### 自動テスト（統合テスト）

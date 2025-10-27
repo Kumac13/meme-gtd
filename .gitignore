@@ -37,3 +37,4 @@ build/
 # OS files
 Thumbs.db
 test-data/
+/test-data/
