@@ -9,6 +9,8 @@ import TasksList from './pages/TasksList';
 import TaskDetail from './pages/TaskDetail';
 import TaskNew from './pages/TaskNew';
 import TaskEdit from './pages/TaskEdit';
+import ProjectsList from './pages/ProjectsList';
+import ProjectNew from './pages/ProjectNew';
 
 function App() {
   return (
@@ -25,6 +27,8 @@ function App() {
             <Route path="tasks/new" element={<TaskNew />} />
             <Route path="tasks/:id" element={<TaskDetail />} />
             <Route path="tasks/:id/edit" element={<TaskEdit />} />
+            <Route path="projects" element={<ProjectsList />} />
+            <Route path="projects/new" element={<ProjectNew />} />
           </Route>
         </Routes>
       </BrowserRouter>
