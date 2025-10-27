@@ -98,10 +98,10 @@
 
 **Purpose**: Update CLAUDE.md to prevent AI from making the same mistake again
 
-- [ ] T019 [US1] Update `CLAUDE.md` - Add prominent "AI Safety: Test Environment Usage" section at line 20 (after versioning section)
-- [ ] T020 [US1] In CLAUDE.md, add concrete examples of correct usage (`pnpm mgtd:test`) vs wrong usage (`mgtd`)
-- [ ] T021 [US1] In CLAUDE.md, explain why direct `mgtd` is dangerous (defaults to production DB)
-- [ ] T022 [US1] In CLAUDE.md, update "本番環境とテスト環境の完全分離" section to reference new test wrapper
+- [x] T019 [US1] Update `CLAUDE.md` - Add prominent "AI Safety: Test Environment Usage" section at line 20 (after versioning section)
+- [x] T020 [US1] In CLAUDE.md, add concrete examples of correct usage (`pnpm mgtd:test`) vs wrong usage (`mgtd`)
+- [x] T021 [US1] In CLAUDE.md, explain why direct `mgtd` is dangerous (defaults to production DB)
+- [x] T022 [US1] In CLAUDE.md, update "本番環境とテスト環境の完全分離" section to reference new test wrapper
 - [ ] T023 [P] [US2] Verify `quickstart.md` has all necessary usage examples (already created in planning)
 - [ ] T024 [P] [US2] Verify `research.md` documents all technical decisions (already created in planning)
 
