@@ -9,7 +9,7 @@
 export interface Project {
   id: number;
   name: string;
-  description?: string;
+  description: string;
   createdAt: string; // ISO 8601 timestamp
 }
 
@@ -49,8 +49,8 @@ export type ProjectStatus =
  * Enriched project with association metadata
  * Used in sidebar display
  */
-export interface ProjectWithMeta extends Project {
-  status: ProjectStatus;      // From view_meta
+export interface ProjectWithMeta extends Omit<Project, 'status'> {
+  status: ProjectStatus;      // From view_meta (different from Project.status which is 'open'|'closed')
   itemId?: number;            // project_items.id (for update/delete operations)
 }
 

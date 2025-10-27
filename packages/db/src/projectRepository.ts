@@ -67,7 +67,9 @@ export const createProject = (db: Database.Database, input: CreateProjectInput):
  * @returns Array of projects
  */
 export const listProjects = (db: Database.Database): Project[] => {
-  const stmt = db.prepare('SELECT * FROM projects ORDER BY created_at DESC');
+  const stmt = db.prepare(`
+    SELECT * FROM projects ORDER BY created_at DESC
+  `);
   const rows = stmt.all() as SqliteRow[];
   return rows.map(projectRowToProject);
 };
