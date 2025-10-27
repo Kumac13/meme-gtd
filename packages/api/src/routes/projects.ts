@@ -10,6 +10,7 @@ import {
   createProjectHandler,
   listProjectsHandler,
   getProjectHandler,
+  updateProjectHandler,
   deleteProjectHandler,
   addProjectItemHandler,
   updateProjectItemHandler,
@@ -17,6 +18,7 @@ import {
 } from '../handlers/projectHandlers.js';
 import {
   CreateProjectRequestSchema,
+  UpdateProjectRequestSchema,
   ProjectSchema,
   ProjectDetailSchema,
   ProjectIdParamsSchema,
@@ -91,6 +93,27 @@ export async function projectRoutes(app: FastifyInstance) {
       },
     },
     getProjectHandler
+  );
+
+  // PATCH /api/projects/:id - Update project (name, description)
+  server.patch(
+    '/api/projects/:id',
+    {
+      schema: {
+        tags: ['Projects'],
+        summary: 'Update project',
+        description: 'Update project name and/or description',
+        operationId: 'updateProject',
+        params: ProjectIdParamsSchema,
+        body: UpdateProjectRequestSchema,
+        response: {
+          200: ProjectSchema,
+          404: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      },
+    },
+    updateProjectHandler
   );
 
   // DELETE /api/projects/:id - Delete a project

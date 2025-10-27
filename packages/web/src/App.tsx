@@ -11,6 +11,9 @@ import TaskNew from './pages/TaskNew';
 import TaskEdit from './pages/TaskEdit';
 import ProjectsList from './pages/ProjectsList';
 import ProjectNew from './pages/ProjectNew';
+import ProjectDetail from './pages/ProjectDetail';
+import KanbanView from './pages/KanbanView';
+import ListView from './pages/ListView';
 
 function App() {
   return (
@@ -29,6 +32,11 @@ function App() {
             <Route path="tasks/:id/edit" element={<TaskEdit />} />
             <Route path="projects" element={<ProjectsList />} />
             <Route path="projects/new" element={<ProjectNew />} />
+            <Route path="projects/:id" element={<ProjectDetail />}>
+              <Route index element={<Navigate to="kanban" replace />} />
+              <Route path="kanban" element={<KanbanView />} />
+              <Route path="list" element={<ListView />} />
+            </Route>
           </Route>
         </Routes>
       </BrowserRouter>

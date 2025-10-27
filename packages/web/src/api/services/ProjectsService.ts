@@ -69,6 +69,45 @@ export class ProjectsService {
   }
 
   /**
+   * Update project (name, description)
+   * @param id Project ID
+   * @param data Update data (name, description)
+   * @returns Updated project
+   */
+  static async updateProject(
+    id: string,
+    data: { name?: string; description?: string | null }
+  ): Promise<Project> {
+    const response = await fetch(`${API_BASE}/projects/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update project ${id}: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Delete project
+   * @param id Project ID
+   */
+  static async deleteProject(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/projects/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete project ${id}: ${response.statusText}`);
+    }
+  }
+
+  /**
    * Add item to project
    * @param projectId Project ID
    * @param data Request body with issueId, position, viewMeta
@@ -88,6 +127,33 @@ export class ProjectsService {
 
     if (!response.ok) {
       throw new Error(`Failed to add item to project ${projectId}: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Update project item (position and/or column)
+   * @param projectId Project ID
+   * @param issueId Issue ID
+   * @param data Update data (column, position)
+   * @returns Updated project item
+   */
+  static async updateProjectItem(
+    projectId: string | number,
+    issueId: string | number,
+    data: { column?: string; position?: number }
+  ): Promise<ProjectItem> {
+    const response = await fetch(`${API_BASE}/projects/${projectId}/items/${issueId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update item ${issueId} in project ${projectId}: ${response.statusText}`);
     }
 
     return response.json();
@@ -134,8 +200,11 @@ export class ProjectsService {
 
         if (item) {
           associatedProjects.push({
-            ...project,
-            status: item.viewMeta?.status || 'No status',
+            id: project.id,
+            name: project.name,
+            description: project.description || '',
+            createdAt: project.createdAt,
+            status: 'No status', // Feature 017 sidebar status - not used in Feature 019
             itemId: item.id,
           });
         }

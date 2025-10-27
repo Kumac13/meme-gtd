@@ -69,6 +69,7 @@ export const ProjectItemWithIssueSchema = ProjectItemSchema.extend({
     id: z.number().int().positive().describe('Issue ID'),
     type: z.enum(['task', 'memo']).describe('Issue type'),
     title: z.string().describe('Issue title'),
+    status: z.enum(['open', 'next', 'waiting', 'scheduled', 'done', 'canceled']).nullable().describe('Task status (null for memos)'),
   }).describe('Issue information'),
 });
 
@@ -112,6 +113,16 @@ export const UpdateProjectItemRequestSchema = z.object({
 });
 
 export type UpdateProjectItemRequest = z.infer<typeof UpdateProjectItemRequestSchema>;
+
+/**
+ * Schema for updating a project (name, description)
+ */
+export const UpdateProjectRequestSchema = z.object({
+  name: z.string().min(1).max(255).optional().describe('Project name'),
+  description: z.string().optional().nullable().describe('Project description'),
+});
+
+export type UpdateProjectRequest = z.infer<typeof UpdateProjectRequestSchema>;
 
 /**
  * Schema for project item path params (project ID + issue ID)
