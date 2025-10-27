@@ -94,6 +94,20 @@ export class ProjectsService {
   }
 
   /**
+   * Delete project
+   * @param id Project ID
+   */
+  static async deleteProject(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/projects/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete project ${id}: ${response.statusText}`);
+    }
+  }
+
+  /**
    * Add item to project
    * @param projectId Project ID
    * @param data Request body with issueId, position, viewMeta
