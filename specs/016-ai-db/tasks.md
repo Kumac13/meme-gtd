@@ -50,10 +50,10 @@
 ### Implementation for User Story 1
 
 - [x] T005 [US1] Add `mgtd:test` script to `package.json` (root) with `DB_PATH=./test-data/test.db pnpm mgtd`
-- [ ] T006 [US1] Test the wrapper: `pnpm mgtd:test init -d ./test-data/test.db -f` (should create test DB)
-- [ ] T007 [US1] Validate wrapper passes arguments: `pnpm mgtd:test task create -t "Test" --no-editor --json`
-- [ ] T008 [US1] Verify production DB unchanged: Check `~/.local/share/mgtd/issues.db` has 0 records (should still be empty from previous issue)
-- [ ] T009 [US1] Verify test DB has records: Check `./test-data/test.db` has the test task created
+- [x] T006 [US1] Test the wrapper: `pnpm mgtd:test init -d ./test-data/test.db -f` (should create test DB)
+- [x] T007 [US1] Validate wrapper passes arguments: `pnpm mgtd:test task create -t "Test" --no-editor --json`
+- [x] T008 [US1] Verify production DB unchanged: Check `~/.local/share/mgtd/issues.db` has 0 records (should still be empty from previous issue)
+- [x] T009 [US1] Verify test DB has records: Check `./test-data/test.db` has the test task created
 
 **Checkpoint**: User Story 1 complete - AI can now safely use `pnpm mgtd:test` instead of direct `mgtd` commands
 
