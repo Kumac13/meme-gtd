@@ -28,9 +28,10 @@ export default function KanbanCard({ item }: KanbanCardProps) {
       ref={setNodeRef}
       style={style}
       {...attributes}
+      {...listeners}
       className={`
         bg-white p-3 rounded border border-gray-200
-        cursor-move hover:shadow-md transition-shadow
+        hover:shadow-md transition-shadow
         ${isDragging ? 'opacity-50' : ''}
       `}
     >
@@ -45,8 +46,8 @@ export default function KanbanCard({ item }: KanbanCardProps) {
       </div>
       <Link
         to={detailPath}
-        className="text-sm font-medium text-gray-900 hover:text-github-green-600 block"
-        {...listeners}
+        className="text-sm font-medium text-gray-900 hover:text-github-green-600 block cursor-pointer"
+        onClick={(e) => e.stopPropagation()}
       >
         {item.issue.title}
       </Link>
