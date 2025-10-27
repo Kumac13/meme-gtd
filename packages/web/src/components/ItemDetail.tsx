@@ -4,6 +4,7 @@ import { TasksService } from '../api/services/TasksService';
 import EditableContent from './EditableContent';
 import CommentSection from './CommentSection';
 import LinkSection from './LinkSection';
+import { ProjectsSection } from './ProjectsSection';
 
 
 export interface BaseItem {
@@ -138,6 +139,9 @@ export default function ItemDetail({
 
       {/* Links section */}
       <LinkSection itemId={item.id} itemType={itemType} />
+
+      {/* Projects section */}
+      <ProjectsSection itemId={item.id} itemType={itemType} />
 
       {/* Body content */}
       <EditableContent

@@ -70,7 +70,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] **T005** [US1] Create ProjectsSection component in `packages/web/src/components/ProjectsSection.tsx`
+- [x] **T005** [US1] Create ProjectsSection component in `packages/web/src/components/ProjectsSection.tsx`
   - Props: `{ itemId: number, itemType: 'memo' | 'task' }`
   - State: `projects`, `associatedProjects`, `loading`, `error`
   - useEffect: Fetch projects on mount via `ProjectsService.getProjectsForIssue(itemId)`
@@ -79,7 +79,7 @@
   - Render: List of projects (name, icon placeholder, status text)
   - Styling: Follow LinkSection pattern (gray background, padding, rounded corners)
 
-- [ ] **T006** [US1] Integrate ProjectsSection into ItemDetail component in `packages/web/src/components/ItemDetail.tsx`
+- [x] **T006** [US1] Integrate ProjectsSection into ItemDetail component in `packages/web/src/components/ItemDetail.tsx`
   - Import `ProjectsSection`
   - Add after `<LinkSection ... />` and before `<EditableContent ... />`
   - Pass props: `itemId={item.id}` and `itemType={itemType}`
