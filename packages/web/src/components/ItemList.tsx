@@ -44,10 +44,24 @@ function isProject(item: Item): item is Project {
 export default function ItemList({ items, itemType, basePath }: ItemListProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
-      {items.map((item) => (
+      {items.map((item) => {
+        // Determine the correct path based on item type
+        let itemPath = `${basePath}/${item.id}`;
+        if (basePath === '') {
+          // Mixed mode: determine path based on item type
+          if (isProject(item)) {
+            itemPath = `/projects/${item.id}`;
+          } else if (isTask(item)) {
+            itemPath = `/tasks/${item.id}`;
+          } else {
+            itemPath = `/memos/${item.id}`;
+          }
+        }
+
+        return (
         <Link
           key={item.id}
-          to={`${basePath}/${item.id}`}
+          to={itemPath}
           className="block p-4 hover:bg-gray-50 transition-colors"
         >
           <div className="flex items-center justify-between gap-3">
@@ -140,7 +154,8 @@ export default function ItemList({ items, itemType, basePath }: ItemListProps) {
             )}
           </div>
         </Link>
-      ))}
+        );
+      })}
     </div>
   );
 }

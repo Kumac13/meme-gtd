@@ -83,20 +83,8 @@ export default function ListView() {
     return <EmptyState message="No items in this project. Add tasks or memos to get started." />;
   }
 
-  return (
-    <div className="space-y-6">
-      {tasks.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">Tasks</h3>
-          <ItemList items={tasks} itemType="task" basePath="/tasks" />
-        </div>
-      )}
-      {memos.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">Memos</h3>
-          <ItemList items={memos} itemType="memo" basePath="/memos" />
-        </div>
-      )}
-    </div>
-  );
+  // Combine tasks and memos into a single list
+  const allItems = [...tasks, ...memos];
+
+  return <ItemList items={allItems} itemType="task" basePath="" />;
 }
