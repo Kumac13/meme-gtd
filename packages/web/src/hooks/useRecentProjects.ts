@@ -6,7 +6,7 @@
  * Manages recently used projects in localStorage
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { Project, RecentProjectsStorage } from '../types/project';
 
 const STORAGE_KEY = 'mgtd:recentProjects';

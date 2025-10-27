@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { ProjectsService } from '../api/services/ProjectsService';
-import type { Project, ProjectWithMeta } from '../types/project';
+import type { Project } from '../types/project';
 import { useRecentProjects } from '../hooks/useRecentProjects';
 
 interface ProjectManagementModalProps {
@@ -19,7 +19,6 @@ interface ProjectManagementModalProps {
 
 export function ProjectManagementModal({
   itemId,
-  itemType,
   isOpen,
   onClose,
   onProjectsChanged,
