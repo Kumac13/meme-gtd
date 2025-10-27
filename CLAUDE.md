@@ -1,5 +1,20 @@
 # meme-gtd 開発ガイド
 
+## CLAUDE.md Writing Guidelines
+
+**When updating this file, apply these principles (based on Anthropic's official recommendations):**
+
+1. **Use emphasis for critical rules**: "IMPORTANT", "YOU MUST", "<critical-safety>" tags
+2. **Provide concrete examples**: Show exact commands, not abstract descriptions
+3. **Keep it concise**: CLAUDE.md becomes part of every prompt—avoid overwhelming content
+4. **Use structure**: XML-style tags, clear sections, bullet points over paragraphs
+5. **Iterate based on AI behavior**: Test what actually improves instruction-following
+
+**Critical safety rules belong in:**
+- Prominent position (early in file, impossible to miss)
+- Both positive examples (✅ do this) and negative examples (❌ never do this)
+- Clear explanation of consequences (e.g., "wipes production DB")
+
 ## 参照資料
 
 1. **`docs/gtd.md`** - GTDワークフローの概念図
