@@ -33,15 +33,13 @@ export default function KanbanBoard({ project, onProjectUpdate }: KanbanBoardPro
       if (item.issue.type === 'memo') {
         // All memos go to Documents column
         grouped['Documents'].push(item);
-      } else if (item.issue.type === 'task') {
-        // Tasks go to their status column
+      } else if (item.issue.type === 'task' && item.issue.status) {
+        // Tasks go to their status column (only if status is not null)
         const status = item.issue.status;
-        if (status) {
-          // Capitalize first letter to match column names
-          const columnName = status.charAt(0).toUpperCase() + status.slice(1);
-          if (grouped[columnName]) {
-            grouped[columnName].push(item);
-          }
+        // Capitalize first letter to match column names
+        const columnName = status.charAt(0).toUpperCase() + status.slice(1);
+        if (grouped[columnName]) {
+          grouped[columnName].push(item);
         }
       }
     });
@@ -82,6 +80,7 @@ export default function KanbanBoard({ project, onProjectUpdate }: KanbanBoardPro
 
     // For tasks, check if status changed
     const oldStatus = item.issue.status;
+    if (!oldStatus) return; // Skip if task has no status
     const newStatus = newColumnName.toLowerCase() as 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
 
     if (oldStatus === newStatus) return;
