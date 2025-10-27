@@ -8,6 +8,7 @@ import { ProjectService } from 'meme-gtd-core';
 import { NotFoundError, ValidationError, ConflictError } from '../errors/index.js';
 import type {
   CreateProjectRequest,
+  UpdateProjectRequest,
   ProjectIdParams,
   AddProjectItemRequest,
   UpdateProjectItemRequest,
@@ -74,6 +75,29 @@ export async function getProjectHandler(
 
   try {
     const project = projectService.getById(projectId);
+    return reply.status(200).send(project);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw new NotFoundError('Project', projectId);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Update a project (name, description)
+ * PATCH /api/projects/:id
+ */
+export async function updateProjectHandler(
+  request: FastifyRequest<{ Params: ProjectIdParams; Body: UpdateProjectRequest }>,
+  reply: FastifyReply
+) {
+  const projectId = parseInt(request.params.id, 10);
+  const { name, description } = request.body;
+  const projectService = new ProjectService({ db: request.server.db });
+
+  try {
+    const project = projectService.update(projectId, { name, description });
     return reply.status(200).send(project);
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {

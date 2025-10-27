@@ -127,6 +127,44 @@ export class ProjectService {
   }
 
   /**
+   * Update a project (name and/or description)
+   * @param id Project ID
+   * @param updates Update data
+   * @returns Updated project
+   * @throws Error if project not found
+   */
+  update(id: number, updates: { name?: string; description?: string | null }): Project {
+    // Get current project
+    const project = dbGetProjectById(this.db, id);
+    if (!project) {
+      throw new Error(`Project #${id} not found`);
+    }
+
+    // Update project in database
+    const stmt = this.db.prepare(`
+      UPDATE projects
+      SET
+        name = COALESCE(?, name),
+        description = ?
+      WHERE id = ?
+    `);
+
+    stmt.run(
+      updates.name ?? null,
+      updates.description !== undefined ? updates.description : project.description,
+      id
+    );
+
+    // Return updated project
+    const updated = dbGetProjectById(this.db, id);
+    if (!updated) {
+      throw new Error(`Failed to retrieve updated project #${id}`);
+    }
+
+    return updated;
+  }
+
+  /**
    * Delete a project
    * Cascades to project_items, issues remain intact
    * @param id Project ID

@@ -710,4 +710,106 @@ describe('Project Management Operations', () => {
       assert.strictEqual(response.statusCode, 404);
     });
   });
+
+  describe('Update Project Metadata', () => {
+    it('should update project name (PATCH /api/projects/:id)', async () => {
+      // Create a project
+      const createResponse = await app.inject({
+        method: 'POST',
+        url: '/api/projects',
+        payload: createProjectFixture({ name: 'Original Name' }),
+      });
+      const project = JSON.parse(createResponse.body);
+
+      // Update project name
+      const updateResponse = await app.inject({
+        method: 'PATCH',
+        url: `/api/projects/${project.id}`,
+        payload: { name: 'Updated Name' },
+      });
+
+      assert.strictEqual(updateResponse.statusCode, 200);
+      const updated = JSON.parse(updateResponse.body);
+      assert.strictEqual(updated.name, 'Updated Name');
+      assert.strictEqual(updated.description, project.description);
+    });
+
+    it('should update project description (PATCH /api/projects/:id)', async () => {
+      // Create a project
+      const createResponse = await app.inject({
+        method: 'POST',
+        url: '/api/projects',
+        payload: createProjectFixture({ description: 'Original Description' }),
+      });
+      const project = JSON.parse(createResponse.body);
+
+      // Update description
+      const updateResponse = await app.inject({
+        method: 'PATCH',
+        url: `/api/projects/${project.id}`,
+        payload: { description: 'Updated Description' },
+      });
+
+      assert.strictEqual(updateResponse.statusCode, 200);
+      const updated = JSON.parse(updateResponse.body);
+      assert.strictEqual(updated.description, 'Updated Description');
+      assert.strictEqual(updated.name, project.name);
+    });
+
+    it('should update both name and description (PATCH /api/projects/:id)', async () => {
+      // Create a project
+      const createResponse = await app.inject({
+        method: 'POST',
+        url: '/api/projects',
+        payload: createProjectFixture(),
+      });
+      const project = JSON.parse(createResponse.body);
+
+      // Update both
+      const updateResponse = await app.inject({
+        method: 'PATCH',
+        url: `/api/projects/${project.id}`,
+        payload: {
+          name: 'New Name',
+          description: 'New Description',
+        },
+      });
+
+      assert.strictEqual(updateResponse.statusCode, 200);
+      const updated = JSON.parse(updateResponse.body);
+      assert.strictEqual(updated.name, 'New Name');
+      assert.strictEqual(updated.description, 'New Description');
+    });
+
+    it('should clear description when set to null (PATCH /api/projects/:id)', async () => {
+      // Create a project with description
+      const createResponse = await app.inject({
+        method: 'POST',
+        url: '/api/projects',
+        payload: createProjectFixture({ description: 'Some Description' }),
+      });
+      const project = JSON.parse(createResponse.body);
+
+      // Clear description
+      const updateResponse = await app.inject({
+        method: 'PATCH',
+        url: `/api/projects/${project.id}`,
+        payload: { description: null },
+      });
+
+      assert.strictEqual(updateResponse.statusCode, 200);
+      const updated = JSON.parse(updateResponse.body);
+      assert.strictEqual(updated.description, null);
+    });
+
+    it('should return 404 when updating non-existent project (PATCH /api/projects/:id)', async () => {
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/api/projects/999999',
+        payload: { name: 'Updated Name' },
+      });
+
+      assert.strictEqual(response.statusCode, 404);
+    });
+  });
 });

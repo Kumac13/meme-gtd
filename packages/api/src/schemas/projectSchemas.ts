@@ -115,6 +115,16 @@ export const UpdateProjectItemRequestSchema = z.object({
 export type UpdateProjectItemRequest = z.infer<typeof UpdateProjectItemRequestSchema>;
 
 /**
+ * Schema for updating a project (name, description)
+ */
+export const UpdateProjectRequestSchema = z.object({
+  name: z.string().min(1).max(255).optional().describe('Project name'),
+  description: z.string().optional().nullable().describe('Project description'),
+});
+
+export type UpdateProjectRequest = z.infer<typeof UpdateProjectRequestSchema>;
+
+/**
  * Schema for project item path params (project ID + issue ID)
  */
 export const ProjectItemParamsSchema = z.object({
