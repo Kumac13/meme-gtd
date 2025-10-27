@@ -34,7 +34,7 @@ interface ItemListProps {
 }
 
 function isTask(item: Item): item is Task {
-  return 'scheduledOn' in item;
+  return 'type' in item && (item as any).type === 'task';
 }
 
 function isProject(item: Item): item is Project {
