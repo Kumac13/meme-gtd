@@ -63,6 +63,11 @@ export default function TasksList() {
     });
   }, [tasks, bookmarkFilter]);
 
+  const handleDelete = async (id: number) => {
+    await TasksService.deleteTask(String(id));
+    setTasks(tasks.filter((task) => task.id !== id));
+  };
+
   if (loading) {
     return <LoadingState message="Loading tasks..." />;
   }
@@ -104,7 +109,7 @@ export default function TasksList() {
           submessage={statusFilter === 'all' && !bookmarkFilter ? 'Create your first task to get started' : undefined}
         />
       ) : (
-        <ItemList items={filteredTasks} itemType="task" basePath="/tasks" />
+        <ItemList items={filteredTasks} itemType="task" basePath="/tasks" onDelete={handleDelete} />
       )}
     </div>
   );

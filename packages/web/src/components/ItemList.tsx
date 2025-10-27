@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatDateTime, formatRelativeTime } from '../utils/dates';
 import { truncateMarkdown } from '../utils/markdown';
@@ -31,6 +32,7 @@ interface ItemListProps {
   items: Item[];
   itemType: 'memo' | 'task' | 'project';
   basePath: string;
+  onDelete?: (id: number) => Promise<void>;
 }
 
 function isTask(item: Item): item is Task {
@@ -41,7 +43,29 @@ function isProject(item: Item): item is Project {
   return 'name' in item && 'description' in item;
 }
 
-export default function ItemList({ items, itemType: _itemType, basePath }: ItemListProps) {
+export default function ItemList({ items, itemType: _itemType, basePath, onDelete }: ItemListProps) {
+  const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<number | null>(null);
+
+  const handleDelete = async (e: React.MouseEvent, id: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!onDelete) return;
+    if (!window.confirm('Are you sure you want to delete this item?')) return;
+
+    try {
+      setDeleting(id);
+      await onDelete(id);
+      setMenuOpenId(null);
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      alert('Failed to delete item');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
       {items.map((item) => {
@@ -59,12 +83,12 @@ export default function ItemList({ items, itemType: _itemType, basePath }: ItemL
         }
 
         return (
-        <Link
-          key={item.id}
-          to={itemPath}
-          className="block p-4 hover:bg-gray-50 transition-colors"
-        >
-          <div className="flex items-center justify-between gap-3">
+        <div key={item.id} className="relative">
+          <Link
+            to={itemPath}
+            className="block p-4 hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center justify-between gap-3">
             <div className="flex-1 min-w-0">
               {isProject(item) ? (
                 <>
@@ -135,25 +159,63 @@ export default function ItemList({ items, itemType: _itemType, basePath }: ItemL
                 </>
               )}
             </div>
-            {!isProject(item) && (
-              <div className="flex-shrink-0 flex items-center gap-2">
-                {(item.commentCount ?? 0) > 0 && (
-                  <span className="flex items-center gap-1 text-xs text-gray-500">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                      <path d="M1 2.75C1 1.784 1.784 1 2.75 1h10.5c.966 0 1.75.784 1.75 1.75v7.5A1.75 1.75 0 0 1 13.25 12H9.06l-2.573 2.573A1.458 1.458 0 0 1 4 13.543V12H2.75A1.75 1.75 0 0 1 1 10.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h4.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path>
+            <div className="flex-shrink-0 flex items-center gap-2">
+              {!isProject(item) && (
+                <>
+                  {(item.commentCount ?? 0) > 0 && (
+                    <span className="flex items-center gap-1 text-xs text-gray-500">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M1 2.75C1 1.784 1.784 1 2.75 1h10.5c.966 0 1.75.784 1.75 1.75v7.5A1.75 1.75 0 0 1 13.25 12H9.06l-2.573 2.573A1.458 1.458 0 0 1 4 13.543V12H2.75A1.75 1.75 0 0 1 1 10.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h4.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path>
+                      </svg>
+                      {item.commentCount ?? 0}
+                    </span>
+                  )}
+                  {item.isBookmarked && (
+                    <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Z"></path>
                     </svg>
-                    {item.commentCount ?? 0}
-                  </span>
-                )}
-                {item.isBookmarked && (
-                  <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Z"></path>
-                  </svg>
-                )}
-              </div>
-            )}
+                  )}
+                </>
+              )}
+              {onDelete && (
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setMenuOpenId(menuOpenId === item.id ? null : item.id);
+                    }}
+                    className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
+                    aria-label="More options"
+                    disabled={deleting === item.id}
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M8 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"></path>
+                    </svg>
+                  </button>
+                  {menuOpenId === item.id && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setMenuOpenId(null)}
+                      />
+                      <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-20">
+                        <button
+                          onClick={(e) => handleDelete(e, item.id)}
+                          disabled={deleting === item.id}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {deleting === item.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </Link>
+      </div>
         );
       })}
     </div>
