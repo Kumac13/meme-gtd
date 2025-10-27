@@ -221,7 +221,7 @@
 
 ### Implementation for User Story 5
 
-- [ ] **T015** [US5] Create useRecentProjects hook in `packages/web/src/hooks/useRecentProjects.ts`
+- [x] **T015** [US5] Create useRecentProjects hook in `packages/web/src/hooks/useRecentProjects.ts`
   - Return: `{ recentProjectIds: number[], addRecentProject: (projectId: number) => void, getRecentProjects: (allProjects: Project[]) => Project[] }`
   - Storage key: `'mgtd:recentProjects'`
   - Storage format: `RecentProjectsStorage` type from types/project.ts
@@ -230,7 +230,7 @@
   - `getRecentProjects`: Filter allProjects to recentProjectIds, sort by lastUsedAt, return top 2
   - Wrap localStorage access in try-catch for Safari private mode compatibility
 
-- [ ] **T016** [US5] Update SelectProjectsModal to show Recent section in `packages/web/src/components/SelectProjectsModal.tsx`
+- [x] **T016** [US5] Update SelectProjectsModal to show Recent section in `packages/web/src/components/SelectProjectsModal.tsx`
   - Import and use `useRecentProjects` hook
   - When project is added (checkbox checked): call `addRecentProject(projectId)` from hook
   - When project is removed (checkbox unchecked): do NOT call addRecentProject (removal indicates de-prioritization)

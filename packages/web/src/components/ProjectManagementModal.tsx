@@ -7,6 +7,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ProjectsService } from '../api/services/ProjectsService';
 import type { Project, ProjectWithMeta } from '../types/project';
+import { useRecentProjects } from '../hooks/useRecentProjects';
 
 interface ProjectManagementModalProps {
   itemId: number;
@@ -29,6 +30,8 @@ export function ProjectManagementModal({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const { addRecentProject, getRecentProjects } = useRecentProjects();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -76,6 +79,9 @@ export function ProjectManagementModal({
           issueId: itemId,
         });
         setAssociatedProjectIds((prev) => new Set(prev).add(projectId));
+
+        // Track as recent project (only on add, not remove)
+        addRecentProject(projectId);
       }
 
       // Notify parent to refresh
@@ -96,6 +102,11 @@ export function ProjectManagementModal({
       project.name.toLowerCase().includes(query)
     );
   }, [allProjects, searchQuery]);
+
+  // Get recent projects (respects search filter)
+  const recentProjects = useMemo(() => {
+    return getRecentProjects(filteredProjects);
+  }, [filteredProjects, getRecentProjects]);
 
   if (!isOpen) return null;
 
@@ -168,34 +179,80 @@ export function ProjectManagementModal({
             )}
 
             {!loading && filteredProjects.length > 0 && (
-              <div className="space-y-2">
-                {filteredProjects.map((project) => {
-                  const isAssociated = associatedProjectIds.has(project.id);
-                  return (
-                    <label
-                      key={project.id}
-                      className="flex items-start gap-3 p-3 rounded border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isAssociated}
-                        onChange={() => handleToggleProject(project.id, isAssociated)}
-                        disabled={saving}
-                        className="mt-1 w-4 h-4 text-github-green-600 border-gray-300 rounded focus:ring-github-green-500"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-gray-900">
-                          {project.name}
-                        </div>
-                        {project.description && (
-                          <div className="text-sm text-gray-500 mt-1">
-                            {project.description}
+              <div className="space-y-4">
+                {/* Recent section */}
+                {recentProjects.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                      Recent
+                    </h4>
+                    <div className="space-y-2">
+                      {recentProjects.map((project) => {
+                        const isAssociated = associatedProjectIds.has(project.id);
+                        return (
+                          <label
+                            key={project.id}
+                            className="flex items-start gap-3 p-3 rounded border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isAssociated}
+                              onChange={() => handleToggleProject(project.id, isAssociated)}
+                              disabled={saving}
+                              className="mt-1 w-4 h-4 text-github-green-600 border-gray-300 rounded focus:ring-github-green-500"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-gray-900">
+                                {project.name}
+                              </div>
+                              {project.description && (
+                                <div className="text-sm text-gray-500 mt-1">
+                                  {project.description}
+                                </div>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Organization section */}
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                    Organization
+                  </h4>
+                  <div className="space-y-2">
+                    {filteredProjects.map((project) => {
+                      const isAssociated = associatedProjectIds.has(project.id);
+                      return (
+                        <label
+                          key={project.id}
+                          className="flex items-start gap-3 p-3 rounded border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isAssociated}
+                            onChange={() => handleToggleProject(project.id, isAssociated)}
+                            disabled={saving}
+                            className="mt-1 w-4 h-4 text-github-green-600 border-gray-300 rounded focus:ring-github-green-500"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-gray-900">
+                              {project.name}
+                            </div>
+                            {project.description && (
+                              <div className="text-sm text-gray-500 mt-1">
+                                {project.description}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </label>
-                  );
-                })}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
           </div>
