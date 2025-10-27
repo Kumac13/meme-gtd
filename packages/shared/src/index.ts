@@ -64,20 +64,15 @@ export interface Link {
   createdAt: string;
 }
 
-export interface Project {
-  id: number;
-  name: string;
-  description: string | null;
-  createdAt: string;
-}
-
-export interface ProjectItem extends Timestamped {
-  id: number;
-  projectId: number;
-  issueId: number;
-  position: number;
-  viewMeta: unknown;
-}
+// Project types (Issue #19)
+export type {
+  ViewType,
+  ViewMeta,
+  Project,
+  ProjectItem,
+  ProjectDetail,
+  ProjectItemWithIssue
+} from './types/project.js';
 
 export const toBoolean = (value: number | boolean): boolean =>
   typeof value === 'boolean' ? value : value !== 0;

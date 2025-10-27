@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.9.0 - 2025-10-25
+
+### New Features
+
+- **Project Management System (#19)**: Complete project management with CLI commands and API endpoints
+  - **CLI Commands**:
+    - `mgtd project create <name>` - Create projects with board or table views
+    - `mgtd project list` - List all projects
+    - `mgtd project view <id>` - View project details with items ordered by position
+    - `mgtd project add <project-id> <issue-id>` - Add tasks/memos to projects
+    - `mgtd project remove <project-id> <issue-id>` - Remove items from projects (with confirmation)
+    - `mgtd project move <project-id> <issue-id>` - Reorder items with fractional positioning
+    - `mgtd project delete <id>` - Delete projects (with confirmation)
+  - **API Endpoints**:
+    - `POST /api/projects` - Create project (201/409)
+    - `GET /api/projects` - List all projects (200)
+    - `GET /api/projects/:id` - Get project with items (200/404)
+    - `POST /api/projects/:id/items` - Add item to project (201/404/409)
+    - `PATCH /api/projects/:id/items/:issueId` - Update item position/column (200/404)
+    - `DELETE /api/projects/:id/items/:issueId` - Remove item from project (204/404)
+    - `DELETE /api/projects/:id` - Delete project (204/404)
+  - **Features**:
+    - Board view with customizable columns (default: To Do, In Progress, Done)
+    - Table view for simple list organization
+    - Fractional positioning for flexible item ordering (1.0, 1.5, 2.0, etc.)
+    - Cascade deletion: deleting projects removes items but preserves issues
+    - Interactive confirmation prompts with TTY detection
+    - `--yes` flag for non-interactive mode (CI/CD friendly)
+    - Full JSON output support for all CLI commands
+    - Comprehensive error handling (duplicate names, not found, etc.)
+    - OpenAPI 3.0 documentation in Swagger UI
+
+### Database
+
+- **Migration 002**: Added `view_meta` column to `projects` table
+  - Stores JSON configuration for board/table views
+  - Auto-applied on first command execution via `ensureDatabase()`
+
+### API Changes
+
+- Added "Projects" tag to OpenAPI documentation
+- All project endpoints follow existing error response patterns
+
 ## 0.8.0 - 2025-10-24
 
 ### New Features

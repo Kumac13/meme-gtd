@@ -61,6 +61,8 @@ corepack prepare pnpm@9.0.0 --activate
 - コメント投稿・編集・削除
 - Bookmark機能
 - Task Status変更
+- Link管理（親子関係・関連付け）
+- Project管理（Board/Tableビュー対応）
 
 ## テスト実行
 ```bash
@@ -125,3 +127,10 @@ pnpm test
 | `mgtd link add` | issue間のリンク作成（`--type`, `--source`, `--target`, `--json` など） |
 | `mgtd link list` | 指定issueのリンク一覧表示（`--type`, `--json` など） |
 | `mgtd link remove` | リンク削除（確認プロンプト、`--yes`, `--json` など） |
+| `mgtd project create` | 新規プロジェクト作成（`--description`, `--view`, `--json` など） |
+| `mgtd project list` | プロジェクト一覧表示（`--json` など） |
+| `mgtd project view` | プロジェクト詳細とアイテム一覧表示（`--json` など） |
+| `mgtd project add` | プロジェクトにissueを追加（`--column`, `--json` など） |
+| `mgtd project remove` | プロジェクトからissueを削除（`--yes`, `--json` など） |
+| `mgtd project move` | アイテムの位置や列を変更（`--after`, `--column`, `--json` など） |
+| `mgtd project delete` | プロジェクト削除（確認プロンプト、`--yes`, `--json` など） |

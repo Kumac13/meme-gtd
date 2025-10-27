@@ -259,3 +259,6 @@ export class LabelService {
 
 // Link Service
 export { LinkService, type LinkServiceOptions } from './linkService.js';
+
+// Project Service
+export { ProjectService, type ProjectServiceOptions } from './projectService.js';
