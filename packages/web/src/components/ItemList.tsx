@@ -41,7 +41,7 @@ function isProject(item: Item): item is Project {
   return 'name' in item && 'description' in item;
 }
 
-export default function ItemList({ items, itemType, basePath }: ItemListProps) {
+export default function ItemList({ items, itemType: _itemType, basePath }: ItemListProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
       {items.map((item) => {
@@ -76,7 +76,7 @@ export default function ItemList({ items, itemType, basePath }: ItemListProps) {
                     <span>{formatRelativeTime(item.createdAt)}</span>
                   </div>
                 </>
-              ) : itemType === 'task' ? (
+              ) : isTask(item) ? (
                 <>
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <h2 className="text-base font-semibold text-gray-900">
