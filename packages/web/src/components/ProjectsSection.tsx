@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react';
 import { ProjectsService } from '../api/services/ProjectsService';
 import type { ProjectWithMeta } from '../types/project';
+import { ProjectManagementModal } from './ProjectManagementModal';
 
 interface ProjectsSectionProps {
   itemId: number;
@@ -17,22 +18,23 @@ export function ProjectsSection({ itemId, itemType }: ProjectsSectionProps) {
   const [associatedProjects, setAssociatedProjects] = useState<ProjectWithMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const fetchProjects = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const projects = await ProjectsService.getProjectsForIssue(itemId);
+      setAssociatedProjects(projects);
+    } catch (err) {
+      console.error('Failed to fetch projects:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch projects');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const projects = await ProjectsService.getProjectsForIssue(itemId);
-        setAssociatedProjects(projects);
-      } catch (err) {
-        console.error('Failed to fetch projects:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch projects');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProjects();
   }, [itemId]);
 
@@ -66,6 +68,7 @@ export function ProjectsSection({ itemId, itemType }: ProjectsSectionProps) {
         <h3 className="text-sm font-semibold text-gray-900">Projects</h3>
         <button
           type="button"
+          onClick={() => setIsModalOpen(true)}
           className="p-1 rounded hover:bg-gray-200 transition-colors"
           aria-label="Project settings"
           title="Manage projects"
@@ -133,6 +136,15 @@ export function ProjectsSection({ itemId, itemType }: ProjectsSectionProps) {
           </div>
         ))}
       </div>
+
+      {/* Project Management Modal */}
+      <ProjectManagementModal
+        itemId={itemId}
+        itemType={itemType}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onProjectsChanged={fetchProjects}
+      />
     </div>
   );
 }

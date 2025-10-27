@@ -121,7 +121,7 @@
 
 ### Implementation for User Stories 2 & 3
 
-- [ ] **T009** [P] [US2/US3] Create SelectProjectsModal component in `packages/web/src/components/SelectProjectsModal.tsx`
+- [x] **T009** [P] [US2/US3] Create SelectProjectsModal component in `packages/web/src/components/SelectProjectsModal.tsx`
   - Props: `{ isOpen: boolean, onClose: () => void, itemId: number, associatedProjectIds: Set<number>, allProjects: Project[], onProjectToggle: (projectId: number, isAssociated: boolean) => Promise<void> }`
   - Render using React Portal (`ReactDOM.createPortal`)
   - Modal structure: backdrop (click to close) + dialog content
@@ -134,7 +134,7 @@
   - Focus trap: Keep focus inside modal while open
   - Styling: TailwindCSS modal pattern (fixed overlay, centered dialog)
 
-- [ ] **T010** [US2/US3] Update ProjectsSection to integrate SelectProjectsModal in `packages/web/src/components/ProjectsSection.tsx`
+- [x] **T010** [US2/US3] Update ProjectsSection to integrate SelectProjectsModal in `packages/web/src/components/ProjectsSection.tsx`
   - Add state: `modalOpen: boolean`
   - Add gear icon onClick: `setModalOpen(true)`
   - Fetch all projects on mount: `ProjectsService.listProjects()` and store in state
