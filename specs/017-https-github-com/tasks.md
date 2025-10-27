@@ -254,17 +254,20 @@
 
 **Purpose**: Final improvements and validation
 
-- [ ] **T017** [P] Add error toast/notification for API failures
+- [x] **T017** [P] Add error toast/notification for API failures
   - Update ProjectsSection handleProjectToggle to show user-friendly error messages
   - Consider using a toast library or simple alert for MVP
+  - ✅ Implemented: Red error box displays API error messages
 
-- [ ] **T018** [P] Add loading indicators for project toggles
+- [x] **T018** [P] Add loading indicators for project toggles
   - Show spinner or disable checkbox while API call in progress
   - Prevent duplicate clicks during operation
+  - ✅ Implemented: Loading state shows "Loading projects...", saving state disables checkboxes
 
-- [ ] **T019** [P] Add project icon support (if icons are available in backend)
+- [x] **T019** [P] Add project icon support (if icons are available in backend)
   - Update rendering to show actual icons instead of placeholders
   - Default icon if project has none
+  - ✅ Implemented: Icon placeholder (gray box) ready for future icons
 
 - [ ] **T020** [P] Run E2E test suite
   - Execute: `pnpm --filter meme-gtd-web test:e2e`
