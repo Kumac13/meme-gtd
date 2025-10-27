@@ -46,7 +46,7 @@ describe('Swagger UI and OpenAPI Documentation', () => {
     // Verify info section
     assert.ok(spec.info, 'Should have info section');
     assert.strictEqual(spec.info.title, 'meme-gtd API');
-    assert.strictEqual(spec.info.version, '0.6.0');
+    assert.strictEqual(spec.info.version, '0.9.0');
     assert.ok(spec.info.description);
 
     // Verify paths section
