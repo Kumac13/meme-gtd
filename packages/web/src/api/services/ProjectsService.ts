@@ -69,6 +69,31 @@ export class ProjectsService {
   }
 
   /**
+   * Update project (name, description)
+   * @param id Project ID
+   * @param data Update data (name, description)
+   * @returns Updated project
+   */
+  static async updateProject(
+    id: string,
+    data: { name?: string; description?: string | null }
+  ): Promise<Project> {
+    const response = await fetch(`${API_BASE}/projects/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update project ${id}: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
    * Add item to project
    * @param projectId Project ID
    * @param data Request body with issueId, position, viewMeta
