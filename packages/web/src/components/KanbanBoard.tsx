@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
 import { ProjectDetail, ProjectItemWithIssue } from '../types/project';
-import { ProjectsService } from '../api/services/ProjectsService';
 import KanbanColumn from './KanbanColumn';
 import KanbanCard from './KanbanCard';
 
