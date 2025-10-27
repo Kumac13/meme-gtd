@@ -1,5 +1,5 @@
 import { useDraggable } from '@dnd-kit/core';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ProjectItemWithIssue } from '../types/project';
 
 interface KanbanCardProps {
@@ -7,6 +7,7 @@ interface KanbanCardProps {
 }
 
 export default function KanbanCard({ item }: KanbanCardProps) {
+  const navigate = useNavigate();
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: item.issueId.toString(),
     data: {
@@ -23,19 +24,25 @@ export default function KanbanCard({ item }: KanbanCardProps) {
 
   const detailPath = `/${item.issue.type}s/${item.issueId}`;
 
+  const handleClick = () => {
+    // Only navigate if not dragging
+    if (!isDragging) {
+      navigate(detailPath);
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
       className={`
         bg-white p-3 rounded border border-gray-200
-        hover:shadow-md transition-shadow
+        hover:shadow-md transition-shadow cursor-pointer
         ${isDragging ? 'opacity-50' : ''}
       `}
     >
-      <div className="flex items-start justify-between mb-2">
+      <div className="flex items-start justify-between mb-2" {...listeners}>
         <span className="text-xs text-gray-500">#{item.issueId}</span>
         <span className={`
           text-xs px-2 py-0.5 rounded
@@ -44,13 +51,12 @@ export default function KanbanCard({ item }: KanbanCardProps) {
           {item.issue.type}
         </span>
       </div>
-      <Link
-        to={detailPath}
-        className="text-sm font-medium text-gray-900 hover:text-github-green-600 block cursor-pointer"
-        onClick={(e) => e.stopPropagation()}
+      <div
+        onClick={handleClick}
+        className="text-sm font-medium text-gray-900 hover:text-github-green-600"
       >
         {item.issue.title}
-      </Link>
+      </div>
     </div>
   );
 }
