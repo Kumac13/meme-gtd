@@ -19,7 +19,7 @@ export default function ProjectDetail() {
         setLoading(true);
         setError(null);
         const data = await ProjectsService.getProject(id);
-        setProject(data);
+        setProject(data as ProjectDetailType);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load project');
       } finally {

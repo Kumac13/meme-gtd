@@ -94,6 +94,33 @@ export class ProjectsService {
   }
 
   /**
+   * Update project item (position and/or column)
+   * @param projectId Project ID
+   * @param issueId Issue ID
+   * @param data Update data (column, position)
+   * @returns Updated project item
+   */
+  static async updateProjectItem(
+    projectId: string | number,
+    issueId: string | number,
+    data: { column?: string; position?: number }
+  ): Promise<ProjectItem> {
+    const response = await fetch(`${API_BASE}/projects/${projectId}/items/${issueId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update item ${issueId} in project ${projectId}: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
    * Remove item from project
    * @param projectId Project ID
    * @param issueId Issue ID (task or memo)
