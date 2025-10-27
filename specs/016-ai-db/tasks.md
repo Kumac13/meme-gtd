@@ -24,10 +24,10 @@
 
 **Purpose**: Verify existing infrastructure that this feature depends on
 
-- [ ] T001 [P] Verify `packages/config/src/index.ts` handles environment variables correctly (read-only verification)
-- [ ] T002 [P] Verify existing integration tests in `packages/cli/test/` use temporary directories (read-only verification)
-- [ ] T003 [P] Verify existing `pnpm server:dev` in `packages/api/package.json` uses test DB (read-only verification)
-- [ ] T004 Create `test-data/` directory if it doesn't exist
+- [x] T001 [P] Verify `packages/config/src/index.ts` handles environment variables correctly (read-only verification)
+- [x] T002 [P] Verify existing integration tests in `packages/cli/test/` use temporary directories (read-only verification)
+- [x] T003 [P] Verify existing `pnpm server:dev` in `packages/api/package.json` uses test DB (read-only verification)
+- [x] T004 Create `test-data/` directory if it doesn't exist
 
 **Checkpoint**: Infrastructure verified - ready for user story implementation
 
@@ -49,7 +49,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Add `mgtd:test` script to `package.json` (root) with `DB_PATH=./test-data/test.db pnpm mgtd`
+- [x] T005 [US1] Add `mgtd:test` script to `package.json` (root) with `DB_PATH=./test-data/test.db pnpm mgtd`
 - [ ] T006 [US1] Test the wrapper: `pnpm mgtd:test init -d ./test-data/test.db -f` (should create test DB)
 - [ ] T007 [US1] Validate wrapper passes arguments: `pnpm mgtd:test task create -t "Test" --no-editor --json`
 - [ ] T008 [US1] Verify production DB unchanged: Check `~/.local/share/mgtd/issues.db` has 0 records (should still be empty from previous issue)
