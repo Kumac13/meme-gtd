@@ -4,6 +4,7 @@ import { TasksService } from '../api/services/TasksService';
 import EditableContent from './EditableContent';
 import CommentSection from './CommentSection';
 import LinkSection from './LinkSection';
+import { ProjectsSection } from './ProjectsSection';
 
 
 export interface BaseItem {
@@ -72,9 +73,9 @@ export default function ItemDetail({
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-2">
-      {/* Header */}
-      <div>
+    <div className="max-w-7xl mx-auto px-4 py-2">
+      {/* Header - Full width */}
+      <div className="mb-4">
         <Link
           to={basePath}
           className="text-github-green-600 hover:text-github-green-800 text-sm font-medium mb-4 inline-block"
@@ -119,7 +120,7 @@ export default function ItemDetail({
           </div>
         </div>
         {item.labels && item.labels.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap mb-3">
+          <div className="flex items-center gap-2 flex-wrap">
             {item.labels.map((label, idx) => (
               <span
                 key={idx}
@@ -136,22 +137,33 @@ export default function ItemDetail({
         )}
       </div>
 
-      {/* Links section */}
-      <LinkSection itemId={item.id} itemType={itemType} />
+      {/* Two column layout */}
+      <div className="flex gap-6 flex-col lg:flex-row lg:items-start">
+        {/* Main content (left column) */}
+        <div className="flex-1 min-w-0">
+          {/* Body content */}
+          <EditableContent
+            content={item.bodyMd}
+            createdAt={item.createdAt}
+            updatedAt={item.updatedAt}
+            onSave={handleUpdateBody}
+            onDelete={handleDeleteBody}
+            title={item.title}
+            showTitleEdit={itemType === 'task'}
+          />
 
-      {/* Body content */}
-      <EditableContent
-        content={item.bodyMd}
-        createdAt={item.createdAt}
-        updatedAt={item.updatedAt}
-        onSave={handleUpdateBody}
-        onDelete={handleDeleteBody}
-        title={item.title}
-        showTitleEdit={itemType === 'task'}
-      />
+          {/* Links section */}
+          <LinkSection itemId={item.id} itemType={itemType} />
 
-      {/* Comments section */}
-      <CommentSection itemId={item.id} itemType={itemType} />
+          {/* Comments section */}
+          <CommentSection itemId={item.id} itemType={itemType} />
+        </div>
+
+        {/* Sidebar (right column) */}
+        <div className="w-full lg:w-80 flex-shrink-0">
+          <ProjectsSection itemId={item.id} itemType={itemType} />
+        </div>
+      </div>
     </div>
   );
 }
