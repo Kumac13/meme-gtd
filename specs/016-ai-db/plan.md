@@ -87,3 +87,47 @@ This is a monorepo project with the following structure:
 
 *No violations detected. This section left empty.*
 
+---
+
+## Production DB Baseline (PRE-IMPLEMENTATION)
+
+**⚠️ CRITICAL**: This section records the production database state BEFORE implementation begins.
+
+**Absolute Path**: `/Users/kumac13/.local/share/mgtd/issues.db`
+
+**File Metadata**:
+- Size: 96KB
+- Last Modified: 2025-10-27 10:54
+
+**Data Content Snapshot** (taken 2025-10-27 11:33):
+
+**Issues Table** (2 records):
+```
+ID | Type | Title | Body    | Created At
+---|------|-------|---------|-------------------------
+1  | memo | ""    | "Memo"  | 2025-10-27T02:06:21.396Z
+2  | task | "Task"| "Task"  | 2025-10-27T02:06:33.904Z
+```
+
+**Projects Table** (1 record):
+```
+ID | Name      | Description | Created At
+---|-----------|-------------|-------------------
+1  | "proejct" | ""          | 2025-10-27T02:07:48Z
+```
+
+**Other Tables**:
+- Comments: 0 records
+- Links: 0 records
+- Labels: 0 records
+
+**Summary**:
+- Total Issues: 2 (1 memo, 1 task)
+- Total Projects: 1
+- No comments, links, or labels
+
+**⚠️ 絶対厳守**:
+- この実装中に本番DBに一切の変更を加えてはならない
+- 実装完了後、これらのデータが全て無傷で残っていることを確認する
+- **途中で間違って消して、それを元に修正したら殺す**
+
