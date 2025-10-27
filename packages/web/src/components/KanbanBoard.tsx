@@ -13,27 +13,36 @@ interface KanbanBoardProps {
 export default function KanbanBoard({ project, onProjectUpdate }: KanbanBoardProps) {
   const [dragError, setDragError] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Task status columns (from TaskStatus type)
+  const taskStatusColumns = ['Open', 'Next', 'Waiting', 'Scheduled', 'Done', 'Canceled'];
+
   // Group items by column
   const itemsByColumn = useMemo(() => {
-    const columns = project.viewMeta.columns || [];
     const grouped: Record<string, ProjectItemWithIssue[]> = {};
 
-    // Initialize all columns
-    columns.forEach(col => {
+    // Initialize task status columns
+    taskStatusColumns.forEach(col => {
       grouped[col] = [];
     });
 
+    // Initialize Documents column for memos
+    grouped['Documents'] = [];
+
     // Group items
     project.items.forEach(item => {
-      const column = item.viewMeta?.column;
-      if (column && grouped[column]) {
-        grouped[column].push(item);
-      } else {
-        // Items without valid column go to "Unassigned"
-        if (!grouped['Unassigned']) {
-          grouped['Unassigned'] = [];
+      if (item.issue.type === 'memo') {
+        // All memos go to Documents column
+        grouped['Documents'].push(item);
+      } else if (item.issue.type === 'task') {
+        // Tasks go to their status column
+        const status = item.issue.status;
+        if (status) {
+          // Capitalize first letter to match column names
+          const columnName = status.charAt(0).toUpperCase() + status.slice(1);
+          if (grouped[columnName]) {
+            grouped[columnName].push(item);
+          }
         }
-        grouped['Unassigned'].push(item);
       }
     });
 
@@ -43,16 +52,12 @@ export default function KanbanBoard({ project, onProjectUpdate }: KanbanBoardPro
     });
 
     return grouped;
-  }, [project.items, project.viewMeta.columns]);
+  }, [project.items]);
 
   const columns = useMemo(() => {
-    const cols = project.viewMeta.columns || [];
-    // Add "Unassigned" if there are unassigned items
-    if (itemsByColumn['Unassigned']?.length > 0) {
-      return [...cols, 'Unassigned'];
-    }
-    return cols;
-  }, [project.viewMeta.columns, itemsByColumn]);
+    // Always show all task status columns + Documents
+    return [...taskStatusColumns, 'Documents'];
+  }, []);
 
   function handleDragStart(event: DragStartEvent) {
     setActiveId(event.active.id as string);
@@ -64,26 +69,35 @@ export default function KanbanBoard({ project, onProjectUpdate }: KanbanBoardPro
 
     if (!over) return;
 
-    const itemId = Number(active.id);
-    const newColumn = over.id as string;
+    const issueId = Number(active.id);
+    const newColumnName = over.id as string;
 
     // Find the item being dragged
-    const item = project.items.find(i => i.issueId === itemId);
+    const item = project.items.find(i => i.issueId === issueId);
     if (!item) return;
 
-    // Check if column changed
-    const oldColumn = item.viewMeta?.column;
-    if (oldColumn === newColumn) return;
+    // Memos can't be dragged out of Documents column
+    if (item.issue.type === 'memo' && newColumnName !== 'Documents') return;
+    if (item.issue.type === 'memo') return; // Memos stay in Documents
+
+    // For tasks, check if status changed
+    const oldStatus = item.issue.status;
+    const newStatus = newColumnName.toLowerCase() as 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
+
+    if (oldStatus === newStatus) return;
 
     // Store original project for potential revert
     const originalProject = { ...project, items: [...project.items] };
 
-    // Optimistic update: update local state immediately
+    // Optimistic update: update task status in local state
     const updatedItems = project.items.map(i => {
-      if (i.issueId === itemId) {
+      if (i.issueId === issueId && i.issue.type === 'task') {
         return {
           ...i,
-          viewMeta: { ...i.viewMeta, column: newColumn }
+          issue: {
+            ...i.issue,
+            status: newStatus
+          }
         };
       }
       return i;
@@ -98,10 +112,18 @@ export default function KanbanBoard({ project, onProjectUpdate }: KanbanBoardPro
     setDragError(null);
 
     try {
-      // API call to persist change
-      await ProjectsService.updateProjectItem(project.id, itemId, {
-        column: newColumn
+      // API call to update task status
+      const response = await fetch(`/api/tasks/${issueId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update task status: ${response.statusText}`);
+      }
     } catch (err) {
       // Revert on error
       onProjectUpdate(originalProject);

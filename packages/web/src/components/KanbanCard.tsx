@@ -1,4 +1,5 @@
 import { useDraggable } from '@dnd-kit/core';
+import { Link } from 'react-router-dom';
 import { ProjectItemWithIssue } from '../types/project';
 
 interface KanbanCardProps {
@@ -20,12 +21,13 @@ export default function KanbanCard({ item }: KanbanCardProps) {
       }
     : undefined;
 
+  const detailPath = `/${item.issue.type}s/${item.issueId}`;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
       className={`
         bg-white p-3 rounded border border-gray-200
         cursor-move hover:shadow-md transition-shadow
@@ -41,9 +43,13 @@ export default function KanbanCard({ item }: KanbanCardProps) {
           {item.issue.type}
         </span>
       </div>
-      <p className="text-sm font-medium text-gray-900">
+      <Link
+        to={detailPath}
+        className="text-sm font-medium text-gray-900 hover:text-github-green-600 block"
+        {...listeners}
+      >
         {item.issue.title}
-      </p>
+      </Link>
     </div>
   );
 }

@@ -30,7 +30,7 @@ export default function KanbanColumn({ column, items }: KanbanColumnProps) {
         ref={setNodeRef}
         className={`
           flex-1 bg-gray-50 p-4 rounded-b-lg border border-gray-200
-          min-h-[200px] space-y-2
+          min-h-[500px] space-y-2
           ${isOver ? 'bg-github-green-50 border-github-green-300' : ''}
         `}
       >
