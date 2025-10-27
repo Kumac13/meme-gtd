@@ -67,11 +67,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T010 [US2] Verify `pnpm --filter meme-gtd-cli test` uses temporary directories (validation only, no changes)
-- [ ] T011 [US2] Verify `pnpm --filter meme-gtd-api test` uses test fixtures (validation only, no changes)
-- [ ] T012 [US2] Run full test suite: `pnpm test` and verify 82+ tests pass
-- [ ] T013 [US2] Verify production DB still has 0 records after running all tests (validation)
-- [ ] T014 [US2] Document test execution in `quickstart.md` (already done in planning phase)
+- [x] T010 [US2] Verify `pnpm --filter meme-gtd-cli test` uses temporary directories (validation only, no changes)
+- [x] T011 [US2] Verify `pnpm --filter meme-gtd-api test` uses test fixtures (validation only, no changes)
+- [x] T012 [US2] Run full test suite: `pnpm test` and verify 82+ tests pass
+- [x] T013 [US2] Verify production DB still has 0 records after running all tests (validation)
+- [x] T014 [US2] Document test execution in `quickstart.md` (already done in planning phase)
 
 **Checkpoint**: User Story 2 complete - All test commands safely isolated from production
 
@@ -85,10 +85,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Verify `mgtd --help` works without environment variables (validation only)
-- [ ] T016 [US3] Verify `pnpm mgtd task list --json` would use production DB if run (DON'T RUN - just verify command structure)
-- [ ] T017 [US3] Document that explicit `DB_PATH` override still works: Test `DB_PATH=/tmp/custom.db pnpm mgtd:test init -d /tmp/custom.db -f`
-- [ ] T018 [US3] Verify no changes required to existing user workflows (documentation review)
+- [x] T015 [US3] Verify `mgtd --help` works without environment variables (validation only)
+- [x] T016 [US3] Verify `pnpm mgtd task list --json` would use production DB if run (DON'T RUN - just verify command structure)
+- [x] T017 [US3] Document that explicit `DB_PATH` override still works: Test `DB_PATH=/tmp/custom.db pnpm mgtd:test init -d /tmp/custom.db -f`
+- [x] T018 [US3] Verify no changes required to existing user workflows (documentation review)
 
 **Checkpoint**: User Story 3 complete - Production commands work as before, backward compatibility maintained
 
