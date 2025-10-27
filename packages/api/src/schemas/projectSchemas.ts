@@ -69,6 +69,7 @@ export const ProjectItemWithIssueSchema = ProjectItemSchema.extend({
     id: z.number().int().positive().describe('Issue ID'),
     type: z.enum(['task', 'memo']).describe('Issue type'),
     title: z.string().describe('Issue title'),
+    status: z.enum(['open', 'next', 'waiting', 'scheduled', 'done', 'canceled']).nullable().describe('Task status (null for memos)'),
   }).describe('Issue information'),
 });
 
