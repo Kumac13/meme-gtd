@@ -4,7 +4,7 @@
  * User Stories 2 & 3: Add/Remove Projects
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ProjectsService } from '../api/services/ProjectsService';
 import type { Project, ProjectWithMeta } from '../types/project';
 
@@ -28,6 +28,7 @@ export function ProjectManagementModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -87,6 +88,15 @@ export function ProjectManagementModal({
     }
   };
 
+  // Filter projects based on search query
+  const filteredProjects = useMemo(() => {
+    if (!searchQuery.trim()) return allProjects;
+    const query = searchQuery.toLowerCase();
+    return allProjects.filter((project) =>
+      project.name.toLowerCase().includes(query)
+    );
+  }, [allProjects, searchQuery]);
+
   if (!isOpen) return null;
 
   return (
@@ -128,6 +138,17 @@ export function ProjectManagementModal({
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-4">
+            {/* Search input */}
+            <div className="mb-4">
+              <input
+                type="text"
+                placeholder="Filter projects"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500"
+              />
+            </div>
+
             {loading && (
               <div className="text-center py-8 text-gray-500">
                 Loading projects...
@@ -140,15 +161,15 @@ export function ProjectManagementModal({
               </div>
             )}
 
-            {!loading && allProjects.length === 0 && (
+            {!loading && filteredProjects.length === 0 && (
               <div className="text-center py-8 text-gray-500">
-                No projects available
+                {searchQuery.trim() ? 'No projects match your search' : 'No projects available'}
               </div>
             )}
 
-            {!loading && allProjects.length > 0 && (
+            {!loading && filteredProjects.length > 0 && (
               <div className="space-y-2">
-                {allProjects.map((project) => {
+                {filteredProjects.map((project) => {
                   const isAssociated = associatedProjectIds.has(project.id);
                   return (
                     <label

@@ -180,7 +180,7 @@
 
 ### Implementation for User Story 4
 
-- [ ] **T012** [US4] Add search functionality to SelectProjectsModal in `packages/web/src/components/SelectProjectsModal.tsx`
+- [x] **T012** [US4] Add search functionality to SelectProjectsModal in `packages/web/src/components/SelectProjectsModal.tsx`
   - Add state: `searchQuery: string`
   - Add debounced search value using `useMemo` or custom debounce hook (300ms delay)
   - Add search input at top of modal: placeholder "Filter projects"
