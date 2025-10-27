@@ -40,7 +40,7 @@
 
 **⚠️ CRITICAL**: No user story implementation can begin until this phase is complete
 
-- [ ] **T003** Extend ProjectsService with `getProjectsForIssue` method in `packages/web/src/api/services/ProjectsService.ts`
+- [x] **T003** Extend ProjectsService with `getProjectsForIssue` method in `packages/web/src/api/services/ProjectsService.ts`
   - Add static method: `getProjectsForIssue(issueId: number): Promise<ProjectWithMeta[]>`
   - Implementation: Fetch all projects via `listProjects()`, then fetch each project detail via `getProject(id)` to extract items matching `issueId`
   - For matched items, construct `ProjectWithMeta` with status from `viewMeta` (default: "No status")
