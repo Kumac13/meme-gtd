@@ -134,8 +134,11 @@ export class ProjectsService {
 
         if (item) {
           associatedProjects.push({
-            ...project,
-            status: item.viewMeta?.status || 'No status',
+            id: project.id,
+            name: project.name,
+            description: project.description || '',
+            createdAt: project.createdAt,
+            status: 'No status', // Feature 017 sidebar status - not used in Feature 019
             itemId: item.id,
           });
         }

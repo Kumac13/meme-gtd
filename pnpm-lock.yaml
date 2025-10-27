@@ -386,6 +386,9 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.0)
+      meme-gtd-shared:
+        specifier: workspace:^
+        version: link:../shared
       react:
         specifier: ^19.2.0
         version: 19.2.0

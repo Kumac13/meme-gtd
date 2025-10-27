@@ -1,34 +1,23 @@
 /**
- * TypeScript type definitions for Projects Sidebar feature
- * Feature: 017-https-github-com
+ * TypeScript type definitions for Projects
+ *
+ * Core project types are re-exported from shared package.
+ * Feature 017 sidebar-specific types are defined here.
  */
 
-/**
- * Project entity (matches backend Project schema)
- */
-export interface Project {
-  id: number;
-  name: string;
-  description: string;
-  createdAt: string; // ISO 8601 timestamp
-}
+// Core project types from shared package (Feature 019)
+export type {
+  Project,
+  ProjectItem,
+  ProjectItemWithIssue,
+  ProjectDetail,
+  ViewMeta,
+  ViewType
+} from 'meme-gtd-shared';
 
 /**
- * Project item association (matches backend ProjectItem schema)
- */
-export interface ProjectItem {
-  id: number;
-  projectId: number;
-  issueId: number;
-  position: number;
-  viewMeta?: ProjectViewMeta; // Parsed from JSON string
-  createdAt: string;
-  updatedAt: string;
-}
-
-/**
- * View metadata stored in project_items.view_meta
- * Defines how an item appears within a specific project
+ * View metadata stored in project_items.view_meta (Feature 017)
+ * Defines how an item appears within a specific project in sidebar
  */
 export interface ProjectViewMeta {
   status?: ProjectStatus;
@@ -36,7 +25,7 @@ export interface ProjectViewMeta {
 }
 
 /**
- * Project status values
+ * Project status values (Feature 017)
  */
 export type ProjectStatus =
   | 'No status'
@@ -46,16 +35,20 @@ export type ProjectStatus =
   | 'Blocked';
 
 /**
- * Enriched project with association metadata
+ * Enriched project with association metadata (Feature 017)
  * Used in sidebar display
  */
-export interface ProjectWithMeta extends Omit<Project, 'status'> {
+export interface ProjectWithMeta {
+  id: number;
+  name: string;
+  description: string;
+  createdAt: string;
   status: ProjectStatus;      // From view_meta (different from Project.status which is 'open'|'closed')
   itemId?: number;            // project_items.id (for update/delete operations)
 }
 
 /**
- * Recent projects tracking (stored in localStorage)
+ * Recent projects tracking (stored in localStorage) (Feature 017)
  */
 export interface RecentProjectsStorage {
   projectIds: number[];        // Last 5 project IDs (ordered by recency)
@@ -63,10 +56,15 @@ export interface RecentProjectsStorage {
 }
 
 /**
- * Project list item (for modal display)
+ * Project list item (for modal display) (Feature 017)
  */
 export interface ProjectListItem {
-  project: Project;
+  project: {
+    id: number;
+    name: string;
+    description: string;
+    createdAt: string;
+  };
   isAssociated: boolean;       // Checkbox checked state
   isRecent: boolean;           // Show in Recent section
 }
