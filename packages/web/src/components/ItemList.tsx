@@ -79,7 +79,7 @@ export default function ItemList({ items, itemType: _itemType, basePath }: ItemL
               ) : isTask(item) ? (
                 <>
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <h2 className="text-base font-semibold text-gray-900">
+                    <h2 className="text-base text-gray-900">
                       {item.title || `Task #${item.id}`}
                     </h2>
                     {item.labels && item.labels.length > 0 && (
