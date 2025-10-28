@@ -150,6 +150,46 @@ export const attachLabelToIssue = (
 };
 
 /**
+ * Detach a label from an issue (idempotent operation)
+ * @param db Database instance
+ * @param issueId Issue ID
+ * @param labelId Label ID
+ * @throws Error if issue or label does not exist
+ */
+export const detachLabelFromIssue = (
+  db: Database.Database,
+  issueId: number,
+  labelId: number
+): void => {
+  // Validate issue exists and is not deleted
+  const issue = db
+    .prepare('SELECT id, is_deleted FROM issues WHERE id = @id')
+    .get({ id: issueId }) as
+    | { id: number; is_deleted: number }
+    | undefined;
+
+  if (!issue || issue.is_deleted === 1) {
+    throw new Error(`Issue #${issueId} not found`);
+  }
+
+  // Validate label exists
+  const label = db
+    .prepare('SELECT id FROM labels WHERE id = @id')
+    .get({ id: labelId }) as
+    | { id: number }
+    | undefined;
+
+  if (!label) {
+    throw new Error(`Label #${labelId} not found`);
+  }
+
+  // Remove assignment (idempotent operation - succeeds even if not assigned)
+  db.prepare(
+    'DELETE FROM issue_labels WHERE issue_id = @issueId AND label_id = @labelId'
+  ).run({ issueId, labelId });
+};
+
+/**
  * Delete a label (CASCADE removes from all issues)
  * @param db Database instance
  * @param name Label name
