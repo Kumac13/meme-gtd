@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: meme-gtd API
   description: HTTP REST API for meme-gtd CLI operations
-  version: 0.6.0
+  version: 0.9.0
 components:
   schemas: {}
 paths:
@@ -196,6 +196,10 @@ paths:
                       items:
                         type: string
                       description: Array of label names assigned to this memo
+                    commentCount:
+                      type: integer
+                      minimum: 0
+                      description: Number of non-deleted comments on this memo
                   required:
                     - id
                     - type
@@ -209,6 +213,7 @@ paths:
                     - createdAt
                     - updatedAt
                     - labels
+                    - commentCount
                   additionalProperties: false
         "400":
           description: Default Response
@@ -1397,6 +1402,10 @@ paths:
                       items:
                         type: string
                       description: Array of label names assigned to this task
+                    commentCount:
+                      type: integer
+                      minimum: 0
+                      description: Number of non-deleted comments on this task
                   required:
                     - id
                     - type
@@ -1410,6 +1419,7 @@ paths:
                     - createdAt
                     - updatedAt
                     - labels
+                    - commentCount
                   additionalProperties: false
         "400":
           description: Default Response
@@ -3218,8 +3228,19 @@ paths:
       summary: List issue links
       tags:
         - Links
-      description: List all links for a given issue with direction
+      description: List all links for a given issue with direction. Optionally filter by link type using ?type= query parameter.
       parameters:
+        - schema:
+            type: string
+            enum:
+              - parent
+              - child
+              - relates
+              - derived_from
+          in: query
+          name: type
+          required: false
+          description: Filter by link type
         - schema:
             type: string
             pattern: ^\d+$
@@ -3270,6 +3291,29 @@ paths:
                         - outgoing
                         - incoming
                       description: Link direction relative to the queried issue
+                    targetIssue:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                          description: Target issue ID
+                        type:
+                          type: string
+                          enum:
+                            - task
+                            - memo
+                          description: Target issue type
+                        title:
+                          type: string
+                          description: Target issue title (task title or memo body preview)
+                      required:
+                        - id
+                        - type
+                        - title
+                      additionalProperties: false
+                      description: Information about the target issue in this link
                   required:
                     - id
                     - sourceIssueId
@@ -3277,7 +3321,31 @@ paths:
                     - linkType
                     - createdAt
                     - direction
+                    - targetIssue
                   additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -3391,6 +3459,1033 @@ paths:
                   - error
                   - message
                 additionalProperties: false
+  /api/projects:
+    post:
+      operationId: createProject
+      summary: Create project
+      tags:
+        - Projects
+      description: Create a new project
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                  description: Project name (must be unique)
+                description:
+                  type: string
+                  nullable: true
+                  description: Optional project description
+                view:
+                  type: string
+                  enum:
+                    - board
+                    - table
+                  default: board
+                  description: View type (defaults to board)
+              required:
+                - name
+              additionalProperties: false
+        required: true
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique project ID
+                  name:
+                    type: string
+                    description: Project name
+                  description:
+                    type: string
+                    nullable: true
+                    description: Project description
+                  viewMeta:
+                    type: object
+                    properties:
+                      viewType:
+                        type: string
+                        enum:
+                          - board
+                          - table
+                        description: "View type: board or table"
+                      columns:
+                        type: array
+                        items:
+                          type: string
+                        description: Column names for board view
+                    required:
+                      - viewType
+                    additionalProperties: false
+                    description: View configuration
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                required:
+                  - id
+                  - name
+                  - description
+                  - viewMeta
+                  - createdAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    get:
+      operationId: listProjects
+      summary: List projects
+      tags:
+        - Projects
+      description: List all projects
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Unique project ID
+                    name:
+                      type: string
+                      description: Project name
+                    description:
+                      type: string
+                      nullable: true
+                      description: Project description
+                    viewMeta:
+                      type: object
+                      properties:
+                        viewType:
+                          type: string
+                          enum:
+                            - board
+                            - table
+                          description: "View type: board or table"
+                        columns:
+                          type: array
+                          items:
+                            type: string
+                          description: Column names for board view
+                      required:
+                        - viewType
+                      additionalProperties: false
+                      description: View configuration
+                    createdAt:
+                      type: string
+                      format: date-time
+                      description: Creation timestamp
+                  required:
+                    - id
+                    - name
+                    - description
+                    - viewMeta
+                    - createdAt
+                  additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/projects/{id}:
+    get:
+      operationId: getProject
+      summary: Get project
+      tags:
+        - Projects
+      description: Get project details with associated items
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Project ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique project ID
+                  name:
+                    type: string
+                    description: Project name
+                  description:
+                    type: string
+                    nullable: true
+                    description: Project description
+                  viewMeta:
+                    type: object
+                    properties:
+                      viewType:
+                        type: string
+                        enum:
+                          - board
+                          - table
+                        description: "View type: board or table"
+                      columns:
+                        type: array
+                        items:
+                          type: string
+                        description: Column names for board view
+                    required:
+                      - viewType
+                    additionalProperties: false
+                    description: View configuration
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                          description: Project item ID
+                        projectId:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                          description: Project ID
+                        issueId:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                          description: Issue ID
+                        position:
+                          type: number
+                          description: Position in project
+                        viewMeta:
+                          type: object
+                          properties:
+                            column:
+                              type: string
+                          additionalProperties: false
+                          nullable: true
+                          description: Item view metadata
+                        createdAt:
+                          type: string
+                          format: date-time
+                          description: Creation timestamp
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          description: Last update timestamp
+                        issue:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              exclusiveMinimum: true
+                              minimum: 0
+                              description: Issue ID
+                            type:
+                              type: string
+                              enum:
+                                - task
+                                - memo
+                              description: Issue type
+                            title:
+                              type: string
+                              description: Issue title
+                            status:
+                              type: string
+                              enum:
+                                - open
+                                - next
+                                - waiting
+                                - scheduled
+                                - done
+                                - canceled
+                              nullable: true
+                              description: Task status (null for memos)
+                          required:
+                            - id
+                            - type
+                            - title
+                            - status
+                          additionalProperties: false
+                          description: Issue information
+                      required:
+                        - id
+                        - projectId
+                        - issueId
+                        - position
+                        - viewMeta
+                        - createdAt
+                        - updatedAt
+                        - issue
+                      additionalProperties: false
+                    description: Project items with issue information
+                required:
+                  - id
+                  - name
+                  - description
+                  - viewMeta
+                  - createdAt
+                  - items
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    patch:
+      operationId: updateProject
+      summary: Update project
+      tags:
+        - Projects
+      description: Update project name and/or description
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                  description: Project name
+                description:
+                  type: string
+                  nullable: true
+                  description: Project description
+              additionalProperties: false
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Project ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique project ID
+                  name:
+                    type: string
+                    description: Project name
+                  description:
+                    type: string
+                    nullable: true
+                    description: Project description
+                  viewMeta:
+                    type: object
+                    properties:
+                      viewType:
+                        type: string
+                        enum:
+                          - board
+                          - table
+                        description: "View type: board or table"
+                      columns:
+                        type: array
+                        items:
+                          type: string
+                        description: Column names for board view
+                    required:
+                      - viewType
+                    additionalProperties: false
+                    description: View configuration
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                required:
+                  - id
+                  - name
+                  - description
+                  - viewMeta
+                  - createdAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    delete:
+      operationId: deleteProject
+      summary: Delete project
+      tags:
+        - Projects
+      description: Delete a project (cascades to project items, issues remain intact)
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Project ID
+      responses:
+        "204":
+          description: Default Response
+          content:
+            application/json:
+              schema: {}
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/projects/{id}/items:
+    post:
+      operationId: addProjectItem
+      summary: Add item to project
+      tags:
+        - Projects
+      description: Add an issue (task or memo) to a project
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                issueId:
+                  type: integer
+                  exclusiveMinimum: true
+                  minimum: 0
+                  description: Issue ID to add
+                position:
+                  type: number
+                  description: Position in project (defaults to end)
+                column:
+                  type: string
+                  nullable: true
+                  description: Board column name
+              required:
+                - issueId
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Project ID
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Project item ID
+                  projectId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Project ID
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Issue ID
+                  position:
+                    type: number
+                    description: Position in project
+                  viewMeta:
+                    type: object
+                    properties:
+                      column:
+                        type: string
+                    additionalProperties: false
+                    nullable: true
+                    description: Item view metadata
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - projectId
+                  - issueId
+                  - position
+                  - viewMeta
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/projects/{id}/items/{issueId}:
+    patch:
+      operationId: updateProjectItem
+      summary: Update project item
+      tags:
+        - Projects
+      description: Move item to new position or column
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                position:
+                  type: number
+                  description: New position
+                column:
+                  type: string
+                  nullable: true
+                  description: New column
+              additionalProperties: false
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Project ID
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: issueId
+          required: true
+          description: Issue ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Project item ID
+                  projectId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Project ID
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Issue ID
+                  position:
+                    type: number
+                    description: Position in project
+                  viewMeta:
+                    type: object
+                    properties:
+                      column:
+                        type: string
+                    additionalProperties: false
+                    nullable: true
+                    description: Item view metadata
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - projectId
+                  - issueId
+                  - position
+                  - viewMeta
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    delete:
+      operationId: removeProjectItem
+      summary: Remove item from project
+      tags:
+        - Projects
+      description: Remove an issue from a project (issue itself remains intact)
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Project ID
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: issueId
+          required: true
+          description: Issue ID
+      responses:
+        "204":
+          description: Default Response
+          content:
+            application/json:
+              schema: {}
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
 servers:
   - url: http://localhost:3000
     description: Development server
@@ -3403,5 +4498,7 @@ tags:
     description: Label management endpoints
   - name: Links
     description: Link management endpoints
+  - name: Projects
+    description: Project management endpoints
   - name: Comments
     description: Comment management endpoints
