@@ -233,3 +233,10 @@ git tag vX.Y.Z
 - 指示から外れる判断が必要な場合は事前に確認を取る
 - 実装中は論理的な区切りごとにコミットを作成し、変更は順次記録する
 - 機能追加や変更時は関連ドキュメント（README.mdやdocs/）を必ず更新する
+
+## Active Technologies
+- TypeScript 5.5.4 / React 19.2.0 / Node.js 22+ (020-web-label-management)
+- SQLite database (already implemented with `labels` and `issue_labels` tables) (020-web-label-management)
+
+## Recent Changes
+- 020-web-label-management: Added TypeScript 5.5.4 / React 19.2.0 / Node.js 22+
