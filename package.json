@@ -7,7 +7,7 @@
   "type": "module",
   "packageManager": "pnpm@9.0.0",
   "scripts": {
-    "build": "pnpm build:web && pnpm -r build",
+    "build": "pnpm --filter meme-gtd-shared build && pnpm build:web && pnpm -r build",
     "build:web": "pnpm --filter meme-gtd-web build",
     "dev:web": "pnpm --filter meme-gtd-web dev",
     "server:start": "pnpm --filter meme-gtd-api start",
