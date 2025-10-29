@@ -88,13 +88,13 @@ Phase 8 (Polish) - Final touches
 
 ### Tasks
 
-- [ ] T006 Implement `detachLabelFromIssue()` in `packages/db/src/labelRepository.ts` (validates issue/label exist, removes assignment)
-- [ ] T007 Add DELETE `/api/issues/:issueId/labels/:labelId` route handler in `packages/api/src/routes/labels.ts`
-- [ ] T008 [P] Add Zod schema for DELETE endpoint parameters in `packages/api/src/schemas/labelSchemas.ts`
-- [ ] T009 [P] Update OpenAPI spec with DELETE endpoint in `packages/api/docs/api/openapi.yaml`
-- [ ] T010 Add integration tests for DELETE endpoint in `packages/api/test/integration/labels.test.ts` (success, 404 errors, idempotency)
-- [ ] T011 Run backend integration tests to verify DELETE endpoint works (`pnpm --filter meme-gtd-api test`)
-- [ ] T012 Regenerate Web API client (`pnpm --filter meme-gtd-web generate:api`) to add `removeLabelFromIssue()` method
+- [X] T006 Implement `detachLabelFromIssue()` in `packages/db/src/labelRepository.ts` (validates issue/label exist, removes assignment)
+- [X] T007 Add DELETE `/api/issues/:issueId/labels/:labelId` route handler in `packages/api/src/routes/labels.ts`
+- [X] T008 [P] Add Zod schema for DELETE endpoint parameters in `packages/api/src/schemas/labelSchemas.ts`
+- [X] T009 [P] Update OpenAPI spec with DELETE endpoint in `packages/api/docs/api/openapi.yaml`
+- [X] T010 Add integration tests for DELETE endpoint in `packages/api/test/integration/labels.test.ts` (success, 404 errors, idempotency)
+- [X] T011 Run backend integration tests to verify DELETE endpoint works (`pnpm --filter meme-gtd-api test`)
+- [X] T012 Regenerate Web API client (`pnpm --filter meme-gtd-web generate:api`) to add `removeLabelFromIssue()` method
 
 **Parallel Opportunities**: T008 and T009 can run in parallel (independent files).
 
