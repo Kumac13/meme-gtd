@@ -5,6 +5,7 @@ import EditableContent from './EditableContent';
 import CommentSection from './CommentSection';
 import LinkSection from './LinkSection';
 import { ProjectsSection } from './ProjectsSection';
+import { LabelBadge } from './LabelBadge';
 
 
 export interface BaseItem {
@@ -46,15 +47,6 @@ export default function ItemDetail({
   onStatusChange,
   bookmarking,
 }: ItemDetailProps) {
-  const getLabelColor = (label: string): string => {
-    let hash = 0;
-    for (let i = 0; i < label.length; i++) {
-      hash = label.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const hue = Math.abs(hash) % 360;
-    return `hsl(${hue}, 70%, 80%)`;
-  };
-
   const handleUpdateBody = async (newBody: string, newTitle?: string) => {
     const updatedItem =
       itemType === 'memo'
@@ -122,16 +114,7 @@ export default function ItemDetail({
         {item.labels && item.labels.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
             {item.labels.map((label, idx) => (
-              <span
-                key={idx}
-                className="px-2 py-0.5 text-xs font-medium rounded"
-                style={{
-                  backgroundColor: getLabelColor(label),
-                  color: '#000',
-                }}
-              >
-                {label}
-              </span>
+              <LabelBadge key={idx} name={label} />
             ))}
           </div>
         )}
