@@ -122,6 +122,31 @@ export class LabelsService {
         });
     }
     /**
+     * Remove label from issue
+     * Remove a label assignment from an issue (idempotent)
+     * @param issueId Issue ID (memo or task)
+     * @param labelId Label ID to remove
+     * @returns void
+     * @throws ApiError
+     */
+    public static removeLabelFromIssue(
+        issueId: string,
+        labelId: number,
+    ): CancelablePromise<void> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/issues/{issueId}/labels/{labelId}',
+            path: {
+                'issueId': issueId,
+                'labelId': labelId,
+            },
+            errors: {
+                404: `Default Response`,
+                500: `Default Response`,
+            },
+        });
+    }
+    /**
      * Delete label
      * Delete a label by name
      * @param name Label name

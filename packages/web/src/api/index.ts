@@ -11,4 +11,5 @@ export { CommentsService } from './services/CommentsService';
 export { LabelsService } from './services/LabelsService';
 export { LinksService } from './services/LinksService';
 export { MemosService } from './services/MemosService';
+export { ProjectsService } from './services/ProjectsService';
 export { TasksService } from './services/TasksService';

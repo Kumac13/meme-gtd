@@ -64,13 +64,15 @@ export class LinksService {
     }
     /**
      * List issue links
-     * List all links for a given issue with direction
+     * List all links for a given issue with direction. Optionally filter by link type using ?type= query parameter.
      * @param id Issue ID
+     * @param type Filter by link type
      * @returns any Default Response
      * @throws ApiError
      */
     public static listIssueLinks(
         id: string,
+        type?: 'parent' | 'child' | 'relates' | 'derived_from',
     ): CancelablePromise<Array<{
         /**
          * Unique link ID
@@ -96,6 +98,23 @@ export class LinksService {
          * Link direction relative to the queried issue
          */
         direction: 'outgoing' | 'incoming';
+        /**
+         * Information about the target issue in this link
+         */
+        targetIssue: {
+            /**
+             * Target issue ID
+             */
+            id: number;
+            /**
+             * Target issue type
+             */
+            type: 'task' | 'memo';
+            /**
+             * Target issue title (task title or memo body preview)
+             */
+            title: string;
+        };
     }>> {
         return __request(OpenAPI, {
             method: 'GET',
@@ -103,7 +122,11 @@ export class LinksService {
             path: {
                 'id': id,
             },
+            query: {
+                'type': type,
+            },
             errors: {
+                400: `Default Response`,
                 404: `Default Response`,
                 500: `Default Response`,
             },
