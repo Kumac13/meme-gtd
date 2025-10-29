@@ -4,7 +4,7 @@
  * User Story 1: Assign Existing Labels to Tasks/Memos
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { LabelsService } from '../api/services/LabelsService';
 import { LabelBadge } from './LabelBadge';
 import { useRecentLabels } from '../hooks/useRecentLabels';
@@ -39,7 +39,7 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
 
   const { addRecentLabel, getRecentLabels } = useRecentLabels();
 
-  const fetchLabels = async () => {
+  const fetchLabels = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -51,11 +51,11 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchLabels();
-  }, []);
+  }, [fetchLabels]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -76,7 +76,7 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isDropdownOpen]);
 
-  const handleToggleLabel = async (labelId: number, isCurrentlyAssigned: boolean) => {
+  const handleToggleLabel = useCallback(async (labelId: number, isCurrentlyAssigned: boolean) => {
     try {
       setSaving(true);
       setError(null);
@@ -96,9 +96,9 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
     } finally {
       setSaving(false);
     }
-  };
+  }, [itemId, addRecentLabel, onLabelsChanged]);
 
-  const handleCreateLabel = async () => {
+  const handleCreateLabel = useCallback(async () => {
     if (!newLabelName.trim()) {
       setError('Label name is required');
       return;
@@ -132,9 +132,9 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
     } finally {
       setSaving(false);
     }
-  };
+  }, [newLabelName, newLabelDescription, itemId, addRecentLabel, onLabelsChanged, fetchLabels]);
 
-  const handleDeleteLabel = async (labelName: string) => {
+  const handleDeleteLabel = useCallback(async (labelName: string) => {
     if (!window.confirm(`Are you sure you want to delete label "${labelName}"? This will remove it from all items and cannot be undone.`)) {
       return;
     }
@@ -158,16 +158,26 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
       setSaving(false);
       setDeletingLabelName(null);
     }
-  };
+  }, [onLabelsChanged, fetchLabels]);
 
-  const filteredLabels = allLabels.filter((label) =>
-    searchQuery.trim()
-      ? label.name.toLowerCase().includes(searchQuery.toLowerCase())
-      : true
+  const filteredLabels = useMemo(() =>
+    allLabels.filter((label) =>
+      searchQuery.trim()
+        ? label.name.toLowerCase().includes(searchQuery.toLowerCase())
+        : true
+    ),
+    [allLabels, searchQuery]
   );
 
-  const recentLabels = getRecentLabels(filteredLabels);
-  const assignedSet = new Set(assignedLabels);
+  const recentLabels = useMemo(() =>
+    getRecentLabels(filteredLabels),
+    [getRecentLabels, filteredLabels]
+  );
+
+  const assignedSet = useMemo(() =>
+    new Set(assignedLabels),
+    [assignedLabels]
+  );
 
   // Show loading state
   if (loading) {
