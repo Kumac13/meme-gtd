@@ -5,6 +5,7 @@ import {
   listLabelsHandler,
   createLabelHandler,
   assignLabelHandler,
+  removeLabelFromIssueHandler,
   deleteLabelHandler,
 } from '../handlers/labelHandlers.js';
 import {
@@ -13,6 +14,7 @@ import {
   LabelSchema,
   LabelNameParamsSchema,
   IssueIdParamsSchema,
+  RemoveLabelParamsSchema,
 } from '../schemas/labelSchemas.js';
 import { ErrorResponseSchema } from '../schemas/errorSchemas.js';
 
@@ -83,6 +85,26 @@ export async function labelRoutes(app: FastifyInstance) {
       },
     },
     assignLabelHandler
+  );
+
+  // DELETE /api/issues/:issueId/labels/:labelId - Remove label from issue
+  server.delete(
+    '/api/issues/:issueId/labels/:labelId',
+    {
+      schema: {
+        tags: ['Labels'],
+        summary: 'Remove label from issue',
+        description: 'Remove a label assignment from an issue (idempotent)',
+        operationId: 'removeLabelFromIssue',
+        params: RemoveLabelParamsSchema,
+        response: {
+          204: z.void(),
+          404: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      },
+    },
+    removeLabelFromIssueHandler
   );
 
   // DELETE /api/labels/:name - Delete a label
