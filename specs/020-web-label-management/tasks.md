@@ -116,31 +116,31 @@ Phase 8 (Polish) - Final touches
 
 ### 3.1 Foundation Components
 
-- [ ] T013 [P] [US1] Create `LabelBadge.tsx` in `packages/web/src/components/` (displays label with auto-generated color from name hash)
-- [ ] T014 [P] [US1] Add `getLabelColor()` utility function to `LabelBadge.tsx` (HSL color generation from string hash)
-- [ ] T015 [US1] Update `ItemDetail.tsx` in `packages/web/src/components/` to display labels using `LabelBadge` component (replace current label display)
+- [X] T013 [P] [US1] Create `LabelBadge.tsx` in `packages/web/src/components/` (displays label with auto-generated color from name hash)
+- [X] T014 [P] [US1] Add `getLabelColor()` utility function to `LabelBadge.tsx` (HSL color generation from string hash)
+- [X] T015 [US1] Update `ItemDetail.tsx` in `packages/web/src/components/` to display labels using `LabelBadge` component (replace current label display)
 
 **Parallel Opportunities**: T013 and T014 are part of same file; T015 depends on T013 completing.
 
 ### 3.2 Label Management Modal
 
-- [ ] T016 [US1] Create `LabelManagementModal.tsx` in `packages/web/src/components/` (modal container with backdrop, header, close button)
-- [ ] T017 [US1] Add state management to `LabelManagementModal.tsx` (allLabels, assignedLabelIds, searchQuery, loading, error, saving)
-- [ ] T018 [US1] Implement label fetching in `LabelManagementModal.tsx` (fetch GET /api/labels and item labels on mount)
-- [ ] T019 [US1] Add checkbox list rendering in `LabelManagementModal.tsx` (show all labels with checked state based on assignedLabelIds)
-- [ ] T020 [US1] Implement label assignment in `LabelManagementModal.tsx` (POST /api/issues/:id/labels with optimistic update and rollback on error)
-- [ ] T021 [US1] Add error handling and user feedback in `LabelManagementModal.tsx` (display error banner, loading state)
-- [ ] T022 [US1] Add ARIA attributes to `LabelManagementModal.tsx` (role="dialog", aria-modal, aria-labelledby for accessibility)
+- [X] T016 [US1] Create `LabelManagementModal.tsx` in `packages/web/src/components/` (modal container with backdrop, header, close button)
+- [X] T017 [US1] Add state management to `LabelManagementModal.tsx` (allLabels, assignedLabelIds, searchQuery, loading, error, saving)
+- [X] T018 [US1] Implement label fetching in `LabelManagementModal.tsx` (fetch GET /api/labels and item labels on mount)
+- [X] T019 [US1] Add checkbox list rendering in `LabelManagementModal.tsx` (show all labels with checked state based on assignedLabelIds)
+- [X] T020 [US1] Implement label assignment in `LabelManagementModal.tsx` (POST /api/issues/:id/labels with optimistic update and rollback on error)
+- [X] T021 [US1] Add error handling and user feedback in `LabelManagementModal.tsx` (display error banner, loading state)
+- [X] T022 [US1] Add ARIA attributes to `LabelManagementModal.tsx` (role="dialog", aria-modal, aria-labelledby for accessibility)
 
 ### 3.3 Search/Filter
 
-- [ ] T023 [US1] Add search input to `LabelManagementModal.tsx` (controlled input with searchQuery state)
-- [ ] T024 [US1] Implement client-side filtering in `LabelManagementModal.tsx` (useMemo to filter labels by name substring match)
+- [X] T023 [US1] Add search input to `LabelManagementModal.tsx` (controlled input with searchQuery state)
+- [X] T024 [US1] Implement client-side filtering in `LabelManagementModal.tsx` (useMemo to filter labels by name substring match)
 
 ### 3.4 Integration
 
-- [ ] T025 [US1] Add "Manage Labels" button to `ItemDetail.tsx` sidebar (opens modal on click, passes item ID and type)
-- [ ] T026 [US1] Connect modal to ItemDetail in `ItemDetail.tsx` (handle modal open/close state, refresh item on labels changed)
+- [X] T025 [US1] Add "Manage Labels" button to `ItemDetail.tsx` sidebar (opens modal on click, passes item ID and type)
+- [X] T026 [US1] Connect modal to ItemDetail in `ItemDetail.tsx` (handle modal open/close state, refresh item on labels changed)
 
 ### 3.5 Verification
 
