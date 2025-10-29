@@ -138,6 +138,10 @@ export class MemosService {
          * Array of label names assigned to this memo
          */
         labels: Array<string>;
+        /**
+         * Number of non-deleted comments on this memo
+         */
+        commentCount: number;
     }>> {
         return __request(OpenAPI, {
             method: 'GET',

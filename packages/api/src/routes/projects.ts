@@ -15,6 +15,7 @@ import {
   addProjectItemHandler,
   updateProjectItemHandler,
   removeProjectItemHandler,
+  getProjectsForIssueHandler,
 } from '../handlers/projectHandlers.js';
 import {
   CreateProjectRequestSchema,
@@ -199,5 +200,26 @@ export async function projectRoutes(app: FastifyInstance) {
       },
     },
     removeProjectItemHandler
+  );
+
+  // GET /api/issues/:id/projects - Get projects for an issue
+  server.get(
+    '/api/issues/:id/projects',
+    {
+      schema: {
+        tags: ['Projects'],
+        summary: 'Get projects for issue',
+        description: 'Get all projects associated with an issue',
+        operationId: 'getProjectsForIssue',
+        params: z.object({
+          id: z.string().regex(/^\d+$/, 'Issue ID must be numeric'),
+        }),
+        response: {
+          200: z.array(ProjectSchema),
+          500: ErrorResponseSchema,
+        },
+      },
+    },
+    getProjectsForIssueHandler
   );
 }

@@ -49,3 +49,13 @@ export const IssueIdParamsSchema = z.object({
 });
 
 export type IssueIdParams = z.infer<typeof IssueIdParamsSchema>;
+
+/**
+ * Schema for removing a label from an issue (path params)
+ */
+export const RemoveLabelParamsSchema = z.object({
+  issueId: z.string().regex(/^\d+$/, 'Issue ID must be a number').describe('Issue ID (memo or task)'),
+  labelId: z.coerce.number().int().positive().describe('Label ID to remove'),
+});
+
+export type RemoveLabelParams = z.infer<typeof RemoveLabelParamsSchema>;

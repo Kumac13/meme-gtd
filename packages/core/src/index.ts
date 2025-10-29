@@ -37,6 +37,7 @@ import {
   getLabelByName,
   createLabel,
   attachLabelToIssue,
+  detachLabelFromIssue,
   deleteLabel,
   // Types
   type CreateMemoInput,
@@ -250,6 +251,10 @@ export class LabelService {
 
   public assignToIssue(issueId: number, labelId: number) {
     return attachLabelToIssue(this.db, issueId, labelId);
+  }
+
+  public removeFromIssue(issueId: number, labelId: number) {
+    return detachLabelFromIssue(this.db, issueId, labelId);
   }
 
   public delete(name: string) {

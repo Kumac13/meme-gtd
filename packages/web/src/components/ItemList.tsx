@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatDateTime, formatRelativeTime } from '../utils/dates';
 import { truncateMarkdown } from '../utils/markdown';
+import { LabelBadge } from './LabelBadge';
 
 interface BaseItem {
   id: number;
@@ -108,14 +109,14 @@ export default function ItemList({ items, itemType: _itemType, basePath, onDelet
                     </h2>
                     {item.labels && item.labels.length > 0 && (
                       <>
-                        {item.labels.map((label, idx) => (
-                          <span
-                            key={idx}
-                            className="px-2 py-0.5 text-xs font-medium rounded bg-gray-200 text-gray-800"
-                          >
-                            {label}
-                          </span>
+                        {item.labels.slice(0, 3).map((label, idx) => (
+                          <LabelBadge key={idx} name={label} />
                         ))}
+                        {item.labels.length > 3 && (
+                          <span className="px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-gray-600">
+                            +{item.labels.length - 3} more
+                          </span>
+                        )}
                       </>
                     )}
                   </div>
@@ -140,14 +141,14 @@ export default function ItemList({ items, itemType: _itemType, basePath, onDelet
                   </div>
                   {item.labels && item.labels.length > 0 && (
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      {item.labels.map((label, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2 py-0.5 text-xs font-medium rounded bg-gray-200 text-gray-800"
-                        >
-                          {label}
-                        </span>
+                      {item.labels.slice(0, 3).map((label, idx) => (
+                        <LabelBadge key={idx} name={label} />
                       ))}
+                      {item.labels.length > 3 && (
+                        <span className="px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-gray-600">
+                          +{item.labels.length - 3} more
+                        </span>
+                      )}
                     </div>
                   )}
                   <div className="flex items-center text-xs text-gray-500 space-x-3">

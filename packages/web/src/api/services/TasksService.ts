@@ -152,6 +152,10 @@ export class TasksService {
          * Array of label names assigned to this task
          */
         labels: Array<string>;
+        /**
+         * Number of non-deleted comments on this task
+         */
+        commentCount: number;
     }>> {
         return __request(OpenAPI, {
             method: 'GET',

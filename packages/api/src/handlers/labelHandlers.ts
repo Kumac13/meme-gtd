@@ -4,6 +4,7 @@ import { NotFoundError, ConflictError } from '../errors/index.js';
 import type {
   CreateLabelRequest,
   AssignLabelRequest,
+  RemoveLabelParams,
 } from '../schemas/labelSchemas.js';
 
 /**
@@ -62,6 +63,33 @@ export async function assignLabelHandler(
   try {
     labelService.assignToIssue(issueId, labelId);
     return reply.status(200).send({ success: true });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      // Could be issue not found or label not found
+      if (error.message.includes('Issue')) {
+        throw new NotFoundError('Issue', issueId);
+      } else if (error.message.includes('Label')) {
+        throw new NotFoundError('Label', labelId);
+      }
+    }
+    throw error;
+  }
+}
+
+/**
+ * Remove a label from an issue (idempotent)
+ */
+export async function removeLabelFromIssueHandler(
+  request: FastifyRequest<{ Params: RemoveLabelParams }>,
+  reply: FastifyReply
+) {
+  const issueId = parseInt(request.params.issueId, 10);
+  const labelId = request.params.labelId;
+  const labelService = new LabelService({ db: request.server.db });
+
+  try {
+    labelService.removeFromIssue(issueId, labelId);
+    return reply.status(204).send();
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
       // Could be issue not found or label not found

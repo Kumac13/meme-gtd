@@ -87,6 +87,23 @@ export const getProjectById = (db: Database.Database, id: number): Project | und
 };
 
 /**
+ * Get projects associated with an issue
+ * @param db Database instance
+ * @param issueId Issue ID (memo or task)
+ * @returns Array of projects containing the issue
+ */
+export const getProjectsForIssue = (db: Database.Database, issueId: number): Project[] => {
+  const stmt = db.prepare(`
+    SELECT p.* FROM projects p
+    INNER JOIN project_items pi ON p.id = pi.project_id
+    WHERE pi.issue_id = ?
+    ORDER BY p.created_at DESC
+  `);
+  const rows = stmt.all(issueId) as SqliteRow[];
+  return rows.map(projectRowToProject);
+};
+
+/**
  * Delete a project by ID
  * Cascades to project_items (defined in schema)
  * @param db Database instance

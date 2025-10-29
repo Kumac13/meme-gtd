@@ -1,219 +1,532 @@
-/**
- * ProjectsService - API client for project management endpoints
- * Feature: 017-https-github-com
- *
- * Note: This service wraps existing project API endpoints
- * All endpoints are already implemented in packages/api/src/routes/projects.ts
- */
-
-import type { Project, ProjectWithMeta, ProjectItem } from '../../types/project';
-
-const API_BASE = '/api';
-
-/**
- * Project detail response (includes items)
- */
-interface ProjectDetail extends Project {
-  items: ProjectItem[];
-}
-
-/**
- * Request body for adding item to project
- */
-interface AddProjectItemRequest {
-  issueId: number;
-  position?: number;
-  viewMeta?: {
-    status?: string;
-  };
-}
-
+/* generated using openapi-typescript-codegen -- do not edit */
+/* istanbul ignore file */
+/* tslint:disable */
+/* eslint-disable */
+import type { CancelablePromise } from '../core/CancelablePromise';
+import { OpenAPI } from '../core/OpenAPI';
+import { request as __request } from '../core/request';
 export class ProjectsService {
-  /**
-   * List all projects
-   * @returns Array of projects
-   */
-  static async listProjects(): Promise<Project[]> {
-    const response = await fetch(`${API_BASE}/projects`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch projects: ${response.statusText}`);
+    /**
+     * Create project
+     * Create a new project
+     * @param requestBody
+     * @returns any Default Response
+     * @throws ApiError
+     */
+    public static createProject(
+        requestBody: {
+            /**
+             * Project name (must be unique)
+             */
+            name: string;
+            /**
+             * Optional project description
+             */
+            description?: string | null;
+            /**
+             * View type (defaults to board)
+             */
+            view?: 'board' | 'table';
+        },
+    ): CancelablePromise<{
+        /**
+         * Unique project ID
+         */
+        id: number;
+        /**
+         * Project name
+         */
+        name: string;
+        /**
+         * Project description
+         */
+        description: string | null;
+        /**
+         * View configuration
+         */
+        viewMeta: {
+            /**
+             * View type: board or table
+             */
+            viewType: 'board' | 'table';
+            /**
+             * Column names for board view
+             */
+            columns?: Array<string>;
+        };
+        /**
+         * Creation timestamp
+         */
+        createdAt: string;
+    }> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/projects',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Default Response`,
+                409: `Default Response`,
+                500: `Default Response`,
+            },
+        });
     }
-
-    return response.json();
-  }
-
-  /**
-   * Get project details with associated items
-   * @param id Project ID
-   * @returns Project with items
-   */
-  static async getProject(id: string): Promise<ProjectDetail> {
-    const response = await fetch(`${API_BASE}/projects/${id}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch project ${id}: ${response.statusText}`);
+    /**
+     * List projects
+     * List all projects
+     * @returns any Default Response
+     * @throws ApiError
+     */
+    public static listProjects(): CancelablePromise<Array<{
+        /**
+         * Unique project ID
+         */
+        id: number;
+        /**
+         * Project name
+         */
+        name: string;
+        /**
+         * Project description
+         */
+        description: string | null;
+        /**
+         * View configuration
+         */
+        viewMeta: {
+            /**
+             * View type: board or table
+             */
+            viewType: 'board' | 'table';
+            /**
+             * Column names for board view
+             */
+            columns?: Array<string>;
+        };
+        /**
+         * Creation timestamp
+         */
+        createdAt: string;
+    }>> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/projects',
+            errors: {
+                500: `Default Response`,
+            },
+        });
     }
-
-    return response.json();
-  }
-
-  /**
-   * Update project (name, description)
-   * @param id Project ID
-   * @param data Update data (name, description)
-   * @returns Updated project
-   */
-  static async updateProject(
-    id: string,
-    data: { name?: string; description?: string | null }
-  ): Promise<Project> {
-    const response = await fetch(`${API_BASE}/projects/${id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to update project ${id}: ${response.statusText}`);
+    /**
+     * Get project
+     * Get project details with associated items
+     * @param id Project ID
+     * @returns any Default Response
+     * @throws ApiError
+     */
+    public static getProject(
+        id: string,
+    ): CancelablePromise<{
+        /**
+         * Unique project ID
+         */
+        id: number;
+        /**
+         * Project name
+         */
+        name: string;
+        /**
+         * Project description
+         */
+        description: string | null;
+        /**
+         * View configuration
+         */
+        viewMeta: {
+            /**
+             * View type: board or table
+             */
+            viewType: 'board' | 'table';
+            /**
+             * Column names for board view
+             */
+            columns?: Array<string>;
+        };
+        /**
+         * Creation timestamp
+         */
+        createdAt: string;
+        /**
+         * Project items with issue information
+         */
+        items: Array<{
+            /**
+             * Project item ID
+             */
+            id: number;
+            /**
+             * Project ID
+             */
+            projectId: number;
+            /**
+             * Issue ID
+             */
+            issueId: number;
+            /**
+             * Position in project
+             */
+            position: number;
+            /**
+             * Item view metadata
+             */
+            viewMeta: {
+                column?: string;
+            } | null;
+            /**
+             * Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * Last update timestamp
+             */
+            updatedAt: string;
+            /**
+             * Issue information
+             */
+            issue: {
+                /**
+                 * Issue ID
+                 */
+                id: number;
+                /**
+                 * Issue type
+                 */
+                type: 'task' | 'memo';
+                /**
+                 * Issue title
+                 */
+                title: string;
+                /**
+                 * Task status (null for memos)
+                 */
+                status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled' | null;
+            };
+        }>;
+    }> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/projects/{id}',
+            path: {
+                'id': id,
+            },
+            errors: {
+                404: `Default Response`,
+                500: `Default Response`,
+            },
+        });
     }
-
-    return response.json();
-  }
-
-  /**
-   * Delete project
-   * @param id Project ID
-   */
-  static async deleteProject(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE}/projects/${id}`, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to delete project ${id}: ${response.statusText}`);
+    /**
+     * Update project
+     * Update project name and/or description
+     * @param id Project ID
+     * @param requestBody
+     * @returns any Default Response
+     * @throws ApiError
+     */
+    public static updateProject(
+        id: string,
+        requestBody?: {
+            /**
+             * Project name
+             */
+            name?: string;
+            /**
+             * Project description
+             */
+            description?: string | null;
+        },
+    ): CancelablePromise<{
+        /**
+         * Unique project ID
+         */
+        id: number;
+        /**
+         * Project name
+         */
+        name: string;
+        /**
+         * Project description
+         */
+        description: string | null;
+        /**
+         * View configuration
+         */
+        viewMeta: {
+            /**
+             * View type: board or table
+             */
+            viewType: 'board' | 'table';
+            /**
+             * Column names for board view
+             */
+            columns?: Array<string>;
+        };
+        /**
+         * Creation timestamp
+         */
+        createdAt: string;
+    }> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/projects/{id}',
+            path: {
+                'id': id,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                404: `Default Response`,
+                500: `Default Response`,
+            },
+        });
     }
-  }
-
-  /**
-   * Add item to project
-   * @param projectId Project ID
-   * @param data Request body with issueId, position, viewMeta
-   * @returns Created project item
-   */
-  static async addProjectItem(
-    projectId: string | number,
-    data: AddProjectItemRequest
-  ): Promise<ProjectItem> {
-    const response = await fetch(`${API_BASE}/projects/${projectId}/items`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to add item to project ${projectId}: ${response.statusText}`);
+    /**
+     * Delete project
+     * Delete a project (cascades to project items, issues remain intact)
+     * @param id Project ID
+     * @returns void
+     * @throws ApiError
+     */
+    public static deleteProject(
+        id: string,
+    ): CancelablePromise<void> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/projects/{id}',
+            path: {
+                'id': id,
+            },
+            errors: {
+                404: `Default Response`,
+                500: `Default Response`,
+            },
+        });
     }
-
-    return response.json();
-  }
-
-  /**
-   * Update project item (position and/or column)
-   * @param projectId Project ID
-   * @param issueId Issue ID
-   * @param data Update data (column, position)
-   * @returns Updated project item
-   */
-  static async updateProjectItem(
-    projectId: string | number,
-    issueId: string | number,
-    data: { column?: string; position?: number }
-  ): Promise<ProjectItem> {
-    const response = await fetch(`${API_BASE}/projects/${projectId}/items/${issueId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to update item ${issueId} in project ${projectId}: ${response.statusText}`);
+    /**
+     * Add item to project
+     * Add an issue (task or memo) to a project
+     * @param id Project ID
+     * @param requestBody
+     * @returns any Default Response
+     * @throws ApiError
+     */
+    public static addProjectItem(
+        id: string,
+        requestBody: {
+            /**
+             * Issue ID to add
+             */
+            issueId: number;
+            /**
+             * Position in project (defaults to end)
+             */
+            position?: number;
+            /**
+             * Board column name
+             */
+            column?: string | null;
+        },
+    ): CancelablePromise<{
+        /**
+         * Project item ID
+         */
+        id: number;
+        /**
+         * Project ID
+         */
+        projectId: number;
+        /**
+         * Issue ID
+         */
+        issueId: number;
+        /**
+         * Position in project
+         */
+        position: number;
+        /**
+         * Item view metadata
+         */
+        viewMeta: {
+            column?: string;
+        } | null;
+        /**
+         * Creation timestamp
+         */
+        createdAt: string;
+        /**
+         * Last update timestamp
+         */
+        updatedAt: string;
+    }> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/projects/{id}/items',
+            path: {
+                'id': id,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Default Response`,
+                404: `Default Response`,
+                409: `Default Response`,
+                500: `Default Response`,
+            },
+        });
     }
-
-    return response.json();
-  }
-
-  /**
-   * Remove item from project
-   * @param projectId Project ID
-   * @param issueId Issue ID (task or memo)
-   */
-  static async removeProjectItem(
-    projectId: string | number,
-    issueId: string | number
-  ): Promise<void> {
-    const response = await fetch(`${API_BASE}/projects/${projectId}/items/${issueId}`, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to remove item ${issueId} from project ${projectId}: ${response.statusText}`);
+    /**
+     * Update project item
+     * Move item to new position or column
+     * @param id Project ID
+     * @param issueId Issue ID
+     * @param requestBody
+     * @returns any Default Response
+     * @throws ApiError
+     */
+    public static updateProjectItem(
+        id: string,
+        issueId: string,
+        requestBody?: {
+            /**
+             * New position
+             */
+            position?: number;
+            /**
+             * New column
+             */
+            column?: string | null;
+        },
+    ): CancelablePromise<{
+        /**
+         * Project item ID
+         */
+        id: number;
+        /**
+         * Project ID
+         */
+        projectId: number;
+        /**
+         * Issue ID
+         */
+        issueId: number;
+        /**
+         * Position in project
+         */
+        position: number;
+        /**
+         * Item view metadata
+         */
+        viewMeta: {
+            column?: string;
+        } | null;
+        /**
+         * Creation timestamp
+         */
+        createdAt: string;
+        /**
+         * Last update timestamp
+         */
+        updatedAt: string;
+    }> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/projects/{id}/items/{issueId}',
+            path: {
+                'id': id,
+                'issueId': issueId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Default Response`,
+                404: `Default Response`,
+                500: `Default Response`,
+            },
+        });
     }
-  }
-
-  /**
-   * Get all projects associated with a specific issue (task or memo)
-   *
-   * Implementation: Fetches all projects, then fetches details for each
-   * to extract items matching the given issueId. This is a temporary
-   * workaround until backend adds GET /api/issues/:id/projects endpoint.
-   *
-   * @param issueId Task or memo ID
-   * @returns Array of projects with view metadata
-   */
-  static async getProjectsForIssue(issueId: number): Promise<ProjectWithMeta[]> {
-    // Fetch all projects
-    const allProjects = await this.listProjects();
-    const associatedProjects: ProjectWithMeta[] = [];
-
-    // For each project, fetch details to find items matching this issue
-    for (const project of allProjects) {
-      try {
-        const details = await this.getProject(String(project.id));
-        const item = details.items.find((i) => i.issueId === issueId);
-
-        if (item) {
-          associatedProjects.push({
-            id: project.id,
-            name: project.name,
-            description: project.description || '',
-            createdAt: project.createdAt,
-            status: 'No status', // Feature 017 sidebar status - not used in Feature 019
-            itemId: item.id,
-          });
-        }
-      } catch (error) {
-        // If project detail fetch fails, skip this project
-        console.error(`Failed to fetch project ${project.id}:`, error);
-      }
+    /**
+     * Remove item from project
+     * Remove an issue from a project (issue itself remains intact)
+     * @param id Project ID
+     * @param issueId Issue ID
+     * @returns void
+     * @throws ApiError
+     */
+    public static removeProjectItem(
+        id: string,
+        issueId: string,
+    ): CancelablePromise<void> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/projects/{id}/items/{issueId}',
+            path: {
+                'id': id,
+                'issueId': issueId,
+            },
+            errors: {
+                404: `Default Response`,
+                500: `Default Response`,
+            },
+        });
     }
-
-    return associatedProjects;
-  }
+    /**
+     * Get projects for issue
+     * Get all projects associated with an issue
+     * @param id
+     * @returns any Default Response
+     * @throws ApiError
+     */
+    public static getProjectsForIssue(
+        id: string,
+    ): CancelablePromise<Array<{
+        /**
+         * Unique project ID
+         */
+        id: number;
+        /**
+         * Project name
+         */
+        name: string;
+        /**
+         * Project description
+         */
+        description: string | null;
+        /**
+         * View configuration
+         */
+        viewMeta: {
+            /**
+             * View type: board or table
+             */
+            viewType: 'board' | 'table';
+            /**
+             * Column names for board view
+             */
+            columns?: Array<string>;
+        };
+        /**
+         * Creation timestamp
+         */
+        createdAt: string;
+    }>> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/issues/{id}/projects',
+            path: {
+                'id': id,
+            },
+            errors: {
+                500: `Default Response`,
+            },
+        });
+    }
 }

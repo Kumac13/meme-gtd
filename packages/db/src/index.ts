@@ -82,6 +82,7 @@ export {
   getLabelByName,
   createLabel,
   attachLabelToIssue,
+  detachLabelFromIssue,
   deleteLabel
 } from './labelRepository.js';
 
@@ -103,6 +104,7 @@ export {
   createProject,
   listProjects,
   getProjectById,
+  getProjectsForIssue,
   deleteProject,
   projectRowToProject,
   type CreateProjectInput
