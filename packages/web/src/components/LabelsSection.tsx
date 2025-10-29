@@ -103,51 +103,6 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isDropdownOpen]);
 
-  // Keyboard navigation: Escape to close dropdown
-  useEffect(() => {
-    if (!isDropdownOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsDropdownOpen(false);
-        gearButtonRef.current?.focus();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isDropdownOpen]);
-
-  // Focus trap: Keep focus within dropdown when open
-  useEffect(() => {
-    if (!isDropdownOpen || !dropdownRef.current) return;
-
-    const dropdown = dropdownRef.current;
-    const focusableElements = dropdown.querySelectorAll<HTMLElement>(
-      'input, button, [tabindex]:not([tabindex="-1"])'
-    );
-    const firstFocusable = focusableElements[0];
-    const lastFocusable = focusableElements[focusableElements.length - 1];
-
-    // Focus first element when dropdown opens
-    firstFocusable?.focus();
-
-    const handleTabKey = (event: KeyboardEvent) => {
-      if (event.key !== 'Tab') return;
-
-      if (event.shiftKey && document.activeElement === firstFocusable) {
-        event.preventDefault();
-        lastFocusable?.focus();
-      } else if (!event.shiftKey && document.activeElement === lastFocusable) {
-        event.preventDefault();
-        firstFocusable?.focus();
-      }
-    };
-
-    document.addEventListener('keydown', handleTabKey);
-    return () => document.removeEventListener('keydown', handleTabKey);
-  }, [isDropdownOpen]);
-
   const handleToggleLabel = useCallback(async (labelId: number, isCurrentlyAssigned: boolean) => {
     try {
       setSaving(true);
@@ -325,9 +280,6 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
       {isDropdownOpen && (
         <div
           ref={dropdownRef}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Label management"
           className="absolute top-full right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 flex flex-col"
           style={{ maxHeight: '400px' }}
         >
@@ -338,7 +290,6 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
               placeholder="Filter labels"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label="Filter labels by name"
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
             />
           </div>
@@ -426,22 +377,19 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
                     return (
                       <div
                         key={label.id}
-                        className="flex items-center gap-2 px-2 rounded hover:bg-gray-50 group"
+                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 group"
                       >
-                        <label className="flex items-center justify-center cursor-pointer" style={{ minWidth: '44px', minHeight: '44px' }}>
-                          <input
-                            type="checkbox"
-                            checked={isAssigned}
-                            onChange={() => handleToggleLabel(label.id, isAssigned)}
-                            disabled={saving}
-                            aria-label={`${isAssigned ? 'Remove' : 'Assign'} label ${label.name}`}
-                            style={{
-                              accentColor: '#16a34a',
-                              colorScheme: 'light',
-                            }}
-                            className="w-4 h-4 rounded border-gray-300 cursor-pointer"
-                          />
-                        </label>
+                        <input
+                          type="checkbox"
+                          checked={isAssigned}
+                          onChange={() => handleToggleLabel(label.id, isAssigned)}
+                          disabled={saving}
+                          style={{
+                            accentColor: '#16a34a',
+                            colorScheme: 'light',
+                          }}
+                          className="w-4 h-4 rounded border-gray-300"
+                        />
                         <span className="flex-1 min-w-0">
                           <LabelBadge name={label.name} />
                         </span>
@@ -490,22 +438,19 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
                     return (
                       <div
                         key={label.id}
-                        className="flex items-center gap-2 px-2 rounded hover:bg-gray-50 group"
+                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 group"
                       >
-                        <label className="flex items-center justify-center cursor-pointer" style={{ minWidth: '44px', minHeight: '44px' }}>
-                          <input
-                            type="checkbox"
-                            checked={isAssigned}
-                            onChange={() => handleToggleLabel(label.id, isAssigned)}
-                            disabled={saving}
-                            aria-label={`${isAssigned ? 'Remove' : 'Assign'} label ${label.name}`}
-                            style={{
-                              accentColor: '#16a34a',
-                              colorScheme: 'light',
-                            }}
-                            className="w-4 h-4 rounded border-gray-300 cursor-pointer"
-                          />
-                        </label>
+                        <input
+                          type="checkbox"
+                          checked={isAssigned}
+                          onChange={() => handleToggleLabel(label.id, isAssigned)}
+                          disabled={saving}
+                          style={{
+                            accentColor: '#16a34a',
+                            colorScheme: 'light',
+                          }}
+                          className="w-4 h-4 rounded border-gray-300"
+                        />
                         <span className="flex-1 min-w-0">
                           <LabelBadge name={label.name} />
                         </span>
