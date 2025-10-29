@@ -33,6 +33,7 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
   const [isCreatingLabel, setIsCreatingLabel] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [newLabelDescription, setNewLabelDescription] = useState('');
+  const [deletingLabelName, setDeletingLabelName] = useState<string | null>(null);
   const gearButtonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -130,6 +131,32 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
       setError(err instanceof Error ? err.message : 'Failed to create label');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteLabel = async (labelName: string) => {
+    if (!window.confirm(`Are you sure you want to delete label "${labelName}"? This will remove it from all items and cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+      setDeletingLabelName(labelName);
+
+      await LabelsService.deleteLabel(labelName);
+
+      // Refresh labels list
+      await fetchLabels();
+
+      // Refresh item to update assigned labels
+      onLabelsChanged();
+    } catch (err) {
+      console.error('Failed to delete label:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete label');
+    } finally {
+      setSaving(false);
+      setDeletingLabelName(null);
     }
   };
 
@@ -309,10 +336,11 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
                 <div className="space-y-1">
                   {recentLabels.map((label) => {
                     const isAssigned = assignedSet.has(label.name);
+                    const isDeleting = deletingLabelName === label.name;
                     return (
-                      <label
+                      <div
                         key={label.id}
-                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer"
+                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 group"
                       >
                         <input
                           type="checkbox"
@@ -323,12 +351,33 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
                             accentColor: '#16a34a',
                             colorScheme: 'light',
                           }}
-                          className="w-4 h-4 rounded border-gray-300"
+                          className="w-4 h-4 rounded border-gray-300 cursor-pointer"
                         />
                         <span className="flex-1 min-w-0">
                           <LabelBadge name={label.name} />
                         </span>
-                      </label>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteLabel(label.name);
+                          }}
+                          disabled={saving}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-red-600 hover:bg-red-50 rounded transition-opacity disabled:opacity-50"
+                          title="Delete label"
+                        >
+                          {isDeleting ? (
+                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -348,10 +397,11 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
                 ) : (
                   filteredLabels.map((label) => {
                     const isAssigned = assignedSet.has(label.name);
+                    const isDeleting = deletingLabelName === label.name;
                     return (
-                      <label
+                      <div
                         key={label.id}
-                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer"
+                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 group"
                       >
                         <input
                           type="checkbox"
@@ -362,12 +412,33 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
                             accentColor: '#16a34a',
                             colorScheme: 'light',
                           }}
-                          className="w-4 h-4 rounded border-gray-300"
+                          className="w-4 h-4 rounded border-gray-300 cursor-pointer"
                         />
                         <span className="flex-1 min-w-0">
                           <LabelBadge name={label.name} />
                         </span>
-                      </label>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteLabel(label.name);
+                          }}
+                          disabled={saving}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-red-600 hover:bg-red-50 rounded transition-opacity disabled:opacity-50"
+                          title="Delete label"
+                        >
+                          {isDeleting ? (
+                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
                     );
                   })
                 )}
