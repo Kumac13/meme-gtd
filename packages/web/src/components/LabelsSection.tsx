@@ -426,22 +426,22 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
                     return (
                       <div
                         key={label.id}
-                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 group"
+                        className="flex items-center gap-2 px-2 rounded hover:bg-gray-50 group"
                       >
-                        <input
-                          type="checkbox"
-                          checked={isAssigned}
-                          onChange={() => handleToggleLabel(label.id, isAssigned)}
-                          disabled={saving}
-                          aria-label={`${isAssigned ? 'Remove' : 'Assign'} label ${label.name}`}
-                          style={{
-                            accentColor: '#16a34a',
-                            colorScheme: 'light',
-                            minWidth: '44px',
-                            minHeight: '44px',
-                          }}
-                          className="w-4 h-4 rounded border-gray-300 cursor-pointer"
-                        />
+                        <label className="flex items-center justify-center cursor-pointer" style={{ minWidth: '44px', minHeight: '44px' }}>
+                          <input
+                            type="checkbox"
+                            checked={isAssigned}
+                            onChange={() => handleToggleLabel(label.id, isAssigned)}
+                            disabled={saving}
+                            aria-label={`${isAssigned ? 'Remove' : 'Assign'} label ${label.name}`}
+                            style={{
+                              accentColor: '#16a34a',
+                              colorScheme: 'light',
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 cursor-pointer"
+                          />
+                        </label>
                         <span className="flex-1 min-w-0">
                           <LabelBadge name={label.name} />
                         </span>
@@ -490,22 +490,22 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
                     return (
                       <div
                         key={label.id}
-                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 group"
+                        className="flex items-center gap-2 px-2 rounded hover:bg-gray-50 group"
                       >
-                        <input
-                          type="checkbox"
-                          checked={isAssigned}
-                          onChange={() => handleToggleLabel(label.id, isAssigned)}
-                          disabled={saving}
-                          aria-label={`${isAssigned ? 'Remove' : 'Assign'} label ${label.name}`}
-                          style={{
-                            accentColor: '#16a34a',
-                            colorScheme: 'light',
-                            minWidth: '44px',
-                            minHeight: '44px',
-                          }}
-                          className="w-4 h-4 rounded border-gray-300 cursor-pointer"
-                        />
+                        <label className="flex items-center justify-center cursor-pointer" style={{ minWidth: '44px', minHeight: '44px' }}>
+                          <input
+                            type="checkbox"
+                            checked={isAssigned}
+                            onChange={() => handleToggleLabel(label.id, isAssigned)}
+                            disabled={saving}
+                            aria-label={`${isAssigned ? 'Remove' : 'Assign'} label ${label.name}`}
+                            style={{
+                              accentColor: '#16a34a',
+                              colorScheme: 'light',
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 cursor-pointer"
+                          />
+                        </label>
                         <span className="flex-1 min-w-0">
                           <LabelBadge name={label.name} />
                         </span>
