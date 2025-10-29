@@ -3007,6 +3007,80 @@ paths:
                   - error
                   - message
                 additionalProperties: false
+  /api/issues/{issueId}/labels/{labelId}:
+    delete:
+      operationId: removeLabelFromIssue
+      summary: Remove label from issue
+      tags:
+        - Labels
+      description: Remove a label assignment from an issue (idempotent)
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: issueId
+          required: true
+          description: Issue ID (memo or task)
+        - schema:
+            type: integer
+            minimum: 1
+          in: path
+          name: labelId
+          required: true
+          description: Label ID to remove
+      responses:
+        "204":
+          description: Default Response
+          content:
+            application/json:
+              schema: {}
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
   /api/labels/{name}:
     delete:
       operationId: deleteLabel
