@@ -7,6 +7,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { LabelsService } from '../api/services/LabelsService';
 import { LabelBadge } from './LabelBadge';
+import { useRecentLabels } from '../hooks/useRecentLabels';
 
 interface Label {
   id: number;
@@ -34,6 +35,8 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
   const [newLabelDescription, setNewLabelDescription] = useState('');
   const gearButtonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const { addRecentLabel, getRecentLabels } = useRecentLabels();
 
   const fetchLabels = async () => {
     try {
@@ -81,6 +84,8 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
         await LabelsService.removeLabelFromIssue(String(itemId), labelId);
       } else {
         await LabelsService.assignLabelToIssue(String(itemId), { labelId });
+        // Track as recent label (only on assign, not remove)
+        addRecentLabel(labelId);
       }
 
       onLabelsChanged();
@@ -112,6 +117,8 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
 
       // Automatically assign the new label to the current item
       await LabelsService.assignLabelToIssue(String(itemId), { labelId: newLabel.id });
+      // Track as recent label
+      addRecentLabel(newLabel.id);
       onLabelsChanged();
 
       // Reset form
@@ -132,6 +139,7 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
       : true
   );
 
+  const recentLabels = getRecentLabels(filteredLabels);
   const assignedSet = new Set(assignedLabels);
 
   // Show loading state
@@ -290,6 +298,41 @@ export function LabelsSection({ itemId, itemType: _, assignedLabels, onLabelsCha
                 </svg>
                 Create new label
               </button>
+            )}
+
+            {/* Recent labels section */}
+            {recentLabels.length > 0 && (
+              <div className="mb-4">
+                <h4 className="text-xs font-semibold text-gray-500 uppercase px-2 mb-2">
+                  Recent
+                </h4>
+                <div className="space-y-1">
+                  {recentLabels.map((label) => {
+                    const isAssigned = assignedSet.has(label.name);
+                    return (
+                      <label
+                        key={label.id}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isAssigned}
+                          onChange={() => handleToggleLabel(label.id, isAssigned)}
+                          disabled={saving}
+                          style={{
+                            accentColor: '#16a34a',
+                            colorScheme: 'light',
+                          }}
+                          className="w-4 h-4 rounded border-gray-300"
+                        />
+                        <span className="flex-1 min-w-0">
+                          <LabelBadge name={label.name} />
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
             )}
 
             {/* All labels section */}
