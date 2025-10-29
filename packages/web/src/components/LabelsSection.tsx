@@ -2,6 +2,23 @@
  * LabelsSection component
  * Feature: 020-web-label-management
  * User Story 1: Assign Existing Labels to Tasks/Memos
+ *
+ * Provides label management UI in item detail sidebar:
+ * - Display assigned labels
+ * - Inline dropdown for label selection/creation/deletion
+ * - Recent labels section for quick access
+ * - Full keyboard navigation and accessibility support
+ * - Search/filter labels by name
+ *
+ * @example
+ * ```tsx
+ * <LabelsSection
+ *   itemId={task.id}
+ *   itemType="task"
+ *   assignedLabels={task.labels}
+ *   onLabelsChanged={() => refetchTask()}
+ * />
+ * ```
  */
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -9,6 +26,9 @@ import { LabelsService } from '../api/services/LabelsService';
 import { LabelBadge } from './LabelBadge';
 import { useRecentLabels } from '../hooks/useRecentLabels';
 
+/**
+ * Label entity from API
+ */
 interface Label {
   id: number;
   name: string;
@@ -16,6 +36,13 @@ interface Label {
   createdAt: string;
 }
 
+/**
+ * Props for LabelsSection component
+ * @property itemId - The ID of the item (task/memo) to manage labels for
+ * @property itemType - Type of item ('memo' or 'task')
+ * @property assignedLabels - Array of label names currently assigned to the item
+ * @property onLabelsChanged - Callback when labels are modified (assign/remove/create/delete)
+ */
 interface LabelsSectionProps {
   itemId: number;
   itemType: 'memo' | 'task';

@@ -3,7 +3,23 @@
  * Feature: 020-web-label-management
  * User Story 4: Quick Access to Recently Used Labels
  *
- * Manages recently used labels in localStorage
+ * Manages recently used labels in localStorage with FIFO queue:
+ * - Tracks up to 5 most recently assigned labels
+ * - Persists across browser sessions
+ * - Automatically deduplicates and sorts by last used time
+ * - Gracefully handles localStorage errors (private mode, quota exceeded)
+ *
+ * @example
+ * ```tsx
+ * const { addRecentLabel, getRecentLabels, recentLabelIds } = useRecentLabels();
+ *
+ * // Track label usage
+ * await assignLabel(labelId);
+ * addRecentLabel(labelId);
+ *
+ * // Get recent labels for display
+ * const recent = getRecentLabels(allLabels); // Returns top 5 by recency
+ * ```
  */
 
 import { useState, useCallback } from 'react';
@@ -12,6 +28,9 @@ const STORAGE_KEY = 'mgtd:recentLabels';
 const MAX_STORED_LABELS = 5;
 const MAX_DISPLAYED_RECENT = 5;
 
+/**
+ * Label entity (subset needed for recent labels)
+ */
 interface Label {
   id: number;
   name: string;
@@ -19,6 +38,11 @@ interface Label {
   createdAt: string;
 }
 
+/**
+ * Structure stored in localStorage
+ * @property labelIds - Ordered array of label IDs (most recent first)
+ * @property lastUsedAt - Map of label ID to ISO timestamp of last use
+ */
 interface RecentLabelsStorage {
   labelIds: number[];
   lastUsedAt: Record<number, string>;

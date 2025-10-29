@@ -1,3 +1,9 @@
+/**
+ * Props for LabelBadge component
+ * @property name - The label text to display
+ * @property onRemove - Optional callback when remove button is clicked
+ * @property className - Additional CSS classes to apply
+ */
 interface LabelBadgeProps {
   name: string;
   onRemove?: () => void;
