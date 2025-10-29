@@ -82,6 +82,7 @@ export {
   getLabelByName,
   createLabel,
   attachLabelToIssue,
+  detachLabelFromIssue,
   deleteLabel
 } from './labelRepository.js';
 
