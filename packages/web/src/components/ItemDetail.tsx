@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import { TasksService } from '../api/services/TasksService';
@@ -6,6 +7,7 @@ import CommentSection from './CommentSection';
 import LinkSection from './LinkSection';
 import { ProjectsSection } from './ProjectsSection';
 import { LabelBadge } from './LabelBadge';
+import { LabelManagementModal } from './LabelManagementModal';
 
 
 export interface BaseItem {
@@ -47,6 +49,8 @@ export default function ItemDetail({
   onStatusChange,
   bookmarking,
 }: ItemDetailProps) {
+  const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
+
   const handleUpdateBody = async (newBody: string, newTitle?: string) => {
     const updatedItem =
       itemType === 'memo'
@@ -62,6 +66,18 @@ export default function ItemDetail({
 
   const handleDeleteBody = async () => {
     await onDelete();
+  };
+
+  const handleLabelsChanged = () => {
+    // Refresh item data to show updated labels
+    const fetchUpdatedItem = async () => {
+      const updatedItem =
+        itemType === 'memo'
+          ? await MemosService.getMemo(String(item.id))
+          : await TasksService.getTask(String(item.id));
+      onUpdate(updatedItem as Item);
+    };
+    fetchUpdatedItem();
   };
 
   return (
@@ -143,10 +159,43 @@ export default function ItemDetail({
         </div>
 
         {/* Sidebar (right column) */}
-        <div className="w-full lg:w-80 flex-shrink-0">
+        <div className="w-full lg:w-80 flex-shrink-0 space-y-6">
+          {/* Labels Section */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900">Labels</h3>
+              <button
+                onClick={() => setIsLabelModalOpen(true)}
+                className="text-xs text-github-green-600 hover:text-github-green-800 font-medium"
+                type="button"
+              >
+                Manage
+              </button>
+            </div>
+            {item.labels && item.labels.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {item.labels.map((label, idx) => (
+                  <LabelBadge key={idx} name={label} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No labels assigned</p>
+            )}
+          </div>
+
+          {/* Projects Section */}
           <ProjectsSection itemId={item.id} itemType={itemType} />
         </div>
       </div>
+
+      {/* Label Management Modal */}
+      <LabelManagementModal
+        itemId={item.id}
+        itemType={itemType}
+        isOpen={isLabelModalOpen}
+        onClose={() => setIsLabelModalOpen(false)}
+        onLabelsChanged={handleLabelsChanged}
+      />
     </div>
   );
 }
