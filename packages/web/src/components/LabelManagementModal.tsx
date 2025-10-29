@@ -2,8 +2,15 @@ import { useState, useEffect, useMemo } from 'react';
 import { LabelsService } from '../api/services/LabelsService';
 import { MemosService } from '../api/services/MemosService';
 import { TasksService } from '../api/services/TasksService';
-import type { Label } from '../api/models/Label';
 import { LabelBadge } from './LabelBadge';
+
+// Label type definition (matches API response)
+interface Label {
+  id: number;
+  name: string;
+  description: string | null;
+  createdAt: string;
+}
 
 interface LabelManagementModalProps {
   itemId: number;

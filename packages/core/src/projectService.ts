@@ -17,6 +17,7 @@ import {
   createProject as dbCreateProject,
   listProjects as dbListProjects,
   getProjectById as dbGetProjectById,
+  getProjectsForIssue as dbGetProjectsForIssue,
   deleteProject as dbDeleteProject,
   createProjectItem as dbCreateProjectItem,
   listProjectItems as dbListProjectItems,
@@ -104,6 +105,15 @@ export class ProjectService {
    */
   list(): Project[] {
     return dbListProjects(this.db);
+  }
+
+  /**
+   * Get projects associated with an issue
+   * @param issueId Issue ID (memo or task)
+   * @returns Array of projects containing the issue
+   */
+  getProjectsForIssue(issueId: number): Project[] {
+    return dbGetProjectsForIssue(this.db, issueId);
   }
 
   /**

@@ -43,11 +43,11 @@ export function ProjectManagementModal({
         // Fetch all projects and associated projects in parallel
         const [projects, associated] = await Promise.all([
           ProjectsService.listProjects(),
-          ProjectsService.getProjectsForIssue(itemId),
+          ProjectsService.getProjectsForIssue(String(itemId)),
         ]);
 
         setAllProjects(projects);
-        setAssociatedProjectIds(new Set(associated.map((p) => p.id)));
+        setAssociatedProjectIds(new Set(associated.map((p: any) => p.id)));
       } catch (err) {
         console.error('Failed to fetch projects:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch projects');
@@ -66,7 +66,7 @@ export function ProjectManagementModal({
 
       if (isCurrentlyAssociated) {
         // Remove project association
-        await ProjectsService.removeProjectItem(projectId, itemId);
+        await ProjectsService.removeProjectItem(String(projectId), String(itemId));
         setAssociatedProjectIds((prev) => {
           const next = new Set(prev);
           next.delete(projectId);
@@ -74,7 +74,7 @@ export function ProjectManagementModal({
         });
       } else {
         // Add project association
-        await ProjectsService.addProjectItem(projectId, {
+        await ProjectsService.addProjectItem(String(projectId), {
           issueId: itemId,
         });
         setAssociatedProjectIds((prev) => new Set(prev).add(projectId));

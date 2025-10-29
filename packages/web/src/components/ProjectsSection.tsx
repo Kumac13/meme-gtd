@@ -32,10 +32,16 @@ export function ProjectsSection({ itemId, itemType: _ }: ProjectsSectionProps) {
       setLoading(true);
       setError(null);
       const [projects, all] = await Promise.all([
-        ProjectsService.getProjectsForIssue(itemId),
+        ProjectsService.getProjectsForIssue(String(itemId)),
         ProjectsService.listProjects(),
       ]);
-      setAssociatedProjects(projects);
+      // Convert Project[] to ProjectWithMeta[] for associated projects
+      const projectsWithMeta: ProjectWithMeta[] = projects.map(p => ({
+        ...p,
+        description: p.description || '',
+        status: 'In Progress' as const
+      }));
+      setAssociatedProjects(projectsWithMeta);
       setAllProjects(all);
     } catch (err) {
       console.error('Failed to fetch projects:', err);
@@ -74,9 +80,9 @@ export function ProjectsSection({ itemId, itemType: _ }: ProjectsSectionProps) {
       setError(null);
 
       if (isCurrentlyAssociated) {
-        await ProjectsService.removeProjectItem(projectId, itemId);
+        await ProjectsService.removeProjectItem(String(projectId), String(itemId));
       } else {
-        await ProjectsService.addProjectItem(projectId, { issueId: itemId });
+        await ProjectsService.addProjectItem(String(projectId), { issueId: itemId });
         addRecentProject(projectId);
       }
 

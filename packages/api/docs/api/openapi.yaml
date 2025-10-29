@@ -3024,7 +3024,8 @@ paths:
           description: Issue ID (memo or task)
         - schema:
             type: integer
-            minimum: 1
+            exclusiveMinimum: true
+            minimum: 0
           in: path
           name: labelId
           required: true
@@ -4537,6 +4538,94 @@ paths:
                   - error
                   - message
                 additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/issues/{id}/projects:
+    get:
+      operationId: getProjectsForIssue
+      summary: Get projects for issue
+      tags:
+        - Projects
+      description: Get all projects associated with an issue
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Unique project ID
+                    name:
+                      type: string
+                      description: Project name
+                    description:
+                      type: string
+                      nullable: true
+                      description: Project description
+                    viewMeta:
+                      type: object
+                      properties:
+                        viewType:
+                          type: string
+                          enum:
+                            - board
+                            - table
+                          description: "View type: board or table"
+                        columns:
+                          type: array
+                          items:
+                            type: string
+                          description: Column names for board view
+                      required:
+                        - viewType
+                      additionalProperties: false
+                      description: View configuration
+                    createdAt:
+                      type: string
+                      format: date-time
+                      description: Creation timestamp
+                  required:
+                    - id
+                    - name
+                    - description
+                    - viewMeta
+                    - createdAt
+                  additionalProperties: false
         "500":
           description: Default Response
           content:

@@ -225,3 +225,18 @@ export async function removeProjectItemHandler(
     throw error;
   }
 }
+
+/**
+ * Get projects for an issue
+ * GET /api/issues/:id/projects
+ */
+export async function getProjectsForIssueHandler(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  const issueId = parseInt(request.params.id, 10);
+  const projectService = new ProjectService({ db: request.server.db });
+
+  const projects = projectService.getProjectsForIssue(issueId);
+  return reply.status(200).send(projects);
+}

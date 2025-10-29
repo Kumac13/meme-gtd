@@ -104,6 +104,7 @@ export {
   createProject,
   listProjects,
   getProjectById,
+  getProjectsForIssue,
   deleteProject,
   projectRowToProject,
   type CreateProjectInput

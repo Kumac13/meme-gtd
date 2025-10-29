@@ -478,4 +478,55 @@ export class ProjectsService {
             },
         });
     }
+    /**
+     * Get projects for issue
+     * Get all projects associated with an issue
+     * @param id
+     * @returns any Default Response
+     * @throws ApiError
+     */
+    public static getProjectsForIssue(
+        id: string,
+    ): CancelablePromise<Array<{
+        /**
+         * Unique project ID
+         */
+        id: number;
+        /**
+         * Project name
+         */
+        name: string;
+        /**
+         * Project description
+         */
+        description: string | null;
+        /**
+         * View configuration
+         */
+        viewMeta: {
+            /**
+             * View type: board or table
+             */
+            viewType: 'board' | 'table';
+            /**
+             * Column names for board view
+             */
+            columns?: Array<string>;
+        };
+        /**
+         * Creation timestamp
+         */
+        createdAt: string;
+    }>> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/issues/{id}/projects',
+            path: {
+                'id': id,
+            },
+            errors: {
+                500: `Default Response`,
+            },
+        });
+    }
 }
