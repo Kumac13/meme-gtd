@@ -1,11 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
 import ItemList from '../components/ItemList';
 import FilterBar from '../components/FilterBar';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
+import {
+  validateStatus,
+  validateBookmarked,
+  updateStatusParam,
+  updateBookmarkedParam,
+} from '../utils/urlFilterHelpers';
 
 interface Task {
   id: number;
@@ -30,11 +36,13 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function TasksList() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusFilter = validateStatus(searchParams.get('status'));
+  const bookmarkFilter = validateBookmarked(searchParams.get('bookmarked'));
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [bookmarkFilter, setBookmarkFilter] = useState(false);
 
   useEffect(() => {
     async function fetchTasks() {
@@ -62,6 +70,16 @@ export default function TasksList() {
       return true;
     });
   }, [tasks, bookmarkFilter]);
+
+  const handleStatusFilterChange = (newStatus: string) => {
+    const params = updateStatusParam(searchParams, newStatus as any);
+    setSearchParams(params);
+  };
+
+  const handleBookmarkFilterChange = (newBookmarked: boolean) => {
+    const params = updateBookmarkedParam(searchParams, newBookmarked);
+    setSearchParams(params);
+  };
 
   const handleDelete = async (id: number) => {
     await TasksService.deleteTask(String(id));
@@ -91,8 +109,8 @@ export default function TasksList() {
         showStatusFilter
         statusFilter={statusFilter}
         bookmarkFilter={bookmarkFilter}
-        onStatusFilterChange={setStatusFilter}
-        onBookmarkFilterChange={setBookmarkFilter}
+        onStatusFilterChange={handleStatusFilterChange}
+        onBookmarkFilterChange={handleBookmarkFilterChange}
       />
 
       {filteredTasks.length === 0 ? (
