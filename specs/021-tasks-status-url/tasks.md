@@ -118,7 +118,7 @@ description: "Task list for Tasks Page URL State Synchronization feature"
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Modify TasksList component to use useSearchParams in `packages/web/src/pages/TasksList.tsx`
+- [x] T011 [US1] Modify TasksList component to use useSearchParams in `packages/web/src/pages/TasksList.tsx`
   - Import `useSearchParams` from 'react-router-dom'
   - Import `validateStatus`, `validateBookmarked`, `updateStatusParam`, `updateBookmarkedParam` from '../utils/urlFilterHelpers'
   - Replace `const [statusFilter, setStatusFilter] = useState<string>('all')` (L36) with:
@@ -131,13 +131,13 @@ description: "Task list for Tasks Page URL State Synchronization feature"
     const bookmarkFilter = validateBookmarked(searchParams.get('bookmarked'));
     ```
 
-- [ ] T012 [US1] Implement status filter change handler in `packages/web/src/pages/TasksList.tsx`
+- [x] T012 [US1] Implement status filter change handler in `packages/web/src/pages/TasksList.tsx`
   - Create `handleStatusFilterChange` function that:
     - Calls `updateStatusParam(searchParams, newStatus)`
     - Calls `setSearchParams(updatedParams)`
   - Update FilterBar onStatusFilterChange prop to use new handler (L94)
 
-- [ ] T013 [US1] Implement bookmark filter change handler in `packages/web/src/pages/TasksList.tsx`
+- [x] T013 [US1] Implement bookmark filter change handler in `packages/web/src/pages/TasksList.tsx`
   - Create `handleBookmarkFilterChange` function that:
     - Calls `updateBookmarkedParam(searchParams, newBookmarked)`
     - Calls `setSearchParams(updatedParams)`
