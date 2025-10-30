@@ -237,6 +237,8 @@ git tag vX.Y.Z
 ## Active Technologies
 - TypeScript 5.5.4 / React 19.2.0 / Node.js 22+ (020-web-label-management)
 - SQLite database (already implemented with `labels` and `issue_labels` tables) (020-web-label-management)
+- TypeScript 5.5.4 / React 19.2.0 / Node.js 22+ + React Router DOM 7.9.4, Vite 7.1.11 (021-tasks-status-url)
+- N/A (URL-based state only, no backend changes) (021-tasks-status-url)
 
 ## Recent Changes
 - 020-web-label-management: Added TypeScript 5.5.4 / React 19.2.0 / Node.js 22+

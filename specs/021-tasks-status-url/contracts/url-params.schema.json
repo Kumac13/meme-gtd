@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tasks Page URL Query Parameters Schema",
+  "description": "Schema for URL query parameters used in /tasks/ page filter state",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "description": "Task status filter",
+      "enum": ["open", "next", "waiting", "scheduled", "done", "canceled"],
+      "default": "all"
+    },
+    "bookmarked": {
+      "type": "string",
+      "description": "Bookmark filter (only 'true' value is recognized)",
+      "enum": ["true"],
+      "default": "false (parameter absent)"
+    }
+  },
+  "additionalProperties": true,
+  "examples": [
+    {
+      "description": "No filters (all tasks)",
+      "url": "/tasks/",
+      "params": {}
+    },
+    {
+      "description": "Status filter only",
+      "url": "/tasks/?status=open",
+      "params": {
+        "status": "open"
+      }
+    },
+    {
+      "description": "Bookmark filter only",
+      "url": "/tasks/?bookmarked=true",
+      "params": {
+        "bookmarked": "true"
+      }
+    },
+    {
+      "description": "Both filters combined",
+      "url": "/tasks/?status=done&bookmarked=true",
+      "params": {
+        "status": "done",
+        "bookmarked": "true"
+      }
+    }
+  ]
+}
