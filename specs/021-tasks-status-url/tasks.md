@@ -46,26 +46,26 @@ description: "Task list for Tasks Page URL State Synchronization feature"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T002 [P] Write unit tests for `validateStatus` function in `packages/web/tests/unit/urlFilterHelpers.test.ts`
+- [x] T002 [P] Write unit tests for `validateStatus` function in `packages/web/tests/unit/urlFilterHelpers.test.ts`
   - Test: null input returns 'all'
   - Test: valid status values ('open', 'done', etc.) return unchanged
   - Test: invalid status returns 'all' (fallback behavior)
   - Test: empty string returns 'all'
   - Reference: data-model.md test cases table
 
-- [ ] T003 [P] Write unit tests for `validateBookmarked` function in `packages/web/tests/unit/urlFilterHelpers.test.ts`
+- [x] T003 [P] Write unit tests for `validateBookmarked` function in `packages/web/tests/unit/urlFilterHelpers.test.ts`
   - Test: 'true' returns true
   - Test: 'false' returns false
   - Test: null returns false
   - Test: other values ('yes', '1') return false
 
-- [ ] T004 [P] Write unit tests for `updateStatusParam` function in `packages/web/tests/unit/urlFilterHelpers.test.ts`
+- [x] T004 [P] Write unit tests for `updateStatusParam` function in `packages/web/tests/unit/urlFilterHelpers.test.ts`
   - Test: setting status to 'all' removes parameter
   - Test: setting valid status adds/updates parameter
   - Test: preserves other parameters (e.g., bookmarked)
   - Test: handles empty URLSearchParams
 
-- [ ] T005 [P] Write unit tests for `updateBookmarkedParam` function in `packages/web/tests/unit/urlFilterHelpers.test.ts`
+- [x] T005 [P] Write unit tests for `updateBookmarkedParam` function in `packages/web/tests/unit/urlFilterHelpers.test.ts`
   - Test: setting to true adds parameter
   - Test: setting to false removes parameter
   - Test: preserves other parameters (e.g., status)
