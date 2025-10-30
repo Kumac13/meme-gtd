@@ -84,13 +84,13 @@ description: "Task list for Tasks Page URL State Synchronization feature"
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T006 [US1] Write E2E test for status filter URL update in `packages/web/tests/e2e/tasks-filters.spec.ts`
+- [x] T006 [US1] Write E2E test for status filter URL update in `packages/web/tests/e2e/tasks-filters.spec.ts`
   - Navigate to /tasks/
   - Click "Open" status filter button
   - Assert URL contains `?status=open`
   - Assert Open tasks are displayed
 
-- [ ] T007 [US1] Write E2E test for filter persistence across page refresh in `packages/web/tests/e2e/tasks-filters.spec.ts`
+- [x] T007 [US1] Write E2E test for filter persistence across page refresh in `packages/web/tests/e2e/tasks-filters.spec.ts`
   - Navigate to /tasks/
   - Apply "Done" filter
   - Verify URL contains `?status=done`
@@ -98,7 +98,7 @@ description: "Task list for Tasks Page URL State Synchronization feature"
   - Assert URL still contains `?status=done`
   - Assert filter UI shows "Done" as active
 
-- [ ] T008 [US1] Write E2E test for browser back button navigation in `packages/web/tests/e2e/tasks-filters.spec.ts`
+- [x] T008 [US1] Write E2E test for browser back button navigation in `packages/web/tests/e2e/tasks-filters.spec.ts`
   - Navigate to /tasks/
   - Apply "Open" filter → verify URL
   - Apply "Done" filter → verify URL
@@ -106,12 +106,12 @@ description: "Task list for Tasks Page URL State Synchronization feature"
   - Assert URL returns to `?status=open`
   - Assert UI shows "Open" filter active
 
-- [ ] T009 [US1] Write E2E test for direct URL navigation in `packages/web/tests/e2e/tasks-filters.spec.ts`
+- [x] T009 [US1] Write E2E test for direct URL navigation in `packages/web/tests/e2e/tasks-filters.spec.ts`
   - Navigate directly to `/tasks/?status=next`
   - Assert page loads with "Next" filter applied
   - Assert UI shows "Next" as active filter
 
-- [ ] T010 [US1] Write E2E test for "All" filter clearing URL parameters in `packages/web/tests/e2e/tasks-filters.spec.ts`
+- [x] T010 [US1] Write E2E test for "All" filter clearing URL parameters in `packages/web/tests/e2e/tasks-filters.spec.ts`
   - Navigate to `/tasks/?status=done`
   - Click "All" filter button
   - Assert URL changes to `/tasks/` (no parameters)
@@ -164,21 +164,21 @@ description: "Task list for Tasks Page URL State Synchronization feature"
 
 ### Tests for User Story 2
 
-- [ ] T015 [US2] Write E2E test for combined filters in URL in `packages/web/tests/e2e/tasks-filters.spec.ts`
+- [x] T015 [US2] Write E2E test for combined filters in URL in `packages/web/tests/e2e/tasks-filters.spec.ts`
   - Navigate to /tasks/
   - Apply "Open" status filter
   - Enable bookmark filter
   - Assert URL contains `?status=open&bookmarked=true`
   - Assert both filters are active in UI
 
-- [ ] T016 [US2] Write E2E test for bookmark filter URL persistence in `packages/web/tests/e2e/tasks-filters.spec.ts`
+- [x] T016 [US2] Write E2E test for bookmark filter URL persistence in `packages/web/tests/e2e/tasks-filters.spec.ts`
   - Navigate to /tasks/
   - Enable bookmark filter only
   - Assert URL contains `?bookmarked=true`
   - Refresh page
   - Assert bookmark filter still active
 
-- [ ] T017 [US2] Write E2E test for disabling bookmark filter clears parameter in `packages/web/tests/e2e/tasks-filters.spec.ts`
+- [x] T017 [US2] Write E2E test for disabling bookmark filter clears parameter in `packages/web/tests/e2e/tasks-filters.spec.ts`
   - Navigate to `/tasks/?status=open&bookmarked=true`
   - Disable bookmark filter
   - Assert URL changes to `/tasks/?status=open` (bookmarked removed)
@@ -208,18 +208,18 @@ description: "Task list for Tasks Page URL State Synchronization feature"
 
 ### Tests for User Story 3
 
-- [ ] T019 [US3] Write E2E test for shareable URL with status filter in `packages/web/tests/e2e/tasks-filters.spec.ts`
+- [x] T019 [US3] Write E2E test for shareable URL with status filter in `packages/web/tests/e2e/tasks-filters.spec.ts`
   - Navigate directly to `/tasks/?status=done` in incognito/new context
   - Assert page loads with "Done" filter applied
   - Assert correct tasks are displayed
   - Verify no prior session state is required
 
-- [ ] T020 [US3] Write E2E test for shareable URL with combined filters in `packages/web/tests/e2e/tasks-filters.spec.ts`
+- [x] T020 [US3] Write E2E test for shareable URL with combined filters in `packages/web/tests/e2e/tasks-filters.spec.ts`
   - Navigate directly to `/tasks/?status=open&bookmarked=true` in new context
   - Assert both filters are applied correctly
   - Assert correct subset of tasks is displayed
 
-- [ ] T021 [US3] Write E2E test for invalid URL parameters in shared links in `packages/web/tests/e2e/tasks-filters.spec.ts`
+- [x] T021 [US3] Write E2E test for invalid URL parameters in shared links in `packages/web/tests/e2e/tasks-filters.spec.ts`
   - Navigate to `/tasks/?status=invalid`
   - Assert page defaults to "All" filter gracefully
   - Assert no error messages displayed
