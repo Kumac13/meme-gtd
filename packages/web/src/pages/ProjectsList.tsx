@@ -44,9 +44,9 @@ export default function ProjectsList() {
   const filteredProjects = useMemo(() => {
     // Note: Projects don't have isBookmarked property yet
     // This is a placeholder for when bookmark support is added
-    return projects.filter((project) => {
+    return projects.filter((_project) => {
       // Uncomment when projects support bookmarking:
-      // if (bookmarkFilter && !project.isBookmarked) return false;
+      // if (bookmarkFilter && !_project.isBookmarked) return false;
       return true;
     });
   }, [projects, bookmarkFilter]);

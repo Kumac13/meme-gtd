@@ -11,7 +11,7 @@ import type {
   DecodedReturnFilters,
   ItemDetailUrlConfig,
   BackUrlConfig,
-} from '../../../specs/022-github/contracts/return-filters.types';
+} from '../../../../specs/022-github/contracts/return-filters.types';
 
 /**
  * Encodes current filter state for inclusion in detail page URL
