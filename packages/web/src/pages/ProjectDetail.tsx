@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react';
-import { useParams, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { useParams, Outlet, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ProjectsService } from '../api/services/ProjectsService';
 import { ProjectDetail as ProjectDetailType } from '../types/project';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EditableContent from '../components/EditableContent';
+import { createBackUrl } from '../utils/navigationHelpers';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnFiltersEncoded = searchParams.get('returnFilters');
+
   const [project, setProject] = useState<ProjectDetailType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,13 +66,17 @@ export default function ProjectDetail() {
 
   const isKanban = location.pathname.includes('/kanban');
   const isList = location.pathname.includes('/list');
+  const backUrl = createBackUrl({
+    basePath: '/projects',
+    returnFiltersEncoded,
+  });
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-2">
       {/* Header */}
       <div className="mb-4">
         <Link
-          to="/projects"
+          to={backUrl}
           className="text-github-green-600 hover:text-github-green-800 text-sm font-medium mb-4 inline-block"
         >
           ← Back to projects

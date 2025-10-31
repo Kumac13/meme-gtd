@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import ItemDetail, { type Item } from '../components/ItemDetail';
 import LoadingState from '../components/LoadingState';
@@ -18,6 +18,9 @@ interface Memo {
 export default function MemoDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnFiltersEncoded = searchParams.get('returnFilters');
+
   const [memo, setMemo] = useState<Memo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,6 +101,7 @@ export default function MemoDetail() {
       item={memo}
       itemType="memo"
       basePath="/memos"
+      returnFilters={returnFiltersEncoded}
       onDelete={handleDelete}
       onBookmarkToggle={handleBookmarkToggle}
       onUpdate={handleUpdate}
