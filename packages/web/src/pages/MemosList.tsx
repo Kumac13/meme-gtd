@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import ItemList from '../components/ItemList';
 import FilterBar from '../components/FilterBar';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
+import { validateBookmarked, updateBookmarkedParam } from '../utils/urlFilterHelpers';
 
 interface Memo {
   id: number;
@@ -19,10 +20,12 @@ interface Memo {
 }
 
 export default function MemosList() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const bookmarkFilter = validateBookmarked(searchParams.get('bookmarked'));
+
   const [memos, setMemos] = useState<Memo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [bookmarkFilter, setBookmarkFilter] = useState(false);
 
   useEffect(() => {
     async function fetchMemos() {
@@ -48,6 +51,11 @@ export default function MemosList() {
       return true;
     });
   }, [memos, bookmarkFilter]);
+
+  const handleBookmarkFilterChange = (newBookmarked: boolean) => {
+    const params = updateBookmarkedParam(searchParams, newBookmarked);
+    setSearchParams(params);
+  };
 
   const handleDelete = async (id: number) => {
     await MemosService.deleteMemo(String(id));
@@ -75,7 +83,7 @@ export default function MemosList() {
 
       <FilterBar
         bookmarkFilter={bookmarkFilter}
-        onBookmarkFilterChange={setBookmarkFilter}
+        onBookmarkFilterChange={handleBookmarkFilterChange}
       />
 
       {filteredMemos.length === 0 ? (
@@ -84,7 +92,7 @@ export default function MemosList() {
           submessage={!bookmarkFilter ? 'Create your first memo to get started' : undefined}
         />
       ) : (
-        <ItemList items={filteredMemos} itemType="memo" basePath="/memos" onDelete={handleDelete} />
+        <ItemList items={filteredMemos} itemType="memo" basePath="/memos" currentFilters={searchParams} onDelete={handleDelete} />
       )}
     </div>
   );

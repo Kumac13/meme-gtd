@@ -7,6 +7,7 @@ import LinkSection from './LinkSection';
 import { ProjectsSection } from './ProjectsSection';
 import { LabelsSection } from './LabelsSection';
 import { LabelBadge } from './LabelBadge';
+import { createBackUrl } from '../utils/navigationHelpers';
 
 
 export interface BaseItem {
@@ -30,6 +31,7 @@ interface ItemDetailProps {
   item: Item;
   itemType: 'memo' | 'task';
   basePath: string;
+  returnFilters?: string | null;
   onDelete: () => Promise<void>;
   onBookmarkToggle: () => Promise<void>;
   onUpdate: (updatedItem: Item) => void;
@@ -42,6 +44,7 @@ export default function ItemDetail({
   item,
   itemType,
   basePath,
+  returnFilters,
   onDelete,
   onBookmarkToggle,
   onUpdate,
@@ -77,12 +80,17 @@ export default function ItemDetail({
     fetchUpdatedItem();
   };
 
+  const backUrl = createBackUrl({
+    basePath,
+    returnFiltersEncoded: returnFilters,
+  });
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-2">
       {/* Header - Full width */}
       <div className="mb-4">
         <Link
-          to={basePath}
+          to={backUrl}
           className="text-github-green-600 hover:text-github-green-800 text-sm font-medium mb-4 inline-block"
         >
           ← Back to {itemType === 'memo' ? 'memos' : 'tasks'}

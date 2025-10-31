@@ -127,7 +127,7 @@ export default function TasksList() {
           submessage={statusFilter === 'all' && !bookmarkFilter ? 'Create your first task to get started' : undefined}
         />
       ) : (
-        <ItemList items={filteredTasks} itemType="task" basePath="/tasks" onDelete={handleDelete} />
+        <ItemList items={filteredTasks} itemType="task" basePath="/tasks" currentFilters={searchParams} onDelete={handleDelete} />
       )}
     </div>
   );

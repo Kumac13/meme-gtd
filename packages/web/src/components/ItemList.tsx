@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { formatDateTime, formatRelativeTime } from '../utils/dates';
 import { truncateMarkdown } from '../utils/markdown';
 import { LabelBadge } from './LabelBadge';
+import { createItemDetailUrl } from '../utils/navigationHelpers';
 
 interface BaseItem {
   id: number;
@@ -33,6 +34,7 @@ interface ItemListProps {
   items: Item[];
   itemType: 'memo' | 'task' | 'project';
   basePath: string;
+  currentFilters?: URLSearchParams;
   onDelete?: (id: number) => Promise<void>;
 }
 
@@ -44,7 +46,7 @@ function isProject(item: Item): item is Project {
   return 'name' in item && 'description' in item;
 }
 
-export default function ItemList({ items, itemType: _itemType, basePath, onDelete }: ItemListProps) {
+export default function ItemList({ items, itemType: _itemType, basePath, currentFilters, onDelete }: ItemListProps) {
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
 
@@ -71,16 +73,35 @@ export default function ItemList({ items, itemType: _itemType, basePath, onDelet
     <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
       {items.map((item) => {
         // Determine the correct path based on item type
-        let itemPath = `${basePath}/${item.id}`;
+        let itemPath: string;
         if (basePath === '') {
           // Mixed mode: determine path based on item type
           if (isProject(item)) {
-            itemPath = `/projects/${item.id}`;
+            itemPath = createItemDetailUrl({
+              basePath: '/projects',
+              itemId: item.id,
+              currentFilters,
+            });
           } else if (isTask(item)) {
-            itemPath = `/tasks/${item.id}`;
+            itemPath = createItemDetailUrl({
+              basePath: '/tasks',
+              itemId: item.id,
+              currentFilters,
+            });
           } else {
-            itemPath = `/memos/${item.id}`;
+            itemPath = createItemDetailUrl({
+              basePath: '/memos',
+              itemId: item.id,
+              currentFilters,
+            });
           }
+        } else {
+          // Single item type mode: use provided basePath
+          itemPath = createItemDetailUrl({
+            basePath,
+            itemId: item.id,
+            currentFilters,
+          });
         }
 
         return (

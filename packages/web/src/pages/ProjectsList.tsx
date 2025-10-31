@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ProjectsService } from '../api/services/ProjectsService';
 import ItemList from '../components/ItemList';
+import FilterBar from '../components/FilterBar';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
+import { validateBookmarked, updateBookmarkedParam } from '../utils/urlFilterHelpers';
 
 interface Project {
   id: number;
@@ -14,6 +16,9 @@ interface Project {
 }
 
 export default function ProjectsList() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const bookmarkFilter = validateBookmarked(searchParams.get('bookmarked'));
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +40,21 @@ export default function ProjectsList() {
 
     fetchProjects();
   }, []);
+
+  const filteredProjects = useMemo(() => {
+    // Note: Projects don't have isBookmarked property yet
+    // This is a placeholder for when bookmark support is added
+    return projects.filter((_project) => {
+      // Uncomment when projects support bookmarking:
+      // if (bookmarkFilter && !_project.isBookmarked) return false;
+      return true;
+    });
+  }, [projects, bookmarkFilter]);
+
+  const handleBookmarkFilterChange = (newBookmarked: boolean) => {
+    const params = updateBookmarkedParam(searchParams, newBookmarked);
+    setSearchParams(params);
+  };
 
   const handleDelete = async (id: number) => {
     await ProjectsService.deleteProject(String(id));
@@ -60,13 +80,18 @@ export default function ProjectsList() {
         </Link>
       </div>
 
-      {projects.length === 0 ? (
+      <FilterBar
+        bookmarkFilter={bookmarkFilter}
+        onBookmarkFilterChange={handleBookmarkFilterChange}
+      />
+
+      {filteredProjects.length === 0 ? (
         <EmptyState
-          message="No projects yet"
-          submessage="Create your first project to get started"
+          message={bookmarkFilter ? 'No bookmarked projects' : 'No projects yet'}
+          submessage={!bookmarkFilter ? 'Create your first project to get started' : undefined}
         />
       ) : (
-        <ItemList items={projects} itemType="project" basePath="/projects" onDelete={handleDelete} />
+        <ItemList items={filteredProjects} itemType="project" basePath="/projects" currentFilters={searchParams} onDelete={handleDelete} />
       )}
     </div>
   );
