@@ -63,6 +63,90 @@ corepack prepare pnpm@9.0.0 --activate
 - Task Status変更
 - Link管理（親子関係・関連付け）
 - Project管理（Board/Tableビュー対応）
+- GitHub風検索構文によるLabel/Status検索
+
+## 検索とフィルタリング
+
+meme-gtdは、Web UI、CLI、APIの全インターフェースで統一された検索構文をサポートしています。
+
+### 検索構文
+
+```
+label:<label-name>           # 単一ラベルでフィルタ
+label:<label1>,<label2>      # 複数ラベル（OR条件）
+status:<status-value>        # ステータスでフィルタ（Taskのみ）
+label:bug status:open        # 複数条件（AND条件）
+```
+
+### Web UI での検索
+
+検索ボックスに検索構文を入力してEnterキーを押すと検索が実行されます。
+
+**例:**
+- `label:bug` - bugラベルのついたアイテムを検索
+- `label:bug,enhancement` - bugまたはenhancementラベルのアイテムを検索
+- `status:open` - ステータスがopenのタスクを検索
+- `label:urgent status:next` - urgentラベルでステータスがnextのタスクを検索
+
+### CLI での検索
+
+`--label` と `--status` フラグを使用してフィルタリングできます。
+
+**Task例:**
+```bash
+# 単一ラベルでフィルタ
+mgtd task list --label bug
+
+# 複数ラベル（OR条件）
+mgtd task list --label bug,enhancement
+
+# ステータスでフィルタ
+mgtd task list --status open
+
+# 組み合わせ（AND条件）
+mgtd task list --label bug --status open
+```
+
+**Memo例:**
+```bash
+# 単一ラベルでフィルタ
+mgtd memo list --label idea
+
+# 複数ラベル（OR条件）
+mgtd memo list --label idea,meeting-notes
+```
+
+詳細は [docs/cli-commands.md](./docs/cli-commands.md) を参照してください。
+
+### API での検索
+
+クエリパラメータを使用してフィルタリングできます。
+
+**Task例:**
+```bash
+# 単一ラベルでフィルタ
+curl http://localhost:3000/api/tasks?label=bug
+
+# 複数ラベル（OR条件）
+curl http://localhost:3000/api/tasks?label=bug,enhancement
+
+# ステータスでフィルタ
+curl http://localhost:3000/api/tasks?status=open
+
+# 組み合わせ（AND条件）
+curl http://localhost:3000/api/tasks?label=bug&status=open
+```
+
+**Memo例:**
+```bash
+# 単一ラベルでフィルタ
+curl http://localhost:3000/api/memos?label=idea
+
+# 複数ラベル（OR条件）
+curl http://localhost:3000/api/memos?label=idea,meeting-notes
+```
+
+詳細は [docs/api-filtering.md](./docs/api-filtering.md) を参照してください。
 
 ## テスト実行
 ```bash
