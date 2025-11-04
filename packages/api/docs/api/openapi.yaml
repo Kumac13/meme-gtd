@@ -137,6 +137,12 @@ paths:
           name: bookmarked
           required: false
           description: Filter by bookmark status
+        - schema:
+            type: string
+          in: query
+          name: label
+          required: false
+          description: Filter by label name(s). Supports comma-separated values for OR logic (e.g., idea,meeting-notes)
       responses:
         "200":
           description: Default Response
@@ -1338,6 +1344,12 @@ paths:
           name: bookmarked
           required: false
           description: Filter by bookmark status
+        - schema:
+            type: string
+          in: query
+          name: label
+          required: false
+          description: Filter by label name(s). Supports comma-separated values for OR logic (e.g., bug,enhancement)
       responses:
         "200":
           description: Default Response

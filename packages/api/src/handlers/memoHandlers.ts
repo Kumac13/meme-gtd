@@ -31,14 +31,20 @@ export async function createMemoHandler(
  */
 export async function listMemosHandler(
   request: FastifyRequest<{
-    Querystring: { bookmarked?: string };
+    Querystring: { bookmarked?: string; label?: string };
   }>,
   reply: FastifyReply
 ) {
   const memoService = new MemoService({ db: request.server.db });
-  const { bookmarked } = request.query;
+  const { bookmarked, label } = request.query;
 
-  const filters = bookmarked === 'true' ? { isBookmarked: true } : {};
+  const filters: any = {};
+  if (bookmarked === 'true') {
+    filters.isBookmarked = true;
+  }
+  if (label) {
+    filters.labels = label.split(',').map(l => l.trim()).filter(Boolean);
+  }
 
   try {
     const memos = memoService.list(filters);

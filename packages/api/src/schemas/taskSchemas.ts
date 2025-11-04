@@ -84,6 +84,7 @@ export type TaskIdParams = z.infer<typeof TaskIdParamsSchema>;
 export const TaskQuerySchema = z.object({
   status: TaskStatusSchema.optional().describe('Filter by task status'),
   bookmarked: z.enum(['true', 'false']).optional().describe('Filter by bookmark status'),
+  label: z.string().optional().describe('Filter by label name(s). Supports comma-separated values for OR logic (e.g., bug,enhancement)'),
 });
 
 export type TaskQuery = z.infer<typeof TaskQuerySchema>;

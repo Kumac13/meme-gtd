@@ -12,14 +12,16 @@ export default class MemoList extends Command {
   static examples = [
     '$ mgtd memo list',
     '$ mgtd memo list --label inbox --order asc',
+    '$ mgtd memo list --label idea,meeting-notes',
+    '$ mgtd memo list --bookmarked',
     '$ mgtd memo list --search "next actions" --limit 5 --json'
   ];
 
   static flags = {
     label: Flags.string({
       char: 'l',
-      summary: 'Filter by label',
-      description: 'Return only memos tagged with the provided label value.'
+      summary: 'Filter by label name(s)',
+      description: 'Filter memos by label. Supports comma-separated values for OR logic (e.g., idea,meeting-notes).'
     }),
     search: Flags.string({
       char: 's',
@@ -55,8 +57,14 @@ export default class MemoList extends Command {
     const { flags } = await this.parse(MemoList);
     const { config } = await loadConfig({ createIfMissing: true });
     const service = new MemoService({ config });
+
+    // Parse comma-separated labels
+    const labels = flags.label
+      ? flags.label.split(',').map(l => l.trim()).filter(Boolean)
+      : undefined;
+
     const memos = service.list({
-      label: flags.label,
+      labels,
       search: flags.search,
       limit: flags.limit,
       order: flags.order as 'asc' | 'desc' | undefined,

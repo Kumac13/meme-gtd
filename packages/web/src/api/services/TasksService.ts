@@ -103,6 +103,7 @@ export class TasksService {
     public static listTasks(
         status?: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled',
         bookmarked?: 'true' | 'false',
+        label?: string,
     ): CancelablePromise<Array<{
         /**
          * Unique task ID
@@ -163,6 +164,7 @@ export class TasksService {
             query: {
                 'status': status,
                 'bookmarked': bookmarked,
+                'label': label,
             },
             errors: {
                 400: `Default Response`,

@@ -90,6 +90,7 @@ export type MemoIdParams = z.infer<typeof MemoIdParamsSchema>;
  */
 export const MemoQuerySchema = z.object({
   bookmarked: z.enum(['true', 'false']).optional().describe('Filter by bookmark status'),
+  label: z.string().optional().describe('Filter by label name(s). Supports comma-separated values for OR logic (e.g., idea,meeting-notes)'),
 });
 
 export type MemoQuery = z.infer<typeof MemoQuerySchema>;

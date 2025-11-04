@@ -84,11 +84,13 @@ export class MemosService {
      * List memos
      * List all memos with optional filters
      * @param bookmarked Filter by bookmark status
+     * @param label Filter by label
      * @returns any Default Response
      * @throws ApiError
      */
     public static listMemos(
         bookmarked?: 'true' | 'false',
+        label?: string,
     ): CancelablePromise<Array<{
         /**
          * Unique memo ID
@@ -148,6 +150,7 @@ export class MemosService {
             url: '/api/memos',
             query: {
                 'bookmarked': bookmarked,
+                'label': label,
             },
             errors: {
                 400: `Default Response`,

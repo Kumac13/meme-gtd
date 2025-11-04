@@ -24,6 +24,7 @@ export interface UpdateTaskInput {
 export interface ListTaskFilters {
   status?: TaskStatus;
   label?: string;
+  labels?: string[];
   search?: string;
   limit?: number;
   order?: 'asc' | 'desc';
@@ -116,6 +117,16 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
       `id IN (SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name = @label)`
     );
     params.label = filters.label;
+  }
+
+  if (filters.labels && filters.labels.length > 0) {
+    const labelPlaceholders = filters.labels.map((_, i) => `@label${i}`).join(', ');
+    conditions.push(
+      `id IN (SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name IN (${labelPlaceholders}))`
+    );
+    filters.labels.forEach((labelName, i) => {
+      params[`label${i}`] = labelName;
+    });
   }
 
   if (filters.isBookmarked !== undefined) {

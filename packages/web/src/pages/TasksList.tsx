@@ -3,9 +3,11 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
 import ItemList from '../components/ItemList';
 import FilterBar from '../components/FilterBar';
+import SearchInput from '../components/SearchInput';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
+import { useUrlFilters } from '../hooks/useUrlFilters';
 import {
   validateStatus,
   validateBookmarked,
@@ -37,6 +39,7 @@ const statusLabels: Record<string, string> = {
 
 export default function TasksList() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { filters, actions } = useUrlFilters();
   const statusFilter = validateStatus(searchParams.get('status'));
   const bookmarkFilter = validateBookmarked(searchParams.get('bookmarked'));
 
@@ -49,8 +52,18 @@ export default function TasksList() {
       try {
         setLoading(true);
         setError(null);
+
+        // Build label parameter from parsed query
+        const labelParam = filters.parsedQuery.labels?.join(',');
+
+        // Use parsed status from search query if available, otherwise use FilterBar status
+        const effectiveStatus = filters.parsedQuery.status ||
+          (statusFilter !== 'all' ? statusFilter : undefined);
+
         const response = await TasksService.listTasks(
-          statusFilter !== 'all' ? (statusFilter as 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled') : undefined
+          effectiveStatus as 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled' | undefined,
+          undefined,
+          labelParam
         );
         setTasks(response || []);
       } catch (err) {
@@ -62,7 +75,7 @@ export default function TasksList() {
     }
 
     fetchTasks();
-  }, [statusFilter]);
+  }, [statusFilter, filters.searchQuery]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -96,10 +109,15 @@ export default function TasksList() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-2">
-      <div className="flex items-center justify-end mb-3">
+      <div className="flex items-center gap-2 mb-4">
+        <SearchInput
+          value={filters.searchQuery}
+          onChange={actions.setSearchQuery}
+          placeholder="Search tasks"
+        />
         <Link
           to="/tasks/new"
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500"
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 whitespace-nowrap"
         >
           New Task
         </Link>
