@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
+import { MemosService } from '../api/services/MemosService';
 import { validateTaskForm } from '../utils/validation';
 
 type TaskStatus = 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
@@ -10,6 +11,7 @@ interface TaskFormProps {
   initialBodyMd?: string;
   initialStatus?: TaskStatus;
   taskId?: number;
+  fromMemoId?: number;
   mode: 'create' | 'edit';
 }
 
@@ -18,6 +20,7 @@ export default function TaskForm({
   initialBodyMd = '',
   initialStatus = 'open',
   taskId,
+  fromMemoId,
   mode,
 }: TaskFormProps) {
   const navigate = useNavigate();
@@ -44,7 +47,17 @@ export default function TaskForm({
       setSubmitting(true);
       setError(null);
 
-      if (mode === 'create') {
+      if (mode === 'create' && fromMemoId) {
+        // Promotion flow
+        const validStatuses = ['open', 'next', 'waiting', 'scheduled'] as const;
+        const promotionStatus = validStatuses.includes(status as any) ? status as 'open' | 'next' | 'waiting' | 'scheduled' : 'open';
+        const response = await MemosService.promoteMemo(
+          fromMemoId.toString(),
+          { title, status: promotionStatus }
+        );
+        navigate(`/tasks/${response.id}`);
+      } else if (mode === 'create') {
+        // Normal create flow
         const response = await TasksService.createTask({
           title,
           bodyMd: bodyMd || undefined,
@@ -124,10 +137,10 @@ export default function TaskForm({
         </p>
       </div>
 
-      {mode === 'edit' && (
+      {(mode === 'edit' || fromMemoId) && (
         <div>
           <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
-            Task Status
+            {fromMemoId ? 'Initial Status' : 'Task Status'}
           </label>
           <select
             id="status"
@@ -139,11 +152,17 @@ export default function TaskForm({
             <option value="next">Next</option>
             <option value="waiting">Waiting</option>
             <option value="scheduled">Scheduled</option>
-            <option value="done">Done</option>
-            <option value="canceled">Canceled</option>
+            {mode === 'edit' && (
+              <>
+                <option value="done">Done</option>
+                <option value="canceled">Canceled</option>
+              </>
+            )}
           </select>
           <p className="mt-1 text-xs text-gray-500">
-            Update the task status to track its progress.
+            {fromMemoId
+              ? 'Select initial status for this task.'
+              : 'Update the task status to track its progress.'}
           </p>
         </div>
       )}

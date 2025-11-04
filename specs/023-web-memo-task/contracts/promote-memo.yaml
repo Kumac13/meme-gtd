@@ -1,0 +1,425 @@
+# API Contract: Promote Memo to Task
+# Feature: 023-web-memo-task
+# Date: 2025-11-04
+
+openapi: 3.0.3
+info:
+  title: Memo Promotion API
+  description: API contract for promoting memos to tasks in the Web UI
+  version: 0.9.0
+
+paths:
+  /api/memos/{id}/promote:
+    post:
+      summary: Promote memo to task
+      description: |
+        Promotes an existing memo to a task by:
+        1. Creating a new task with the provided title and optional status
+        2. Transferring memo body to task body
+        3. Transferring all metadata (labels, comments, links, projects, bookmarks)
+        4. Creating a derived_from link from task to memo
+        5. Deleting the original memo (soft delete)
+      operationId: promoteMemo
+      tags:
+        - Memos
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Memo ID to promote
+          schema:
+            type: integer
+            minimum: 1
+            example: 123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                  description: Title for the new task
+                  example: "Implement React Router form pre-population"
+                status:
+                  type: string
+                  enum: [open, next, waiting, scheduled]
+                  default: open
+                  description: Initial status for the task
+                  example: "next"
+            examples:
+              basic:
+                summary: Basic promotion
+                value:
+                  title: "Research task management patterns"
+              withStatus:
+                summary: Promotion with specific status
+                value:
+                  title: "Fix authentication bug"
+                  status: "next"
+      responses:
+        '200':
+          description: Memo successfully promoted to task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              examples:
+                promotedTask:
+                  summary: Successfully promoted task
+                  value:
+                    id: 456
+                    type: "task"
+                    title: "Implement React Router form pre-population"
+                    bodyMd: "Research React Router patterns for form pre-population"
+                    status: "next"
+                    scheduledOn: null
+                    meta: {}
+                    isBookmarked: true
+                    isDeleted: false
+                    createdAt: "2025-11-04T10:05:00Z"
+                    updatedAt: "2025-11-04T10:05:00Z"
+                    labels: ["research", "frontend"]
+        '400':
+          description: Invalid request (validation error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                missingTitle:
+                  summary: Title is missing
+                  value:
+                    statusCode: 400
+                    error: "Bad Request"
+                    message: "Validation failed"
+                    validation:
+                      title: "Task title is required"
+                emptyTitle:
+                  summary: Title is empty
+                  value:
+                    statusCode: 400
+                    error: "Bad Request"
+                    message: "Validation failed"
+                    validation:
+                      title: "Title must be at least 1 character"
+                invalidStatus:
+                  summary: Invalid status value
+                  value:
+                    statusCode: 400
+                    error: "Bad Request"
+                    message: "Validation failed"
+                    validation:
+                      status: "Status must be one of: open, next, waiting, scheduled"
+        '404':
+          description: Memo not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+              examples:
+                memoNotFound:
+                  summary: Memo does not exist
+                  value:
+                    statusCode: 404
+                    error: "Not Found"
+                    message: "Memo not found: 123"
+        '500':
+          description: Server error during promotion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+              examples:
+                databaseError:
+                  summary: Database transaction failed
+                  value:
+                    statusCode: 500
+                    error: "Internal Server Error"
+                    message: "Failed to promote memo"
+
+components:
+  schemas:
+    Task:
+      type: object
+      required:
+        - id
+        - type
+        - title
+        - bodyMd
+        - status
+        - scheduledOn
+        - meta
+        - isBookmarked
+        - isDeleted
+        - createdAt
+        - updatedAt
+        - labels
+      properties:
+        id:
+          type: integer
+          description: Unique task ID
+          example: 456
+        type:
+          type: string
+          enum: [task]
+          description: Entity type (always "task")
+        title:
+          type: string
+          description: Task title
+          example: "Implement React Router form pre-population"
+        bodyMd:
+          type: string
+          nullable: true
+          description: Task body in Markdown format (from original memo)
+          example: "Research React Router patterns for form pre-population"
+        status:
+          type: string
+          enum: [open, next, waiting, scheduled, done, canceled]
+          description: Current task status
+          example: "next"
+        scheduledOn:
+          type: string
+          format: date
+          nullable: true
+          description: Scheduled date in ISO 8601 format
+          example: null
+        meta:
+          type: object
+          additionalProperties: true
+          description: Metadata key-value pairs
+          example: {}
+        isBookmarked:
+          type: boolean
+          description: Bookmark flag (transferred from memo)
+          example: true
+        isDeleted:
+          type: boolean
+          description: Soft delete flag
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          description: Task creation timestamp (ISO 8601)
+          example: "2025-11-04T10:05:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp (ISO 8601)
+          example: "2025-11-04T10:05:00Z"
+        labels:
+          type: array
+          items:
+            type: string
+          description: Array of label names (transferred from memo)
+          example: ["research", "frontend"]
+
+    ValidationError:
+      type: object
+      required:
+        - statusCode
+        - error
+        - message
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        error:
+          type: string
+          example: "Bad Request"
+        message:
+          type: string
+          example: "Validation failed"
+        validation:
+          type: object
+          additionalProperties:
+            type: string
+          description: Field-level validation errors
+          example:
+            title: "Task title is required"
+
+    NotFoundError:
+      type: object
+      required:
+        - statusCode
+        - error
+        - message
+      properties:
+        statusCode:
+          type: integer
+          example: 404
+        error:
+          type: string
+          example: "Not Found"
+        message:
+          type: string
+          example: "Memo not found: 123"
+
+    ServerError:
+      type: object
+      required:
+        - statusCode
+        - error
+        - message
+      properties:
+        statusCode:
+          type: integer
+          example: 500
+        error:
+          type: string
+          example: "Internal Server Error"
+        message:
+          type: string
+          example: "Failed to promote memo"
+
+# Contract Tests (Specification)
+# These test cases should be implemented in packages/api/test/integration/
+
+contractTests:
+  - name: "Successful promotion with minimal data"
+    request:
+      method: POST
+      path: /api/memos/123/promote
+      body:
+        title: "Test task"
+    preconditions:
+      - Memo ID 123 exists
+      - Memo has bodyMd: "Test memo content"
+    expectedResponse:
+      status: 200
+      body:
+        id: <any positive integer>
+        type: "task"
+        title: "Test task"
+        bodyMd: "Test memo content"
+        status: "open"
+    postconditions:
+      - Task created with returned ID
+      - Original memo deleted (isDeleted = true)
+      - derived_from link exists from task to memo
+
+  - name: "Successful promotion with custom status"
+    request:
+      method: POST
+      path: /api/memos/124/promote
+      body:
+        title: "Next action task"
+        status: "next"
+    preconditions:
+      - Memo ID 124 exists
+    expectedResponse:
+      status: 200
+      body:
+        status: "next"
+    postconditions:
+      - Task has status "next"
+
+  - name: "Metadata transfer - labels"
+    request:
+      method: POST
+      path: /api/memos/125/promote
+      body:
+        title: "Task with labels"
+    preconditions:
+      - Memo ID 125 exists
+      - Memo has labels ["urgent", "work"]
+    expectedResponse:
+      status: 200
+      body:
+        labels: ["urgent", "work"]
+    postconditions:
+      - Task has same labels as original memo
+
+  - name: "Metadata transfer - comments"
+    request:
+      method: POST
+      path: /api/memos/126/promote
+      body:
+        title: "Task with comments"
+    preconditions:
+      - Memo ID 126 exists
+      - Memo has 3 comments
+    postconditions:
+      - Task has 3 comments with same content
+
+  - name: "Metadata transfer - bookmark status"
+    request:
+      method: POST
+      path: /api/memos/127/promote
+      body:
+        title: "Bookmarked task"
+    preconditions:
+      - Memo ID 127 exists
+      - Memo is bookmarked (isBookmarked = true)
+    expectedResponse:
+      status: 200
+      body:
+        isBookmarked: true
+
+  - name: "Validation error - missing title"
+    request:
+      method: POST
+      path: /api/memos/128/promote
+      body: {}
+    expectedResponse:
+      status: 400
+      body:
+        error: "Bad Request"
+        validation:
+          title: <error message about required field>
+
+  - name: "Validation error - empty title"
+    request:
+      method: POST
+      path: /api/memos/129/promote
+      body:
+        title: ""
+    expectedResponse:
+      status: 400
+
+  - name: "Validation error - invalid status"
+    request:
+      method: POST
+      path: /api/memos/130/promote
+      body:
+        title: "Test"
+        status: "invalid_status"
+    expectedResponse:
+      status: 400
+
+  - name: "Not found error - memo does not exist"
+    request:
+      method: POST
+      path: /api/memos/99999/promote
+      body:
+        title: "Test"
+    preconditions:
+      - Memo ID 99999 does NOT exist
+    expectedResponse:
+      status: 404
+      body:
+        error: "Not Found"
+        message: <message containing "99999">
+
+  - name: "Atomic operation - rollback on partial failure"
+    description: |
+      If any step in promotion fails (e.g., derived_from link creation),
+      entire operation should roll back (no task created, memo unchanged)
+    request:
+      method: POST
+      path: /api/memos/131/promote
+      body:
+        title: "Test"
+    simulatedFailure:
+      step: "derived_from link creation"
+    expectedResponse:
+      status: 500
+    postconditions:
+      - No task created
+      - Memo ID 131 still exists and unchanged
+      - No orphaned data in database

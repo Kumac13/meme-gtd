@@ -38,6 +38,7 @@ interface ItemDetailProps {
   onStatusChange?: (status: string) => Promise<void>;
   deleting: boolean;
   bookmarking: boolean;
+  customActions?: React.ReactNode;
 }
 
 export default function ItemDetail({
@@ -50,6 +51,7 @@ export default function ItemDetail({
   onUpdate,
   onStatusChange,
   bookmarking,
+  customActions,
 }: ItemDetailProps) {
   const handleUpdateBody = async (newBody: string, newTitle?: string) => {
     const updatedItem =
@@ -114,6 +116,7 @@ export default function ItemDetail({
                 <option value="canceled">Canceled</option>
               </select>
             )}
+            {customActions}
             <button
               onClick={onBookmarkToggle}
               disabled={bookmarking}
