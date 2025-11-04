@@ -241,6 +241,8 @@ git tag vX.Y.Z
 - N/A (URL-based state only, no backend changes) (021-tasks-status-url)
 - TypeScript 5.5.4, Node.js 22+ + React 19.2.0, React Router DOM 7.9.4, Fastify 5.2.0, better-sqlite3 (023-web-memo-task)
 - SQLite database (already has promote endpoint implemented) (023-web-memo-task)
+- TypeScript 5.5.4 / Node.js 22+ (024-tasks-memos-label)
+- SQLite database with existing schema: (024-tasks-memos-label)
 
 ## Recent Changes
 - 020-web-label-management: Added TypeScript 5.5.4 / React 19.2.0 / Node.js 22+
