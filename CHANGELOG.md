@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.10.0 - 2025-11-04
+
+### New Features
+
+- **Label and Status Search (#71)**: Unified search and filtering across all interfaces with GitHub-style syntax
+  - **Web UI**:
+    - GitHub-style search input component with `label:value` and `status:value` syntax
+    - Enter key submission for explicit search execution
+    - Real-time syntax validation with helpful hints
+    - Support for comma-separated labels with OR logic (`label:bug,enhancement`)
+    - React Icons integration (IoSearch, IoClose)
+    - Absolute positioning for hints to prevent layout shifts
+    - Warning when using status filters on memos
+    - Horizontal layout matching GitHub's design
+    - English-only UI text
+  - **CLI Commands**:
+    - `mgtd task list --label bug,enhancement --status open` - Filter tasks by multiple labels and status
+    - `mgtd memo list --label idea,meeting-notes` - Filter memos by multiple labels
+    - Comma-separated labels for OR logic
+    - Full backward compatibility
+  - **API Endpoints**:
+    - `GET /api/tasks?label=bug,enhancement&status=open` - Query parameter filtering for tasks
+    - `GET /api/memos?label=idea,meeting-notes` - Query parameter filtering for memos
+    - Comma-separated label parameters
+    - Query parameter validation
+  - **Database Layer**:
+    - Multi-label filtering with OR logic using SQL `IN` clauses
+    - Case-insensitive label matching
+    - Efficient query optimization
+
+### Documentation
+
+- Added comprehensive filtering documentation:
+  - `docs/cli-commands.md` - CLI filtering reference with examples
+  - `docs/api-filtering.md` - API filtering guide with integration examples (Python, JavaScript, Shell)
+  - `README.md` - Search and filtering section covering all interfaces
+  - Feature specification in `specs/024-tasks-memos-label/`
+
+### Bug Fixes
+
+- Fixed infinite loop in TasksList component by using primitive dependency in useEffect
+- Changed from auto-search to explicit Enter key submission to prevent focus loss
+- Fixed layout shifts when validation hints appear by using absolute positioning
+
+### Breaking Changes
+
+None. All changes are backward compatible.
+
 ## 0.9.0 - 2025-10-25
 
 ### New Features
