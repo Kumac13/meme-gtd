@@ -35,12 +35,12 @@ export async function createTaskHandler(
  */
 export async function listTasksHandler(
   request: FastifyRequest<{
-    Querystring: { status?: string; bookmarked?: string };
+    Querystring: { status?: string; bookmarked?: string; label?: string };
   }>,
   reply: FastifyReply
 ) {
   const taskService = new TaskService({ db: request.server.db });
-  const { status, bookmarked } = request.query;
+  const { status, bookmarked, label } = request.query;
 
   const filters: any = {};
   if (status) {
@@ -48,6 +48,9 @@ export async function listTasksHandler(
   }
   if (bookmarked === 'true') {
     filters.isBookmarked = true;
+  }
+  if (label) {
+    filters.labels = label.split(',').map(l => l.trim()).filter(Boolean);
   }
 
   try {
