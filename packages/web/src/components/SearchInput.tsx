@@ -1,16 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { parseSearchQuery, isValidStatus } from '../utils/queryParser';
 
 interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  debounceMs?: number;
   showStatusHint?: boolean;
 }
 
 /**
- * GitHub-style search input component with debounced input
+ * GitHub-style search input component with search button
  *
  * Supports query syntax:
  * - label:bug → Filter by label
@@ -22,38 +21,15 @@ export default function SearchInput({
   value,
   onChange,
   placeholder = '検索例: label:bug status:open',
-  debounceMs = 300,
   showStatusHint = true,
 }: SearchInputProps) {
   const [localValue, setLocalValue] = useState(value);
   const [showHint, setShowHint] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const timeoutRef = useRef<number | null>(null);
 
-  // Sync local value when prop changes (only when NOT typing)
+  // Sync local value when prop changes
   useEffect(() => {
-    if (!isTyping) {
-      setLocalValue(value);
-    }
-  }, [value, isTyping]);
-
-  // Debounced onChange
-  useEffect(() => {
-    if (timeoutRef.current !== null) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    timeoutRef.current = window.setTimeout(() => {
-      onChange(localValue);
-      setIsTyping(false);
-    }, debounceMs);
-
-    return () => {
-      if (timeoutRef.current !== null) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [localValue, onChange, debounceMs]);
+    setLocalValue(value);
+  }, [value]);
 
   // Validate query and show hint for invalid syntax
   useEffect(() => {
@@ -73,35 +49,54 @@ export default function SearchInput({
   }, [localValue, showStatusHint]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setIsTyping(true);
     setLocalValue(e.target.value);
   };
 
+  const handleSearch = () => {
+    onChange(localValue);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSearch();
+    }
+  };
+
   const handleClear = () => {
-    setIsTyping(false);
     setLocalValue('');
     onChange('');
   };
 
   return (
     <div className="mb-4">
-      <div className="relative">
-        <input
-          type="text"
-          value={localValue}
-          onChange={handleInputChange}
-          placeholder={placeholder}
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-600 focus:border-transparent"
-        />
-        {localValue && (
-          <button
-            onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            aria-label="Clear search"
-          >
-            ✕
-          </button>
-        )}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            value={localValue}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-600 focus:border-transparent pr-10"
+          />
+          {localValue && (
+            <button
+              onClick={handleClear}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              aria-label="Clear search"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+        <button
+          onClick={handleSearch}
+          className="px-4 py-2 bg-github-green-600 text-white rounded-md hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-github-green-600 focus:ring-offset-2 transition-colors"
+          aria-label="Search"
+        >
+          🔍 検索
+        </button>
       </div>
 
       {/* Hint for invalid syntax */}
