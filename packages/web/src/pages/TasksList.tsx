@@ -3,9 +3,11 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
 import ItemList from '../components/ItemList';
 import FilterBar from '../components/FilterBar';
+import SearchInput from '../components/SearchInput';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
+import { useUrlFilters } from '../hooks/useUrlFilters';
 import {
   validateStatus,
   validateBookmarked,
@@ -37,6 +39,7 @@ const statusLabels: Record<string, string> = {
 
 export default function TasksList() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { filters, actions } = useUrlFilters();
   const statusFilter = validateStatus(searchParams.get('status'));
   const bookmarkFilter = validateBookmarked(searchParams.get('bookmarked'));
 
@@ -49,8 +52,14 @@ export default function TasksList() {
       try {
         setLoading(true);
         setError(null);
+
+        // Build label parameter from parsed query
+        const labelParam = filters.parsedQuery.labels?.join(',');
+
         const response = await TasksService.listTasks(
-          statusFilter !== 'all' ? (statusFilter as 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled') : undefined
+          statusFilter !== 'all' ? (statusFilter as 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled') : undefined,
+          undefined,
+          labelParam
         );
         setTasks(response || []);
       } catch (err) {
@@ -62,7 +71,7 @@ export default function TasksList() {
     }
 
     fetchTasks();
-  }, [statusFilter]);
+  }, [statusFilter, filters.parsedQuery]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -104,6 +113,12 @@ export default function TasksList() {
           New Task
         </Link>
       </div>
+
+      <SearchInput
+        value={filters.searchQuery}
+        onChange={actions.setSearchQuery}
+        placeholder="検索例: label:bug status:open"
+      />
 
       <FilterBar
         showStatusFilter

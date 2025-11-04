@@ -104,3 +104,35 @@ export function updateBookmarkedParam(
 
   return params;
 }
+
+/**
+ * Updates the search query parameter in URLSearchParams
+ *
+ * @param currentParams - Current URLSearchParams object
+ * @param searchQuery - New search query string (e.g., "label:bug status:open")
+ * @returns New URLSearchParams object with updated query
+ */
+export function updateSearchParam(
+  currentParams: URLSearchParams,
+  searchQuery: string
+): URLSearchParams {
+  const params = new URLSearchParams(currentParams);
+
+  if (searchQuery && searchQuery.trim() !== '') {
+    params.set('q', searchQuery);
+  } else {
+    params.delete('q');
+  }
+
+  return params;
+}
+
+/**
+ * Gets the search query from URLSearchParams
+ *
+ * @param params - URLSearchParams object
+ * @returns Search query string or empty string if not present
+ */
+export function getSearchParam(params: URLSearchParams): string {
+  return params.get('q') || '';
+}
