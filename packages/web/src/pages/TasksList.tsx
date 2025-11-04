@@ -56,8 +56,12 @@ export default function TasksList() {
         // Build label parameter from parsed query
         const labelParam = filters.parsedQuery.labels?.join(',');
 
+        // Use parsed status from search query if available, otherwise use FilterBar status
+        const effectiveStatus = filters.parsedQuery.status ||
+          (statusFilter !== 'all' ? statusFilter : undefined);
+
         const response = await TasksService.listTasks(
-          statusFilter !== 'all' ? (statusFilter as 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled') : undefined,
+          effectiveStatus as 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled' | undefined,
           undefined,
           labelParam
         );
