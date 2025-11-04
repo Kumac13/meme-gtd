@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { IoSearch } from 'react-icons/io5';
+import { IoSearch, IoClose } from 'react-icons/io5';
 import { parseSearchQuery, isValidStatus } from '../utils/queryParser';
 
 interface SearchInputProps {
@@ -70,7 +70,7 @@ export default function SearchInput({
   };
 
   return (
-    <div className="flex-1">
+    <div className="flex-1 relative">
       <div className="relative">
         <IoSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
         <input
@@ -87,15 +87,14 @@ export default function SearchInput({
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             aria-label="Clear search"
           >
-            ✕
+            <IoClose className="w-5 h-5" />
           </button>
         )}
       </div>
 
-      {/* Hint for invalid syntax */}
+      {/* Hint for invalid syntax - positioned absolutely to not affect layout */}
       {showHint && (
-        <div className="mt-2 text-sm text-gray-600">
-          <span className="mr-2">💡</span>
+        <div className="absolute left-0 top-full mt-1 text-sm text-gray-600 bg-white border border-gray-200 rounded-md shadow-sm p-2 z-10">
           Example: label:bug status:open
           <br />
           <span className="text-xs text-gray-500">
