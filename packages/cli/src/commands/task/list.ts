@@ -13,6 +13,8 @@ export default class TaskList extends Command {
     '$ mgtd task list',
     '$ mgtd task list --status next',
     '$ mgtd task list --label urgent --order asc',
+    '$ mgtd task list --label bug,enhancement',
+    '$ mgtd task list --label bug --status open',
     '$ mgtd task list --search "bug" --limit 10',
     '$ mgtd task list --bookmarked --json'
   ];
@@ -26,8 +28,8 @@ export default class TaskList extends Command {
     }),
     label: Flags.string({
       char: 'l',
-      summary: 'Filter by label',
-      description: 'Return only tasks tagged with the provided label value.'
+      summary: 'Filter by label name(s)',
+      description: 'Filter tasks by label. Supports comma-separated values for OR logic (e.g., bug,enhancement).'
     }),
     search: Flags.string({
       summary: 'Filter using full-text search',
@@ -62,9 +64,15 @@ export default class TaskList extends Command {
     const { flags } = await this.parse(TaskList);
     const { config } = await loadConfig({ createIfMissing: true });
     const service = new TaskService({ config });
+
+    // Parse comma-separated labels
+    const labels = flags.label
+      ? flags.label.split(',').map(l => l.trim()).filter(Boolean)
+      : undefined;
+
     const tasks = service.list({
       status: flags.status as any,
-      label: flags.label,
+      labels,
       search: flags.search,
       limit: flags.limit,
       order: flags.order as 'asc' | 'desc' | undefined,
