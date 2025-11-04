@@ -7,6 +7,7 @@ interface SearchInputProps {
   onChange: (value: string) => void;
   placeholder?: string;
   showStatusHint?: boolean;
+  itemType?: 'task' | 'memo';
 }
 
 /**
@@ -23,9 +24,11 @@ export default function SearchInput({
   onChange,
   placeholder = 'Search tasks',
   showStatusHint = true,
+  itemType = 'task',
 }: SearchInputProps) {
   const [localValue, setLocalValue] = useState(value);
   const [showHint, setShowHint] = useState(false);
+  const [showMemoWarning, setShowMemoWarning] = useState(false);
 
   // Sync local value when prop changes
   useEffect(() => {
@@ -36,18 +39,28 @@ export default function SearchInput({
   useEffect(() => {
     if (!localValue || localValue.trim() === '') {
       setShowHint(false);
+      setShowMemoWarning(false);
       return;
     }
 
     const parsed = parseSearchQuery(localValue);
 
-    // Show hint if status is invalid
+    // Show warning if status filter is used with memos
+    if (itemType === 'memo' && parsed.status) {
+      setShowMemoWarning(true);
+      setShowHint(false);
+      return;
+    } else {
+      setShowMemoWarning(false);
+    }
+
+    // Show hint if status is invalid (for tasks)
     if (showStatusHint && parsed.status && !isValidStatus(parsed.status)) {
       setShowHint(true);
     } else {
       setShowHint(false);
     }
-  }, [localValue, showStatusHint]);
+  }, [localValue, showStatusHint, itemType]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalValue(e.target.value);
@@ -100,6 +113,13 @@ export default function SearchInput({
           <span className="text-xs text-gray-500">
             Valid statuses: open, next, waiting, scheduled, done, canceled
           </span>
+        </div>
+      )}
+
+      {/* Warning for status filter on memos */}
+      {showMemoWarning && (
+        <div className="absolute left-0 top-full mt-1 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md shadow-sm p-2 z-10">
+          Note: Status filters do not apply to memos
         </div>
       )}
     </div>
