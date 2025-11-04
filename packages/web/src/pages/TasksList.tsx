@@ -71,7 +71,7 @@ export default function TasksList() {
     }
 
     fetchTasks();
-  }, [statusFilter, filters.parsedQuery]);
+  }, [statusFilter, filters.searchQuery]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
