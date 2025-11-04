@@ -11,9 +11,9 @@
 
 - Q: 無効なステータス値のエラー処理 - Web UI、API、CLIで無効なステータス値（例: `status:invalid`）が入力された場合、システムはどのように動作すべきか？ → A: エラーメッセージを表示し、有効なステータス値のリストを示す（Web UI: 画面上にエラー表示、API: 400 Bad Requestレスポンス、CLI: stderr出力）
 - Q: ページネーションのデフォルト設定 - APIで大量の結果を返す場合のページネーション設定（デフォルトページサイズと最大ページサイズ）はどうすべきか？ → A: デフォルト: 100件、最大: 1000件（クエリパラメータ `limit` と `offset` で制御）
-- Q: Web UI での無効な検索構文のエラー処理 - ユーザーが無効な検索構文（例: `label:` や `status` のみ）を入力した場合、Web UI はどのように動作すべきか？ → A: 全件を表示し、検索ボックス下に控えめなヒントを表示する（例: "検索例: label:bug status:open"）。入力中のユーザー体験を妨げない
-- Q: メモ検索でのステータスフィルター処理 - メモ検索画面でユーザーが `status:open` のようなステータスフィルターを入力した場合、システムはどのように動作すべきか？ → A: ステータスフィルターを無視してメモを表示し、検索ボックス下に警告を表示する（例: "注意: ステータスフィルターはメモには適用されません"）。APIは `status` パラメータを無視し、CLIは警告メッセージを出力
-- Q: Web UI 検索入力のデバウンス時間 - ユーザーが検索ボックスに入力する際、過剰なフィルタリング処理を避けるためのデバウンス時間はどのくらいにすべきか？ → A: 300ms（ユーザーが入力を停止してから300ms後にフィルタリングを実行。タイピング中は不要な処理を回避し、UXとパフォーマンスのバランスを保つ）
+- Q: Web UI での無効な検索構文のエラー処理 - ユーザーが無効な検索構文（例: `label:` や `status` のみ）を入力した場合、Web UI はどのように動作すべきか？ → A: 全件を表示し、検索ボックス下に控えめなヒントを表示する（例: "Example: label:bug status:open"）。入力中のユーザー体験を妨げない
+- Q: メモ検索でのステータスフィルター処理 - メモ検索画面でユーザーが `status:open` のようなステータスフィルターを入力した場合、システムはどのように動作すべきか？ → A: ステータスフィルターを無視してメモを表示し、検索ボックス下に警告を表示する（例: "Note: Status filters do not apply to memos"）。APIは `status` パラメータを無視し、CLIは警告メッセージを出力
+- Q: Web UI 検索送信のトリガー - ユーザーが検索ボックスに入力する際、いつ検索を実行すべきか？ → A: Enterキー押下時のみ検索を実行。GitHubの実装と同様に、明示的な送信アクションを要求することで、ユーザーが意図しない検索処理の発生を防ぐ
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -27,9 +27,9 @@ As a user, I want to search my tasks by a single label so that I can quickly fin
 
 **Acceptance Scenarios**:
 
-1. **Given** I have tasks with labels "bug", "enhancement", and "documentation", **When** I type `label:bug` in the search box, **Then** only tasks with the "bug" label are displayed
-2. **Given** I have tasks with mixed labels, **When** I type `label:enhancement`, **Then** only tasks with the "enhancement" label are displayed
-3. **Given** I type `label:nonexistent`, **When** no tasks have this label, **Then** an empty list is displayed with a message "No tasks found"
+1. **Given** I have tasks with labels "bug", "enhancement", and "documentation", **When** I type `label:bug` in the search box and press Enter, **Then** only tasks with the "bug" label are displayed
+2. **Given** I have tasks with mixed labels, **When** I type `label:enhancement` and press Enter, **Then** only tasks with the "enhancement" label are displayed
+3. **Given** I type `label:nonexistent` and press Enter, **When** no tasks have this label, **Then** an empty list is displayed with a message "No tasks found"
 
 ---
 
@@ -43,9 +43,9 @@ As a user, I want to search my memos by a single label so that I can quickly fin
 
 **Acceptance Scenarios**:
 
-1. **Given** I have memos with labels "idea", "meeting-notes", and "todo", **When** I type `label:idea` in the search box, **Then** only memos with the "idea" label are displayed
-2. **Given** I have memos with different labels, **When** I type `label:meeting-notes`, **Then** only memos with the "meeting-notes" label are displayed
-3. **Given** I type `label:nonexistent`, **When** no memos have this label, **Then** an empty list is displayed with a message "No memos found"
+1. **Given** I have memos with labels "idea", "meeting-notes", and "todo", **When** I type `label:idea` in the search box and press Enter, **Then** only memos with the "idea" label are displayed
+2. **Given** I have memos with different labels, **When** I type `label:meeting-notes` and press Enter, **Then** only memos with the "meeting-notes" label are displayed
+3. **Given** I type `label:nonexistent` and press Enter, **When** no memos have this label, **Then** an empty list is displayed with a message "No memos found"
 
 ---
 
@@ -59,9 +59,9 @@ As a user, I want to search for tasks or memos that have any of multiple labels 
 
 **Acceptance Scenarios**:
 
-1. **Given** I have tasks with labels "bug", "enhancement", and "documentation", **When** I type `label:bug,enhancement`, **Then** tasks with either "bug" OR "enhancement" labels are displayed
-2. **Given** I have memos with labels "idea", "meeting-notes", and "todo", **When** I type `label:idea,todo`, **Then** memos with either "idea" OR "todo" labels are displayed
-3. **Given** I type `label:bug,nonexistent`, **When** some items have "bug" label, **Then** only items with the "bug" label are displayed (non-existent labels are ignored)
+1. **Given** I have tasks with labels "bug", "enhancement", and "documentation", **When** I type `label:bug,enhancement` and press Enter, **Then** tasks with either "bug" OR "enhancement" labels are displayed
+2. **Given** I have memos with labels "idea", "meeting-notes", and "todo", **When** I type `label:idea,todo` and press Enter, **Then** memos with either "idea" OR "todo" labels are displayed
+3. **Given** I type `label:bug,nonexistent` and press Enter, **When** some items have "bug" label, **Then** only items with the "bug" label are displayed (non-existent labels are ignored)
 
 ---
 
@@ -75,9 +75,9 @@ As a user, I want to search my tasks by status (e.g., `status:open`, `status:clo
 
 **Acceptance Scenarios**:
 
-1. **Given** I have both open and closed tasks, **When** I type `status:open`, **Then** only open tasks are displayed
-2. **Given** I have both open and closed tasks, **When** I type `status:closed`, **Then** only closed tasks are displayed
-3. **Given** I type an invalid status like `status:invalid`, **When** the system doesn't recognize the status, **Then** an error message is displayed showing the list of valid status values (e.g., "Invalid status 'invalid'. Valid values: open, next, waiting, scheduled, done, canceled")
+1. **Given** I have both open and closed tasks, **When** I type `status:open` and press Enter, **Then** only open tasks are displayed
+2. **Given** I have both open and closed tasks, **When** I type `status:closed` and press Enter, **Then** only closed tasks are displayed
+3. **Given** I type an invalid status like `status:invalid` and press Enter, **When** the system doesn't recognize the status, **Then** an error message is displayed showing the list of valid status values (e.g., "Invalid status 'invalid'. Valid values: open, next, waiting, scheduled, done, canceled")
 
 ---
 
@@ -91,9 +91,9 @@ As a user, I want to combine label and status filters (e.g., `label:bug status:o
 
 **Acceptance Scenarios**:
 
-1. **Given** I have tasks with various labels and statuses, **When** I type `label:bug status:open`, **Then** only open tasks with the "bug" label are displayed
-2. **Given** I type `label:bug,enhancement status:closed`, **When** tasks exist matching the criteria, **Then** only closed tasks with either "bug" or "enhancement" labels are displayed
-3. **Given** I type combined filters with no matches, **When** no tasks meet all criteria, **Then** an empty list with "No tasks found" message is displayed
+1. **Given** I have tasks with various labels and statuses, **When** I type `label:bug status:open` and press Enter, **Then** only open tasks with the "bug" label are displayed
+2. **Given** I type `label:bug,enhancement status:closed` and press Enter, **When** tasks exist matching the criteria, **Then** only closed tasks with either "bug" or "enhancement" labels are displayed
+3. **Given** I type combined filters with no matches and press Enter, **When** no tasks meet all criteria, **Then** an empty list with "No tasks found" message is displayed
 
 ---
 
@@ -166,7 +166,7 @@ As a command-line user, I want to filter tasks by status using CLI flags so that
 ### Edge Cases
 
 - **What happens when a search query is empty?** All items (tasks or memos) should be displayed without any filtering
-- **What happens when a user types an invalid search syntax in Web UI?** Display all items without filtering and show a subtle hint below the search box with example syntax (e.g., "検索例: label:bug status:open"). Do not interrupt the user's typing flow with errors
+- **What happens when a user types an invalid search syntax in Web UI?** User can continue typing without interruption. When they submit (press Enter), display all items without filtering and show a subtle hint below the search box with example syntax (e.g., "Example: label:bug status:open"). Hint is positioned absolutely to prevent layout shifts
 - **What happens when a user types an invalid status value?** System should display an error message with the list of valid status values (e.g., "Invalid status 'invalid'. Valid values: open, next, waiting, scheduled, done, canceled")
 - **How does the system handle case sensitivity in label names?** Search should be case-insensitive (e.g., `label:BUG` matches items with "bug" label)
 - **What happens when a task/memo has multiple labels and user searches for one?** The item should appear in results if it has at least one matching label
@@ -193,14 +193,21 @@ As a command-line user, I want to filter tasks by status using CLI flags so that
 - **FR-008**: System MUST display all items when the search box is empty
 - **FR-009**: System MUST display an appropriate message when no items match the search criteria
 - **FR-010**: System MUST share the same label system between tasks and memos (labels are common/shared)
-- **FR-011**: System MUST update the displayed list dynamically as the user types in the search box, with a debounce delay of 300ms to avoid excessive filtering operations during typing
+- **FR-011**: System MUST execute search only when user explicitly submits (Enter key press) to prevent unintended search operations during typing
 - **FR-012**: System MUST preserve the search query in the URL so that users can bookmark or share filtered views
 - **FR-013**: System MUST handle whitespace gracefully by trimming leading/trailing spaces from search terms
 - **FR-014**: System MUST support label names containing spaces using quoted syntax (e.g., `label:"needs review"`)
-- **FR-015**: Search interface MUST follow GitHub-style UI patterns with a search input field at the top of the list
+- **FR-015**: Search interface MUST follow GitHub-style UI patterns:
+  - Search input with integrated search icon (left side) using React Icons
+  - Clear button icon (right side) using React Icons when input has value
+  - Search input and action button (e.g., "New Task") on the same horizontal line
+  - English text for UI elements (placeholders, hints, buttons)
+  - No emoji characters in production UI
+  - Input submits on Enter key press only (no auto-search during typing)
 - **FR-015a**: Web UI MUST display an error message when an invalid status value is entered, showing the list of valid status values
-- **FR-015b**: Web UI MUST display all items (without filtering) when invalid search syntax is entered, with a subtle hint showing example syntax below the search box (e.g., "検索例: label:bug status:open")
-- **FR-015c**: Web UI MUST NOT block or interrupt user input with error dialogs during typing (graceful degradation approach)
+- **FR-015b**: Web UI MUST display all items (without filtering) when invalid search syntax is entered, with a subtle hint showing example syntax below the search box (e.g., "Example: label:bug status:open")
+- **FR-015c**: Web UI MUST position validation hints absolutely to prevent layout shifts when hint appears/disappears
+- **FR-015d**: Web UI MUST NOT block or interrupt user input with error dialogs during typing (graceful degradation approach)
 
 #### API Requirements
 
@@ -246,11 +253,17 @@ As a command-line user, I want to filter tasks by status using CLI flags so that
 - **SC-003**: Users can combine multiple labels using comma syntax and see accurate OR-based filtering results
 - **SC-004**: Users can filter tasks by status and see only items matching the specified status
 - **SC-005**: Users can combine label and status filters in tasks view and see items matching all specified criteria
-- **SC-006**: 95% of search queries return results instantly without perceivable delay (under 300ms)
+- **SC-006**: 95% of search queries return results instantly without perceivable delay (under 300ms after Enter key press)
 - **SC-007**: Search functionality reduces time to find specific items by at least 70% compared to manual scrolling through lists
 - **SC-008**: Zero data loss or corruption when applying filters (filtering is read-only operation)
 - **SC-009**: Users can bookmark filtered views and return to the same filtered state when accessing the bookmark
-- **SC-010**: Search interface is visually consistent with GitHub's issue search UI, with search input field prominently displayed at top of list
+- **SC-010**: Search interface is visually consistent with GitHub's issue search UI:
+  - Search icon integrated into input field (left side)
+  - Clear button appears when input has value (right side)
+  - Search input and "New Task" button on same horizontal line
+  - All text in English
+  - No emoji characters in UI
+  - Validation hints positioned absolutely to prevent layout shifts
 - **SC-011**: API returns filtered results in under 500ms for datasets up to 1000 items
 - **SC-012**: API correctly filters tasks and memos by label with 100% accuracy (no false positives or false negatives)
 - **SC-013**: API correctly combines label and status filters with AND logic (all specified criteria must match)
