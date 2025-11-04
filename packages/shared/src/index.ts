@@ -31,6 +31,7 @@ export interface Memo extends IssueBase {
   status: null;
   scheduledOn: null;
   commentCount?: number;
+  preview?: string;
 }
 
 export interface Task extends IssueBase {
@@ -38,6 +39,7 @@ export interface Task extends IssueBase {
   title: string;
   status: TaskStatus;
   commentCount?: number;
+  preview?: string;
 }
 
 export type Issue = Memo | Task;

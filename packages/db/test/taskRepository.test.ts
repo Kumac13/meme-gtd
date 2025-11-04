@@ -408,3 +408,104 @@ test('listTasks returns commentCount field', () => {
   db.close();
   fs.removeSync(dir);
 });
+
+// Test listTasks() with search filter
+test('listTasks() with search filter returns matching tasks', () => {
+  const { dir, db } = createTempDb();
+
+  // Create test tasks
+  createTask(db, { title: 'Implement login feature', bodyMd: 'OAuth integration' });
+  createTask(db, { title: 'Fix authentication bug', bodyMd: 'Session handling' });
+  createTask(db, { title: 'Add user settings', bodyMd: 'Profile page' });
+
+  // Search by title
+  const results = listTasks(db, { search: 'login' });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].title, 'Implement login feature');
+  assert.ok(results[0].preview); // Preview should be present
+  assert.ok(results[0].preview.includes('<mark>login</mark>')); // Highlighted
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('listTasks() with multi-word search', () => {
+  const { dir, db } = createTempDb();
+
+  createTask(db, { title: 'Implement OAuth login screen', bodyMd: 'Frontend UI' });
+  createTask(db, { title: 'Update screen layout for login', bodyMd: 'CSS changes' });
+  createTask(db, { title: 'Add screen transitions', bodyMd: 'Animation' });
+
+  // Multi-word implicit AND
+  const results = listTasks(db, { search: 'login screen' });
+
+  assert.equal(results.length, 2); // Both tasks have "login" AND "screen"
+  assert.ok(results.every(t => t.preview)); // All results should have preview
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('listTasks() search combined with status filter', () => {
+  const { dir, db } = createTempDb();
+
+  createTask(db, { title: 'Fix login bug', bodyMd: 'Open bug', status: 'open' });
+  createTask(db, { title: 'Fix login issue', bodyMd: 'Done task', status: 'done' });
+  createTask(db, { title: 'Add feature', bodyMd: 'Open task', status: 'open' });
+
+  // Search for "login" with status "open"
+  const results = listTasks(db, { search: 'login', status: 'open' });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].title, 'Fix login bug');
+  assert.equal(results[0].status, 'open');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('listTasks() search combined with label filter', () => {
+  const { dir, db } = createTempDb();
+
+  createTask(db, { title: 'Fix login authentication', bodyMd: 'Bug fix', labels: ['bug'] });
+  createTask(db, { title: 'Add login feature', bodyMd: 'Enhancement', labels: ['feature'] });
+  createTask(db, { title: 'Update login UI', bodyMd: 'Bug fix', labels: ['bug'] });
+
+  // Search for "login" with label "bug"
+  const results = listTasks(db, { search: 'login', label: 'bug' });
+
+  assert.equal(results.length, 2);
+  assert.ok(results.every(t => t.title.includes('login')));
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('listTasks() search returns empty when no match', () => {
+  const { dir, db } = createTempDb();
+
+  createTask(db, { title: 'Task one', bodyMd: 'Content' });
+  createTask(db, { title: 'Task two', bodyMd: 'Content' });
+
+  const results = listTasks(db, { search: 'nonexistent' });
+
+  assert.equal(results.length, 0);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('listTasks() without search does not include preview field', () => {
+  const { dir, db } = createTempDb();
+
+  createTask(db, { title: 'Test task', bodyMd: 'Content' });
+
+  const results = listTasks(db, {});
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].preview, undefined); // No preview when not searching
+
+  db.close();
+  fs.removeSync(dir);
+});
