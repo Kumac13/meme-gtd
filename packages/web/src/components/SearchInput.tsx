@@ -27,12 +27,15 @@ export default function SearchInput({
 }: SearchInputProps) {
   const [localValue, setLocalValue] = useState(value);
   const [showHint, setShowHint] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const timeoutRef = useRef<number | null>(null);
 
-  // Sync local value when prop changes (e.g., from URL navigation)
+  // Sync local value when prop changes (only when NOT typing)
   useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
+    if (!isTyping) {
+      setLocalValue(value);
+    }
+  }, [value, isTyping]);
 
   // Debounced onChange
   useEffect(() => {
@@ -42,6 +45,7 @@ export default function SearchInput({
 
     timeoutRef.current = window.setTimeout(() => {
       onChange(localValue);
+      setIsTyping(false);
     }, debounceMs);
 
     return () => {
@@ -69,10 +73,12 @@ export default function SearchInput({
   }, [localValue, showStatusHint]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsTyping(true);
     setLocalValue(e.target.value);
   };
 
   const handleClear = () => {
+    setIsTyping(false);
     setLocalValue('');
     onChange('');
   };
