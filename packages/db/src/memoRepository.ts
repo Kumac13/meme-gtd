@@ -18,7 +18,8 @@ export interface UpdateMemoInput {
 export interface ListMemoFilters {
   label?: string;
   labels?: string[];
-  search?: string;
+  search?: string;  // Search body (same as searchBody for memos)
+  searchBody?: string;  // Search body only (explicit)
   limit?: number;
   order?: 'asc' | 'desc';
   isBookmarked?: boolean;
@@ -126,8 +127,13 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
     params.limit = filters.limit;
   }
 
-  if (filters.search) {
+  // Handle search filters (search or searchBody - both search body for memos)
+  const searchTerm = filters.search || filters.searchBody;
+
+  if (searchTerm) {
     const searchConditions = ["i.type = 'memo'", 'i.is_deleted = 0', 'f.body_md MATCH @search'];
+    params.search = searchTerm;
+
     if (filters.label) {
       searchConditions.push(
         `i.id IN (SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name = @label)`
@@ -151,7 +157,6 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
       JOIN issues_fts f ON f.issue_id = i.id
       WHERE ${searchConditions.join(' AND ')}
       ORDER BY i.updated_at ${filters.order === 'asc' ? 'ASC' : 'DESC'}`;
-    params.search = filters.search;
     if (filters.limit) {
       sql += ' LIMIT @limit';
     }

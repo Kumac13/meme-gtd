@@ -26,7 +26,11 @@ export default class MemoList extends Command {
     search: Flags.string({
       char: 's',
       summary: 'Search memos by body content',
-      description: 'Search memos by body content using free-text partial matching (SQLite FTS5). Supports multi-word queries with implicit AND logic.'
+      description: 'Search memos by body content using free-text partial matching (SQLite FTS5). Supports multi-word queries with implicit AND logic. (Same as --search-body for memos)'
+    }),
+    'search-body': Flags.string({
+      summary: 'Search memos by body only',
+      description: 'Search memos by body field only using free-text partial matching (SQLite FTS5). (Same as --search for memos)'
     }),
     limit: Flags.integer({
       char: 'n',
@@ -66,6 +70,7 @@ export default class MemoList extends Command {
     const memos = service.list({
       labels,
       search: flags.search,
+      searchBody: flags['search-body'],
       limit: flags.limit,
       order: flags.order as 'asc' | 'desc' | undefined,
       isBookmarked: flags.bookmarked ? true : undefined

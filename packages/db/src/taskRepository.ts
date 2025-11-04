@@ -25,7 +25,9 @@ export interface ListTaskFilters {
   status?: TaskStatus;
   label?: string;
   labels?: string[];
-  search?: string;
+  search?: string;  // Search both title and body (shorthand)
+  searchTitle?: string;  // Search title only
+  searchBody?: string;  // Search body only
   limit?: number;
   order?: 'asc' | 'desc';
   isBookmarked?: boolean;
@@ -152,8 +154,39 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
     params.limit = filters.limit;
   }
 
-  if (filters.search) {
-    const searchConditions = ["i.type = 'task'", 'i.is_deleted = 0', 'f.title MATCH @search'];
+  // Handle search filters (search, searchTitle, searchBody)
+  const hasSearch = filters.search || filters.searchTitle || filters.searchBody;
+
+  if (hasSearch) {
+    const searchConditions = ["i.type = 'task'", 'i.is_deleted = 0'];
+
+    // Build FTS5 MATCH conditions
+    if (filters.search) {
+      // Search both title and body (default FTS5 behavior searches all indexed columns)
+      searchConditions.push('issues_fts MATCH @search');
+      params.search = filters.search;
+    } else {
+      // Search specific fields
+      const ftsConditions: string[] = [];
+      if (filters.searchTitle) {
+        ftsConditions.push('f.title MATCH @searchTitle');
+        params.searchTitle = filters.searchTitle;
+      }
+      if (filters.searchBody) {
+        ftsConditions.push('f.body_md MATCH @searchBody');
+        params.searchBody = filters.searchBody;
+      }
+      // Multiple field searches need UNION or separate queries
+      // For now, combine them with OR at SQL level using IN with subqueries
+      if (ftsConditions.length > 1) {
+        searchConditions.push(
+          `i.id IN (SELECT issue_id FROM issues_fts WHERE ${ftsConditions.join(' OR ')})`
+        );
+      } else {
+        searchConditions.push(ftsConditions[0]);
+      }
+    }
+
     if (filters.status) {
       searchConditions.push('i.status = @status');
     }
@@ -180,7 +213,6 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
       JOIN issues_fts f ON f.issue_id = i.id
       WHERE ${searchConditions.join(' AND ')}
       ORDER BY i.updated_at ${filters.order === 'asc' ? 'ASC' : 'DESC'}`;
-    params.search = filters.search;
     if (filters.limit) {
       sql += ' LIMIT @limit';
     }
