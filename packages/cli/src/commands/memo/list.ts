@@ -25,8 +25,8 @@ export default class MemoList extends Command {
     }),
     search: Flags.string({
       char: 's',
-      summary: 'Filter using full-text search',
-      description: 'Runs the query against memo Markdown content using SQLite FTS.'
+      summary: 'Search memos by body content',
+      description: 'Search memos by body content using free-text partial matching (SQLite FTS5). Supports multi-word queries with implicit AND logic.'
     }),
     limit: Flags.integer({
       char: 'n',

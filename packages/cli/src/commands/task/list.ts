@@ -32,8 +32,8 @@ export default class TaskList extends Command {
       description: 'Filter tasks by label. Supports comma-separated values for OR logic (e.g., bug,enhancement).'
     }),
     search: Flags.string({
-      summary: 'Filter using full-text search',
-      description: 'Runs the query against task title and body using SQLite FTS.'
+      summary: 'Search tasks by title',
+      description: 'Search tasks by title using free-text partial matching (SQLite FTS5). Supports multi-word queries with implicit AND logic.'
     }),
     limit: Flags.integer({
       char: 'n',
