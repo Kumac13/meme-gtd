@@ -10,28 +10,33 @@ USING fts5(
     tokenize = 'unicode61'
 );
 
--- Populate FTS5 table with existing data
+-- Populate FTS5 table with existing data (avoid duplicates)
 INSERT INTO issues_fts(issue_id, title, body_md)
 SELECT id, COALESCE(title, ''), body_md
 FROM issues
-WHERE is_deleted = 0;
+WHERE is_deleted = 0
+  AND id NOT IN (SELECT issue_id FROM issues_fts);
+
+-- Drop existing triggers to ensure they are recreated with correct logic
+DROP TRIGGER IF EXISTS issues_ai;
+DROP TRIGGER IF EXISTS issues_ad;
+DROP TRIGGER IF EXISTS issues_au;
 
 -- Trigger: After INSERT on issues
-CREATE TRIGGER IF NOT EXISTS issues_ai AFTER INSERT ON issues
+CREATE TRIGGER issues_ai AFTER INSERT ON issues
 BEGIN
     INSERT INTO issues_fts(issue_id, title, body_md)
     VALUES (NEW.id, COALESCE(NEW.title, ''), NEW.body_md);
 END;
 
 -- Trigger: After DELETE on issues
-CREATE TRIGGER IF NOT EXISTS issues_ad AFTER DELETE ON issues
+CREATE TRIGGER issues_ad AFTER DELETE ON issues
 BEGIN
     DELETE FROM issues_fts WHERE issue_id = OLD.id;
 END;
 
 -- Trigger: After UPDATE on issues (title or body_md changed)
-CREATE TRIGGER IF NOT EXISTS issues_au AFTER UPDATE ON issues
-WHEN OLD.title IS NOT NEW.title OR OLD.body_md IS NOT NEW.body_md
+CREATE TRIGGER issues_au AFTER UPDATE OF title, body_md ON issues
 BEGIN
     UPDATE issues_fts
     SET title = COALESCE(NEW.title, ''),
