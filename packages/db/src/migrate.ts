@@ -15,7 +15,8 @@ const schemaDir = path.resolve(
 
 const migrations = [
   { version: '001_init', file: path.join(schemaDir, '001_init.sql') },
-  { version: '002_add_project_view_meta', file: path.join(schemaDir, '002_add_project_view_meta.sql') }
+  { version: '002_add_project_view_meta', file: path.join(schemaDir, '002_add_project_view_meta.sql') },
+  { version: '003_add_fts5', file: path.join(schemaDir, '003_add_fts5.sql') }
 ] as const;
 
 const prepareDatabase = (db: Database.Database): void => {
