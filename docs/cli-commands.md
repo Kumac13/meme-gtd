@@ -2,6 +2,83 @@
 
 ## Search and Filter Commands
 
+### Full-Text Search
+
+Search tasks and memos using free-text queries powered by SQLite FTS5 (Full-Text Search).
+
+#### Task Search Options
+
+Tasks support three search options for flexible querying:
+
+```bash
+# Search both title AND body (default)
+mgtd task list --search "authentication"
+mgtd task list --search "login screen"
+
+# Search title only
+mgtd task list --search-title "Implement OAuth"
+mgtd task list --search-title "Fix bug"
+
+# Search body only
+mgtd task list --search-body "OAuth integration details"
+mgtd task list --search-body "error handling"
+```
+
+#### Memo Search Options
+
+Memos support searching in body content:
+
+```bash
+# Search memo body
+mgtd memo list --search "meeting notes"
+mgtd memo list --search "project requirements"
+
+# Explicit body search (equivalent to --search for memos)
+mgtd memo list --search-body "action items"
+```
+
+#### Search Features
+
+**Multi-word Search (AND Logic):**
+Multiple words in a search query are combined with implicit AND logic.
+
+```bash
+# Find tasks containing BOTH "login" AND "OAuth"
+mgtd task list --search "login OAuth"
+
+# Find memos containing BOTH "meeting" AND "requirements"
+mgtd memo list --search "meeting requirements"
+```
+
+**Search with Filters:**
+Combine search with label and status filters.
+
+```bash
+# Search for "authentication" in bugs
+mgtd task list --search "authentication" --label bug
+
+# Search for "OAuth" in open tasks
+mgtd task list --search "OAuth" --status open
+
+# Search memos with specific label
+mgtd memo list --search "action items" --label meeting-notes
+```
+
+**Preview Snippets:**
+Search results include highlighted preview snippets (when using `--json`).
+
+```bash
+mgtd task list --search "login" --json
+# Returns: "preview": "Implement <mark>login</mark> feature"
+```
+
+#### Search Technology
+
+- **Engine**: SQLite FTS5 with unicode61 tokenizer
+- **Matching**: Partial word matching supported
+- **Case**: Case-insensitive by default
+- **Performance**: Instant results for datasets up to 10,000 items
+
 ### Task List with Filters
 
 Filter tasks by label and status using the `--label` and `--status` flags.
@@ -80,31 +157,34 @@ mgtd memo list --label idea --limit 5 --json
 ### Task List
 
 ```bash
-mgtd task list [--status <state>] [--label <name>] [--search <query>] [--bookmarked] [--order <asc|desc>] [--limit <n>] [--json]
+mgtd task list [--status <state>] [--label <name>] [--search <query>] [--search-title <query>] [--search-body <query>] [--bookmarked] [--order <asc|desc>] [--limit <n>] [--json]
 ```
 
 **Options:**
 - `--status <state>` - Filter by task status (open, next, waiting, scheduled, done, canceled)
 - `--label <name>` - Filter by label. Supports comma-separated values for OR logic (e.g., bug,enhancement)
-- `--search <query>` - Search in task title and body
+- `--search <query>` - Search in both task title and body using FTS5 (multi-word AND logic)
+- `--search-title <query>` - Search in task title only using FTS5
+- `--search-body <query>` - Search in task body only using FTS5
 - `--bookmarked` - Show only bookmarked tasks
 - `--order <asc|desc>` - Sort order (default: desc)
 - `--limit <n>` - Maximum number of results
-- `--json` - Output in JSON format
+- `--json` - Output in JSON format (includes preview snippets when searching)
 
 ### Memo List
 
 ```bash
-mgtd memo list [--label <name>] [--search <query>] [--bookmarked] [--order <asc|desc>] [--limit <n>] [--json]
+mgtd memo list [--label <name>] [--search <query>] [--search-body <query>] [--bookmarked] [--order <asc|desc>] [--limit <n>] [--json]
 ```
 
 **Options:**
 - `--label <name>` - Filter by label. Supports comma-separated values for OR logic (e.g., idea,meeting-notes)
-- `--search <query>` - Search in memo body
+- `--search <query>` - Search in memo body using FTS5 (multi-word AND logic)
+- `--search-body <query>` - Search in memo body using FTS5 (same as --search for memos)
 - `--bookmarked` - Show only bookmarked memos
 - `--order <asc|desc>` - Sort order (default: desc)
 - `--limit <n>` - Maximum number of results
-- `--json` - Output in JSON format
+- `--json` - Output in JSON format (includes preview snippets when searching)
 
 ## Examples
 
@@ -128,6 +208,37 @@ mgtd task list --label bug --status open --json
 
 # Limit results
 mgtd task list --label enhancement --limit 10
+```
+
+### Search Examples
+
+```bash
+# Search tasks for "authentication"
+mgtd task list --search "authentication"
+
+# Search task titles only
+mgtd task list --search-title "Implement OAuth"
+
+# Search task bodies only
+mgtd task list --search-body "integration details"
+
+# Multi-word search (AND logic)
+mgtd task list --search "login OAuth"
+
+# Search with label filter
+mgtd task list --search "authentication" --label bug
+
+# Search with status filter
+mgtd task list --search "OAuth" --status open
+
+# Search memos
+mgtd memo list --search "meeting notes"
+
+# Search memos with label
+mgtd memo list --search "action items" --label meeting-notes
+
+# Search with JSON output (includes preview)
+mgtd task list --search "login" --json
 ```
 
 ### Integration with Other Tools
