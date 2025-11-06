@@ -93,32 +93,5 @@ CREATE TABLE IF NOT EXISTS sync_state (
     schema_version TEXT NOT NULL
 );
 
--- Full Text Search for issues body/title (title may be NULL for memos)
-CREATE VIRTUAL TABLE IF NOT EXISTS issues_fts
-USING fts5(
-    issue_id UNINDEXED,
-    title,
-    body_md,
-    tokenize = 'unicode61'
-);
-
-CREATE TRIGGER IF NOT EXISTS issues_ai AFTER INSERT ON issues
-BEGIN
-    INSERT INTO issues_fts(issue_id, title, body_md)
-    VALUES (NEW.id, COALESCE(NEW.title, ''), NEW.body_md);
-END;
-
-CREATE TRIGGER IF NOT EXISTS issues_ad AFTER DELETE ON issues
-BEGIN
-    DELETE FROM issues_fts WHERE issue_id = OLD.id;
-END;
-
-CREATE TRIGGER IF NOT EXISTS issues_au AFTER UPDATE ON issues
-BEGIN
-    UPDATE issues_fts
-    SET title = COALESCE(NEW.title, ''), body_md = NEW.body_md
-    WHERE issue_id = NEW.id;
-END;
-
 INSERT OR REPLACE INTO schema_migrations (version) VALUES ('001_init');
 
