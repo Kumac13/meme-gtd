@@ -84,13 +84,15 @@ export class MemosService {
      * List memos
      * List all memos with optional filters
      * @param bookmarked Filter by bookmark status
-     * @param label Filter by label
+     * @param label Filter by label name(s). Supports comma-separated values for OR logic (e.g., idea,meeting-notes)
+     * @param search Search memos by body content using free-text partial matching (SQLite FTS5). Supports multi-word queries with implicit AND logic.
      * @returns any Default Response
      * @throws ApiError
      */
     public static listMemos(
         bookmarked?: 'true' | 'false',
         label?: string,
+        search?: string,
     ): CancelablePromise<Array<{
         /**
          * Unique memo ID
@@ -144,6 +146,10 @@ export class MemosService {
          * Number of non-deleted comments on this memo
          */
         commentCount: number;
+        /**
+         * Context preview with highlighted search terms (only present when searching)
+         */
+        preview?: string;
     }>> {
         return __request(OpenAPI, {
             method: 'GET',
@@ -151,6 +157,7 @@ export class MemosService {
             query: {
                 'bookmarked': bookmarked,
                 'label': label,
+                'search': search,
             },
             errors: {
                 400: `Default Response`,

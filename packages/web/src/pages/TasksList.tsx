@@ -24,6 +24,7 @@ interface Task {
   commentCount?: number;
   scheduledOn: string | null;
   labels?: string[];
+  preview?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -60,10 +61,14 @@ export default function TasksList() {
         const effectiveStatus = filters.parsedQuery.status ||
           (statusFilter !== 'all' ? statusFilter : undefined);
 
+        // Extract free-text search from parsed query
+        const searchParam = filters.parsedQuery.freeText;
+
         const response = await TasksService.listTasks(
           effectiveStatus as 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled' | undefined,
           undefined,
-          labelParam
+          labelParam,
+          searchParam
         );
         setTasks(response || []);
       } catch (err) {

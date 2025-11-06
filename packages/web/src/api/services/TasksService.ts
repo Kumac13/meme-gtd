@@ -97,6 +97,8 @@ export class TasksService {
      * List all tasks with optional filters
      * @param status Filter by task status
      * @param bookmarked Filter by bookmark status
+     * @param label Filter by label name(s). Supports comma-separated values for OR logic (e.g., bug,enhancement)
+     * @param search Search tasks by title and body using free-text partial matching (SQLite FTS5). Supports multi-word queries with implicit AND logic.
      * @returns any Default Response
      * @throws ApiError
      */
@@ -104,6 +106,7 @@ export class TasksService {
         status?: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled',
         bookmarked?: 'true' | 'false',
         label?: string,
+        search?: string,
     ): CancelablePromise<Array<{
         /**
          * Unique task ID
@@ -157,6 +160,10 @@ export class TasksService {
          * Number of non-deleted comments on this task
          */
         commentCount: number;
+        /**
+         * Context preview with highlighted search terms (only present when searching)
+         */
+        preview?: string;
     }>> {
         return __request(OpenAPI, {
             method: 'GET',
@@ -165,6 +172,7 @@ export class TasksService {
                 'status': status,
                 'bookmarked': bookmarked,
                 'label': label,
+                'search': search,
             },
             errors: {
                 400: `Default Response`,
