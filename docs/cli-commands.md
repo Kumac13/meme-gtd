@@ -1,5 +1,48 @@
 # CLI Commands Reference
 
+## Claude Code Slash Commands
+
+meme-gtdは、Claude Codeとの統合を強化するスラッシュコマンドを提供しています。これらはCLIコマンドとして実行するのではなく、Claude Codeの対話内で使用します。
+
+### インストール
+
+```bash
+# グローバルインストール（すべてのプロジェクトで利用可能）
+mgtd claude init --global
+
+# カレントプロジェクトのみにインストール
+mgtd claude init
+```
+
+### 管理コマンド
+
+```bash
+# インストール済みコマンドの一覧表示
+mgtd claude list --global
+
+# コマンドの更新
+mgtd claude update --global
+
+# コマンドの削除
+mgtd claude remove --global
+```
+
+### 利用可能なスラッシュコマンド
+
+インストール後、Claude Codeで以下のコマンドが使用可能になります：
+
+| コマンド | 説明 |
+|---------|------|
+| `/gtd:inbox-review` | ラベルなしメモをレビューしてタスク化を検討 |
+| `/gtd:next-actions` | status:nextのタスク一覧を表示 |
+| `/gtd:weekly-review` | GTD週次レビューを実施 |
+| `/gtd:clarify <memo-id>` | メモを明確化して行動可能にする |
+| `/quick:memo <text>` | 素早くメモを作成（テスト環境） |
+| `/quick:task <title>` | 素早くタスクを作成（テスト環境） |
+| `/promote <memo-id>` | メモをタスクに昇格 |
+
+詳細は [packages/cli/templates/claude-commands/README.md](../packages/cli/templates/claude-commands/README.md) を参照してください。
+
 ## Search and Filter Commands
 
 ### Task List with Filters

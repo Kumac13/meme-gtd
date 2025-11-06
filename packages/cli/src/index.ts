@@ -47,7 +47,12 @@ const MULTIWORD_COMMANDS = [
   ['project', 'remove'],
   ['project', 'move'],
   ['project', 'delete'],
-  ['project']
+  ['project'],
+  ['claude', 'init'],
+  ['claude', 'update'],
+  ['claude', 'list'],
+  ['claude', 'remove'],
+  ['claude']
 ] as const;
 
 const argv = process.argv.slice(2);

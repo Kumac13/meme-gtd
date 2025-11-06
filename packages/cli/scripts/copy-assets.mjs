@@ -6,15 +6,28 @@ import fs from 'fs-extra';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const src = path.resolve(__dirname, '..', 'src', 'assets');
-const dest = path.resolve(__dirname, '..', 'dist', 'assets');
+const assets = {
+  src: path.resolve(__dirname, '..', 'src', 'assets'),
+  dest: path.resolve(__dirname, '..', 'dist', 'assets')
+};
+
+const templates = {
+  src: path.resolve(__dirname, '..', 'templates'),
+  dest: path.resolve(__dirname, '..', 'dist', 'templates')
+};
 
 const main = async () => {
-  if (!(await fs.pathExists(src))) {
-    return;
+  // Copy assets
+  if (await fs.pathExists(assets.src)) {
+    await fs.remove(assets.dest);
+    await fs.copy(assets.src, assets.dest, { overwrite: true });
   }
-  await fs.remove(dest);
-  await fs.copy(src, dest, { overwrite: true });
+
+  // Copy templates
+  if (await fs.pathExists(templates.src)) {
+    await fs.remove(templates.dest);
+    await fs.copy(templates.src, templates.dest, { overwrite: true });
+  }
 };
 
 main().catch((error) => {

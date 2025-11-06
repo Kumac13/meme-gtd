@@ -196,10 +196,45 @@ pnpm test
 - `pnpm mgtd:pack` で `pnpm pack` を実行し、`meme-gtd-cli-<version>.tgz` を生成できます。
 - 事前に `pnpm build` が走るため、最新ビルド成果物が含まれます。
 
+## Claude Code スラッシュコマンド
+
+meme-gtdは、Claude CodeのAIアシスタントをGTDワークフローに統合するための専用コマンドを提供します。
+
+### インストール
+
+```bash
+# グローバルインストール（推奨）
+mgtd claude init --global
+
+# カレントプロジェクトにインストール
+mgtd claude init
+
+# 更新
+mgtd claude update --global
+```
+
+### 利用可能なコマンド
+
+| コマンド | 説明 |
+| --- | --- |
+| `/gtd:inbox-review` | ラベルなしメモをレビューしてタスク化を検討 |
+| `/gtd:next-actions` | status:nextのタスク一覧を表示 |
+| `/gtd:weekly-review` | GTD週次レビューを実施 |
+| `/gtd:clarify <memo-id>` | メモを明確化して行動可能にする |
+| `/quick:memo <text>` | 素早くメモを作成（テスト環境） |
+| `/quick:task <title>` | 素早くタスクを作成（テスト環境） |
+| `/promote <memo-id>` | メモをタスクに昇格 |
+
+詳細は [packages/cli/templates/claude-commands/README.md](./packages/cli/templates/claude-commands/README.md) を参照してください。
+
 ## 主なサブコマンド一覧
 | コマンド | 説明 |
 | --- | --- |
 | `mgtd init` | SQLite DB と context.json を初期化（`--help` で USAGE/FLAGS を確認） |
+| `mgtd claude init` | Claude Code スラッシュコマンドをインストール |
+| `mgtd claude update` | インストール済みコマンドを更新 |
+| `mgtd claude list` | インストール済みコマンドの一覧表示 |
+| `mgtd claude remove` | インストール済みコマンドを削除 |
 | `mgtd memo create` | 新規メモ作成（`--body`, `--body-file`, `--label`, `--project`, `--json` 等） |
 | `mgtd memo list` | メモ一覧取得（`--label`, `--search`, `--limit`, `--order`, `--json` 等） |
 | `mgtd memo promote` | メモをタスクに昇格（`--title`, `--body`, `--label`, `--status`, `--json` 等） |
