@@ -6,8 +6,9 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "pnpm run clean && tsc -p tsconfig.json",
+    "build": "pnpm run clean && tsc -p tsconfig.json && pnpm run copy:schema",
     "clean": "rimraf dist",
+    "copy:schema": "mkdir -p dist/schema && cp ../../schema/*.sql dist/schema/",
     "lint": "eslint \"src/**/*.ts\"",
     "test": "node --import tsx/esm --test test/*.test.ts"
   },
