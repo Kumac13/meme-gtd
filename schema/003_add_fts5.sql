@@ -38,3 +38,5 @@ BEGIN
         body_md = NEW.body_md
     WHERE issue_id = NEW.id;
 END;
+
+INSERT OR REPLACE INTO schema_migrations (version) VALUES ('003_add_fts5');

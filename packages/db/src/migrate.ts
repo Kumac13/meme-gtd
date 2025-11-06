@@ -10,7 +10,7 @@ export interface MigrationResult {
 
 const schemaDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  '../../../schema'
+  './schema'
 );
 
 const migrations = [
