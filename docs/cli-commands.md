@@ -72,6 +72,21 @@ mgtd task list --search "login" --json
 # Returns: "preview": "Implement <mark>login</mark> feature"
 ```
 
+**Prefix Wildcard Search:**
+Use `*` suffix for prefix matching. This is especially useful for Japanese text search.
+
+```bash
+# English: exact word match
+mgtd task list --search "auth"        # Matches "auth" as standalone word
+mgtd task list --search "auth*"       # Matches "auth", "authentication", "authorize", etc.
+
+# Japanese: prefix wildcard recommended
+mgtd task list --search-title "MS*"   # Matches "MSのタスク", "MSお困りごと", etc.
+mgtd memo list --search "会議*"       # Matches "会議メモ", "会議議事録", etc.
+```
+
+**Note:** Current FTS5 tokenizer (`unicode61`) splits on spaces and punctuation, which works well for English but not for Japanese. For Japanese text, use the `*` wildcard for reliable partial matching. See [Issue #76](https://github.com/Kumac13/meme-gtd/issues/76) for Japanese tokenization support.
+
 #### Search Technology
 
 - **Engine**: SQLite FTS5 with unicode61 tokenizer
