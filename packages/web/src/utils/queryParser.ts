@@ -6,15 +6,17 @@
  * - label:bug,enhancement → Filter by multiple labels (OR logic)
  * - status:open → Filter by status
  * - label:bug status:open → Combine filters (AND logic)
+ * - Free-text terms → Search in title/body (e.g., "login screen")
  *
  * @example
- * parseSearchQuery("label:bug status:open")
- * // Returns: { labels: ["bug"], status: "open" }
+ * parseSearchQuery("label:bug status:open login screen")
+ * // Returns: { labels: ["bug"], status: "open", freeText: "login screen" }
  */
 
 export interface ParsedSearchQuery {
   labels?: string[];
   status?: string;
+  freeText?: string;
   rawQuery?: string;
 }
 
@@ -52,6 +54,15 @@ export function parseSearchQuery(query: string): ParsedSearchQuery {
     result.status = statusMatch[1];
   }
 
+  // Extract free-text (remove all key:value patterns)
+  const freeText = query
+    .replace(/\w+:[^\s]+/g, '')  // Remove structured filters
+    .trim();
+
+  if (freeText) {
+    result.freeText = freeText;
+  }
+
   return result;
 }
 
@@ -67,6 +78,10 @@ export function buildSearchQuery(filters: ParsedSearchQuery): string {
 
   if (filters.status) {
     parts.push(`status:${filters.status}`);
+  }
+
+  if (filters.freeText) {
+    parts.push(filters.freeText);
   }
 
   return parts.join(' ');

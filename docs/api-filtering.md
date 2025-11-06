@@ -12,7 +12,7 @@ http://localhost:3000/api
 
 ### GET /api/tasks
 
-List all tasks with optional filters.
+List all tasks with optional filters and search.
 
 #### Query Parameters
 
@@ -21,6 +21,7 @@ List all tasks with optional filters.
 | `status` | string | Filter by task status | `open`, `next`, `waiting`, `scheduled`, `done`, `canceled` |
 | `bookmarked` | string | Filter by bookmark status | `true`, `false` |
 | `label` | string | Filter by label name(s). Comma-separated for OR logic | `bug`, `bug,enhancement` |
+| `search` | string | Search in title and body using FTS5. Multi-word AND logic | `authentication`, `login OAuth` |
 
 #### Filter by Single Label
 
@@ -74,6 +75,48 @@ curl http://localhost:3000/api/tasks?label=bug,enhancement&bookmarked=true
 curl http://localhost:3000/api/tasks?status=next&label=urgent
 ```
 
+#### Full-Text Search
+
+Search tasks using SQLite FTS5 (Full-Text Search) with automatic multi-word AND logic.
+
+```bash
+# Search for "authentication" in any task
+curl http://localhost:3000/api/tasks?search=authentication
+
+# Multi-word search (finds tasks with BOTH words)
+curl "http://localhost:3000/api/tasks?search=login+OAuth"
+
+# Search with label filter
+curl "http://localhost:3000/api/tasks?search=authentication&label=bug"
+
+# Search with status filter
+curl "http://localhost:3000/api/tasks?search=OAuth&status=open"
+
+# Search with multiple filters
+curl "http://localhost:3000/api/tasks?search=login&label=bug,enhancement&status=open"
+```
+
+**Response with Search Preview:**
+```json
+[
+  {
+    "id": 2,
+    "title": "Implement login feature",
+    "bodyMd": "OAuth integration",
+    "preview": "Implement <mark>login</mark> feature",
+    "status": "open",
+    "labels": ["feature"],
+    ...
+  }
+]
+```
+
+**Search Features:**
+- **Multi-word AND**: `search=login OAuth` finds tasks with BOTH terms
+- **Partial matching**: FTS5 supports partial word matching
+- **Case-insensitive**: Search is case-insensitive by default
+- **Preview snippets**: Results include `preview` field with `<mark>` tags highlighting matches
+
 #### Error Handling
 
 **Invalid Status:**
@@ -93,7 +136,7 @@ curl http://localhost:3000/api/tasks?status=invalid
 
 ### GET /api/memos
 
-List all memos with optional filters.
+List all memos with optional filters and search.
 
 #### Query Parameters
 
@@ -101,6 +144,7 @@ List all memos with optional filters.
 |-----------|------|-------------|---------|
 | `bookmarked` | string | Filter by bookmark status | `true`, `false` |
 | `label` | string | Filter by label name(s). Comma-separated for OR logic | `idea`, `idea,meeting-notes` |
+| `search` | string | Search in memo body using FTS5. Multi-word AND logic | `meeting`, `action items` |
 
 **Note:** Memos do not have status. The `status` parameter is silently ignored if provided.
 
@@ -124,6 +168,37 @@ curl http://localhost:3000/api/memos?label=idea&bookmarked=true
 
 # Multiple labels with bookmark filter
 curl http://localhost:3000/api/memos?label=inbox,todo&bookmarked=true
+```
+
+#### Full-Text Search
+
+Search memos using SQLite FTS5 with automatic multi-word AND logic.
+
+```bash
+# Search for "meeting" in any memo
+curl http://localhost:3000/api/memos?search=meeting
+
+# Multi-word search (finds memos with BOTH words)
+curl "http://localhost:3000/api/memos?search=action+items"
+
+# Search with label filter
+curl "http://localhost:3000/api/memos?search=requirements&label=meeting-notes"
+
+# Search with bookmark filter
+curl "http://localhost:3000/api/memos?search=important&bookmarked=true"
+```
+
+**Response with Search Preview:**
+```json
+[
+  {
+    "id": 4,
+    "bodyMd": "Attended project meeting and discussed requirements",
+    "preview": "Attended project <mark>meeting</mark> and discussed requirements",
+    "labels": ["meeting-notes"],
+    ...
+  }
+]
 ```
 
 ## Advanced Examples
@@ -220,7 +295,8 @@ All list endpoints return an array of objects. Each object contains:
   "createdAt": "2025-11-04T00:00:00.000Z",
   "updatedAt": "2025-11-04T00:00:00.000Z",
   "labels": ["bug", "urgent"],
-  "commentCount": 2
+  "commentCount": 2,
+  "preview": "Context <mark>preview</mark> with highlighted terms (only present when searching)"
 }
 ```
 
@@ -239,7 +315,8 @@ All list endpoints return an array of objects. Each object contains:
   "createdAt": "2025-11-04T00:00:00.000Z",
   "updatedAt": "2025-11-04T00:00:00.000Z",
   "labels": ["idea", "inbox"],
-  "commentCount": 0
+  "commentCount": 0,
+  "preview": "Context <mark>preview</mark> with highlighted terms (only present when searching)"
 }
 ```
 

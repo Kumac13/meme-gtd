@@ -18,7 +18,8 @@ export interface UpdateMemoInput {
 export interface ListMemoFilters {
   label?: string;
   labels?: string[];
-  search?: string;
+  search?: string;  // Search body (same as searchBody for memos)
+  searchBody?: string;  // Search body only (explicit)
   limit?: number;
   order?: 'asc' | 'desc';
   isBookmarked?: boolean;
@@ -36,7 +37,8 @@ const memoRowToMemo = (row: any): Memo => ({
   updatedAt: row.updated_at,
   isBookmarked: toBoolean(row.is_bookmarked),
   isDeleted: toBoolean(row.is_deleted),
-  commentCount: row.comment_count ?? 0
+  commentCount: row.comment_count ?? 0,
+  ...(row.preview !== undefined && { preview: row.preview })
 });
 
 const commentRowToComment = (row: any): Comment => ({
@@ -125,20 +127,36 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
     params.limit = filters.limit;
   }
 
-  if (filters.search) {
+  // Handle search filters (search or searchBody - both search body for memos)
+  const searchTerm = filters.search || filters.searchBody;
+
+  if (searchTerm) {
     const searchConditions = ["i.type = 'memo'", 'i.is_deleted = 0', 'f.body_md MATCH @search'];
+    params.search = searchTerm;
+
+    if (filters.label) {
+      searchConditions.push(
+        `i.id IN (SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name = @label)`
+      );
+    }
+    if (filters.labels && filters.labels.length > 0) {
+      const labelPlaceholders = filters.labels.map((_, i) => `@label${i}`).join(', ');
+      searchConditions.push(
+        `i.id IN (SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name IN (${labelPlaceholders}))`
+      );
+    }
     if (filters.isBookmarked !== undefined) {
       searchConditions.push('i.is_bookmarked = @isBookmarked');
     }
     sql = `
       SELECT i.*,
+        snippet(issues_fts, -1, '<mark>', '</mark>', '...', 15) as preview,
         (SELECT COUNT(*) FROM comments c
          WHERE c.issue_id = i.id AND c.is_deleted = 0) as comment_count
       FROM issues i
       JOIN issues_fts f ON f.issue_id = i.id
       WHERE ${searchConditions.join(' AND ')}
       ORDER BY i.updated_at ${filters.order === 'asc' ? 'ASC' : 'DESC'}`;
-    params.search = filters.search;
     if (filters.limit) {
       sql += ' LIMIT @limit';
     }

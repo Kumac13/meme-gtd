@@ -54,6 +54,7 @@ export type Memo = z.infer<typeof MemoSchema>;
  */
 export const MemoListItemSchema = MemoSchema.extend({
   commentCount: z.number().int().nonnegative().describe('Number of non-deleted comments on this memo'),
+  preview: z.string().optional().describe('Context preview with highlighted search terms (only present when search parameter is active)'),
 });
 
 export type MemoListItem = z.infer<typeof MemoListItemSchema>;
@@ -91,6 +92,7 @@ export type MemoIdParams = z.infer<typeof MemoIdParamsSchema>;
 export const MemoQuerySchema = z.object({
   bookmarked: z.enum(['true', 'false']).optional().describe('Filter by bookmark status'),
   label: z.string().optional().describe('Filter by label name(s). Supports comma-separated values for OR logic (e.g., idea,meeting-notes)'),
+  search: z.string().optional().describe('Search memos by body content using free-text partial matching'),
 });
 
 export type MemoQuery = z.infer<typeof MemoQuerySchema>;

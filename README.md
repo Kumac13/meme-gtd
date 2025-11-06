@@ -76,7 +76,19 @@ label:<label-name>           # 単一ラベルでフィルタ
 label:<label1>,<label2>      # 複数ラベル（OR条件）
 status:<status-value>        # ステータスでフィルタ（Taskのみ）
 label:bug status:open        # 複数条件（AND条件）
+フリーテキスト                # タイトルや本文で検索（SQLite FTS5）
+label:bug authentication     # ラベルフィルタ + フリーテキスト検索
 ```
+
+### フリーテキスト検索
+
+SQLite FTS5を使用した高速な全文検索をサポートしています：
+
+- **タスク**: タイトルと本文の両方を検索
+- **メモ**: 本文を検索
+- **複数語AND検索**: `login OAuth` で両方の単語を含むアイテムを検索
+- **ハイライト**: 検索結果に`<mark>`タグ付きプレビューを表示
+- **大小文字区別なし**: 自動的に大小文字を区別しない検索
 
 ### Web UI での検索
 
@@ -87,10 +99,13 @@ label:bug status:open        # 複数条件（AND条件）
 - `label:bug,enhancement` - bugまたはenhancementラベルのアイテムを検索
 - `status:open` - ステータスがopenのタスクを検索
 - `label:urgent status:next` - urgentラベルでステータスがnextのタスクを検索
+- `authentication` - "authentication"を含むアイテムを検索
+- `login OAuth` - "login"と"OAuth"の両方を含むアイテムを検索
+- `label:bug authentication` - bugラベルで"authentication"を含むアイテムを検索
 
 ### CLI での検索
 
-`--label` と `--status` フラグを使用してフィルタリングできます。
+`--label`、`--status`、`--search` フラグを使用してフィルタリング・検索できます。
 
 **Task例:**
 ```bash
@@ -105,6 +120,18 @@ mgtd task list --status open
 
 # 組み合わせ（AND条件）
 mgtd task list --label bug --status open
+
+# フリーテキスト検索（タイトルと本文）
+mgtd task list --search "authentication"
+
+# タイトルのみ検索
+mgtd task list --search-title "Implement OAuth"
+
+# 本文のみ検索
+mgtd task list --search-body "OAuth integration"
+
+# フィルタと検索の組み合わせ
+mgtd task list --label bug --search "authentication"
 ```
 
 **Memo例:**
@@ -114,13 +141,19 @@ mgtd memo list --label idea
 
 # 複数ラベル（OR条件）
 mgtd memo list --label idea,meeting-notes
+
+# フリーテキスト検索
+mgtd memo list --search "meeting notes"
+
+# フィルタと検索の組み合わせ
+mgtd memo list --label meeting-notes --search "action items"
 ```
 
 詳細は [docs/cli-commands.md](./docs/cli-commands.md) を参照してください。
 
 ### API での検索
 
-クエリパラメータを使用してフィルタリングできます。
+クエリパラメータを使用してフィルタリング・検索できます。
 
 **Task例:**
 ```bash
@@ -135,6 +168,12 @@ curl http://localhost:3000/api/tasks?status=open
 
 # 組み合わせ（AND条件）
 curl http://localhost:3000/api/tasks?label=bug&status=open
+
+# フリーテキスト検索
+curl http://localhost:3000/api/tasks?search=authentication
+
+# 検索とフィルタの組み合わせ
+curl "http://localhost:3000/api/tasks?search=OAuth&label=bug&status=open"
 ```
 
 **Memo例:**
@@ -144,6 +183,12 @@ curl http://localhost:3000/api/memos?label=idea
 
 # 複数ラベル（OR条件）
 curl http://localhost:3000/api/memos?label=idea,meeting-notes
+
+# フリーテキスト検索
+curl http://localhost:3000/api/memos?search=meeting
+
+# 検索とフィルタの組み合わせ
+curl "http://localhost:3000/api/memos?search=action+items&label=meeting-notes"
 ```
 
 詳細は [docs/api-filtering.md](./docs/api-filtering.md) を参照してください。

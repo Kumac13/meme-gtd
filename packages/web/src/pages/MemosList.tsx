@@ -17,6 +17,7 @@ interface Memo {
   isBookmarked: boolean;
   commentCount?: number;
   labels?: string[];
+  preview?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,7 +40,10 @@ export default function MemosList() {
         // Build label parameter from parsed query
         const labelParam = filters.parsedQuery.labels?.join(',');
 
-        const response = await MemosService.listMemos(undefined, labelParam);
+        // Extract free-text search from parsed query
+        const searchParam = filters.parsedQuery.freeText;
+
+        const response = await MemosService.listMemos(undefined, labelParam, searchParam);
         setMemos(response || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load memos');

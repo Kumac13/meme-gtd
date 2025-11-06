@@ -56,6 +56,7 @@ export type Task = z.infer<typeof TaskSchema>;
  */
 export const TaskListItemSchema = TaskSchema.extend({
   commentCount: z.number().int().nonnegative().describe('Number of non-deleted comments on this task'),
+  preview: z.string().optional().describe('Context preview with highlighted search terms (only present when search parameter is active)'),
 });
 
 export type TaskListItem = z.infer<typeof TaskListItemSchema>;
@@ -85,6 +86,7 @@ export const TaskQuerySchema = z.object({
   status: TaskStatusSchema.optional().describe('Filter by task status'),
   bookmarked: z.enum(['true', 'false']).optional().describe('Filter by bookmark status'),
   label: z.string().optional().describe('Filter by label name(s). Supports comma-separated values for OR logic (e.g., bug,enhancement)'),
+  search: z.string().optional().describe('Search tasks by title using free-text partial matching'),
 });
 
 export type TaskQuery = z.infer<typeof TaskQuerySchema>;

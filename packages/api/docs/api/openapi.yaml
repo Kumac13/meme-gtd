@@ -143,6 +143,12 @@ paths:
           name: label
           required: false
           description: Filter by label name(s). Supports comma-separated values for OR logic (e.g., idea,meeting-notes)
+        - schema:
+            type: string
+          in: query
+          name: search
+          required: false
+          description: Search memos by body content using free-text partial matching (SQLite FTS5). Supports multi-word queries with implicit AND logic.
       responses:
         "200":
           description: Default Response
@@ -206,6 +212,9 @@ paths:
                       type: integer
                       minimum: 0
                       description: Number of non-deleted comments on this memo
+                    preview:
+                      type: string
+                      description: Context preview with highlighted search terms (only present when searching)
                   required:
                     - id
                     - type
@@ -1350,6 +1359,12 @@ paths:
           name: label
           required: false
           description: Filter by label name(s). Supports comma-separated values for OR logic (e.g., bug,enhancement)
+        - schema:
+            type: string
+          in: query
+          name: search
+          required: false
+          description: Search tasks by title and body using free-text partial matching (SQLite FTS5). Supports multi-word queries with implicit AND logic.
       responses:
         "200":
           description: Default Response
@@ -1418,6 +1433,9 @@ paths:
                       type: integer
                       minimum: 0
                       description: Number of non-deleted comments on this task
+                    preview:
+                      type: string
+                      description: Context preview with highlighted search terms (only present when searching)
                   required:
                     - id
                     - type
