@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { formatRelativeTime } from '../utils/dates';
 import { MarkdownRenderer } from '../utils/markdown';
+import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
+import { getShortcutHint } from '../utils/keyboard';
 
 interface EditableContentProps {
   content: string;
@@ -58,6 +60,10 @@ export default function EditableContent({
     await onDelete();
   };
 
+  const handleKeyDown = useKeyboardShortcut(handleSaveEdit, {
+    disabled: saving || !editingContent.trim(),
+  });
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg py-1 px-4">
       <div className="flex items-center justify-between py-1 border-b border-gray-200">
@@ -113,6 +119,8 @@ export default function EditableContent({
                 type="text"
                 value={editingTitle}
                 onChange={(e) => setEditingTitle(e.target.value)}
+                onKeyDown={handleKeyDown}
+                aria-keyshortcuts="Control+Enter"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500"
                 placeholder="Task title"
               />
@@ -121,6 +129,8 @@ export default function EditableContent({
           <textarea
             value={editingContent}
             onChange={(e) => setEditingContent(e.target.value)}
+            onKeyDown={handleKeyDown}
+            aria-keyshortcuts="Control+Enter"
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500 min-h-[100px]"
           />
           <div className="mt-2 flex justify-end space-x-2">
@@ -135,6 +145,7 @@ export default function EditableContent({
               onClick={handleSaveEdit}
               disabled={saving || !editingContent.trim()}
               className="px-3 py-1 text-sm bg-github-green-600 text-white rounded-md hover:bg-github-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={`Save (${getShortcutHint()})`}
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
