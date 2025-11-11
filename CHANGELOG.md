@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.11.0 - 2025-11-11
+
+### New Features
+
+- **Keyboard Shortcuts for Save and Comment Actions (#78)**: Add Cmd/Ctrl+Enter shortcuts for improved productivity
+  - **Web UI Enhancements**:
+    - Cmd+Enter (macOS) / Ctrl+Enter (Windows/Linux) keyboard shortcuts for all Save and Comment buttons
+    - Works across all forms: TaskForm, MemoForm, ProjectForm, EditableContent, CommentSection
+    - OS-aware tooltips showing correct shortcut (⌘+Enter or Ctrl+Enter)
+    - `aria-keyshortcuts` attributes for screen reader accessibility
+    - Prevents duplicate submissions during form submission
+    - Respects existing form validation
+  - **Core Infrastructure**:
+    - Reusable `keyboard.ts` utilities for OS detection and shortcut handling
+    - `useKeyboardShortcut` custom React hook for DRY implementation
+    - Comprehensive test coverage (20 tests, all passing)
+  - **User Benefits**:
+    - Keyboard-focused workflow without mouse interaction
+    - Faster task, memo, and project creation
+    - Quick comment submission
+    - Improved productivity for power users
+
+### Bug Fixes
+
+- Fixed KanbanView TypeError when navigating to newly created projects (undefined `project.items`)
+
+### Documentation
+
+- Added comprehensive feature specification in `specs/026-webui-save-comment/`
+- Updated developer quickstart guide with keyboard shortcut implementation patterns
+
+### Breaking Changes
+
+None. All changes are backward compatible and additive only.
+
+---
+
 ## 0.10.0 - 2025-11-04
 
 ### New Features
