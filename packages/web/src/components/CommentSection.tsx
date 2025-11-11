@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { CommentsService } from '../api/services/CommentsService';
 import EditableContent from './EditableContent';
+import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
+import { getShortcutHint } from '../utils/keyboard';
 
 interface Comment {
   id: number;
@@ -80,6 +82,13 @@ export default function CommentSection({ itemId, itemType }: CommentSectionProps
     setComments(comments.filter((c) => c.id !== commentId));
   };
 
+  const handleKeyDown = useKeyboardShortcut(() => {
+    const form = document.querySelector('form');
+    if (form) {
+      form.requestSubmit();
+    }
+  }, { disabled: submitting || !newCommentBody.trim() });
+
   return (
     <div className="mt-8">
       <h2 className="text-xl font-bold text-gray-900 mb-4">
@@ -109,6 +118,8 @@ export default function CommentSection({ itemId, itemType }: CommentSectionProps
         <textarea
           value={newCommentBody}
           onChange={(e) => setNewCommentBody(e.target.value)}
+          onKeyDown={handleKeyDown}
+          aria-keyshortcuts="Control+Enter"
           placeholder="Write a comment..."
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500 min-h-[100px]"
           disabled={submitting}
@@ -118,6 +129,7 @@ export default function CommentSection({ itemId, itemType }: CommentSectionProps
             type="submit"
             disabled={submitting || !newCommentBody.trim()}
             className="px-4 py-2 bg-github-green-600 text-white rounded-md hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={`Comment (${getShortcutHint()})`}
           >
             {submitting ? 'Commenting...' : 'Comment'}
           </button>
