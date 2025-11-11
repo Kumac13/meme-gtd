@@ -244,6 +244,8 @@ git tag vX.Y.Z
 - TypeScript 5.5.4 / Node.js 22+ (024-tasks-memos-label)
 - SQLite database with existing schema: (024-tasks-memos-label)
 - SQLite (better-sqlite3) - existing `issues` table (025-a)
+- TypeScript 5.5.4 / React 19.2.0 / Node.js 22+ + React 19.2.0, React Router DOM 7.9.4, Vite 7.1.11, Tailwind CSS 4.1.14 (026-webui-save-comment)
+- N/A (UI-only feature, no data model changes) (026-webui-save-comment)
 
 ## Recent Changes
 - 020-web-label-management: Added TypeScript 5.5.4 / React 19.2.0 / Node.js 22+
