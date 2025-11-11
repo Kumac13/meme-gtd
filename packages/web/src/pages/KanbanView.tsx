@@ -11,7 +11,7 @@ interface OutletContext {
 export default function KanbanView() {
   const { project, setProject } = useOutletContext<OutletContext>();
 
-  if (project.items.length === 0) {
+  if (!project.items || project.items.length === 0) {
     return <EmptyState message="No items in this project. Add tasks or memos to get started." />;
   }
 

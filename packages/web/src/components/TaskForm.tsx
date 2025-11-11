@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
 import { MemosService } from '../api/services/MemosService';
 import { validateTaskForm } from '../utils/validation';
+import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
+import { getShortcutHint } from '../utils/keyboard';
 
 type TaskStatus = 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
 
@@ -87,6 +89,13 @@ export default function TaskForm({
     }
   };
 
+  const handleKeyDown = useKeyboardShortcut(() => {
+    const form = document.querySelector('form');
+    if (form) {
+      form.requestSubmit();
+    }
+  }, { disabled: submitting });
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
@@ -112,6 +121,8 @@ export default function TaskForm({
           id="title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={handleKeyDown}
+          aria-keyshortcuts="Control+Enter"
           className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 ${
             validationError ? 'border-red-300' : 'border-gray-300'
           }`}
@@ -128,6 +139,8 @@ export default function TaskForm({
           id="bodyMd"
           value={bodyMd}
           onChange={(e) => setBodyMd(e.target.value)}
+          onKeyDown={handleKeyDown}
+          aria-keyshortcuts="Control+Enter"
           rows={10}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 font-mono text-sm"
           placeholder="Enter task description in Markdown format..."
@@ -184,6 +197,7 @@ export default function TaskForm({
           type="submit"
           className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={submitting}
+          title={`Save (${getShortcutHint()})`}
         >
           {submitting ? 'Saving...' : mode === 'create' ? 'Create Task' : 'Update Task'}
         </button>

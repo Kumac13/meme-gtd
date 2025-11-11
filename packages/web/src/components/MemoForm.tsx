@@ -2,6 +2,8 @@ import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import { validateMemoBody } from '../utils/validation';
+import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
+import { getShortcutHint } from '../utils/keyboard';
 
 interface MemoFormProps {
   initialBodyMd?: string;
@@ -54,6 +56,13 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode }: MemoFormP
     }
   };
 
+  const handleKeyDown = useKeyboardShortcut(() => {
+    const form = document.querySelector('form');
+    if (form) {
+      form.requestSubmit();
+    }
+  }, { disabled: submitting });
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
@@ -78,6 +87,8 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode }: MemoFormP
           id="bodyMd"
           value={bodyMd}
           onChange={(e) => setBodyMd(e.target.value)}
+          onKeyDown={handleKeyDown}
+          aria-keyshortcuts="Control+Enter"
           rows={15}
           className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 font-mono text-sm ${
             validationError ? 'border-red-300' : 'border-gray-300'
@@ -105,6 +116,7 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode }: MemoFormP
           type="submit"
           className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={submitting}
+          title={`Save (${getShortcutHint()})`}
         >
           {submitting ? 'Saving...' : mode === 'create' ? 'Create Memo' : 'Update Memo'}
         </button>
