@@ -93,7 +93,7 @@
   - Add test case: saves edit with Cmd/Ctrl+Enter
   - Add test case: respects existing validation
 
-- [ ] T008 [P] [US1] (Optional) Add keyboard shortcut to ProjectForm in `packages/web/src/components/ProjectForm.tsx`
+- [x] T008 [P] [US1] Add keyboard shortcut to ProjectForm in `packages/web/src/components/ProjectForm.tsx`
   - Import `useKeyboardShortcut` and `getShortcutHint`
   - Add `handleKeyDown` handler using the hook
   - Add `onKeyDown` and `aria-keyshortcuts` to input field
