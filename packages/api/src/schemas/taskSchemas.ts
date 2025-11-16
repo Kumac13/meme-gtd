@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * Schema for task status values
  */
-export const TaskStatusSchema = z.enum(['open', 'next', 'waiting', 'scheduled', 'done', 'canceled']);
+export const TaskStatusSchema = z.enum(['inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled']);
 
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 
