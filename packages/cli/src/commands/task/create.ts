@@ -10,7 +10,7 @@ import { detectLegacyFlags, formatLegacyFlagError } from '../../lib/legacy-flags
 export default class TaskCreate extends Command {
   static summary = 'Create a new task';
   static description =
-    'Create a task record with title and body. Tasks support status tracking (open/next/waiting/scheduled/done/canceled).';
+    'Create a task record with title and body. Tasks support status tracking (inbox/open/next/waiting/scheduled/someday/done/canceled).';
   static usage = [
     '<%= command.id %> --title <text> [--body <text> | --body-file <path>] [--status <state>] [--scheduled-on <date>] [--label <name> ...] [--project <id> ...] [--json]'
   ];
@@ -43,8 +43,8 @@ export default class TaskCreate extends Command {
     status: Flags.string({
       char: 's',
       summary: 'Initial status',
-      description: 'Set task status (open, next, waiting, scheduled, done, canceled). Default: open',
-      options: ['open', 'next', 'waiting', 'scheduled', 'done', 'canceled'],
+      description: 'Set task status (inbox, open, next, waiting, scheduled, someday, done, canceled). Default: open',
+      options: ['inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled'],
       default: 'open'
     }),
     'scheduled-on': Flags.string({
