@@ -6,7 +6,7 @@ import { validateTaskForm } from '../utils/validation';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
 
-type TaskStatus = 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
+type TaskStatus = 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
 
 interface TaskFormProps {
   initialTitle?: string;
@@ -161,10 +161,12 @@ export default function TaskForm({
             onChange={(e) => setStatus(e.target.value as TaskStatus)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500"
           >
+            <option value="inbox">Inbox</option>
             <option value="open">Open</option>
             <option value="next">Next</option>
             <option value="waiting">Waiting</option>
             <option value="scheduled">Scheduled</option>
+            <option value="someday">Someday</option>
             {mode === 'edit' && (
               <>
                 <option value="done">Done</option>
