@@ -1,5 +1,35 @@
 # Changelog
 
+## [Unreleased]
+
+### New Features
+
+- **Inbox and Someday Task Statuses (#81)**: Complete GTD workflow support with two new task statuses
+  - **New Statuses**:
+    - `inbox`: For newly captured, unprocessed tasks (GTD capture phase)
+    - `someday`: For deferred, non-actionable ideas (GTD someday/maybe list)
+  - **CLI Enhancements**:
+    - `mgtd task create --status inbox`: Create tasks in inbox for later triage
+    - `mgtd task edit <id> --status someday`: Defer tasks to someday list
+    - `mgtd task list --status inbox`: Filter by inbox or someday status
+    - All 8 statuses now available: inbox, open, next, waiting, scheduled, someday, done, canceled
+  - **Web UI**:
+    - Status dropdown includes Inbox and Someday options in GTD workflow order
+    - URL filtering: `/tasks?status=inbox` and `/tasks?status=someday`
+    - Memo promotion now defaults to status='inbox' (was 'open')
+  - **API**:
+    - All endpoints accept inbox/someday: POST/PUT/GET `/api/tasks`
+    - OpenAPI specification updated with new status values
+    - Backward compatible: Existing 'open' tasks preserved unchanged
+  - **GTD Workflow Order**: inbox → open → next → waiting → scheduled → someday → done → canceled
+  - **User Benefits**:
+    - Separate task capture from processing (inbox)
+    - Park future ideas without cluttering active lists (someday)
+    - Full GTD workflow compliance
+    - No automatic migration (existing data unchanged)
+
+---
+
 ## 0.11.0 - 2025-11-11
 
 ### New Features
