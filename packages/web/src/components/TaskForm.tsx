@@ -51,8 +51,8 @@ export default function TaskForm({
 
       if (mode === 'create' && fromMemoId) {
         // Promotion flow
-        const validStatuses = ['open', 'next', 'waiting', 'scheduled'] as const;
-        const promotionStatus = validStatuses.includes(status as any) ? status as 'open' | 'next' | 'waiting' | 'scheduled' : 'open';
+        const validStatuses = ['inbox', 'open', 'next', 'waiting', 'scheduled'] as const;
+        const promotionStatus = validStatuses.includes(status as any) ? status as 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' : 'inbox';
         const response = await MemosService.promoteMemo(
           fromMemoId.toString(),
           { title, status: promotionStatus }

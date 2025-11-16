@@ -571,6 +571,7 @@ paths:
                 status:
                   type: string
                   enum:
+                    - inbox
                     - open
                     - next
                     - waiting

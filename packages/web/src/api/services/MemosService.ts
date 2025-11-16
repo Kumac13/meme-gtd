@@ -361,7 +361,7 @@ export class MemosService {
             /**
              * Initial status for the task
              */
-            status?: 'open' | 'next' | 'waiting' | 'scheduled';
+            status?: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled';
         },
     ): CancelablePromise<any> {
         return __request(OpenAPI, {
