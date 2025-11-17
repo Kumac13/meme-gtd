@@ -14,9 +14,14 @@
     - `mgtd task list --status inbox`: Filter by inbox or someday status
     - All 8 statuses now available: inbox, open, next, waiting, scheduled, someday, done, canceled
   - **Web UI**:
-    - Status dropdown includes Inbox and Someday options in GTD workflow order
+    - Status dropdown includes Inbox and Someday options in task edit/create forms
+    - Status filter bar includes Inbox and Someday filter buttons
+    - Project kanban view includes Inbox and Someday columns
+    - Task list status labels include Inbox and Someday
+    - Search input supports status:inbox and status:someday queries
     - URL filtering: `/tasks?status=inbox` and `/tasks?status=someday`
     - Memo promotion now defaults to status='inbox' (was 'open')
+    - All validation functions updated to accept inbox/someday
   - **API**:
     - All endpoints accept inbox/someday: POST/PUT/GET `/api/tasks`
     - OpenAPI specification updated with new status values
