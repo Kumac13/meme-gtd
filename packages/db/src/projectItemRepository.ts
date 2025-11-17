@@ -121,17 +121,14 @@ export const listProjectItems = (
 ): ProjectItemWithIssue[] => {
   const stmt = db.prepare(`
     SELECT
-      pi.id,
-      pi.project_id,
-      pi.issue_id,
-      pi.position,
-      pi.view_meta,
-      pi.created_at,
-      pi.updated_at,
-      i.type as issue_type,
-      i.status as issue_status,
-      COALESCE(i.title, SUBSTR(i.body_md, 1, 100)) as issue_title,
-      i.body_md as issue_body_md
+      pi.id as pi_id,
+      pi.project_id as pi_project_id,
+      pi.issue_id as pi_issue_id,
+      pi.position as pi_position,
+      pi.view_meta as pi_view_meta,
+      pi.created_at as pi_created_at,
+      pi.updated_at as pi_updated_at,
+      i.*
     FROM project_items pi
     JOIN issues i ON pi.issue_id = i.id
     WHERE pi.project_id = ? AND i.is_deleted = 0
@@ -141,15 +138,20 @@ export const listProjectItems = (
   const rows = stmt.all(projectId) as SqliteRow[];
 
   return rows.map((row) => {
-    const projectItem = projectItemRowToProjectItem(row);
     return {
-      ...projectItem,
+      id: row.pi_id as number,
+      projectId: row.pi_project_id as number,
+      issueId: row.pi_issue_id as number,
+      position: row.pi_position as number,
+      viewMeta: row.pi_view_meta ? JSON.parse(row.pi_view_meta as string) : null,
+      createdAt: row.pi_created_at as string,
+      updatedAt: row.pi_updated_at as string,
       issue: {
-        id: row.issue_id as number,
-        type: row.issue_type as 'task' | 'memo',
-        title: row.issue_title as string,
-        bodyMd: row.issue_body_md as string,
-        status: row.issue_status as 'inbox' | 'someday' | 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled' | null
+        id: row.id as number,
+        type: row.type as 'task' | 'memo',
+        title: (row.title || (row.body_md as string)?.substring(0, 100) || '') as string,
+        bodyMd: row.body_md as string,
+        status: row.status as 'inbox' | 'someday' | 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled' | null
       }
     };
   });
