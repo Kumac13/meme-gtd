@@ -1,6 +1,7 @@
 import { useDraggable } from '@dnd-kit/core';
 import { useNavigate } from 'react-router-dom';
 import { ProjectItemWithIssue } from '../types/project';
+import { InlineMarkdownRenderer, extractFirstLine } from '../utils/markdown';
 
 interface KanbanCardProps {
   item: ProjectItemWithIssue;
@@ -55,7 +56,15 @@ export default function KanbanCard({ item }: KanbanCardProps) {
         onClick={handleClick}
         className="text-sm font-medium text-gray-900 hover:text-github-green-600"
       >
-        {item.issue.title}
+        {item.issue.type === 'memo' ? (
+          item.issue.bodyMd && item.issue.bodyMd.trim() ? (
+            <InlineMarkdownRenderer content={extractFirstLine(item.issue.bodyMd, 80)} />
+          ) : (
+            <span className="text-gray-500">Memo #{item.issueId}</span>
+          )
+        ) : (
+          item.issue.title || `Task #${item.issueId}`
+        )}
       </div>
     </div>
   );
