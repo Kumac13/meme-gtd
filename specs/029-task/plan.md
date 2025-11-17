@@ -65,7 +65,9 @@ specs/029-task/
 packages/web/
 ├── src/
 │   ├── components/
-│   │   ├── EditableContent.tsx      # MODIFY: 三点リーダーメニューに「Copy」選択肢追加
+│   │   ├── CopyButton.tsx           # NEW: 共通コピーボタンコンポーネント
+│   │   ├── EditableContent.tsx      # MODIFY: 本文コピーボタン追加
+│   │   ├── CommentSection.tsx       # MODIFY: コメントコピーボタン追加
 │   │   └── ItemDetail.tsx           # MODIFY: すべてコピーボタン追加
 │   ├── hooks/
 │   │   └── useCopyToClipboard.ts    # NEW: クリップボードコピーロジック
@@ -76,13 +78,14 @@ packages/web/
 │       └── MemoDetail.tsx           # MODIFY: すべてコピー機能のためのデータ収集
 └── tests/
     ├── unit/
+    │   ├── CopyButton.test.tsx          # NEW: CopyButtonコンポーネントテスト
     │   ├── useCopyToClipboard.test.ts   # NEW: フックテスト
     │   └── markdownFormatter.test.ts    # NEW: フォーマッターテスト
     └── e2e/
         └── copy-functionality.spec.ts   # NEW: E2Eテスト（クリップボード統合）
 ```
 
-**Structure Decision**: 既存のWeb applicationアーキテクチャ（monorepo内の`packages/web`）を使用。既存のEditableContentコンポーネントの三点リーダーメニューに「Copy」選択肢を追加することで、最小限のコード変更で機能を実現する。
+**Structure Decision**: 既存のWeb applicationアーキテクチャ（monorepo内の`packages/web`）を使用。新規コンポーネント・フック・ユーティリティを既存ディレクトリ構造に追加し、既存コンポーネントを最小限の変更で拡張する。
 
 ## Complexity Tracking
 

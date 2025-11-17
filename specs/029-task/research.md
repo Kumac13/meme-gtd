@@ -49,47 +49,37 @@ async function copyToClipboard(text: string): Promise<boolean> {
 - クリップボードAPI非対応時: 無反応（ユーザーにエラーUIは表示しない）
 - console.logにエラー情報を出力（開発者向けデバッグ）
 
-### 2. UI Pattern - Dropdown Menu Integration
+### 2. React Icon Library
 
-#### Decision: 既存の三点リーダードロップダウンメニューに「Copy」選択肢を追加
+#### Decision: react-icons（既存依存関係）を使用
 
-**Rationale** (明確化済み):
-- 既存のEditableContentコンポーネントにEdit/Deleteメニューがある
-- ユーザー要求: 独立したアイコンではなく、メニューの一選択肢として実装
-- UIの一貫性: 既存の操作パターン（三点リーダー→選択肢）を維持
-- 最小限のコード変更: 新規コンポーネント不要
+**Rationale**:
+- プロジェクトに既にインストール済み（`package.json`確認済み）
+- 複数のアイコンセットを統一インターフェースで提供
+- Tree-shakingに対応（未使用アイコンはバンドルされない）
+- SVGベースで高品質、スケーラブル
 
-**Menu Structure**:
-- Edit（既存）
-- **Copy（新規追加）**
-- Delete（既存）
+**Icon Selection**:
+- **コピーボタン（初期状態）**: `FiClipboard`（Feather Icons）
+  - クリップボードを表現する標準的なアイコン
+  - GitHubやVSCodeなどで使用される一般的なデザイン
+- **コピー成功状態**: `FiCheck`（Feather Icons）
+  - チェックマークアイコン
+  - 成功を示す普遍的なシンボル
 
-**Implementation Pattern**:
-```typescript
-{isMenuOpen && (
-  <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-    <button onClick={() => { handleStartEdit(); setIsMenuOpen(false); }}>
-      Edit
-    </button>
-    <button onClick={() => { handleCopy(); setIsMenuOpen(false); }}>
-      {copied ? 'Copied!' : 'Copy'}
-    </button>
-    <button onClick={() => { handleDelete(); setIsMenuOpen(false); }}>
-      Delete
-    </button>
-  </div>
-)}
-```
+**Alternatives Considered**:
+- カスタムSVG: メンテナンス負荷、既存ライブラリで十分
+- Material Icons (MdContentCopy): Featherの方がシンプルで既存UIと調和
 
 ### 3. Visual Feedback Pattern
 
-#### Decision: メニュー項目テキスト変化（1秒間）
+#### Decision: Icon Swap + CSS Transition（1秒間）
 
 **Rationale** (明確化済み):
-- ユーザー要求: アイコンではなくメニュー項目として実装
-- コピー成功時: 「Copy」→「Copied!」に1秒間変化
-- シンプルで明確なフィードバック
-- メニューが閉じるため、次回開いたときは「Copy」に戻っている
+- ユーザー要求: アイコン変化のみ、1秒間表示
+- シンプルで邪魔にならない
+- 既存のボタンUIパターン（bookmark、status変更）と一貫性
+- モバイルでも画面を占有しない
 
 **Implementation Pattern**:
 ```typescript
@@ -103,49 +93,41 @@ const handleCopy = async () => {
   }
 };
 
-// メニュー項目
-<button onClick={() => { handleCopy(); /* メニューは閉じない or 閉じる */ }}>
-  {copied ? 'Copied!' : 'Copy'}
-</button>
+return (
+  <button onClick={handleCopy} aria-label="Copy markdown">
+    {copied ? <FiCheck /> : <FiClipboard />}
+  </button>
+);
 ```
 
-**Note**: メニューを閉じるタイミングは実装時に調整（フィードバックを見せるために閉じない選択もある）
-
 **Accessibility Considerations**:
-- キーボードナビゲーション: 既存のメニューナビゲーションを維持
-- `aria-label`: メニュー項目に適切なラベル
-- スクリーンリーダー: 「Copied!」状態の通知
+- `aria-label`: スクリーンリーダー対応
+- `aria-live="polite"`: コピー成功時の状態変化を通知（オプション）
+- キーボードナビゲーション: `<button>`要素でデフォルト対応
 
 ### 4. Component Architecture
 
-#### Decision: 既存コンポーネント拡張 + Custom Hook
+#### Decision: Presentational/Container分離 + Custom Hook
 
 **Rationale**:
-- **EditableContent.tsx**: 既存の三点リーダーメニューに「Copy」選択肢を追加
+- **CopyButton.tsx**: プレゼンテーショナルコンポーネント（UI、アイコン、スタイル）
 - **useCopyToClipboard.ts**: ロジックフック（Clipboard API呼び出し、状態管理）
 - **markdownFormatter.ts**: ピュアユーティリティ（「すべてコピー」のMarkdown構造化）
 
 **Benefits**:
-- 最小限のコード変更（既存コンポーネントの拡張）
 - 関心の分離（Separation of Concerns）
 - テスタビリティ: ロジックとUIを独立してテスト可能
-- 再利用性: 同じフックを異なるコンポーネントで使用可能
+- 再利用性: 同じフックを異なるUIで使用可能
 - React Best Practices準拠
 
 **Component Hierarchy**:
 ```
 ItemDetail (Page Component)
-├── EditableContent (本文)
-│   └── 三点リーダーメニュー
-│       ├── Edit
-│       ├── Copy (新規)
-│       └── Delete
+├── EditableContent
+│   └── CopyButton (本文用)
 ├── CommentSection
 │   └── EditableContent (each comment)
-│       └── 三点リーダーメニュー
-│           ├── Edit
-│           ├── Copy (新規)
-│           └── Delete
+│       └── CopyButton (コメント用)
 └── Header Actions
     └── CopyButton (すべてコピー用)
 ```
@@ -185,11 +167,11 @@ function formatAllContent(
 - コメントが0件の場合: コメントセクションを省略
 - 特殊文字: そのまま（Markdownエスケープ不要、rawテキスト）
 
-### 6. Copy Action Placement Strategy
+### 6. Button Placement Strategy
 
 #### Decision (明確化済み):
-- **本文コピー**: EditableContentの三点リーダーメニューに「Copy」選択肢を追加
-- **コメントコピー**: 各コメントのEditableContentの三点リーダーメニューに「Copy」選択肢を追加
+- **本文コピーボタン**: 本文エリアの右上隅（コンテンツ表示エリア内）
+- **コメントコピーボタン**: 各コメントの右上隅（コンテンツ表示エリア内）
 - **すべてコピーボタン**: ページヘッダーエリア（タイトル・ステータス・ブックマークボタンの横）
 
 **Layout Pattern**:
@@ -198,16 +180,15 @@ function formatAllContent(
 │ Header: [Title] [Status] [Bookmark] [CopyAll]│
 │                                               │
 │ ┌─ Body ─────────────────────────────────┐   │
-│ │ Markdown Content              [⋮]      │   │
-│ │                              ┌────┐    │   │
-│ │                              │Edit│    │   │
-│ │                              │Copy│    │   │
-│ │                              │Del │    │   │
-│ │                              └────┘    │   │
+│ │ Markdown Content              [Copy]   │   │
 │ └────────────────────────────────────────┘   │
 │                                               │
 │ ┌─ Comment 1 ────────────────────────────┐   │
-│ │ Comment text                  [⋮]      │   │
+│ │ Comment text                  [Copy]   │   │
+│ └────────────────────────────────────────┘   │
+│                                               │
+│ ┌─ Comment 2 ────────────────────────────┐   │
+│ │ Comment text                  [Copy]   │   │
 │ └────────────────────────────────────────┘   │
 └───────────────────────────────────────────────┘
 ```
@@ -219,9 +200,11 @@ function formatAllContent(
 **Unit Tests** (Vitest):
 - `useCopyToClipboard.test.ts`: フックロジック、状態管理
 - `markdownFormatter.test.ts`: Markdown構造化、エッジケース
+- `CopyButton.test.tsx`: コンポーネントレンダリング、props
 
 **Integration Tests** (Vitest + Testing Library):
-- EditableContentのメニューコピー機能統合
+- EditableContent + CopyButton統合
+- CommentSection + CopyButton統合
 - モック化したClipboard API
 
 **E2E Tests** (Playwright):
@@ -298,11 +281,11 @@ try {
 
 全ての不明点は仕様明確化フェーズ（`/speckit.clarify`）で解決済み:
 
-✅ Q1: 視覚的フィードバック方法 → A: メニュー項目テキスト変化「Copied!」（1秒間）
+✅ Q1: 視覚的フィードバック方法 → A: アイコン変化のみ（1秒間）
 ✅ Q2: Clipboard API非対応時の動作 → A: 無反応 + console.logエラー出力
-✅ Q3: 本文/コメントコピー配置 → A: 三点リーダーメニューに「Copy」選択肢追加
+✅ Q3: 本文/コメントボタン配置 → A: 右上隅（コンテンツエリア内）
 ✅ Q4: すべてコピーボタン配置 → A: ページヘッダーエリア
-✅ Q5: フィードバック表示時間 → A: 1秒間
+✅ Q5: アイコン変化時間 → A: 1秒間
 
 ## Next Steps
 
