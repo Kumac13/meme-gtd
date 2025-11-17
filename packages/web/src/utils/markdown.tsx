@@ -178,3 +178,72 @@ export function truncateMarkdown(markdown: string, maxLength: number = 100): str
   }
   return plainText.slice(0, maxLength).trim() + '...';
 }
+
+/**
+ * Extract first line from markdown content
+ * @param markdown Markdown content
+ * @param maxLength Optional maximum length for truncation
+ * @returns First line of markdown (text before first \n)
+ */
+export function extractFirstLine(markdown: string, maxLength?: number): string {
+  const firstLine = markdown.split('\n')[0] || '';
+  if (maxLength && firstLine.length > maxLength) {
+    return firstLine.slice(0, maxLength).trim() + '...';
+  }
+  return firstLine;
+}
+
+/**
+ * Inline markdown renderer for list/card previews
+ * Renders markdown inline without block-level margins
+ * @param props Component props with content string
+ * @returns JSX element with inline-rendered markdown
+ */
+export function InlineMarkdownRenderer({ content }: { content: string }) {
+  const inlineComponents: Components = {
+    p: ({ children }) => <span className="text-gray-900">{children}</span>,
+    h1: ({ children }) => <strong className="text-base font-semibold text-gray-900">{children}</strong>,
+    h2: ({ children }) => <strong className="text-base font-semibold text-gray-900">{children}</strong>,
+    h3: ({ children }) => <strong className="text-sm font-semibold text-gray-900">{children}</strong>,
+    h4: ({ children }) => <strong className="text-sm font-semibold text-gray-900">{children}</strong>,
+    h5: ({ children }) => <strong className="text-xs font-semibold text-gray-900">{children}</strong>,
+    h6: ({ children }) => <strong className="text-xs font-semibold text-gray-900">{children}</strong>,
+    strong: ({ children }) => <strong className="font-bold text-gray-900">{children}</strong>,
+    em: ({ children }) => <em className="italic text-gray-700">{children}</em>,
+    code: ({ children }) => (
+      <code className="bg-gray-100 text-red-600 px-1 py-0.5 rounded text-xs font-mono">
+        {children}
+      </code>
+    ),
+    a: ({ href, children }) => (
+      <a
+        href={href}
+        className="text-github-green-600 hover:text-github-green-800 underline"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {children}
+      </a>
+    ),
+    ul: ({ children }) => <span>{children}</span>,
+    ol: ({ children }) => <span>{children}</span>,
+    li: ({ children }) => <span className="mr-2">{children}</span>,
+    blockquote: ({ children }) => <span className="italic text-gray-600">{children}</span>,
+    hr: () => null,
+    table: () => null,
+    thead: () => null,
+    tbody: () => null,
+    tr: () => null,
+    th: () => null,
+    td: () => null,
+  };
+
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={inlineComponents}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+}
