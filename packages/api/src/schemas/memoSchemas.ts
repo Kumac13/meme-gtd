@@ -24,7 +24,7 @@ export type UpdateMemoRequest = z.infer<typeof UpdateMemoRequestSchema>;
  */
 export const PromoteMemoRequestSchema = z.object({
   title: z.string().min(1, 'Task title is required').describe('Title for the new task'),
-  status: z.enum(['inbox', 'open', 'next', 'waiting', 'scheduled']).optional().describe('Initial status for the task'),
+  status: z.enum(['inbox', 'someday', 'open', 'next', 'waiting', 'scheduled']).optional().describe('Initial status for the task'),
 });
 
 export type PromoteMemoRequest = z.infer<typeof PromoteMemoRequestSchema>;
