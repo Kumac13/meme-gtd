@@ -128,7 +128,17 @@ export const listProjectItems = (
       pi.view_meta as pi_view_meta,
       pi.created_at as pi_created_at,
       pi.updated_at as pi_updated_at,
-      i.*
+      i.id as i_id,
+      i.type as i_type,
+      i.title as i_title,
+      i.body_md as i_body_md,
+      i.status as i_status,
+      i.scheduled_on as i_scheduled_on,
+      i.meta as i_meta,
+      i.created_at as i_created_at,
+      i.updated_at as i_updated_at,
+      i.is_bookmarked as i_is_bookmarked,
+      i.is_deleted as i_is_deleted
     FROM project_items pi
     JOIN issues i ON pi.issue_id = i.id
     WHERE pi.project_id = ? AND i.is_deleted = 0
@@ -147,11 +157,11 @@ export const listProjectItems = (
       createdAt: row.pi_created_at as string,
       updatedAt: row.pi_updated_at as string,
       issue: {
-        id: row.id as number,
-        type: row.type as 'task' | 'memo',
-        title: (row.title || (row.body_md as string)?.substring(0, 100) || '') as string,
-        bodyMd: row.body_md as string,
-        status: row.status as 'inbox' | 'someday' | 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled' | null
+        id: row.i_id as number,
+        type: row.i_type as 'task' | 'memo',
+        title: (row.i_title || (row.i_body_md as string)?.substring(0, 100) || '') as string,
+        bodyMd: row.i_body_md as string,
+        status: row.i_status as 'inbox' | 'someday' | 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled' | null
       }
     };
   });
