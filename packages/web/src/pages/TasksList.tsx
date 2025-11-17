@@ -30,10 +30,12 @@ interface Task {
 }
 
 const statusLabels: Record<string, string> = {
+  inbox: 'Inbox',
   open: 'Open',
   next: 'Next',
   waiting: 'Waiting',
   scheduled: 'Scheduled',
+  someday: 'Someday',
   done: 'Done',
   canceled: 'Canceled',
 };
@@ -65,7 +67,7 @@ export default function TasksList() {
         const searchParam = filters.parsedQuery.freeText;
 
         const response = await TasksService.listTasks(
-          effectiveStatus as 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled' | undefined,
+          effectiveStatus as 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled' | undefined,
           undefined,
           labelParam,
           searchParam

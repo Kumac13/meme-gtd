@@ -103,7 +103,7 @@ export default function TaskDetail() {
 
     try {
       const updatedTask = await TasksService.updateTask(id, {
-        status: status as 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled'
+        status: status as 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled'
       });
       setTask(updatedTask as Task);
     } catch (err) {
