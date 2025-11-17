@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatDateTime, formatRelativeTime } from '../utils/dates';
-import { truncateMarkdown } from '../utils/markdown';
+import { InlineMarkdownRenderer, extractFirstLine } from '../utils/markdown';
 import { LabelBadge } from './LabelBadge';
 import { createItemDetailUrl } from '../utils/navigationHelpers';
 
@@ -157,7 +157,11 @@ export default function ItemList({ items, itemType: _itemType, basePath, current
                 <>
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <p className="text-gray-900 text-sm">
-                      {truncateMarkdown(item.bodyMd, 150)}
+                      {item.bodyMd && item.bodyMd.trim() ? (
+                        <InlineMarkdownRenderer content={extractFirstLine(item.bodyMd, 150)} />
+                      ) : (
+                        <span className="text-gray-500">Memo #{item.id}</span>
+                      )}
                     </p>
                   </div>
                   {item.labels && item.labels.length > 0 && (
