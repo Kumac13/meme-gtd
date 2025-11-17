@@ -56,14 +56,10 @@ export default function KanbanCard({ item }: KanbanCardProps) {
         onClick={handleClick}
         className="text-sm font-medium text-gray-900 hover:text-github-green-600"
       >
-        {item.issue.type === 'memo' ? (
-          item.issue.bodyMd && item.issue.bodyMd.trim() ? (
-            <InlineMarkdownRenderer content={extractFirstLine(item.issue.bodyMd, 80)} />
-          ) : (
-            <span className="text-gray-500">Memo #{item.issueId}</span>
-          )
+        {item.issue.title ? (
+          <InlineMarkdownRenderer content={extractFirstLine(item.issue.title, 80)} />
         ) : (
-          item.issue.title || `Task #${item.issueId}`
+          <span className="text-gray-500">{item.issue.type === 'memo' ? 'Memo' : 'Task'} #{item.issueId}</span>
         )}
       </div>
     </div>
