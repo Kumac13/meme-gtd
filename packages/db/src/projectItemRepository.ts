@@ -125,7 +125,8 @@ export const listProjectItems = (
       i.id as issue_id,
       i.type as issue_type,
       i.status as issue_status,
-      COALESCE(i.title, SUBSTR(i.body_md, 1, 100)) as issue_title
+      COALESCE(i.title, SUBSTR(i.body_md, 1, 100)) as issue_title,
+      i.body_md as issue_body_md
     FROM project_items pi
     JOIN issues i ON pi.issue_id = i.id
     WHERE pi.project_id = ? AND i.is_deleted = 0
@@ -142,6 +143,7 @@ export const listProjectItems = (
         id: row.issue_id as number,
         type: row.issue_type as 'task' | 'memo',
         title: row.issue_title as string,
+        bodyMd: row.issue_body_md as string,
         status: row.issue_status as 'inbox' | 'someday' | 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled' | null
       }
     };
