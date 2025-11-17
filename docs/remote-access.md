@@ -62,7 +62,39 @@ pnpm server:dev
 
 サーバーは `http://0.0.0.0:3001` で起動します。
 
-### 3. アクセス方法
+### 3. Tailscale Serveの設定（推奨）
+
+Tailscale Serveを使うと、IPアドレスではなくホスト名（例: `hirakus-mac-mini.tailff2c68.ts.net`）でHTTPSアクセスできます。
+
+#### macOS/Linuxでの設定
+
+```bash
+# localhost:3000をTailscaleネットワークに公開
+tailscale serve https / http://localhost:3000
+
+# 設定を確認
+tailscale serve status
+# 出力例:
+# https://hirakus-mac-mini.tailff2c68.ts.net (tailnet only)
+# |-- / proxy http://localhost:3000
+```
+
+これで `https://hirakus-mac-mini.tailff2c68.ts.net` でアクセス可能になります。
+
+#### Tailscale Serve使用時の注意点
+
+- Web UIの `OpenAPI.ts` で `BASE: ''` と設定すると、どの環境からでも相対パスでAPIにアクセスできます
+  - Mac上: `localhost:3000` → API: `localhost:3000/api/...`
+  - iPhone: `https://hirakus-mac-mini.tailff2c68.ts.net` → API: `https://hirakus-mac-mini.tailff2c68.ts.net/api/...`
+
+#### 設定の停止
+
+```bash
+# Tailscale Serveを停止
+tailscale serve reset
+```
+
+### 4. アクセス方法
 
 #### ローカルマシンからのテスト
 
@@ -76,7 +108,20 @@ curl http://localhost:3001/api/memos
 
 #### iPhoneからのアクセス
 
+##### 方法1: Tailscale Serve経由（HTTPS、推奨）
+
 Safariまたは好みのブラウザで以下のURLを開きます：
+
+```
+https://hirakus-mac-mini.tailff2c68.ts.net
+```
+
+**メリット**:
+- ホスト名で覚えやすい
+- HTTPSで自動暗号化
+- ポート番号不要
+
+##### 方法2: IPアドレス直接（HTTP）
 
 ```
 本番環境: http://100.123.45.67:3000
@@ -85,7 +130,7 @@ Safariまたは好みのブラウザで以下のURLを開きます：
 
 **重要**: `100.123.45.67` の部分は、手順1で確認した自分のTailscale IPアドレスに置き換えてください。
 
-### 4. ファイアウォール設定（必要に応じて）
+### 5. ファイアウォール設定（必要に応じて）
 
 Linuxマシンでファイアウォールが有効な場合、Tailscaleネットワーク（100.64.0.0/10）からのアクセスを許可する必要があります。
 
