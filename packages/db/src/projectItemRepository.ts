@@ -121,8 +121,13 @@ export const listProjectItems = (
 ): ProjectItemWithIssue[] => {
   const stmt = db.prepare(`
     SELECT
-      pi.*,
-      i.id as issue_id,
+      pi.id,
+      pi.project_id,
+      pi.issue_id,
+      pi.position,
+      pi.view_meta,
+      pi.created_at,
+      pi.updated_at,
       i.type as issue_type,
       i.status as issue_status,
       COALESCE(i.title, SUBSTR(i.body_md, 1, 100)) as issue_title,
