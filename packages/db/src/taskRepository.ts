@@ -61,7 +61,7 @@ const commentRowToComment = (row: any): Comment => ({
 // T012: Implement createTask()
 export const createTask = (db: Database.Database, input: CreateTaskInput): Task => {
   const now = nowIso();
-  const status = input.status ?? 'open';
+  const status = input.status ?? 'inbox';
   const stmt = db.prepare(
     `INSERT INTO issues (type, title, body_md, status, scheduled_on, meta, created_at, updated_at, is_bookmarked, is_deleted)
      VALUES ('task', @title, @body, @status, @scheduledOn, json('{}'), @createdAt, @createdAt, 0, 0)`

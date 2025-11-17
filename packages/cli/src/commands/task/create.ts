@@ -43,9 +43,9 @@ export default class TaskCreate extends Command {
     status: Flags.string({
       char: 's',
       summary: 'Initial status',
-      description: 'Set task status (inbox, open, next, waiting, scheduled, someday, done, canceled). Default: open',
+      description: 'Set task status (inbox, open, next, waiting, scheduled, someday, done, canceled). Default: inbox',
       options: ['inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled'],
-      default: 'open'
+      default: 'inbox'
     }),
     'scheduled-on': Flags.string({
       summary: 'Scheduled date (ISO 8601)',

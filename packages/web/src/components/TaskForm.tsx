@@ -20,7 +20,7 @@ interface TaskFormProps {
 export default function TaskForm({
   initialTitle = '',
   initialBodyMd = '',
-  initialStatus = 'open',
+  initialStatus = 'inbox',
   taskId,
   fromMemoId,
   mode,
@@ -63,6 +63,7 @@ export default function TaskForm({
         const response = await TasksService.createTask({
           title,
           bodyMd: bodyMd || undefined,
+          status,
         });
         navigate(`/tasks/${response.id}`);
       } else if (mode === 'edit' && taskId) {
