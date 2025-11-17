@@ -91,6 +91,6 @@ export function buildSearchQuery(filters: ParsedSearchQuery): string {
  * Validate if a status value is valid
  */
 export function isValidStatus(status: string): boolean {
-  const validStatuses = ['open', 'next', 'waiting', 'scheduled', 'done', 'canceled'];
+  const validStatuses = ['inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled'];
   return validStatuses.includes(status);
 }

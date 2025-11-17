@@ -26,7 +26,7 @@ export class TasksService {
             /**
              * Task status (defaults to "open")
              */
-            status?: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
+            status?: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
             /**
              * Scheduled date for the task (YYYY-MM-DD)
              */
@@ -52,7 +52,7 @@ export class TasksService {
         /**
          * Current task status
          */
-        status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
+        status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
@@ -98,12 +98,12 @@ export class TasksService {
      * @param status Filter by task status
      * @param bookmarked Filter by bookmark status
      * @param label Filter by label name(s). Supports comma-separated values for OR logic (e.g., bug,enhancement)
-     * @param search Search tasks by title and body using free-text partial matching (SQLite FTS5). Supports multi-word queries with implicit AND logic.
+     * @param search Search tasks by title using free-text partial matching
      * @returns any Default Response
      * @throws ApiError
      */
     public static listTasks(
-        status?: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled',
+        status?: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled',
         bookmarked?: 'true' | 'false',
         label?: string,
         search?: string,
@@ -127,7 +127,7 @@ export class TasksService {
         /**
          * Current task status
          */
-        status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
+        status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
@@ -161,7 +161,7 @@ export class TasksService {
          */
         commentCount: number;
         /**
-         * Context preview with highlighted search terms (only present when searching)
+         * Context preview with highlighted search terms (only present when search parameter is active)
          */
         preview?: string;
     }>> {
@@ -208,7 +208,7 @@ export class TasksService {
         /**
          * Current task status
          */
-        status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
+        status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
@@ -275,7 +275,7 @@ export class TasksService {
             /**
              * Updated task status
              */
-            status?: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
+            status?: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
             /**
              * Updated scheduled date (YYYY-MM-DD, null to clear)
              */
@@ -301,7 +301,7 @@ export class TasksService {
         /**
          * Current task status
          */
-        status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
+        status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
@@ -395,7 +395,7 @@ export class TasksService {
         /**
          * Current task status
          */
-        status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
+        status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
@@ -465,7 +465,7 @@ export class TasksService {
         /**
          * Current task status
          */
-        status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
+        status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
@@ -535,7 +535,7 @@ export class TasksService {
         /**
          * Current task status
          */
-        status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
+        status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
@@ -605,7 +605,7 @@ export class TasksService {
         /**
          * Current task status
          */
-        status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
+        status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
@@ -675,7 +675,7 @@ export class TasksService {
         /**
          * Current task status
          */
-        status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
+        status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */

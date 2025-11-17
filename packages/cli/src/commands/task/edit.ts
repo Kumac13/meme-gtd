@@ -48,8 +48,8 @@ export default class TaskEdit extends Command {
     status: Flags.string({
       char: 's',
       summary: 'Update task status',
-      description: 'Set task status (open, next, waiting, scheduled, done, canceled).',
-      options: ['open', 'next', 'waiting', 'scheduled', 'done', 'canceled']
+      description: 'Set task status (inbox, open, next, waiting, scheduled, someday, done, canceled).',
+      options: ['inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled']
     }),
     'scheduled-on': Flags.string({
       summary: 'Update scheduled date (ISO 8601)',

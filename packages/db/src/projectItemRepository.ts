@@ -142,7 +142,7 @@ export const listProjectItems = (
         id: row.issue_id as number,
         type: row.issue_type as 'task' | 'memo',
         title: row.issue_title as string,
-        status: row.issue_status as 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled' | null
+        status: row.issue_status as 'inbox' | 'someday' | 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled' | null
       }
     };
   });

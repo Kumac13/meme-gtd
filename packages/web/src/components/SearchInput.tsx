@@ -111,7 +111,7 @@ export default function SearchInput({
           Example: label:bug status:open
           <br />
           <span className="text-xs text-gray-500">
-            Valid statuses: open, next, waiting, scheduled, done, canceled
+            Valid statuses: inbox, open, next, waiting, scheduled, someday, done, canceled
           </span>
         </div>
       )}

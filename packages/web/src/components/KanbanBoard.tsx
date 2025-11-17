@@ -13,8 +13,8 @@ export default function KanbanBoard({ project, onProjectUpdate }: KanbanBoardPro
   const [dragError, setDragError] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   // Column order: Documents first, then task status columns
-  const allColumns = ['Documents', 'Open', 'Next', 'Waiting', 'Scheduled', 'Done', 'Canceled'];
-  const taskStatusColumns = ['Open', 'Next', 'Waiting', 'Scheduled', 'Done', 'Canceled'];
+  const allColumns = ['Documents', 'Inbox', 'Open', 'Next', 'Waiting', 'Scheduled', 'Someday', 'Done', 'Canceled'];
+  const taskStatusColumns = ['Inbox', 'Open', 'Next', 'Waiting', 'Scheduled', 'Someday', 'Done', 'Canceled'];
 
   // Group items by column
   const itemsByColumn = useMemo(() => {
@@ -81,7 +81,7 @@ export default function KanbanBoard({ project, onProjectUpdate }: KanbanBoardPro
     // For tasks, check if status changed
     const oldStatus = item.issue.status;
     if (!oldStatus) return; // Skip if task has no status
-    const newStatus = newColumnName.toLowerCase() as 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
+    const newStatus = newColumnName.toLowerCase() as 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
 
     if (oldStatus === newStatus) return;
 

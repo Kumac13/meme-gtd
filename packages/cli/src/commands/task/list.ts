@@ -24,7 +24,7 @@ export default class TaskList extends Command {
       char: 's',
       summary: 'Filter by status',
       description: 'Return only tasks with the specified status.',
-      options: ['open', 'next', 'waiting', 'scheduled', 'done', 'canceled']
+      options: ['inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled']
     }),
     label: Flags.string({
       char: 'l',

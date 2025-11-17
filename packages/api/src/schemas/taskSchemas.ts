@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * Schema for task status values
  */
-export const TaskStatusSchema = z.enum(['open', 'next', 'waiting', 'scheduled', 'done', 'canceled']);
+export const TaskStatusSchema = z.enum(['inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled']);
 
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 
@@ -13,7 +13,7 @@ export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 export const CreateTaskRequestSchema = z.object({
   title: z.string().min(1, 'Task title is required').describe('Task title'),
   bodyMd: z.string().optional().describe('Task description in Markdown format'),
-  status: TaskStatusSchema.optional().describe('Task status (defaults to "open")'),
+  status: TaskStatusSchema.optional().describe('Task status (defaults to "inbox")'),
   scheduledOn: z.string().date().optional().describe('Scheduled date for the task (YYYY-MM-DD)'),
 });
 

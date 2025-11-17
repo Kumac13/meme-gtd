@@ -11,6 +11,8 @@
  * Valid task status filter values
  */
 export const VALID_STATUSES = [
+  'inbox',
+  'someday',
   'open',
   'next',
   'waiting',

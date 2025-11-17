@@ -36,7 +36,7 @@ describe('Task CRUD Operations', () => {
     assert.strictEqual(task.type, 'task');
     assert.strictEqual(task.title, 'Test Task');
     assert.strictEqual(task.bodyMd, 'Test task body');
-    assert.strictEqual(task.status, 'open'); // Default status
+    assert.strictEqual(task.status, 'inbox'); // Default status changed to inbox
     assert.ok(task.id);
     assert.ok(task.createdAt);
     assert.ok(task.updatedAt);

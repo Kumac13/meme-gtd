@@ -148,7 +148,7 @@ paths:
           in: query
           name: search
           required: false
-          description: Search memos by body content using free-text partial matching (SQLite FTS5). Supports multi-word queries with implicit AND logic.
+          description: Search memos by body content using free-text partial matching
       responses:
         "200":
           description: Default Response
@@ -214,7 +214,7 @@ paths:
                       description: Number of non-deleted comments on this memo
                     preview:
                       type: string
-                      description: Context preview with highlighted search terms (only present when searching)
+                      description: Context preview with highlighted search terms (only present when search parameter is active)
                   required:
                     - id
                     - type
@@ -571,6 +571,7 @@ paths:
                 status:
                   type: string
                   enum:
+                    - inbox
                     - open
                     - next
                     - waiting
@@ -1210,10 +1211,12 @@ paths:
                 status:
                   type: string
                   enum:
+                    - inbox
                     - open
                     - next
                     - waiting
                     - scheduled
+                    - someday
                     - done
                     - canceled
                   description: Task status (defaults to "open")
@@ -1252,10 +1255,12 @@ paths:
                   status:
                     type: string
                     enum:
+                      - inbox
                       - open
                       - next
                       - waiting
                       - scheduled
+                      - someday
                       - done
                       - canceled
                     description: Current task status
@@ -1334,10 +1339,12 @@ paths:
         - schema:
             type: string
             enum:
+              - inbox
               - open
               - next
               - waiting
               - scheduled
+              - someday
               - done
               - canceled
           in: query
@@ -1364,7 +1371,7 @@ paths:
           in: query
           name: search
           required: false
-          description: Search tasks by title and body using free-text partial matching (SQLite FTS5). Supports multi-word queries with implicit AND logic.
+          description: Search tasks by title using free-text partial matching
       responses:
         "200":
           description: Default Response
@@ -1394,10 +1401,12 @@ paths:
                     status:
                       type: string
                       enum:
+                        - inbox
                         - open
                         - next
                         - waiting
                         - scheduled
+                        - someday
                         - done
                         - canceled
                       description: Current task status
@@ -1435,7 +1444,7 @@ paths:
                       description: Number of non-deleted comments on this task
                     preview:
                       type: string
-                      description: Context preview with highlighted search terms (only present when searching)
+                      description: Context preview with highlighted search terms (only present when search parameter is active)
                   required:
                     - id
                     - type
@@ -1516,10 +1525,12 @@ paths:
                   status:
                     type: string
                     enum:
+                      - inbox
                       - open
                       - next
                       - waiting
                       - scheduled
+                      - someday
                       - done
                       - canceled
                     description: Current task status
@@ -1614,10 +1625,12 @@ paths:
                 status:
                   type: string
                   enum:
+                    - inbox
                     - open
                     - next
                     - waiting
                     - scheduled
+                    - someday
                     - done
                     - canceled
                   description: Updated task status
@@ -1662,10 +1675,12 @@ paths:
                   status:
                     type: string
                     enum:
+                      - inbox
                       - open
                       - next
                       - waiting
                       - scheduled
+                      - someday
                       - done
                       - canceled
                     description: Current task status
@@ -1839,10 +1854,12 @@ paths:
                   status:
                     type: string
                     enum:
+                      - inbox
                       - open
                       - next
                       - waiting
                       - scheduled
+                      - someday
                       - done
                       - canceled
                     description: Current task status
@@ -1953,10 +1970,12 @@ paths:
                   status:
                     type: string
                     enum:
+                      - inbox
                       - open
                       - next
                       - waiting
                       - scheduled
+                      - someday
                       - done
                       - canceled
                     description: Current task status
@@ -2067,10 +2086,12 @@ paths:
                   status:
                     type: string
                     enum:
+                      - inbox
                       - open
                       - next
                       - waiting
                       - scheduled
+                      - someday
                       - done
                       - canceled
                     description: Current task status
@@ -2181,10 +2202,12 @@ paths:
                   status:
                     type: string
                     enum:
+                      - inbox
                       - open
                       - next
                       - waiting
                       - scheduled
+                      - someday
                       - done
                       - canceled
                     description: Current task status
@@ -2295,10 +2318,12 @@ paths:
                   status:
                     type: string
                     enum:
+                      - inbox
                       - open
                       - next
                       - waiting
                       - scheduled
+                      - someday
                       - done
                       - canceled
                     description: Current task status

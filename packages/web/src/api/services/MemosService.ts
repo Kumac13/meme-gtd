@@ -85,7 +85,7 @@ export class MemosService {
      * List all memos with optional filters
      * @param bookmarked Filter by bookmark status
      * @param label Filter by label name(s). Supports comma-separated values for OR logic (e.g., idea,meeting-notes)
-     * @param search Search memos by body content using free-text partial matching (SQLite FTS5). Supports multi-word queries with implicit AND logic.
+     * @param search Search memos by body content using free-text partial matching
      * @returns any Default Response
      * @throws ApiError
      */
@@ -147,7 +147,7 @@ export class MemosService {
          */
         commentCount: number;
         /**
-         * Context preview with highlighted search terms (only present when searching)
+         * Context preview with highlighted search terms (only present when search parameter is active)
          */
         preview?: string;
     }>> {
@@ -361,7 +361,7 @@ export class MemosService {
             /**
              * Initial status for the task
              */
-            status?: 'open' | 'next' | 'waiting' | 'scheduled';
+            status?: 'inbox' | 'someday' | 'open' | 'next' | 'waiting' | 'scheduled';
         },
     ): CancelablePromise<any> {
         return __request(OpenAPI, {

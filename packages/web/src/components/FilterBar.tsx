@@ -7,10 +7,12 @@ interface FilterBarProps {
 }
 
 const statusLabels: Record<string, string> = {
+  inbox: 'Inbox',
   open: 'Open',
   next: 'Next',
   waiting: 'Waiting',
   scheduled: 'Scheduled',
+  someday: 'Someday',
   done: 'Done',
   canceled: 'Canceled',
 };
@@ -39,7 +41,7 @@ export default function FilterBar({
       {/* Status filter (tasks only) */}
       {showStatusFilter && onStatusFilterChange && (
         <>
-          {['all', 'open', 'next', 'waiting', 'scheduled', 'done', 'canceled'].map((status) => (
+          {['all', 'inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled'].map((status) => (
             <button
               key={status}
               onClick={() => onStatusFilterChange(status)}

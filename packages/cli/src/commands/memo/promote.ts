@@ -49,8 +49,9 @@ export default class MemoPromote extends Command {
     status: Flags.string({
       char: 's',
       summary: 'Initial task status',
-      description: 'Set the status that the new task should start in.',
-      default: 'open'
+      description: 'Set the status that the new task should start in. Default: inbox',
+      options: ['inbox', 'someday', 'open', 'next', 'waiting', 'scheduled'],
+      default: 'inbox'
     }),
     json: Flags.boolean({
       char: 'j',

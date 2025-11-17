@@ -1,10 +1,12 @@
 export type IssueType = 'memo' | 'task';
 
 export type TaskStatus =
+  | 'inbox'
   | 'open'
   | 'next'
   | 'waiting'
   | 'scheduled'
+  | 'someday'
   | 'done'
   | 'canceled';
 

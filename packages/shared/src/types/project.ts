@@ -58,6 +58,6 @@ export interface ProjectItemWithIssue extends ProjectItem {
     id: number;
     type: 'task' | 'memo';
     title: string;
-    status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled' | null;
+    status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled' | null;
   };
 }

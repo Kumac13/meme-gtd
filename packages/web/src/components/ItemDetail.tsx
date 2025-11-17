@@ -104,10 +104,12 @@ export default function ItemDetail({
           <div className="flex items-center gap-2">
             {itemType === 'task' && 'status' in item && onStatusChange && (
               <select
-                value={item.status || 'open'}
+                value={item.status || 'inbox'}
                 onChange={(e) => onStatusChange(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500"
               >
+                <option value="inbox">Inbox</option>
+                <option value="someday">Someday</option>
                 <option value="open">Open</option>
                 <option value="next">Next</option>
                 <option value="waiting">Waiting</option>
