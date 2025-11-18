@@ -43,7 +43,7 @@ export type BookmarkFilter = boolean;
  * validateStatus(null) // 'all'
  */
 export function validateStatus(value: string | null): StatusFilter {
-  if (!value) return 'all';
+  if (!value) return 'next';
   return VALID_STATUSES.includes(value as any) ? (value as StatusFilter) : 'all';
 }
 
@@ -76,7 +76,7 @@ export function updateStatusParam(
 ): URLSearchParams {
   const params = new URLSearchParams(currentParams);
 
-  if (newStatus === 'all') {
+  if (newStatus === 'next') {
     params.delete('status');
   } else {
     params.set('status', newStatus);
