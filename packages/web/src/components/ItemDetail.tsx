@@ -6,6 +6,7 @@ import CommentSection from './CommentSection';
 import LinkSection from './LinkSection';
 import { ProjectsSection } from './ProjectsSection';
 import { LabelsSection } from './LabelsSection';
+import { ScheduleSection } from './ScheduleSection';
 import { LabelBadge } from './LabelBadge';
 import { createBackUrl } from '../utils/navigationHelpers';
 
@@ -58,12 +59,12 @@ export default function ItemDetail({
     const updatedItem =
       itemType === 'memo'
         ? await MemosService.updateMemo(String(item.id), {
-            bodyMd: newBody,
-          })
+          bodyMd: newBody,
+        })
         : await TasksService.updateTask(String(item.id), {
-            title: newTitle !== undefined ? newTitle : item.title || undefined,
-            bodyMd: newBody,
-          });
+          title: newTitle !== undefined ? newTitle : item.title || undefined,
+          bodyMd: newBody,
+        });
     onUpdate(updatedItem as Item);
   };
 
@@ -173,6 +174,21 @@ export default function ItemDetail({
         <div className="w-full lg:w-80 flex-shrink-0 space-y-6">
           {/* Projects Section */}
           <ProjectsSection itemId={item.id} itemType={itemType} />
+
+          {/* Schedule Section */}
+          {itemType === 'task' && 'scheduledOn' in item && (
+            <ScheduleSection
+              scheduledOn={item.scheduledOn}
+              onScheduleChange={async (date) => {
+                if (onUpdate) {
+                  const updatedItem = await TasksService.updateTask(String(item.id), {
+                    scheduledOn: date,
+                  });
+                  onUpdate(updatedItem as Item);
+                }
+              }}
+            />
+          )}
 
           {/* Labels Section */}
           <LabelsSection
