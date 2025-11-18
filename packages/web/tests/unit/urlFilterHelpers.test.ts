@@ -10,8 +10,8 @@ import {
 
 describe('urlFilterHelpers', () => {
   describe('validateStatus', () => {
-    it('should return "all" for null input', () => {
-      expect(validateStatus(null)).toBe('all');
+    it('should return "next" for null input', () => {
+      expect(validateStatus(null)).toBe('next');
     });
 
     it('should return valid status values unchanged', () => {
@@ -29,8 +29,8 @@ describe('urlFilterHelpers', () => {
       expect(validateStatus('random')).toBe('all');
     });
 
-    it('should return "all" for empty string', () => {
-      expect(validateStatus('')).toBe('all');
+    it('should return "next" for empty string', () => {
+      expect(validateStatus('')).toBe('next');
     });
   });
 
@@ -56,9 +56,9 @@ describe('urlFilterHelpers', () => {
   });
 
   describe('updateStatusParam', () => {
-    it('should remove status parameter when set to "all"', () => {
+    it('should remove status parameter when set to "next"', () => {
       const params = new URLSearchParams('status=open');
-      const updated = updateStatusParam(params, 'all');
+      const updated = updateStatusParam(params, 'next');
       expect(updated.has('status')).toBe(false);
       expect(updated.toString()).toBe('');
     });
@@ -68,6 +68,13 @@ describe('urlFilterHelpers', () => {
       const updated = updateStatusParam(params, 'open');
       expect(updated.get('status')).toBe('open');
       expect(updated.toString()).toBe('status=open');
+    });
+
+    it('should add status parameter when setting to "all"', () => {
+      const params = new URLSearchParams();
+      const updated = updateStatusParam(params, 'all');
+      expect(updated.get('status')).toBe('all');
+      expect(updated.toString()).toBe('status=all');
     });
 
     it('should update existing status parameter', () => {
@@ -87,7 +94,7 @@ describe('urlFilterHelpers', () => {
 
     it('should preserve other parameters when removing status', () => {
       const params = new URLSearchParams('status=open&bookmarked=true');
-      const updated = updateStatusParam(params, 'all');
+      const updated = updateStatusParam(params, 'next');
       expect(updated.has('status')).toBe(false);
       expect(updated.get('bookmarked')).toBe('true');
       expect(updated.toString()).toBe('bookmarked=true');
