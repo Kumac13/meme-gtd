@@ -3,6 +3,7 @@ import { formatRelativeTime } from '../utils/dates';
 import { MarkdownRenderer } from '../utils/markdown';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
+import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
 
 interface EditableContentProps {
   content: string;
@@ -28,6 +29,11 @@ export default function EditableContent({
   const [editingTitle, setEditingTitle] = useState(title || '');
   const [saving, setSaving] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { copied, copy } = useCopyToClipboard();
+
+  const handleCopy = async () => {
+    await copy(content);
+  };
 
   const handleStartEdit = () => {
     setIsEditing(true);
@@ -92,6 +98,12 @@ export default function EditableContent({
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
                   Edit
+                </button>
+                <button
+                  onClick={handleCopy}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  {copied ? 'Copied!' : 'Copy'}
                 </button>
                 <button
                   onClick={() => {
