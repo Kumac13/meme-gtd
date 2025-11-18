@@ -62,18 +62,6 @@ try {
 
 ## Frontend-Only Contract
 
-### CopyButton Component Interface
-
-```typescript
-interface CopyButtonProps {
-  text: string;               // Markdown text to copy
-  ariaLabel?: string;         // Default: "Copy markdown"
-  className?: string;         // Custom Tailwind classes
-  onCopySuccess?: () => void; // Optional callback
-  onCopyError?: (error: Error) => void; // Optional callback
-}
-```
-
 ### useCopyToClipboard Hook Interface
 
 ```typescript
@@ -121,17 +109,18 @@ expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expectedMarkdown);
 ### E2E Test Interface (Playwright)
 
 ```typescript
-// Copy action
-await page.click('[aria-label="Copy markdown"]');
+// Open menu and copy
+await page.click('button[aria-label="More options"]'); // 三点リーダーメニュー
+await page.click('text=Copy');
 
 // Verify clipboard content
 const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
 expect(clipboardText).toBe(expectedMarkdown);
 
-// Verify visual feedback (icon change)
-await expect(page.locator('[aria-label="Copy markdown"] svg')).toHaveAttribute('data-icon', 'check');
+// Verify visual feedback (text change)
+await expect(page.locator('text=Copied!')).toBeVisible();
 await page.waitForTimeout(1000);
-await expect(page.locator('[aria-label="Copy markdown"] svg')).toHaveAttribute('data-icon', 'clipboard');
+await expect(page.locator('text=Copy')).toBeVisible();
 ```
 
 ## No Backend Changes

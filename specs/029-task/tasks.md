@@ -38,7 +38,7 @@ This feature uses existing infrastructure (React, TypeScript, Vite). No new proj
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-### Shared Components & Hooks
+### Shared Hooks & Utilities
 
 - [ ] T004 [US-Foundation] Create `useCopyToClipboard` custom hook in `packages/web/src/hooks/useCopyToClipboard.ts`
   - Implement `copy(text: string): Promise<boolean>` function using `navigator.clipboard.writeText()`
@@ -47,115 +47,99 @@ This feature uses existing infrastructure (React, TypeScript, Vite). No new proj
   - Add error handling (log to console.error, return false)
   - Export `UseCopyToClipboardReturn` interface
 
-- [ ] T005 [US-Foundation] Create `CopyButton` component in `packages/web/src/components/CopyButton.tsx`
-  - Accept props: `text: string`, `ariaLabel?: string`, `className?: string`, `onCopySuccess?: () => void`, `onCopyError?: (error: Error) => void`
-  - Use `useCopyToClipboard` hook
-  - Render `FiClipboard` icon (default state) from `react-icons/fi`
-  - Render `FiCheck` icon (copied state, green color)
-  - Apply Tailwind CSS: `p-2 rounded hover:bg-gray-100 transition-colors`
-  - Add `aria-label` and `title` attributes
-  - Handle click event to call `copy(text)`
-
 ### Unit Tests for Foundation
 
-- [ ] T006 [P] [US-Foundation] Write unit tests for `useCopyToClipboard` hook in `packages/web/tests/unit/useCopyToClipboard.test.ts`
+- [ ] T005 [P] [US-Foundation] Write unit tests for `useCopyToClipboard` hook in `packages/web/tests/unit/useCopyToClipboard.test.ts`
   - Mock `navigator.clipboard.writeText`
   - Test successful copy operation
   - Test `copied` state changes to true, then false after 1000ms (use `vi.useFakeTimers()`)
   - Test error handling when Clipboard API fails
   - Use `@testing-library/react` `renderHook` and `act`
 
-- [ ] T007 [P] [US-Foundation] Write unit tests for `CopyButton` component in `packages/web/tests/unit/CopyButton.test.tsx`
-  - Mock `navigator.clipboard.writeText`
-  - Test initial render shows `FiClipboard` icon
-  - Test click calls `navigator.clipboard.writeText` with correct text
-  - Test successful copy shows `FiCheck` icon (green)
-  - Test icon reverts to `FiClipboard` after 1 second
-  - Test `ariaLabel` prop is applied
-  - Use `@testing-library/react` and `userEvent`
-
-**Checkpoint**: Foundation ready - `CopyButton` and `useCopyToClipboard` fully tested and working
+**Checkpoint**: Foundation ready - `useCopyToClipboard` hook fully tested and working
 
 ---
 
 ## Phase 3: User Story 1 - Copy Task/Memo Body as Markdown (Priority: P1) 🎯 MVP
 
-**Goal**: ユーザーがタスク/メモ詳細画面の本文をMarkdown形式でワンクリックでコピーできる
+**Goal**: ユーザーがタスク/メモ詳細画面の本文をMarkdown形式で三点リーダーメニューからコピーできる
 
-**Independent Test**: タスク詳細ページ（例: `/tasks/39`）を開き、本文エリア右上のコピーボタンをクリック。クリップボードに本文のMarkdown rawテキストがコピーされ、テキストエディタに貼り付けて元のMarkdown形式が保持されていることを確認。
+**Independent Test**: タスク詳細ページ（例: `/tasks/39`）を開き、本文エリアの三点リーダーメニューから「Copy」を選択。クリップボードに本文のMarkdown rawテキストがコピーされ、テキストエディタに貼り付けて元のMarkdown形式が保持されていることを確認。
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Modify `EditableContent` component in `packages/web/src/components/EditableContent.tsx`
-  - Import `CopyButton` component
-  - Add `<div className="absolute top-2 right-2">` container in view mode
-  - Render `<CopyButton text={content} ariaLabel="Copy body markdown" />` inside container
-  - Ensure button is positioned in the right-top corner of content area
-  - Preserve existing edit mode functionality
+- [ ] T006 [US1] Modify `EditableContent` component in `packages/web/src/components/EditableContent.tsx`
+  - Import `useCopyToClipboard` hook
+  - Add `copied` state and `copy` function from hook
+  - Add `handleCopy` async function that calls `copy(content)`
+  - Add "Copy" button in dropdown menu between "Edit" and "Delete"
+  - Display `{copied ? 'Copied!' : 'Copy'}` as button text
+  - Apply same styling as Edit button (gray text, hover bg)
 
-- [ ] T009 [US1] Verify integration in `TaskDetail` page (`packages/web/src/pages/TaskDetail.tsx`)
+- [ ] T007 [US1] Verify integration in `TaskDetail` page (`packages/web/src/pages/TaskDetail.tsx`)
   - No code changes required (EditableContent already used)
   - Verify `bodyMd` prop is passed to EditableContent
 
-- [ ] T010 [US1] Verify integration in `MemoDetail` page (`packages/web/src/pages/MemoDetail.tsx`)
+- [ ] T008 [US1] Verify integration in `MemoDetail` page (`packages/web/src/pages/MemoDetail.tsx`)
   - No code changes required (EditableContent already used)
   - Verify `bodyMd` prop is passed to EditableContent
 
 ### E2E Tests for User Story 1
 
-- [ ] T011 [US1] Write E2E test for body copy in tasks in `packages/web/tests/e2e/copy-functionality.spec.ts`
+- [ ] T009 [US1] Write E2E test for body copy in tasks in `packages/web/tests/e2e/copy-functionality.spec.ts`
   - Navigate to `/tasks/1` (test task)
   - Grant clipboard permissions: `context.grantPermissions(['clipboard-read', 'clipboard-write'])`
-  - Click `[aria-label="Copy body markdown"]` button
+  - Open three-dot menu
+  - Click "Copy" menu item
   - Read clipboard: `await page.evaluate(() => navigator.clipboard.readText())`
   - Assert clipboard contains task body markdown (e.g., contains "## Start State")
-  - Verify `FiCheck` icon appears (`.text-green-600`)
-  - Wait 1100ms and verify icon reverts to `FiClipboard` (`.text-gray-600`)
+  - Verify menu text changes to "Copied!"
+  - Wait 1100ms and verify text reverts to "Copy"
 
-- [ ] T012 [P] [US1] Write E2E test for body copy in memos in `packages/web/tests/e2e/copy-functionality.spec.ts`
+- [ ] T010 [P] [US1] Write E2E test for body copy in memos in `packages/web/tests/e2e/copy-functionality.spec.ts`
   - Navigate to `/memos/1` (test memo)
-  - Perform same clipboard copy test as T011
+  - Perform same menu copy test as T009
   - Assert clipboard contains memo body markdown
 
-- [ ] T013 [P] [US1] Write E2E test for empty body edge case in `packages/web/tests/e2e/copy-functionality.spec.ts`
+- [ ] T011 [P] [US1] Write E2E test for empty body edge case in `packages/web/tests/e2e/copy-functionality.spec.ts`
   - Create/navigate to task with empty `bodyMd`
-  - Click copy button
+  - Open menu and click "Copy"
   - Assert clipboard contains empty string `""`
   - Assert no errors occur
 
-**Checkpoint**: User Story 1 complete - 本文コピー機能が完全に動作し、テスト済み
+**Checkpoint**: User Story 1 complete - 本文コピー機能（メニュー経由）が完全に動作し、テスト済み
 
 ---
 
 ## Phase 4: User Story 2 - Copy Individual Comment as Markdown (Priority: P2)
 
-**Goal**: ユーザーが個々のコメントをMarkdown形式でコピーできる
+**Goal**: ユーザーが個々のコメントをMarkdown形式で三点リーダーメニューからコピーできる
 
-**Independent Test**: コメントがあるタスク詳細ページ（例: `/tasks/39`）を開き、コメントセクションの各コメント右上のコピーボタンをクリック。特定のコメントのMarkdownテキストだけがクリップボードにコピーされることを確認。
+**Independent Test**: コメントがあるタスク詳細ページ（例: `/tasks/39`）を開き、コメントセクションの各コメントの三点リーダーメニューから「Copy」を選択。特定のコメントのMarkdownテキストだけがクリップボードにコピーされることを確認。
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Verify `CommentSection` uses `EditableContent` for each comment in `packages/web/src/components/CommentSection.tsx`
+- [ ] T012 [US2] Verify `CommentSection` uses `EditableContent` for each comment in `packages/web/src/components/CommentSection.tsx`
   - No code changes required (already uses EditableContent)
   - Verify each comment's `bodyMd` is passed to EditableContent
-  - CopyButton is automatically added by T008 changes to EditableContent
+  - Copy menu item is automatically added by T006 changes to EditableContent
 
 ### E2E Tests for User Story 2
 
-- [ ] T015 [US2] Write E2E test for individual comment copy in `packages/web/tests/e2e/copy-functionality.spec.ts`
+- [ ] T013 [US2] Write E2E test for individual comment copy in `packages/web/tests/e2e/copy-functionality.spec.ts`
   - Navigate to task/memo with multiple comments (e.g., `/tasks/39`)
-  - Locate first comment's copy button (use nth selector or data-testid)
-  - Click first comment's `[aria-label="Copy body markdown"]` button
+  - Locate first comment's three-dot menu (use nth selector or data-testid)
+  - Open menu and click "Copy"
   - Assert clipboard contains only first comment's markdown text
-  - Click second comment's copy button
+  - Open second comment's menu and click "Copy"
   - Assert clipboard now contains only second comment's markdown text
 
-- [ ] T016 [P] [US2] Write E2E test for comment copy with multiple comments in `packages/web/tests/e2e/copy-functionality.spec.ts`
+- [ ] T014 [P] [US2] Write E2E test for comment copy with multiple comments in `packages/web/tests/e2e/copy-functionality.spec.ts`
   - Navigate to task with 3+ comments
-  - Click different comment copy buttons sequentially
+  - Click different comment "Copy" menu items sequentially
   - Assert each click copies only the corresponding comment's markdown
 
-**Checkpoint**: User Story 2 complete - コメント個別コピー機能が完全に動作し、テスト済み
+**Checkpoint**: User Story 2 complete - コメント個別コピー機能（メニュー経由）が完全に動作し、テスト済み
 
 ---
 
@@ -167,7 +151,7 @@ This feature uses existing infrastructure (React, TypeScript, Vite). No new proj
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Create `markdownFormatter` utility in `packages/web/src/utils/markdownFormatter.ts`
+- [ ] T015 [US3] Create `markdownFormatter` utility in `packages/web/src/utils/markdownFormatter.ts`
   - Export `formatAllContent` function
   - Accept params: `title: string | null`, `bodyMd: string`, `comments: Array<{bodyMd: string, createdAt: string}>`, `itemId?: number`
   - Generate H1 title (`# ${title}` or `# Memo #${itemId}` if title is null)
@@ -176,13 +160,13 @@ This feature uses existing infrastructure (React, TypeScript, Vite). No new proj
   - For each comment, add `### Comment ${index + 1} (${createdAt})` + comment body
   - Return formatted markdown string (trimmed)
 
-- [ ] T018 [P] [US3] Write unit tests for `markdownFormatter` in `packages/web/tests/unit/markdownFormatter.test.ts`
+- [ ] T016 [P] [US3] Write unit tests for `markdownFormatter` in `packages/web/tests/unit/markdownFormatter.test.ts`
   - Test task with title, body, and comments → correct H1/H2/H3 structure
   - Test memo (title = null) with itemId → default title `# Memo #${id}`
   - Test empty comments array → no "## Comments" section
   - Test special characters in content → preserved as-is (no escaping)
 
-- [ ] T019 [US3] Modify `ItemDetail` component in `packages/web/src/components/ItemDetail.tsx`
+- [ ] T017 [US3] Modify `ItemDetail` component in `packages/web/src/components/ItemDetail.tsx`
   - Import `CopyButton` and `formatAllContent`
   - Import `CommentsService` from `../api/services/CommentsService`
   - Add `useState<Comment[]>` for comments
@@ -192,7 +176,7 @@ This feature uses existing infrastructure (React, TypeScript, Vite). No new proj
 
 ### E2E Tests for User Story 3
 
-- [ ] T020 [US3] Write E2E test for "copy all" with comments in `packages/web/tests/e2e/copy-functionality.spec.ts`
+- [ ] T018 [US3] Write E2E test for "copy all" with comments in `packages/web/tests/e2e/copy-functionality.spec.ts`
   - Navigate to task with title, body, and comments (e.g., `/tasks/39`)
   - Click `[aria-label="Copy all content"]` button in header
   - Read clipboard content
@@ -202,13 +186,13 @@ This feature uses existing infrastructure (React, TypeScript, Vite). No new proj
   - Assert contains `### Comment 1 (${ISO8601 date})`
   - Assert contains comment body texts
 
-- [ ] T021 [P] [US3] Write E2E test for "copy all" without comments in `packages/web/tests/e2e/copy-functionality.spec.ts`
+- [ ] T019 [P] [US3] Write E2E test for "copy all" without comments in `packages/web/tests/e2e/copy-functionality.spec.ts`
   - Navigate to task/memo with no comments
   - Click "Copy all content" button
   - Assert clipboard contains title + body only
   - Assert does NOT contain `## Comments`
 
-- [ ] T022 [P] [US3] Write E2E test for "copy all" with memo (no title) in `packages/web/tests/e2e/copy-functionality.spec.ts`
+- [ ] T020 [P] [US3] Write E2E test for "copy all" with memo (no title) in `packages/web/tests/e2e/copy-functionality.spec.ts`
   - Navigate to memo (e.g., `/memos/123`)
   - Click "Copy all content" button
   - Assert clipboard starts with `# Memo #123`
@@ -222,33 +206,33 @@ This feature uses existing infrastructure (React, TypeScript, Vite). No new proj
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T023 [P] Run all unit tests (`pnpm --filter meme-gtd-web test`)
+- [ ] T021 [P] Run all unit tests (`pnpm --filter meme-gtd-web test`)
   - Verify all tests pass
-  - Check test coverage for new files (hook, component, formatter)
+  - Check test coverage for new files (hook, formatter)
 
-- [ ] T024 [P] Run all E2E tests (`pnpm --filter meme-gtd-web test:e2e`)
+- [ ] T022 [P] Run all E2E tests (`pnpm --filter meme-gtd-web test:e2e`)
   - Verify tests pass on Chrome, Firefox, Safari
   - Check mobile browsers (iOS Safari, Android Chrome) if available
 
-- [ ] T025 [P] Manual testing checklist from `quickstart.md`
+- [ ] T023 [P] Manual testing checklist from `quickstart.md`
   - Test on http://localhost:3001 (dev server)
-  - Verify本文コピーボタンが右上に表示
-  - Verify 1秒間チェックマークアイコン表示
-  - Verify モバイルでタップ動作
+  - Verify三点リーダーメニューに「Copy」が表示
+  - Verify 1秒間「Copied!」テキスト表示
+  - Verify モバイルでメニュータップ動作
   - Verify HTTPS以外でconsole.logエラー出力（エラーハンドリング）
 
-- [ ] T026 [P] Accessibility review
-  - Verify all copy buttons have `aria-label`
-  - Test keyboard navigation (Tab key to buttons, Enter to activate)
+- [ ] T024 [P] Accessibility review
+  - Verify menu items have proper keyboard navigation
+  - Test keyboard navigation (Tab key to menu, Enter to activate)
   - Test with screen reader (VoiceOver/NVDA) if available
 
-- [ ] T027 Code cleanup and linting
+- [ ] T025 Code cleanup and linting
   - Run `pnpm --filter meme-gtd-web lint`
   - Fix any linting errors
   - Remove unused imports
   - Add JSDoc comments to public functions (optional)
 
-- [ ] T028 Performance validation
+- [ ] T026 Performance validation
   - Measure copy operation time in DevTools Performance tab (target: <200ms)
   - Test with large markdown content (e.g., 10KB body + 50 comments)
   - Verify no memory leaks (check DevTools Memory tab after 50+ copy operations)
@@ -281,39 +265,30 @@ This feature uses existing infrastructure (React, TypeScript, Vite). No new proj
 ### Parallel Opportunities
 
 - **Phase 1 (Setup)**: All 3 tasks [P] can run in parallel
-- **Phase 2 (Foundation)**: T006 and T007 [P] can run in parallel (different test files)
-- **Phase 3 (US1)**: T011, T012, T013 [P] can run in parallel (different E2E test scenarios)
-- **Phase 4 (US2)**: T015, T016 [P] can run in parallel (different E2E test scenarios)
-- **Phase 5 (US3)**: T018, T021, T022 [P] can run in parallel (unit test + E2E tests in different files)
-- **Phase 6 (Polish)**: T023, T024, T025, T026 [P] can run in parallel (different validation tasks)
+- **Phase 2 (Foundation)**: Single task T004, then T005 test
+- **Phase 3 (US1)**: T010, T011 [P] can run in parallel (different E2E test scenarios)
+- **Phase 4 (US2)**: T013, T014 [P] can run in parallel (different E2E test scenarios)
+- **Phase 5 (US3)**: T016, T019, T020 [P] can run in parallel (unit test + E2E tests in different files)
+- **Phase 6 (Polish)**: T021, T022, T023, T024 [P] can run in parallel (different validation tasks)
 - **Cross-Story Parallelism**: After Phase 2, US1, US2, US3 can be developed in parallel by different team members
 
 ---
 
-## Parallel Example: Foundational Phase (Phase 2)
-
-```bash
-# Launch foundation unit tests in parallel:
-Task: "Write unit tests for useCopyToClipboard hook in packages/web/tests/unit/useCopyToClipboard.test.ts"  # T006
-Task: "Write unit tests for CopyButton component in packages/web/tests/unit/CopyButton.test.tsx"  # T007
-```
-
 ## Parallel Example: User Story 1 (Phase 3)
 
 ```bash
-# Launch all E2E tests for US1 in parallel:
-Task: "Write E2E test for body copy in tasks"  # T011
-Task: "Write E2E test for body copy in memos"  # T012
-Task: "Write E2E test for empty body edge case"  # T013
+# Launch E2E tests for US1 in parallel:
+Task: "Write E2E test for body copy in memos"  # T010
+Task: "Write E2E test for empty body edge case"  # T011
 ```
 
 ## Parallel Example: User Story 3 (Phase 5)
 
 ```bash
 # Launch tests for US3 in parallel:
-Task: "Write unit tests for markdownFormatter"  # T018
-Task: "Write E2E test for 'copy all' without comments"  # T021
-Task: "Write E2E test for 'copy all' with memo (no title)"  # T022
+Task: "Write unit tests for markdownFormatter"  # T016
+Task: "Write E2E test for 'copy all' without comments"  # T019
+Task: "Write E2E test for 'copy all' with memo (no title)"  # T020
 ```
 
 ---
@@ -323,36 +298,36 @@ Task: "Write E2E test for 'copy all' with memo (no title)"  # T022
 ### MVP First (User Story 1 Only)
 
 1. Complete Phase 1: Setup (understand existing components) - ~30 min
-2. Complete Phase 2: Foundational (CopyButton + hook + tests) - ~2 hours
-3. Complete Phase 3: User Story 1 (body copy + tests) - ~1.5 hours
+2. Complete Phase 2: Foundational (hook + tests) - ~1 hour
+3. Complete Phase 3: User Story 1 (menu copy + tests) - ~2 hours
 4. **STOP and VALIDATE**: Test User Story 1 independently (manual + E2E)
-5. Deploy/demo if ready - Users can now copy task/memo bodies!
+5. Deploy/demo if ready - Users can now copy task/memo bodies from menu!
 
-**Total MVP time**: ~4 hours
+**Total MVP time**: ~3.5 hours
 
 ### Incremental Delivery
 
-1. Complete Setup + Foundational → Foundation ready (~2.5 hours)
-2. Add User Story 1 → Test independently → Deploy (MVP!) (~1.5 hours)
-3. Add User Story 2 → Test independently → Deploy (~1 hour - reuses foundation)
+1. Complete Setup + Foundational → Foundation ready (~1.5 hours)
+2. Add User Story 1 → Test independently → Deploy (MVP!) (~2 hours)
+3. Add User Story 2 → Test independently → Deploy (~0.5 hour - automatic via EditableContent)
 4. Add User Story 3 → Test independently → Deploy (~2 hours - adds formatter)
 5. Polish & validate → Final release (~1.5 hours)
 
-**Total feature time**: ~8.5 hours
+**Total feature time**: ~7.5 hours
 
 ### Parallel Team Strategy
 
 With 3 developers:
 
-1. Team completes Setup + Foundational together (~2.5 hours)
+1. Team completes Setup + Foundational together (~1.5 hours)
 2. Once Foundational is done:
-   - Developer A: User Story 1 (本文コピー) - ~1.5 hours
-   - Developer B: User Story 2 (コメントコピー) - ~1 hour
+   - Developer A: User Story 1 (本文コピー - メニュー追加) - ~2 hours
+   - Developer B: User Story 2 (コメントコピー - 検証のみ) - ~0.5 hour
    - Developer C: User Story 3 (すべてコピー) - ~2 hours
 3. Stories complete and integrate independently
 4. Team reviews Polish tasks together (~1.5 hours)
 
-**Total parallel time**: ~5.5 hours (vs 8.5 hours sequential)
+**Total parallel time**: ~4.5 hours (vs 7.5 hours sequential)
 
 ---
 
@@ -369,6 +344,7 @@ With 3 developers:
 - Stop at any checkpoint to validate story independently
 - All E2E tests use Playwright with clipboard permissions
 - All unit tests use Vitest with mocked Clipboard API
-- No new dependencies required (uses existing react-icons, Clipboard API)
+- No new dependencies required (uses existing Clipboard API)
 - No backend changes required (UI-only feature)
+- Total tasks: 26 (reduced from CopyButton-based approach)
 
