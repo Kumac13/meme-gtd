@@ -1,17 +1,13 @@
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import { TasksService } from '../api/services/TasksService';
-import { CommentsService } from '../api/services/CommentsService';
 import EditableContent from './EditableContent';
 import CommentSection from './CommentSection';
 import LinkSection from './LinkSection';
 import { ProjectsSection } from './ProjectsSection';
 import { LabelsSection } from './LabelsSection';
 import { LabelBadge } from './LabelBadge';
-import CopyButton from './CopyButton';
 import { createBackUrl } from '../utils/navigationHelpers';
-import { formatAllContent } from '../utils/markdownFormatter';
 
 
 export interface BaseItem {
@@ -45,14 +41,6 @@ interface ItemDetailProps {
   customActions?: React.ReactNode;
 }
 
-interface Comment {
-  id: number;
-  issueId: number;
-  bodyMd: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export default function ItemDetail({
   item,
   itemType,
@@ -65,32 +53,6 @@ export default function ItemDetail({
   bookmarking,
   customActions,
 }: ItemDetailProps) {
-  const [comments, setComments] = useState<Comment[]>([]);
-
-  useEffect(() => {
-    const fetchComments = async () => {
-      try {
-        const response =
-          itemType === 'memo'
-            ? await CommentsService.listMemoComments(String(item.id))
-            : await CommentsService.listTaskComments(String(item.id));
-        setComments(response);
-      } catch (error) {
-        console.error('Error fetching comments for copy all:', error);
-      }
-    };
-    fetchComments();
-  }, [item.id, itemType]);
-
-  const allContentMarkdown = formatAllContent({
-    title: item.title,
-    bodyMd: item.bodyMd,
-    comments: comments.map((c) => ({
-      bodyMd: c.bodyMd,
-      createdAt: c.createdAt,
-    })),
-    itemId: item.id,
-  });
 
   const handleUpdateBody = async (newBody: string, newTitle?: string) => {
     const updatedItem =
@@ -158,10 +120,6 @@ export default function ItemDetail({
               </select>
             )}
             {customActions}
-            <CopyButton
-              text={allContentMarkdown}
-              ariaLabel="Copy all content"
-            />
             <button
               onClick={onBookmarkToggle}
               disabled={bookmarking}
