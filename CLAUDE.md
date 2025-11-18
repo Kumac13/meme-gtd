@@ -246,6 +246,8 @@ git tag vX.Y.Z
 - SQLite (better-sqlite3) - existing `issues` table (025-a)
 - TypeScript 5.5.4 / React 19.2.0 / Node.js 22+ + React 19.2.0, React Router DOM 7.9.4, Vite 7.1.11, Tailwind CSS 4.1.14 (026-webui-save-comment)
 - N/A (UI-only feature, no data model changes) (026-webui-save-comment)
+- TypeScript 5.5.4 / Node.js 22+ + React 19.2.0, React Router DOM 7.9.4, Vite 7.1.11, Tailwind CSS 4.1.14 (029-task)
+- N/A (クライアント側のみ、既存のAPIから取得したデータを使用) (029-task)
 
 ## Recent Changes
 - 020-web-label-management: Added TypeScript 5.5.4 / React 19.2.0 / Node.js 22+
