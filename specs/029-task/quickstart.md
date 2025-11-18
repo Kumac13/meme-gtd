@@ -21,23 +21,26 @@
 │ └─────────────────────────────────────────────────────────┘ │
 │                                                             │
 │ ┌─ EditableContent (Body) ───────────────────────────────┐ │
-│ │ Markdown Content                    [CopyButton]       │ │
-│ │                                                         │ │
-│ │ useCopyToClipboard() ──> Clipboard API                 │ │
+│ │ Markdown Content                         [⋮]           │ │
+│ │                                     ┌────────┐         │ │
+│ │ useCopyToClipboard() ──>            │Edit    │         │ │
+│ │     Clipboard API                   │Copy    │         │ │
+│ │                                     │Delete  │         │ │
+│ │                                     └────────┘         │ │
 │ └─────────────────────────────────────────────────────────┘ │
 │                                                             │
 │ ┌─ CommentSection ───────────────────────────────────────┐ │
 │ │ ┌─ EditableContent (Comment 1) ────────────────────┐   │ │
-│ │ │ Comment text                  [CopyButton]       │   │ │
+│ │ │ Comment text                        [⋮]          │   │ │
 │ │ └──────────────────────────────────────────────────┘   │ │
 │ │ ┌─ EditableContent (Comment 2) ────────────────────┐   │ │
-│ │ │ Comment text                  [CopyButton]       │   │ │
+│ │ │ Comment text                        [⋮]          │   │ │
 │ │ └──────────────────────────────────────────────────┘   │ │
 │ └─────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 
 Components:
-  CopyButton.tsx          - Presentational component (UI)
+  EditableContent.tsx     - Modified to add "Copy" menu item
   useCopyToClipboard.ts   - Logic hook (Clipboard API + state)
   markdownFormatter.ts    - Utility (format "copy all" markdown)
 ```
@@ -129,103 +132,58 @@ describe('useCopyToClipboard', () => {
 });
 ```
 
-### Step 2: Create the CopyButton Component (45 min)
+### Step 2: Add Copy to EditableContent Menu (45 min)
 
-**File**: `packages/web/src/components/CopyButton.tsx`
+**File**: `packages/web/src/components/EditableContent.tsx` (MODIFY)
+
+既存の三点リーダーメニューに「Copy」選択肢を追加：
 
 ```typescript
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
-import { FiClipboard, FiCheck } from 'react-icons/fi';
 
-interface CopyButtonProps {
-  text: string;
-  ariaLabel?: string;
-  className?: string;
-  onCopySuccess?: () => void;
-  onCopyError?: (error: Error) => void;
-}
-
-export default function CopyButton({
-  text,
-  ariaLabel = 'Copy markdown',
-  className = '',
-  onCopySuccess,
-  onCopyError,
-}: CopyButtonProps) {
+export default function EditableContent({ content, ... }) {
   const { copied, copy } = useCopyToClipboard();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const handleClick = async () => {
-    const success = await copy(text);
-    if (success && onCopySuccess) {
-      onCopySuccess();
-    } else if (!success && onCopyError) {
-      onCopyError(new Error('Clipboard copy failed'));
-    }
+  const handleCopy = async () => {
+    await copy(content);
+    // メニューは閉じない（フィードバックを見せる）
+    // または1秒後に閉じる場合は setTimeout を使用
   };
 
   return (
-    <button
-      onClick={handleClick}
-      aria-label={ariaLabel}
-      className={`p-2 rounded hover:bg-gray-100 transition-colors ${className}`}
-      title={ariaLabel}
-    >
-      {copied ? (
-        <FiCheck className="w-4 h-4 text-green-600" aria-hidden="true" />
-      ) : (
-        <FiClipboard className="w-4 h-4 text-gray-600" aria-hidden="true" />
+    <div className="border rounded-lg p-4 relative">
+      {/* 三点リーダーボタン（既存） */}
+      <button onClick={() => setIsMenuOpen(!isMenuOpen)}>
+        ⋮
+      </button>
+
+      {isMenuOpen && (
+        <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+          <button onClick={() => { handleStartEdit(); setIsMenuOpen(false); }}
+            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+            Edit
+          </button>
+          <button onClick={handleCopy}
+            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+            {copied ? 'Copied!' : 'Copy'}
+          </button>
+          <button onClick={() => { handleDelete(); setIsMenuOpen(false); }}
+            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+            Delete
+          </button>
+        </div>
       )}
-    </button>
+
+      {/* Existing content rendering ... */}
+    </div>
   );
 }
 ```
 
-**Test**: `packages/web/tests/unit/CopyButton.test.tsx`
-
-```typescript
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import CopyButton from '../../src/components/CopyButton';
-
-describe('CopyButton', () => {
-  beforeEach(() => {
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: vi.fn(() => Promise.resolve()),
-      },
-    });
-  });
-
-  it('should render clipboard icon initially', () => {
-    render(<CopyButton text="Test" />);
-    const button = screen.getByRole('button', { name: /copy markdown/i });
-    expect(button).toBeInTheDocument();
-  });
-
-  it('should copy text on click', async () => {
-    const user = userEvent.setup();
-    render(<CopyButton text="Test markdown" />);
-
-    const button = screen.getByRole('button');
-    await user.click(button);
-
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Test markdown');
-  });
-
-  it('should show check icon after successful copy', async () => {
-    const user = userEvent.setup();
-    render(<CopyButton text="Test" />);
-
-    await user.click(screen.getByRole('button'));
-
-    await waitFor(() => {
-      // Check icon should be visible (data-icon or className check)
-      expect(screen.getByRole('button').querySelector('.text-green-600')).toBeInTheDocument();
-    });
-  });
-});
-```
+**Note**:
+- Copyをクリック後、メニューは閉じない（「Copied!」を表示するため）
+- メニューを閉じたい場合は、1秒後に自動で閉じる処理を追加
 
 ### Step 3: Create Markdown Formatter Utility (30 min)
 
@@ -313,46 +271,17 @@ describe('formatAllContent', () => {
 });
 ```
 
-### Step 4: Integrate CopyButton into EditableContent (30 min)
+### Step 4: Verify CommentSection Integration (10 min)
 
-**File**: `packages/web/src/components/EditableContent.tsx` (MODIFY)
+**File**: `packages/web/src/components/CommentSection.tsx`
 
-既存のコンポーネントに以下を追加：
+各コメントはEditableContentを使用しているため、Step 2の変更で自動的にコピー機能が追加されます。追加作業は不要。
 
-```typescript
-import CopyButton from './CopyButton';
+確認事項：
+- 各コメントの三点リーダーメニューに「Copy」が表示されること
+- コメントの`bodyMd`が正しくコピーされること
 
-// 既存のコードに追加
-export default function EditableContent({ content, ... }) {
-  // ... existing code ...
-
-  return (
-    <div className="border rounded-lg p-4 relative">
-      {/* 右上にコピーボタンを配置 */}
-      <div className="absolute top-2 right-2">
-        <CopyButton text={content} ariaLabel="Copy body markdown" />
-      </div>
-
-      {/* Existing content rendering ... */}
-      {isEditing ? (
-        // Edit mode
-      ) : (
-        // View mode with markdown rendering
-      )}
-    </div>
-  );
-}
-```
-
-**Note**: 既存のレイアウトに合わせてTailwindクラスを調整してください。
-
-### Step 5: Integrate CopyButton into CommentSection (20 min)
-
-**File**: `packages/web/src/components/CommentSection.tsx` (MODIFY)
-
-各コメントのEditableContentに既にコピーボタンが含まれるため、Step 4の変更で自動的に対応されます。追加作業は不要。
-
-### Step 6: Add "Copy All" Button to ItemDetail (45 min)
+### Step 5: Add "Copy All" Button to ItemDetail (45 min)
 
 **File**: `packages/web/src/components/ItemDetail.tsx` (MODIFY)
 
@@ -414,7 +343,7 @@ export default function ItemDetail({ item, itemType, ... }) {
 }
 ```
 
-### Step 7: Write E2E Tests (60 min)
+### Step 6: Write E2E Tests (60 min)
 
 **File**: `packages/web/tests/e2e/copy-functionality.spec.ts`
 
@@ -427,12 +356,15 @@ test.describe('Copy Markdown Functionality', () => {
     await page.goto('http://localhost:3001/tasks/1');
   });
 
-  test('should copy body markdown on button click', async ({ page, context }) => {
+  test('should copy body markdown from menu', async ({ page, context }) => {
     // 権限を付与
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
-    // 本文コピーボタンをクリック
-    await page.click('[aria-label="Copy body markdown"]');
+    // 三点リーダーメニューを開く
+    await page.click('button[aria-label="More options"]'); // または適切なセレクタ
+
+    // 「Copy」メニュー項目をクリック
+    await page.click('text=Copy');
 
     // クリップボードの内容を取得
     const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
@@ -441,23 +373,24 @@ test.describe('Copy Markdown Functionality', () => {
     expect(clipboardText).toContain('## Start State');
   });
 
-  test('should show check icon after successful copy', async ({ page, context }) => {
+  test('should show "Copied!" text after successful copy', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
-    const button = page.locator('[aria-label="Copy body markdown"]');
+    // 三点リーダーメニューを開く
+    await page.click('button[aria-label="More options"]');
 
-    // 初期状態: クリップボードアイコン
-    await expect(button.locator('.text-gray-600')).toBeVisible();
+    // 初期状態: 「Copy」テキスト
+    await expect(page.locator('text=Copy')).toBeVisible();
 
     // クリック
-    await button.click();
+    await page.click('text=Copy');
 
-    // 1秒間チェックマークアイコンが表示される
-    await expect(button.locator('.text-green-600')).toBeVisible();
+    // 1秒間「Copied!」が表示される
+    await expect(page.locator('text=Copied!')).toBeVisible();
 
-    // 1秒後に元に戻る
+    // 1秒後に「Copy」に戻る
     await page.waitForTimeout(1100);
-    await expect(button.locator('.text-gray-600')).toBeVisible();
+    await expect(page.locator('text=Copy')).toBeVisible();
   });
 
   test('should copy all content with structured markdown', async ({ page, context }) => {
@@ -483,16 +416,17 @@ cd packages/web
 pnpm test:e2e
 ```
 
-### Step 8: Manual Testing Checklist (30 min)
+### Step 7: Manual Testing Checklist (30 min)
 
 1. **本文コピー**:
-   - [ ] タスク詳細ページで本文コピーボタンが右上に表示される
-   - [ ] クリックでMarkdownテキストがコピーされる
-   - [ ] 1秒間チェックマークアイコンが表示される
+   - [ ] タスク詳細ページで三点リーダーメニューに「Copy」が表示される
+   - [ ] Edit→Copy→Deleteの順序で表示される
+   - [ ] 「Copy」クリックでMarkdownテキストがコピーされる
+   - [ ] 1秒間「Copied!」に変化する
    - [ ] テキストエディタに貼り付けてMarkdown形式が保持されている
 
 2. **コメントコピー**:
-   - [ ] 各コメントに個別のコピーボタンが表示される
+   - [ ] 各コメントの三点リーダーメニューに「Copy」が表示される
    - [ ] 特定のコメントだけがコピーされる
 
 3. **すべてコピー**:
@@ -501,8 +435,8 @@ pnpm test:e2e
    - [ ] メモ（タイトルなし）でも正しく動作する
 
 4. **モバイルテスト**:
-   - [ ] iOS Safari / Android Chromeでコピーボタンが動作する
-   - [ ] ボタンのタップ領域が十分大きい
+   - [ ] iOS Safari / Android Chromeでメニューが動作する
+   - [ ] メニュー項目のタップ領域が十分大きい
 
 5. **エラーハンドリング**:
    - [ ] HTTP（非HTTPS）環境でconsole.logにエラーが出力される
@@ -548,13 +482,20 @@ Object.assign(navigator, {
 });
 ```
 
-### Issue: Icon doesn't change after click
+### Issue: Menu text doesn't change to "Copied!"
 
-**Solution**: Check React state update in useCopyToClipboard. Ensure setTimeout is called and state is managed correctly.
+**Solution**: Check React state update in useCopyToClipboard. Ensure setTimeout is called and state is managed correctly. Verify `copied` state is used in the menu button text.
 
 ### Issue: "Copy all" button not showing
 
 **Solution**: Verify ItemDetail component has been updated with CopyButton import and allContentMarkdown generation.
+
+### Issue: "Copy" menu item not appearing
+
+**Solution**: Verify EditableContent component has been updated with:
+- Import of `useCopyToClipboard` hook
+- `handleCopy` function
+- New "Copy" button in the dropdown menu between Edit and Delete
 
 ## Performance Targets
 
