@@ -24,9 +24,9 @@
 
 This feature uses existing infrastructure (React, TypeScript, Vite). No new project setup required.
 
-- [ ] T001 [P] Review existing EditableContent component structure in `packages/web/src/components/EditableContent.tsx`
-- [ ] T002 [P] Review existing CommentSection component structure in `packages/web/src/components/CommentSection.tsx`
-- [ ] T003 [P] Review existing ItemDetail component structure in `packages/web/src/components/ItemDetail.tsx`
+- [x] T001 [P] Review existing EditableContent component structure in `packages/web/src/components/EditableContent.tsx`
+- [x] T002 [P] Review existing CommentSection component structure in `packages/web/src/components/CommentSection.tsx`
+- [x] T003 [P] Review existing ItemDetail component structure in `packages/web/src/components/ItemDetail.tsx`
 
 **Checkpoint**: Existing component structures understood
 
@@ -40,7 +40,7 @@ This feature uses existing infrastructure (React, TypeScript, Vite). No new proj
 
 ### Shared Hooks & Utilities
 
-- [ ] T004 [US-Foundation] Create `useCopyToClipboard` custom hook in `packages/web/src/hooks/useCopyToClipboard.ts`
+- [x] T004 [US-Foundation] Create `useCopyToClipboard` custom hook in `packages/web/src/hooks/useCopyToClipboard.ts`
   - Implement `copy(text: string): Promise<boolean>` function using `navigator.clipboard.writeText()`
   - Implement `copied: boolean` state (true for 1 second, then auto-reset)
   - Implement `reset()` function for manual state reset
@@ -49,7 +49,7 @@ This feature uses existing infrastructure (React, TypeScript, Vite). No new proj
 
 ### Unit Tests for Foundation
 
-- [ ] T005 [P] [US-Foundation] Write unit tests for `useCopyToClipboard` hook in `packages/web/tests/unit/useCopyToClipboard.test.ts`
+- [x] T005 [P] [US-Foundation] Write unit tests for `useCopyToClipboard` hook in `packages/web/tests/unit/useCopyToClipboard.test.ts`
   - Mock `navigator.clipboard.writeText`
   - Test successful copy operation
   - Test `copied` state changes to true, then false after 1000ms (use `vi.useFakeTimers()`)
@@ -68,7 +68,7 @@ This feature uses existing infrastructure (React, TypeScript, Vite). No new proj
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Modify `EditableContent` component in `packages/web/src/components/EditableContent.tsx`
+- [x] T006 [US1] Modify `EditableContent` component in `packages/web/src/components/EditableContent.tsx`
   - Import `useCopyToClipboard` hook
   - Add `copied` state and `copy` function from hook
   - Add `handleCopy` async function that calls `copy(content)`
@@ -76,11 +76,11 @@ This feature uses existing infrastructure (React, TypeScript, Vite). No new proj
   - Display `{copied ? 'Copied!' : 'Copy'}` as button text
   - Apply same styling as Edit button (gray text, hover bg)
 
-- [ ] T007 [US1] Verify integration in `TaskDetail` page (`packages/web/src/pages/TaskDetail.tsx`)
+- [x] T007 [US1] Verify integration in `TaskDetail` page (`packages/web/src/pages/TaskDetail.tsx`)
   - No code changes required (EditableContent already used)
   - Verify `bodyMd` prop is passed to EditableContent
 
-- [ ] T008 [US1] Verify integration in `MemoDetail` page (`packages/web/src/pages/MemoDetail.tsx`)
+- [x] T008 [US1] Verify integration in `MemoDetail` page (`packages/web/src/pages/MemoDetail.tsx`)
   - No code changes required (EditableContent already used)
   - Verify `bodyMd` prop is passed to EditableContent
 
@@ -119,7 +119,7 @@ This feature uses existing infrastructure (React, TypeScript, Vite). No new proj
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Verify `CommentSection` uses `EditableContent` for each comment in `packages/web/src/components/CommentSection.tsx`
+- [x] T012 [US2] Verify `CommentSection` uses `EditableContent` for each comment in `packages/web/src/components/CommentSection.tsx`
   - No code changes required (already uses EditableContent)
   - Verify each comment's `bodyMd` is passed to EditableContent
   - Copy menu item is automatically added by T006 changes to EditableContent
@@ -151,7 +151,7 @@ This feature uses existing infrastructure (React, TypeScript, Vite). No new proj
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Create `markdownFormatter` utility in `packages/web/src/utils/markdownFormatter.ts`
+- [x] T015 [US3] Create `markdownFormatter` utility in `packages/web/src/utils/markdownFormatter.ts`
   - Export `formatAllContent` function
   - Accept params: `title: string | null`, `bodyMd: string`, `comments: Array<{bodyMd: string, createdAt: string}>`, `itemId?: number`
   - Generate H1 title (`# ${title}` or `# Memo #${itemId}` if title is null)
@@ -160,13 +160,13 @@ This feature uses existing infrastructure (React, TypeScript, Vite). No new proj
   - For each comment, add `### Comment ${index + 1} (${createdAt})` + comment body
   - Return formatted markdown string (trimmed)
 
-- [ ] T016 [P] [US3] Write unit tests for `markdownFormatter` in `packages/web/tests/unit/markdownFormatter.test.ts`
+- [x] T016 [P] [US3] Write unit tests for `markdownFormatter` in `packages/web/tests/unit/markdownFormatter.test.ts`
   - Test task with title, body, and comments → correct H1/H2/H3 structure
   - Test memo (title = null) with itemId → default title `# Memo #${id}`
   - Test empty comments array → no "## Comments" section
   - Test special characters in content → preserved as-is (no escaping)
 
-- [ ] T017 [US3] Modify `ItemDetail` component in `packages/web/src/components/ItemDetail.tsx`
+- [x] T017 [US3] Modify `ItemDetail` component in `packages/web/src/components/ItemDetail.tsx`
   - Import `CopyButton` and `formatAllContent`
   - Import `CommentsService` from `../api/services/CommentsService`
   - Add `useState<Comment[]>` for comments
@@ -206,7 +206,7 @@ This feature uses existing infrastructure (React, TypeScript, Vite). No new proj
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T021 [P] Run all unit tests (`pnpm --filter meme-gtd-web test`)
+- [x] T021 [P] Run all unit tests (`pnpm --filter meme-gtd-web test`)
   - Verify all tests pass
   - Check test coverage for new files (hook, formatter)
 
