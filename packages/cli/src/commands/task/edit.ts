@@ -55,6 +55,18 @@ export default class TaskEdit extends Command {
       summary: 'Update scheduled date (ISO 8601)',
       description: 'Set scheduled date in YYYY-MM-DD format. Use empty string to clear.'
     }),
+    start: Flags.string({
+      summary: 'Update start time (HH:MM)',
+      description: 'Set start time in HH:MM format. Use empty string to clear.'
+    }),
+    end: Flags.string({
+      summary: 'Update end time (HH:MM)',
+      description: 'Set end time in HH:MM format. Use empty string to clear.'
+    }),
+    duration: Flags.integer({
+      summary: 'Update duration (minutes)',
+      description: 'Set duration in minutes. Use 0 to clear.'
+    }),
     editor: Flags.boolean({
       summary: 'Force editor launch',
       description: 'Always launch the configured editor with existing content.',
@@ -118,14 +130,14 @@ export default class TaskEdit extends Command {
 
     // エディタ起動の判定
     const shouldLaunchEditor = flags.title === undefined &&
-                               flags.body === undefined &&
-                               flags['body-file'] === undefined &&
-                               flags.status === undefined &&
-                               flags['scheduled-on'] === undefined &&
-                               !flags['add-label'] &&
-                               !flags['remove-label'] &&
-                               !flags.project &&
-                               !flags['no-editor'];
+      flags.body === undefined &&
+      flags['body-file'] === undefined &&
+      flags.status === undefined &&
+      flags['scheduled-on'] === undefined &&
+      !flags['add-label'] &&
+      !flags['remove-label'] &&
+      !flags.project &&
+      !flags['no-editor'];
 
     if (shouldLaunchEditor || flags.editor) {
       const task = service.show(args.id);
@@ -158,6 +170,9 @@ export default class TaskEdit extends Command {
       bodyMd: body,
       status: flags.status as TaskStatus | undefined,
       scheduledOn: flags['scheduled-on'] === '' ? null : flags['scheduled-on'],
+      startTime: flags.start === '' ? null : flags.start,
+      endTime: flags.end === '' ? null : flags.end,
+      duration: flags.duration === 0 ? null : flags.duration,
       addLabels: flags['add-label'],
       removeLabels: flags['remove-label'],
       projectIds: flags.project

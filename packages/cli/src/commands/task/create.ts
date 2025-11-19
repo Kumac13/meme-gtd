@@ -51,6 +51,18 @@ export default class TaskCreate extends Command {
       summary: 'Scheduled date (ISO 8601)',
       description: 'Set scheduled date in YYYY-MM-DD format (typically used with --status scheduled).'
     }),
+    start: Flags.string({
+      summary: 'Start time (HH:MM)',
+      description: 'Set start time in HH:MM format.'
+    }),
+    end: Flags.string({
+      summary: 'End time (HH:MM)',
+      description: 'Set end time in HH:MM format.'
+    }),
+    duration: Flags.integer({
+      summary: 'Duration (minutes)',
+      description: 'Set duration in minutes.'
+    }),
     editor: Flags.boolean({
       summary: 'Force editor launch',
       description: 'Always launch the configured editor for body content, even when body is provided.',
@@ -120,6 +132,9 @@ export default class TaskCreate extends Command {
       bodyMd: body,
       status: flags.status as TaskStatus,
       scheduledOn: flags['scheduled-on'] ?? undefined,
+      startTime: flags.start,
+      endTime: flags.end,
+      duration: flags.duration,
       labels: flags.label ?? [],
       projectIds: flags.project ?? []
     });
