@@ -12,11 +12,12 @@ export default class TaskCreate extends Command {
   static description =
     'Create a task record with title and body. Tasks support status tracking (inbox/open/next/waiting/scheduled/someday/done/canceled).';
   static usage = [
-    '<%= command.id %> --title <text> [--body <text> | --body-file <path>] [--status <state>] [--scheduled-on <date>] [--label <name> ...] [--project <id> ...] [--json]'
+    '<%= command.id %> --title <text> [--body <text> | --body-file <path>] [--status <state>] [--scheduled-on <date>] [--end-date <date>] [--start <time>] [--end <time>] [--duration <minutes>] [--label <name> ...] [--project <id> ...] [--json]'
   ];
   static examples = [
     '$ mgtd task create --title "Buy groceries" --body "Milk, eggs, bread"',
-    '$ mgtd task create --title "Team meeting" --status scheduled --scheduled-on 2025-10-20',
+    '$ mgtd task create --title "Team meeting" --status scheduled --scheduled-on 2025-10-20 --start 14:00 --duration 60',
+    '$ mgtd task create --title "Conference trip" --scheduled-on 2025-11-20 --end-date 2025-11-23',
     '$ mgtd task create --title "Fix bug" --body-file issue.md --label urgent --label backend',
     '$ mgtd task create --title "Review PR" --label review --json'
   ];

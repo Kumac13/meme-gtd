@@ -12,14 +12,16 @@ export default class TaskEdit extends Command {
     'Revise a task using inline text, file input, or the editor. You can update title, body, status, scheduled date, and labels.';
   static usage = [
     '<%= command.id %> <taskId> [--title <text>] [--body <text> | --body-file <path>]',
-    '<%= command.id %> <taskId> [--status <state>] [--scheduled-on <date>]',
+    '<%= command.id %> <taskId> [--status <state>] [--scheduled-on <date>] [--end-date <date>]',
+    '<%= command.id %> <taskId> [--start <time>] [--end <time>] [--duration <minutes>]',
     '<%= command.id %> <taskId> [--add-label <name> ...] [--remove-label <name> ...]',
     '<%= command.id %> <taskId> [--project <id> ...] [--json]'
   ];
   static examples = [
     '$ mgtd task edit 12 --title "Updated title"',
     '$ mgtd task edit 7 --status next',
-    '$ mgtd task edit 4 --scheduled-on 2025-10-20',
+    '$ mgtd task edit 4 --scheduled-on 2025-10-20 --end-date 2025-10-22',
+    '$ mgtd task edit 8 --start 09:00 --duration 120',
     '$ mgtd task edit 12 --body-file updated.md',
     '$ mgtd task edit 7 --add-label urgent --remove-label backlog',
     '$ mgtd task edit 4 --project 3 --project 8 --json'
