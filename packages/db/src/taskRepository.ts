@@ -304,7 +304,6 @@ export const updateTask = (db: Database.Database, input: UpdateTaskInput): Task 
       task.duration
     );
 
-    // Only add to updates if the value actually changed or was explicitly set
     if (startTime !== undefined) {
       updates.push('start_time = @startTime');
       params.startTime = startTime;
@@ -587,7 +586,7 @@ const timeToMinutes = (time: string): number => {
 const minutesToTime = (minutes: number): string => {
   const h = Math.floor(minutes / 60) % 24;
   const m = minutes % 60;
-  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} `;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 };
 
 const addMinutes = (time: string, minutes: number): string => {
