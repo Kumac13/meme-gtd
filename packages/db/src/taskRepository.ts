@@ -89,7 +89,7 @@ export const createTask = (db: Database.Database, input: CreateTaskInput): Task 
     body: input.bodyMd,
     status,
     scheduledOn: input.scheduledOn ?? null,
-    endDate: input.endDate ?? null, // Added
+    endDate: input.endDate ?? input.scheduledOn ?? null,
     startTime: startTime ?? null,
     endTime: endTime ?? null,
     duration: duration ?? null,
