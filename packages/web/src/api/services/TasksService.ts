@@ -36,6 +36,10 @@ export class TasksService {
              */
             startTime?: string;
             /**
+             * End date for the task (YYYY-MM-DD)
+             */
+            endDate?: string;
+            /**
              * End time (HH:MM)
              */
             endTime?: string;
@@ -69,6 +73,10 @@ export class TasksService {
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
         /**
          * Start time (HH:MM, null if not set)
          */
@@ -156,6 +164,10 @@ export class TasksService {
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
         /**
          * Start time (HH:MM, null if not set)
          */
@@ -250,6 +262,10 @@ export class TasksService {
          */
         scheduledOn: string | null;
         /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
+        /**
          * Start time (HH:MM, null if not set)
          */
         startTime: string | null;
@@ -329,6 +345,10 @@ export class TasksService {
              */
             scheduledOn?: string | null;
             /**
+             * Updated end date (YYYY-MM-DD, null to clear)
+             */
+            endDate?: string | null;
+            /**
              * Updated start time (HH:MM, null to clear)
              */
             startTime?: string | null;
@@ -366,6 +386,10 @@ export class TasksService {
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
         /**
          * Start time (HH:MM, null if not set)
          */
@@ -473,6 +497,10 @@ export class TasksService {
          */
         scheduledOn: string | null;
         /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
+        /**
          * Start time (HH:MM, null if not set)
          */
         startTime: string | null;
@@ -554,6 +582,10 @@ export class TasksService {
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
         /**
          * Start time (HH:MM, null if not set)
          */
@@ -637,6 +669,10 @@ export class TasksService {
          */
         scheduledOn: string | null;
         /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
+        /**
          * Start time (HH:MM, null if not set)
          */
         startTime: string | null;
@@ -719,6 +755,10 @@ export class TasksService {
          */
         scheduledOn: string | null;
         /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
+        /**
          * Start time (HH:MM, null if not set)
          */
         startTime: string | null;
@@ -800,6 +840,10 @@ export class TasksService {
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
         /**
          * Start time (HH:MM, null if not set)
          */

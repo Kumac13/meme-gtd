@@ -3,17 +3,19 @@ import { useState, useEffect, useRef } from 'react';
 interface ScheduleSectionProps {
     scheduledOn: string | null;
     startTime: string | null;
+    endDate: string | null;
     endTime: string | null;
     duration: number | null;
     onScheduleChange: (updates: {
         scheduledOn?: string | null;
         startTime?: string | null;
+        endDate?: string | null;
         endTime?: string | null;
         duration?: number | null;
     }) => Promise<void>;
 }
 
-export function ScheduleSection({ scheduledOn, startTime, endTime, duration, onScheduleChange }: ScheduleSectionProps) {
+export function ScheduleSection({ scheduledOn, startTime, endDate, endTime, duration, onScheduleChange }: ScheduleSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -21,6 +23,7 @@ export function ScheduleSection({ scheduledOn, startTime, endTime, duration, onS
 
     // Local state for form inputs
     const [formDate, setFormDate] = useState(scheduledOn || '');
+    const [formEndDate, setFormEndDate] = useState(endDate || '');
     const [formStart, setFormStart] = useState(startTime || '');
     const [formEnd, setFormEnd] = useState(endTime || '');
     const [formDuration, setFormDuration] = useState(duration?.toString() || '');
@@ -28,10 +31,11 @@ export function ScheduleSection({ scheduledOn, startTime, endTime, duration, onS
     // Sync local state when props change
     useEffect(() => {
         setFormDate(scheduledOn || '');
+        setFormEndDate(endDate || '');
         setFormStart(startTime || '');
         setFormEnd(endTime || '');
         setFormDuration(duration?.toString() || '');
-    }, [scheduledOn, startTime, endTime, duration]);
+    }, [scheduledOn, startTime, endDate, endTime, duration]);
 
     // Close when clicking outside
     useEffect(() => {
@@ -57,6 +61,7 @@ export function ScheduleSection({ scheduledOn, startTime, endTime, duration, onS
             await onScheduleChange({
                 scheduledOn: formDate || null,
                 startTime: formStart || null,
+                endDate: formEndDate || null,
                 endTime: formEnd || null,
                 duration: formDuration ? parseInt(formDuration, 10) : null
             });
@@ -76,6 +81,7 @@ export function ScheduleSection({ scheduledOn, startTime, endTime, duration, onS
             await onScheduleChange({
                 scheduledOn: null,
                 startTime: null,
+                endDate: null,
                 endTime: null,
                 duration: null
             });
@@ -91,6 +97,9 @@ export function ScheduleSection({ scheduledOn, startTime, endTime, duration, onS
     const formatDisplay = () => {
         if (!scheduledOn) return 'No schedule';
         let display = scheduledOn;
+        if (endDate && endDate !== scheduledOn) {
+            display += ` - ${endDate}`;
+        }
         if (startTime) {
             display += ` ${startTime}`;
             if (endTime) display += ` - ${endTime}`;
@@ -114,15 +123,26 @@ export function ScheduleSection({ scheduledOn, startTime, endTime, duration, onS
 
             {isEditing ? (
                 <div className="flex flex-col gap-3">
-                    <div>
-                        <label className="block text-xs text-gray-500 mb-1">Date</label>
-                        <input
-                            type="date"
-                            value={formDate}
-                            onChange={(e) => setFormDate(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
-                            autoFocus
-                        />
+                    <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <label className="block text-xs text-gray-500 mb-1">Start Date</label>
+                            <input
+                                type="date"
+                                value={formDate}
+                                onChange={(e) => setFormDate(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
+                                autoFocus
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs text-gray-500 mb-1">End Date</label>
+                            <input
+                                type="date"
+                                value={formEndDate}
+                                onChange={(e) => setFormEndDate(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
+                            />
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
