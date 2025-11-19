@@ -22,6 +22,9 @@ export interface IssueBase extends Timestamped {
   bodyMd: string;
   status: TaskStatus | null;
   scheduledOn: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  duration: number | null;
   meta: unknown;
   isBookmarked: boolean;
   isDeleted: boolean;
@@ -32,6 +35,9 @@ export interface Memo extends IssueBase {
   title: null;
   status: null;
   scheduledOn: null;
+  startTime: null;
+  endTime: null;
+  duration: null;
   commentCount?: number;
   preview?: string;
 }

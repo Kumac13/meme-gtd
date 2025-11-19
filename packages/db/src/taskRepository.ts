@@ -6,6 +6,9 @@ export interface CreateTaskInput {
   bodyMd: string;
   status?: TaskStatus;
   scheduledOn?: string;
+  startTime?: string;
+  endTime?: string;
+  duration?: number;
   labels?: string[];
   projectIds?: number[];
 }
@@ -16,6 +19,9 @@ export interface UpdateTaskInput {
   bodyMd?: string;
   status?: TaskStatus;
   scheduledOn?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  duration?: number | null;
   addLabels?: string[];
   removeLabels?: string[];
   projectIds?: number[];
@@ -40,6 +46,9 @@ const taskRowToTask = (row: any): Task => ({
   bodyMd: row.body_md,
   status: row.status as TaskStatus,
   scheduledOn: row.scheduled_on,
+  startTime: row.start_time,
+  endTime: row.end_time,
+  duration: row.duration,
   meta: row.meta ? JSON.parse(row.meta) : null,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -62,15 +71,24 @@ const commentRowToComment = (row: any): Comment => ({
 export const createTask = (db: Database.Database, input: CreateTaskInput): Task => {
   const now = nowIso();
   const status = input.status ?? 'inbox';
+  const { startTime, endTime, duration } = calculateTimeFields(
+    input.startTime,
+    input.endTime,
+    input.duration
+  );
+
   const stmt = db.prepare(
-    `INSERT INTO issues (type, title, body_md, status, scheduled_on, meta, created_at, updated_at, is_bookmarked, is_deleted)
-     VALUES ('task', @title, @body, @status, @scheduledOn, json('{}'), @createdAt, @createdAt, 0, 0)`
+    `INSERT INTO issues (type, title, body_md, status, scheduled_on, start_time, end_time, duration, meta, created_at, updated_at, is_bookmarked, is_deleted)
+     VALUES ('task', @title, @body, @status, @scheduledOn, @startTime, @endTime, @duration, json('{}'), @createdAt, @createdAt, 0, 0)`
   );
   const result = stmt.run({
     title: input.title,
     body: input.bodyMd,
     status,
     scheduledOn: input.scheduledOn ?? null,
+    startTime: startTime ?? null,
+    endTime: endTime ?? null,
+    duration: duration ?? null,
     createdAt: now
   });
   const taskId = Number(result.lastInsertRowid);
@@ -251,6 +269,31 @@ export const updateTask = (db: Database.Database, input: UpdateTaskInput): Task 
   if (input.scheduledOn !== undefined) {
     updates.push('scheduled_on = @scheduledOn');
     params.scheduledOn = input.scheduledOn;
+  }
+
+  // Calculate time fields
+  if (input.startTime !== undefined || input.endTime !== undefined || input.duration !== undefined) {
+    const { startTime, endTime, duration } = calculateTimeFields(
+      input.startTime,
+      input.endTime,
+      input.duration,
+      task.startTime,
+      task.endTime,
+      task.duration
+    );
+
+    if (startTime !== undefined) {
+      updates.push('start_time = @startTime');
+      params.startTime = startTime;
+    }
+    if (endTime !== undefined) {
+      updates.push('end_time = @endTime');
+      params.endTime = endTime;
+    }
+    if (duration !== undefined) {
+      updates.push('duration = @duration');
+      params.duration = duration;
+    }
   }
 
   updates.push('updated_at = @updatedAt');
@@ -461,4 +504,82 @@ const resetProjects = (db: Database.Database, issueId: number, projectIds: numbe
     return;
   }
   attachProjects(db, issueId, projectIds);
+};
+
+// Helper to calculate time fields
+const calculateTimeFields = (
+  newStart?: string | null,
+  newEnd?: string | null,
+  newDuration?: number | null,
+  oldStart?: string | null,
+  oldEnd?: string | null,
+  oldDuration?: number | null
+): { startTime?: string | null; endTime?: string | null; duration?: number | null } => {
+  // Resolve effective values (new > old)
+  // Note: undefined means "no change", null means "clear"
+  const start = newStart !== undefined ? newStart : oldStart;
+  const end = newEnd !== undefined ? newEnd : oldEnd;
+  const duration = newDuration !== undefined ? newDuration : oldDuration;
+
+  // If any is null, we might need to clear others or recalculate
+  // But for now, let's stick to the "update" logic
+
+  let finalStart = start;
+  let finalEnd = end;
+  let finalDuration = duration;
+
+  // 1. Change Start: Keep Duration, Recalc End
+  if (newStart !== undefined && newStart !== null) {
+    if (finalDuration) {
+      finalEnd = addMinutes(newStart, finalDuration);
+    } else if (finalEnd) {
+      // If we have end but no duration, calc duration
+      finalDuration = diffMinutes(newStart, finalEnd);
+    }
+  }
+  // 2. Change End: Keep Start, Recalc Duration
+  else if (newEnd !== undefined && newEnd !== null) {
+    if (finalStart) {
+      finalDuration = diffMinutes(finalStart, newEnd);
+    }
+  }
+  // 3. Change Duration: Keep Start, Recalc End
+  else if (newDuration !== undefined && newDuration !== null) {
+    if (finalStart) {
+      finalEnd = addMinutes(finalStart, newDuration);
+    } else if (finalEnd) {
+      // If we have end but no start, calc start (reverse)
+      finalStart = subMinutes(finalEnd, newDuration);
+    }
+  }
+
+  return { startTime: finalStart, endTime: finalEnd, duration: finalDuration };
+};
+
+const timeToMinutes = (time: string): number => {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+};
+
+const minutesToTime = (minutes: number): string => {
+  const h = Math.floor(minutes / 60) % 24;
+  const m = minutes % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+};
+
+const addMinutes = (time: string, minutes: number): string => {
+  const total = timeToMinutes(time) + minutes;
+  return minutesToTime(total);
+};
+
+const subMinutes = (time: string, minutes: number): string => {
+  const total = timeToMinutes(time) - minutes;
+  // Handle negative (prev day) if needed, but for now assume same day or wrap
+  return minutesToTime(total >= 0 ? total : total + 24 * 60);
+};
+
+const diffMinutes = (start: string, end: string): number => {
+  let diff = timeToMinutes(end) - timeToMinutes(start);
+  if (diff < 0) diff += 24 * 60; // Assume wrap around midnight
+  return diff;
 };
