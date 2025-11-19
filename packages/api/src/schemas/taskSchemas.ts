@@ -26,14 +26,14 @@ export type CreateTaskRequest = z.infer<typeof CreateTaskRequestSchema>;
  * Schema for updating a task
  */
 export const UpdateTaskRequestSchema = z.object({
-  title: z.string().min(1).optional(),
-  bodyMd: z.string().optional(),
-  status: TaskStatusSchema.optional(),
-  scheduledOn: z.string().date().nullable().optional(),
-  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).nullable().optional(),
-  endDate: z.string().date().nullable().optional(),
-  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).nullable().optional(),
-  duration: z.number().int().positive().nullable().optional(),
+  title: z.string().min(1, 'Task title cannot be empty').optional().describe('Updated task title'),
+  bodyMd: z.string().optional().describe('Updated task description in Markdown format'),
+  status: TaskStatusSchema.optional().describe('Updated task status'),
+  scheduledOn: z.string().date().nullish().describe('Updated scheduled date (YYYY-MM-DD, null to clear)'),
+  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').nullish().describe('Updated start time (HH:MM, null to clear)'),
+  endDate: z.string().date().nullish().describe('Updated end date (YYYY-MM-DD, null to clear)'),
+  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').nullish().describe('Updated end time (HH:MM, null to clear)'),
+  duration: z.number().int().positive().nullish().describe('Updated duration in minutes (null to clear)'),
   addLabels: z.array(z.string()).optional(),
   removeLabels: z.array(z.string()).optional(),
   projectIds: z.array(z.number().int()).optional()
