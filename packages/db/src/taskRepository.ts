@@ -6,6 +6,10 @@ export interface CreateTaskInput {
   bodyMd: string;
   status?: TaskStatus;
   scheduledOn?: string;
+  startTime?: string;
+  endDate?: string;
+  endTime?: string;
+  duration?: number;
   labels?: string[];
   projectIds?: number[];
 }
@@ -16,6 +20,10 @@ export interface UpdateTaskInput {
   bodyMd?: string;
   status?: TaskStatus;
   scheduledOn?: string | null;
+  startTime?: string | null;
+  endDate?: string | null;
+  endTime?: string | null;
+  duration?: number | null;
   addLabels?: string[];
   removeLabels?: string[];
   projectIds?: number[];
@@ -40,6 +48,10 @@ const taskRowToTask = (row: any): Task => ({
   bodyMd: row.body_md,
   status: row.status as TaskStatus,
   scheduledOn: row.scheduled_on,
+  endDate: row.end_date,
+  startTime: row.start_time,
+  endTime: row.end_time,
+  duration: row.duration,
   meta: row.meta ? JSON.parse(row.meta) : null,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -62,15 +74,25 @@ const commentRowToComment = (row: any): Comment => ({
 export const createTask = (db: Database.Database, input: CreateTaskInput): Task => {
   const now = nowIso();
   const status = input.status ?? 'inbox';
+  const { startTime, endTime, duration } = calculateTimeFields(
+    input.startTime,
+    input.endTime,
+    input.duration
+  );
+
   const stmt = db.prepare(
-    `INSERT INTO issues (type, title, body_md, status, scheduled_on, meta, created_at, updated_at, is_bookmarked, is_deleted)
-     VALUES ('task', @title, @body, @status, @scheduledOn, json('{}'), @createdAt, @createdAt, 0, 0)`
+    `INSERT INTO issues (type, title, body_md, status, scheduled_on, end_date, start_time, end_time, duration, meta, created_at, updated_at, is_bookmarked, is_deleted)
+     VALUES ('task', @title, @body, @status, @scheduledOn, @endDate, @startTime, @endTime, @duration, json('{}'), @createdAt, @createdAt, 0, 0)`
   );
   const result = stmt.run({
     title: input.title,
     body: input.bodyMd,
     status,
     scheduledOn: input.scheduledOn ?? null,
+    endDate: input.endDate ?? input.scheduledOn ?? null,
+    startTime: startTime ?? null,
+    endTime: endTime ?? null,
+    duration: duration ?? null,
     createdAt: now
   });
   const taskId = Number(result.lastInsertRowid);
@@ -99,7 +121,7 @@ export const getTask = (db: Database.Database, id: number): Task => {
   }
 
   if ((row as any).type !== 'task') {
-    throw new Error(`ID refers to different type (${(row as any).type})`);
+    throw new Error(`ID refers to different type(${(row as any).type})`);
   }
 
   return taskRowToTask(row);
@@ -117,18 +139,18 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
 
   if (filters.label) {
     conditions.push(
-      `id IN (SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name = @label)`
+      `id IN(SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name = @label)`
     );
     params.label = filters.label;
   }
 
   if (filters.labels && filters.labels.length > 0) {
-    const labelPlaceholders = filters.labels.map((_, i) => `@label${i}`).join(', ');
+    const labelPlaceholders = filters.labels.map((_, i) => `@label${i} `).join(', ');
     conditions.push(
-      `id IN (SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name IN (${labelPlaceholders}))`
+      `id IN(SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name IN(${labelPlaceholders}))`
     );
     filters.labels.forEach((labelName, i) => {
-      params[`label${i}`] = labelName;
+      params[`label${i} `] = labelName;
     });
   }
 
@@ -144,11 +166,11 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
 
   let sql = `
     SELECT i.*,
-      (SELECT COUNT(*) FROM comments c
+  (SELECT COUNT(*) FROM comments c
        WHERE c.issue_id = i.id AND c.is_deleted = 0) as comment_count
     FROM issues i
     WHERE ${conditions.join(' AND ')}
-    ORDER BY ${orderBy}`;
+    ORDER BY ${orderBy} `;
   if (filters.limit) {
     sql += ' LIMIT @limit';
     params.limit = filters.limit;
@@ -180,7 +202,7 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
       // For now, combine them with OR at SQL level using IN with subqueries
       if (ftsConditions.length > 1) {
         searchConditions.push(
-          `i.id IN (SELECT issue_id FROM issues_fts WHERE ${ftsConditions.join(' OR ')})`
+          `i.id IN(SELECT issue_id FROM issues_fts WHERE ${ftsConditions.join(' OR ')})`
         );
       } else {
         searchConditions.push(ftsConditions[0]);
@@ -192,13 +214,13 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
     }
     if (filters.label) {
       searchConditions.push(
-        `i.id IN (SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name = @label)`
+        `i.id IN(SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name = @label)`
       );
     }
     if (filters.labels && filters.labels.length > 0) {
-      const labelPlaceholders = filters.labels.map((_, i) => `@label${i}`).join(', ');
+      const labelPlaceholders = filters.labels.map((_, i) => `@label${i} `).join(', ');
       searchConditions.push(
-        `i.id IN (SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name IN (${labelPlaceholders}))`
+        `i.id IN(SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name IN(${labelPlaceholders}))`
       );
     }
     if (filters.isBookmarked !== undefined) {
@@ -206,13 +228,13 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
     }
     sql = `
       SELECT i.*,
-        snippet(issues_fts, -1, '<mark>', '</mark>', '...', 15) as preview,
-        (SELECT COUNT(*) FROM comments c
+  snippet(issues_fts, -1, '<mark>', '</mark>', '...', 15) as preview,
+  (SELECT COUNT(*) FROM comments c
          WHERE c.issue_id = i.id AND c.is_deleted = 0) as comment_count
       FROM issues i
       JOIN issues_fts f ON f.issue_id = i.id
       WHERE ${searchConditions.join(' AND ')}
-      ORDER BY i.updated_at ${filters.order === 'asc' ? 'ASC' : 'DESC'}`;
+      ORDER BY i.updated_at ${filters.order === 'asc' ? 'ASC' : 'DESC'} `;
     if (filters.limit) {
       sql += ' LIMIT @limit';
     }
@@ -226,19 +248,32 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
 export const updateTask = (db: Database.Database, input: UpdateTaskInput): Task => {
   const task = getTask(db, input.id);
 
-  if (!input.title && !input.bodyMd && input.status === undefined && input.scheduledOn === undefined && !input.addLabels?.length && !input.removeLabels?.length) {
+  // Check if any actual update fields are provided (excluding labels/projects which are handled separately)
+  if (
+    input.title === undefined &&
+    input.bodyMd === undefined &&
+    input.status === undefined &&
+    input.scheduledOn === undefined &&
+    input.endDate === undefined && // Added
+    input.startTime === undefined &&
+    input.endTime === undefined &&
+    input.duration === undefined &&
+    !input.addLabels?.length &&
+    !input.removeLabels?.length &&
+    input.projectIds === undefined // projectIds being undefined means no change, empty array means reset
+  ) {
     return task;
   }
 
   const updates: string[] = [];
   const params: Record<string, any> = { id: input.id, updatedAt: nowIso() };
 
-  if (input.title) {
+  if (input.title !== undefined) {
     updates.push('title = @title');
     params.title = input.title;
   }
 
-  if (input.bodyMd) {
+  if (input.bodyMd !== undefined) {
     updates.push('body_md = @bodyMd');
     params.bodyMd = input.bodyMd;
   }
@@ -251,6 +286,37 @@ export const updateTask = (db: Database.Database, input: UpdateTaskInput): Task 
   if (input.scheduledOn !== undefined) {
     updates.push('scheduled_on = @scheduledOn');
     params.scheduledOn = input.scheduledOn;
+  }
+
+  if (input.endDate !== undefined) { // Added
+    updates.push('end_date = @endDate');
+    params.endDate = input.endDate;
+  }
+
+  // Calculate time fields
+  if (input.startTime !== undefined || input.endTime !== undefined || input.duration !== undefined) {
+    const { startTime, endTime, duration } = calculateTimeFields(
+      input.startTime,
+      input.endTime,
+      input.duration,
+      task.startTime,
+      task.endTime,
+      task.duration
+    );
+
+    // Only add to updates if the value actually changed or was explicitly set
+    if (startTime !== undefined) {
+      updates.push('start_time = @startTime');
+      params.startTime = startTime;
+    }
+    if (endTime !== undefined) {
+      updates.push('end_time = @endTime');
+      params.endTime = endTime;
+    }
+    if (duration !== undefined) {
+      updates.push('duration = @duration');
+      params.duration = duration;
+    }
   }
 
   updates.push('updated_at = @updatedAt');
@@ -283,7 +349,7 @@ export const deleteTask = (db: Database.Database, id: number): void => {
     )
     .run({ id, updatedAt: nowIso() });
   if (result.changes === 0) {
-    throw new Error(`Task not found: ${id}`);
+    throw new Error(`Task not found: ${id} `);
   }
 };
 
@@ -310,8 +376,8 @@ export const addComment = (
   const now = nowIso();
   const result = db
     .prepare(
-      `INSERT INTO comments (issue_id, body_md, created_at, updated_at, is_deleted)
-       VALUES (@issueId, @bodyMd, @createdAt, @createdAt, 0)`
+      `INSERT INTO comments(issue_id, body_md, created_at, updated_at, is_deleted)
+VALUES(@issueId, @bodyMd, @createdAt, @createdAt, 0)`
     )
     .run({ issueId: taskId, bodyMd, createdAt: now });
 
@@ -330,12 +396,12 @@ export const updateComment = (
     .prepare('SELECT * FROM comments WHERE id = @id')
     .get({ id: commentId }) as any;
   if (!existing) {
-    throw new Error(`Comment not found: ${commentId}`);
+    throw new Error(`Comment not found: ${commentId} `);
   }
 
   db.prepare(
-    `INSERT INTO comment_revisions (comment_id, body_md, created_at)
-     VALUES (@commentId, @bodyMd, @createdAt)`
+    `INSERT INTO comment_revisions(comment_id, body_md, created_at)
+VALUES(@commentId, @bodyMd, @createdAt)`
   ).run({ commentId, bodyMd: existing.body_md, createdAt: now });
 
   db.prepare(
@@ -352,7 +418,7 @@ export const deleteComment = (db: Database.Database, commentId: number): void =>
     .prepare('UPDATE comments SET is_deleted = 1, updated_at = @updatedAt WHERE id = @id')
     .run({ id: commentId, updatedAt: nowIso() });
   if (result.changes === 0) {
-    throw new Error(`Comment not found: ${commentId}`);
+    throw new Error(`Comment not found: ${commentId} `);
   }
 };
 
@@ -409,13 +475,13 @@ export const setBookmark = (db: Database.Database, id: number, isBookmarked: boo
 // Shared helper functions (reused from memoRepository patterns)
 const attachLabels = (db: Database.Database, issueId: number, labels: string[]): void => {
   const insertLabel = db.prepare(
-    `INSERT OR IGNORE INTO labels (name, description, created_at)
-     VALUES (@name, NULL, @createdAt)`
+    `INSERT OR IGNORE INTO labels(name, description, created_at)
+VALUES(@name, NULL, @createdAt)`
   );
 
   const linkLabel = db.prepare(
-    `INSERT OR IGNORE INTO issue_labels (issue_id, label_id, assigned_at)
-     VALUES (@issueId, (SELECT id FROM labels WHERE name = @name), @assignedAt)`
+    `INSERT OR IGNORE INTO issue_labels(issue_id, label_id, assigned_at)
+VALUES(@issueId, (SELECT id FROM labels WHERE name = @name), @assignedAt)`
   );
 
   const now = nowIso();
@@ -427,9 +493,9 @@ const attachLabels = (db: Database.Database, issueId: number, labels: string[]):
 
 const detachLabels = (db: Database.Database, issueId: number, labels: string[]): void => {
   const stmt = db.prepare(
-    `DELETE FROM issue_labels WHERE issue_id = @issueId AND label_id IN (
-      SELECT id FROM labels WHERE name = @name
-    )`
+    `DELETE FROM issue_labels WHERE issue_id = @issueId AND label_id IN(
+  SELECT id FROM labels WHERE name = @name
+)`
   );
   for (const name of labels) {
     stmt.run({ issueId, name });
@@ -438,11 +504,11 @@ const detachLabels = (db: Database.Database, issueId: number, labels: string[]):
 
 const attachProjects = (db: Database.Database, issueId: number, projectIds: number[]): void => {
   const stmt = db.prepare(
-    `INSERT INTO project_items (project_id, issue_id, position, view_meta, created_at, updated_at)
-     VALUES (@projectId, @issueId, @position, json('{}'), @createdAt, @createdAt)
+    `INSERT INTO project_items(project_id, issue_id, position, view_meta, created_at, updated_at)
+VALUES(@projectId, @issueId, @position, json('{}'), @createdAt, @createdAt)
      ON CONFLICT(project_id, issue_id) DO UPDATE SET
-       position = excluded.position,
-       updated_at = excluded.updated_at`
+position = excluded.position,
+  updated_at = excluded.updated_at`
   );
   const now = nowIso();
   projectIds.forEach((projectId, index) => {
@@ -461,4 +527,82 @@ const resetProjects = (db: Database.Database, issueId: number, projectIds: numbe
     return;
   }
   attachProjects(db, issueId, projectIds);
+};
+
+// Helper to calculate time fields
+const calculateTimeFields = (
+  newStart?: string | null,
+  newEnd?: string | null,
+  newDuration?: number | null,
+  oldStart?: string | null,
+  oldEnd?: string | null,
+  oldDuration?: number | null
+): { startTime?: string | null; endTime?: string | null; duration?: number | null } => {
+  // Resolve effective values (new > old)
+  // Note: undefined means "no change", null means "clear"
+  const start = newStart !== undefined ? newStart : oldStart;
+  const end = newEnd !== undefined ? newEnd : oldEnd;
+  const duration = newDuration !== undefined ? newDuration : oldDuration;
+
+  // If any is null, we might need to clear others or recalculate
+  // But for now, let's stick to the "update" logic
+
+  let finalStart = start;
+  let finalEnd = end;
+  let finalDuration = duration;
+
+  // 1. Change Start: Keep Duration, Recalc End
+  if (newStart !== undefined && newStart !== null) {
+    if (finalDuration) {
+      finalEnd = addMinutes(newStart, finalDuration);
+    } else if (finalEnd) {
+      // If we have end but no duration, calc duration
+      finalDuration = diffMinutes(newStart, finalEnd);
+    }
+  }
+  // 2. Change End: Keep Start, Recalc Duration
+  else if (newEnd !== undefined && newEnd !== null) {
+    if (finalStart) {
+      finalDuration = diffMinutes(finalStart, newEnd);
+    }
+  }
+  // 3. Change Duration: Keep Start, Recalc End
+  else if (newDuration !== undefined && newDuration !== null) {
+    if (finalStart) {
+      finalEnd = addMinutes(finalStart, newDuration);
+    } else if (finalEnd) {
+      // If we have end but no start, calc start (reverse)
+      finalStart = subMinutes(finalEnd, newDuration);
+    }
+  }
+
+  return { startTime: finalStart, endTime: finalEnd, duration: finalDuration };
+};
+
+const timeToMinutes = (time: string): number => {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+};
+
+const minutesToTime = (minutes: number): string => {
+  const h = Math.floor(minutes / 60) % 24;
+  const m = minutes % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} `;
+};
+
+const addMinutes = (time: string, minutes: number): string => {
+  const total = timeToMinutes(time) + minutes;
+  return minutesToTime(total);
+};
+
+const subMinutes = (time: string, minutes: number): string => {
+  const total = timeToMinutes(time) - minutes;
+  // Handle negative (prev day) if needed, but for now assume same day or wrap
+  return minutesToTime(total >= 0 ? total : total + 24 * 60);
+};
+
+const diffMinutes = (start: string, end: string): number => {
+  let diff = timeToMinutes(end) - timeToMinutes(start);
+  if (diff < 0) diff += 24 * 60; // Assume wrap around midnight
+  return diff;
 };

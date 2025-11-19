@@ -97,7 +97,13 @@ stateDiagram-v2
 ### 4.2 タスク（Task）
 
 - **役割**: Inbox 以降のアクション管理。Captured から昇格したメモ、または直接定義された作業項目を統一的に扱う。
-- **主要データ**: `issues.type = task`、`title` 必須、`status` は `open`, `next`, `waiting`, `scheduled`, `done`, `canceled` から選択、必要に応じて `scheduled_on` を設定。
+- **主要データ**: `issues.type = task`、`title` 必須、`status` は `open`, `next`, `waiting`, `scheduled`, `done`, `canceled` から選択。
+  - **スケジュール管理**:
+    - `scheduled_on` (YYYY-MM-DD): タスクの開始日
+    - `end_date` (YYYY-MM-DD): タスクの終了日（未指定時は `scheduled_on` と同じ）
+    - `start_time` (HH:MM): 開始時刻（オプション）
+    - `end_time` (HH:MM): 終了時刻（オプション、`start_time` + `duration` から自動計算可能）
+    - `duration` (INTEGER): 所要時間（分）（オプション）
 - **機能要件**:
   - タスクの生成（メモ昇格または直接作成）。生成時は Inbox（初期 `status=open`）に配置。
   - タスク一覧・フィルタリング（ステータス、ラベル、プロジェクト、検索語など）。

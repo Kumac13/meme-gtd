@@ -12,14 +12,16 @@ export default class TaskEdit extends Command {
     'Revise a task using inline text, file input, or the editor. You can update title, body, status, scheduled date, and labels.';
   static usage = [
     '<%= command.id %> <taskId> [--title <text>] [--body <text> | --body-file <path>]',
-    '<%= command.id %> <taskId> [--status <state>] [--scheduled-on <date>]',
+    '<%= command.id %> <taskId> [--status <state>] [--scheduled-on <date>] [--end-date <date>]',
+    '<%= command.id %> <taskId> [--start <time>] [--end <time>] [--duration <minutes>]',
     '<%= command.id %> <taskId> [--add-label <name> ...] [--remove-label <name> ...]',
     '<%= command.id %> <taskId> [--project <id> ...] [--json]'
   ];
   static examples = [
     '$ mgtd task edit 12 --title "Updated title"',
     '$ mgtd task edit 7 --status next',
-    '$ mgtd task edit 4 --scheduled-on 2025-10-20',
+    '$ mgtd task edit 4 --scheduled-on 2025-10-20 --end-date 2025-10-22',
+    '$ mgtd task edit 8 --start 09:00 --duration 120',
     '$ mgtd task edit 12 --body-file updated.md',
     '$ mgtd task edit 7 --add-label urgent --remove-label backlog',
     '$ mgtd task edit 4 --project 3 --project 8 --json'
@@ -55,6 +57,10 @@ export default class TaskEdit extends Command {
       summary: 'Update scheduled date (ISO 8601)',
       description: 'Set scheduled date in YYYY-MM-DD format. Use empty string to clear.'
     }),
+    start: Flags.string({ description: 'Start time (HH:MM)' }),
+    'end-date': Flags.string({ description: 'End date (YYYY-MM-DD)' }),
+    end: Flags.string({ description: 'End time (HH:MM)' }),
+    duration: Flags.integer({ description: 'Duration in minutes' }),
     editor: Flags.boolean({
       summary: 'Force editor launch',
       description: 'Always launch the configured editor with existing content.',
@@ -118,14 +124,14 @@ export default class TaskEdit extends Command {
 
     // エディタ起動の判定
     const shouldLaunchEditor = flags.title === undefined &&
-                               flags.body === undefined &&
-                               flags['body-file'] === undefined &&
-                               flags.status === undefined &&
-                               flags['scheduled-on'] === undefined &&
-                               !flags['add-label'] &&
-                               !flags['remove-label'] &&
-                               !flags.project &&
-                               !flags['no-editor'];
+      flags.body === undefined &&
+      flags['body-file'] === undefined &&
+      flags.status === undefined &&
+      flags['scheduled-on'] === undefined &&
+      !flags['add-label'] &&
+      !flags['remove-label'] &&
+      !flags.project &&
+      !flags['no-editor'];
 
     if (shouldLaunchEditor || flags.editor) {
       const task = service.show(args.id);
@@ -158,6 +164,10 @@ export default class TaskEdit extends Command {
       bodyMd: body,
       status: flags.status as TaskStatus | undefined,
       scheduledOn: flags['scheduled-on'] === '' ? null : flags['scheduled-on'],
+      startTime: flags.start === '' ? null : flags.start,
+      endDate: flags['end-date'] === '' ? null : flags['end-date'],
+      endTime: flags.end === '' ? null : flags.end,
+      duration: flags.duration === 0 ? null : flags.duration,
       addLabels: flags['add-label'],
       removeLabels: flags['remove-label'],
       projectIds: flags.project

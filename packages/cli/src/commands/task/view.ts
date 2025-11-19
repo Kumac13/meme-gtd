@@ -49,7 +49,20 @@ export default class TaskView extends Command {
     this.log(`Task #${task.id}: ${task.title}${bookmarkIndicator}`);
     this.log(`Status: ${task.status}`);
     if (task.scheduledOn) {
-      this.log(`Scheduled: ${task.scheduledOn}`);
+      let schedule = `Scheduled: ${task.scheduledOn} `;
+      if (task.endDate && task.endDate !== task.scheduledOn) {
+        schedule += ` - ${task.endDate} `;
+      }
+      if (task.startTime) {
+        schedule += ` ${task.startTime} `;
+        if (task.endTime) {
+          schedule += ` - ${task.endTime} `;
+        }
+        if (task.duration) {
+          schedule += ` (${task.duration} min)`;
+        }
+      }
+      this.log(schedule);
     }
     this.log(`Updated: ${task.updatedAt}`);
     this.log(`Labels: ${task.labels && task.labels.length > 0 ? task.labels.join(', ') : '(none)'}`);

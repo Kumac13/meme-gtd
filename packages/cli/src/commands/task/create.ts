@@ -12,11 +12,12 @@ export default class TaskCreate extends Command {
   static description =
     'Create a task record with title and body. Tasks support status tracking (inbox/open/next/waiting/scheduled/someday/done/canceled).';
   static usage = [
-    '<%= command.id %> --title <text> [--body <text> | --body-file <path>] [--status <state>] [--scheduled-on <date>] [--label <name> ...] [--project <id> ...] [--json]'
+    '<%= command.id %> --title <text> [--body <text> | --body-file <path>] [--status <state>] [--scheduled-on <date>] [--end-date <date>] [--start <time>] [--end <time>] [--duration <minutes>] [--label <name> ...] [--project <id> ...] [--json]'
   ];
   static examples = [
     '$ mgtd task create --title "Buy groceries" --body "Milk, eggs, bread"',
-    '$ mgtd task create --title "Team meeting" --status scheduled --scheduled-on 2025-10-20',
+    '$ mgtd task create --title "Team meeting" --status scheduled --scheduled-on 2025-10-20 --start 14:00 --duration 60',
+    '$ mgtd task create --title "Conference trip" --scheduled-on 2025-11-20 --end-date 2025-11-23',
     '$ mgtd task create --title "Fix bug" --body-file issue.md --label urgent --label backend',
     '$ mgtd task create --title "Review PR" --label review --json'
   ];
@@ -50,6 +51,19 @@ export default class TaskCreate extends Command {
     'scheduled-on': Flags.string({
       summary: 'Scheduled date (ISO 8601)',
       description: 'Set scheduled date in YYYY-MM-DD format (typically used with --status scheduled).'
+    }),
+    start: Flags.string({
+      summary: 'Start time (HH:MM)',
+      description: 'Set start time in HH:MM format.'
+    }),
+    'end-date': Flags.string({ description: 'End date (YYYY-MM-DD)' }),
+    end: Flags.string({
+      summary: 'End time (HH:MM)',
+      description: 'Set end time in HH:MM format.'
+    }),
+    duration: Flags.integer({
+      summary: 'Duration (minutes)',
+      description: 'Set duration in minutes.'
     }),
     editor: Flags.boolean({
       summary: 'Force editor launch',
@@ -120,6 +134,10 @@ export default class TaskCreate extends Command {
       bodyMd: body,
       status: flags.status as TaskStatus,
       scheduledOn: flags['scheduled-on'] ?? undefined,
+      startTime: flags.start,
+      endDate: flags['end-date'],
+      endTime: flags.end,
+      duration: flags.duration,
       labels: flags.label ?? [],
       projectIds: flags.project ?? []
     });

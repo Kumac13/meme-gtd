@@ -24,6 +24,7 @@ export interface BaseItem {
 export interface Task extends BaseItem {
   status: string | null;
   scheduledOn: string | null;
+  endDate: string | null;
 }
 
 export type Item = BaseItem | Task;
@@ -179,11 +180,13 @@ export default function ItemDetail({
           {itemType === 'task' && 'scheduledOn' in item && (
             <ScheduleSection
               scheduledOn={item.scheduledOn}
-              onScheduleChange={async (date) => {
+              startTime={(item as any).startTime}
+              endDate={item.endDate}
+              endTime={(item as any).endTime}
+              duration={(item as any).duration}
+              onScheduleChange={async (updates) => {
                 if (onUpdate) {
-                  const updatedItem = await TasksService.updateTask(String(item.id), {
-                    scheduledOn: date,
-                  });
+                  const updatedItem = await TasksService.updateTask(String(item.id), updates);
                   onUpdate(updatedItem as Item);
                 }
               }}

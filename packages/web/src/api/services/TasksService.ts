@@ -31,6 +31,22 @@ export class TasksService {
              * Scheduled date for the task (YYYY-MM-DD)
              */
             scheduledOn?: string;
+            /**
+             * Start time (HH:MM)
+             */
+            startTime?: string;
+            /**
+             * End date for the task (YYYY-MM-DD)
+             */
+            endDate?: string;
+            /**
+             * End time (HH:MM)
+             */
+            endTime?: string;
+            /**
+             * Duration in minutes
+             */
+            duration?: number;
         },
     ): CancelablePromise<{
         /**
@@ -57,6 +73,22 @@ export class TasksService {
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
+        /**
+         * Start time (HH:MM, null if not set)
+         */
+        startTime: string | null;
+        /**
+         * End time (HH:MM, null if not set)
+         */
+        endTime: string | null;
+        /**
+         * Duration in minutes (null if not set)
+         */
+        duration: number | null;
         /**
          * Metadata object
          */
@@ -132,6 +164,22 @@ export class TasksService {
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
+        /**
+         * Start time (HH:MM, null if not set)
+         */
+        startTime: string | null;
+        /**
+         * End time (HH:MM, null if not set)
+         */
+        endTime: string | null;
+        /**
+         * Duration in minutes (null if not set)
+         */
+        duration: number | null;
         /**
          * Metadata object
          */
@@ -214,6 +262,22 @@ export class TasksService {
          */
         scheduledOn: string | null;
         /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
+        /**
+         * Start time (HH:MM, null if not set)
+         */
+        startTime: string | null;
+        /**
+         * End time (HH:MM, null if not set)
+         */
+        endTime: string | null;
+        /**
+         * Duration in minutes (null if not set)
+         */
+        duration: number | null;
+        /**
          * Metadata object
          */
         meta: Record<string, any>;
@@ -280,6 +344,22 @@ export class TasksService {
              * Updated scheduled date (YYYY-MM-DD, null to clear)
              */
             scheduledOn?: string | null;
+            /**
+             * Updated end date (YYYY-MM-DD, null to clear)
+             */
+            endDate?: string | null;
+            /**
+             * Updated start time (HH:MM, null to clear)
+             */
+            startTime?: string | null;
+            /**
+             * Updated end time (HH:MM, null to clear)
+             */
+            endTime?: string | null;
+            /**
+             * Updated duration in minutes (null to clear)
+             */
+            duration?: number | null;
         },
     ): CancelablePromise<{
         /**
@@ -306,6 +386,22 @@ export class TasksService {
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
+        /**
+         * Start time (HH:MM, null if not set)
+         */
+        startTime: string | null;
+        /**
+         * End time (HH:MM, null if not set)
+         */
+        endTime: string | null;
+        /**
+         * Duration in minutes (null if not set)
+         */
+        duration: number | null;
         /**
          * Metadata object
          */
@@ -401,6 +497,22 @@ export class TasksService {
          */
         scheduledOn: string | null;
         /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
+        /**
+         * Start time (HH:MM, null if not set)
+         */
+        startTime: string | null;
+        /**
+         * End time (HH:MM, null if not set)
+         */
+        endTime: string | null;
+        /**
+         * Duration in minutes (null if not set)
+         */
+        duration: number | null;
+        /**
          * Metadata object
          */
         meta: Record<string, any>;
@@ -470,6 +582,22 @@ export class TasksService {
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
+        /**
+         * Start time (HH:MM, null if not set)
+         */
+        startTime: string | null;
+        /**
+         * End time (HH:MM, null if not set)
+         */
+        endTime: string | null;
+        /**
+         * Duration in minutes (null if not set)
+         */
+        duration: number | null;
         /**
          * Metadata object
          */
@@ -541,6 +669,22 @@ export class TasksService {
          */
         scheduledOn: string | null;
         /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
+        /**
+         * Start time (HH:MM, null if not set)
+         */
+        startTime: string | null;
+        /**
+         * End time (HH:MM, null if not set)
+         */
+        endTime: string | null;
+        /**
+         * Duration in minutes (null if not set)
+         */
+        duration: number | null;
+        /**
          * Metadata object
          */
         meta: Record<string, any>;
@@ -611,6 +755,22 @@ export class TasksService {
          */
         scheduledOn: string | null;
         /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
+        /**
+         * Start time (HH:MM, null if not set)
+         */
+        startTime: string | null;
+        /**
+         * End time (HH:MM, null if not set)
+         */
+        endTime: string | null;
+        /**
+         * Duration in minutes (null if not set)
+         */
+        duration: number | null;
+        /**
          * Metadata object
          */
         meta: Record<string, any>;
@@ -680,6 +840,22 @@ export class TasksService {
          * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
          */
         scheduledOn: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
+        /**
+         * Start time (HH:MM, null if not set)
+         */
+        startTime: string | null;
+        /**
+         * End time (HH:MM, null if not set)
+         */
+        endTime: string | null;
+        /**
+         * Duration in minutes (null if not set)
+         */
+        duration: number | null;
         /**
          * Metadata object
          */

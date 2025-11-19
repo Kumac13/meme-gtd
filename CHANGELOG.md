@@ -1,6 +1,22 @@
 # Changelog
 
-## [Unreleased]
+## 0.13.0 - 2025-11-20
+
+### New Features
+
+- **Task Scheduling Enhancement**: Support for start time, end time, and duration.
+  - **Database**: Added `start_time`, `end_time`, `duration` columns to `issues` table.
+  - **CLI**: Added `--start`, `--end`, `--duration` flags to `task create` and `task edit`.
+    - Auto-calculation of end time based on start time and duration.
+    - `task view` displays formatted schedule (e.g., "2025-11-20 10:00 - 11:00 (60 min)").
+  - **Web UI**:
+    - `ScheduleSection` now supports time and duration inputs.
+    - Visual display of full schedule details.
+  - **API**:
+    - Updated `Task` schema to include time fields.
+    - Auto-calculation logic implemented in backend.
+
+## 0.12.0 - 2025-11-19
 
 ### New Features
 
