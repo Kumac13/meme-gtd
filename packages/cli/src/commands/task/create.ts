@@ -55,6 +55,7 @@ export default class TaskCreate extends Command {
       summary: 'Start time (HH:MM)',
       description: 'Set start time in HH:MM format.'
     }),
+    'end-date': Flags.string({ description: 'End date (YYYY-MM-DD)' }),
     end: Flags.string({
       summary: 'End time (HH:MM)',
       description: 'Set end time in HH:MM format.'
@@ -133,6 +134,7 @@ export default class TaskCreate extends Command {
       status: flags.status as TaskStatus,
       scheduledOn: flags['scheduled-on'] ?? undefined,
       startTime: flags.start,
+      endDate: flags['end-date'],
       endTime: flags.end,
       duration: flags.duration,
       labels: flags.label ?? [],
