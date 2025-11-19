@@ -15,6 +15,9 @@ export const CreateTaskRequestSchema = z.object({
   bodyMd: z.string().optional().describe('Task description in Markdown format'),
   status: TaskStatusSchema.optional().describe('Task status (defaults to "inbox")'),
   scheduledOn: z.string().date().optional().describe('Scheduled date for the task (YYYY-MM-DD)'),
+  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').optional().describe('Start time (HH:MM)'),
+  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').optional().describe('End time (HH:MM)'),
+  duration: z.number().int().positive().optional().describe('Duration in minutes'),
 });
 
 export type CreateTaskRequest = z.infer<typeof CreateTaskRequestSchema>;
@@ -27,6 +30,9 @@ export const UpdateTaskRequestSchema = z.object({
   bodyMd: z.string().optional().describe('Updated task description in Markdown format'),
   status: TaskStatusSchema.optional().describe('Updated task status'),
   scheduledOn: z.string().date().nullish().describe('Updated scheduled date (YYYY-MM-DD, null to clear)'),
+  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').nullish().describe('Updated start time (HH:MM, null to clear)'),
+  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').nullish().describe('Updated end time (HH:MM, null to clear)'),
+  duration: z.number().int().positive().nullish().describe('Updated duration in minutes (null to clear)'),
 });
 
 export type UpdateTaskRequest = z.infer<typeof UpdateTaskRequestSchema>;
@@ -41,6 +47,9 @@ export const TaskSchema = z.object({
   bodyMd: z.string().describe('Task description in Markdown format'),
   status: TaskStatusSchema.describe('Current task status'),
   scheduledOn: z.string().date().nullable().describe('Scheduled date for the task (YYYY-MM-DD, null if not scheduled)'),
+  startTime: z.string().nullable().describe('Start time (HH:MM, null if not set)'),
+  endTime: z.string().nullable().describe('End time (HH:MM, null if not set)'),
+  duration: z.number().int().nullable().describe('Duration in minutes (null if not set)'),
   meta: z.record(z.any()).describe('Metadata object'),
   isBookmarked: z.boolean().describe('Whether the task is bookmarked'),
   isDeleted: z.boolean().describe('Whether the task is soft-deleted'),

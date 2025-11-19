@@ -572,6 +572,7 @@ paths:
                   type: string
                   enum:
                     - inbox
+                    - someday
                     - open
                     - next
                     - waiting
@@ -1219,11 +1220,24 @@ paths:
                     - someday
                     - done
                     - canceled
-                  description: Task status (defaults to "open")
+                  description: Task status (defaults to "inbox")
                 scheduledOn:
                   type: string
                   format: date
                   description: Scheduled date for the task (YYYY-MM-DD)
+                startTime:
+                  type: string
+                  pattern: ^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$
+                  description: Start time (HH:MM)
+                endTime:
+                  type: string
+                  pattern: ^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$
+                  description: End time (HH:MM)
+                duration:
+                  type: integer
+                  exclusiveMinimum: true
+                  minimum: 0
+                  description: Duration in minutes
               required:
                 - title
               additionalProperties: false
@@ -1269,6 +1283,18 @@ paths:
                     format: date
                     nullable: true
                     description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+                  startTime:
+                    type: string
+                    nullable: true
+                    description: Start time (HH:MM, null if not set)
+                  endTime:
+                    type: string
+                    nullable: true
+                    description: End time (HH:MM, null if not set)
+                  duration:
+                    type: integer
+                    nullable: true
+                    description: Duration in minutes (null if not set)
                   meta:
                     type: object
                     additionalProperties: {}
@@ -1299,6 +1325,9 @@ paths:
                   - bodyMd
                   - status
                   - scheduledOn
+                  - startTime
+                  - endTime
+                  - duration
                   - meta
                   - isBookmarked
                   - isDeleted
@@ -1415,6 +1444,18 @@ paths:
                       format: date
                       nullable: true
                       description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+                    startTime:
+                      type: string
+                      nullable: true
+                      description: Start time (HH:MM, null if not set)
+                    endTime:
+                      type: string
+                      nullable: true
+                      description: End time (HH:MM, null if not set)
+                    duration:
+                      type: integer
+                      nullable: true
+                      description: Duration in minutes (null if not set)
                     meta:
                       type: object
                       additionalProperties: {}
@@ -1452,6 +1493,9 @@ paths:
                     - bodyMd
                     - status
                     - scheduledOn
+                    - startTime
+                    - endTime
+                    - duration
                     - meta
                     - isBookmarked
                     - isDeleted
@@ -1539,6 +1583,18 @@ paths:
                     format: date
                     nullable: true
                     description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+                  startTime:
+                    type: string
+                    nullable: true
+                    description: Start time (HH:MM, null if not set)
+                  endTime:
+                    type: string
+                    nullable: true
+                    description: End time (HH:MM, null if not set)
+                  duration:
+                    type: integer
+                    nullable: true
+                    description: Duration in minutes (null if not set)
                   meta:
                     type: object
                     additionalProperties: {}
@@ -1573,6 +1629,9 @@ paths:
                   - bodyMd
                   - status
                   - scheduledOn
+                  - startTime
+                  - endTime
+                  - duration
                   - meta
                   - isBookmarked
                   - isDeleted
@@ -1639,6 +1698,22 @@ paths:
                   format: date
                   nullable: true
                   description: Updated scheduled date (YYYY-MM-DD, null to clear)
+                startTime:
+                  type: string
+                  pattern: ^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$
+                  nullable: true
+                  description: Updated start time (HH:MM, null to clear)
+                endTime:
+                  type: string
+                  pattern: ^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$
+                  nullable: true
+                  description: Updated end time (HH:MM, null to clear)
+                duration:
+                  type: integer
+                  exclusiveMinimum: true
+                  minimum: 0
+                  nullable: true
+                  description: Updated duration in minutes (null to clear)
               additionalProperties: false
       parameters:
         - schema:
@@ -1689,6 +1764,18 @@ paths:
                     format: date
                     nullable: true
                     description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+                  startTime:
+                    type: string
+                    nullable: true
+                    description: Start time (HH:MM, null if not set)
+                  endTime:
+                    type: string
+                    nullable: true
+                    description: End time (HH:MM, null if not set)
+                  duration:
+                    type: integer
+                    nullable: true
+                    description: Duration in minutes (null if not set)
                   meta:
                     type: object
                     additionalProperties: {}
@@ -1719,6 +1806,9 @@ paths:
                   - bodyMd
                   - status
                   - scheduledOn
+                  - startTime
+                  - endTime
+                  - duration
                   - meta
                   - isBookmarked
                   - isDeleted
@@ -1868,6 +1958,18 @@ paths:
                     format: date
                     nullable: true
                     description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+                  startTime:
+                    type: string
+                    nullable: true
+                    description: Start time (HH:MM, null if not set)
+                  endTime:
+                    type: string
+                    nullable: true
+                    description: End time (HH:MM, null if not set)
+                  duration:
+                    type: integer
+                    nullable: true
+                    description: Duration in minutes (null if not set)
                   meta:
                     type: object
                     additionalProperties: {}
@@ -1898,6 +2000,9 @@ paths:
                   - bodyMd
                   - status
                   - scheduledOn
+                  - startTime
+                  - endTime
+                  - duration
                   - meta
                   - isBookmarked
                   - isDeleted
@@ -1984,6 +2089,18 @@ paths:
                     format: date
                     nullable: true
                     description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+                  startTime:
+                    type: string
+                    nullable: true
+                    description: Start time (HH:MM, null if not set)
+                  endTime:
+                    type: string
+                    nullable: true
+                    description: End time (HH:MM, null if not set)
+                  duration:
+                    type: integer
+                    nullable: true
+                    description: Duration in minutes (null if not set)
                   meta:
                     type: object
                     additionalProperties: {}
@@ -2014,6 +2131,9 @@ paths:
                   - bodyMd
                   - status
                   - scheduledOn
+                  - startTime
+                  - endTime
+                  - duration
                   - meta
                   - isBookmarked
                   - isDeleted
@@ -2100,6 +2220,18 @@ paths:
                     format: date
                     nullable: true
                     description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+                  startTime:
+                    type: string
+                    nullable: true
+                    description: Start time (HH:MM, null if not set)
+                  endTime:
+                    type: string
+                    nullable: true
+                    description: End time (HH:MM, null if not set)
+                  duration:
+                    type: integer
+                    nullable: true
+                    description: Duration in minutes (null if not set)
                   meta:
                     type: object
                     additionalProperties: {}
@@ -2130,6 +2262,9 @@ paths:
                   - bodyMd
                   - status
                   - scheduledOn
+                  - startTime
+                  - endTime
+                  - duration
                   - meta
                   - isBookmarked
                   - isDeleted
@@ -2216,6 +2351,18 @@ paths:
                     format: date
                     nullable: true
                     description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+                  startTime:
+                    type: string
+                    nullable: true
+                    description: Start time (HH:MM, null if not set)
+                  endTime:
+                    type: string
+                    nullable: true
+                    description: End time (HH:MM, null if not set)
+                  duration:
+                    type: integer
+                    nullable: true
+                    description: Duration in minutes (null if not set)
                   meta:
                     type: object
                     additionalProperties: {}
@@ -2246,6 +2393,9 @@ paths:
                   - bodyMd
                   - status
                   - scheduledOn
+                  - startTime
+                  - endTime
+                  - duration
                   - meta
                   - isBookmarked
                   - isDeleted
@@ -2332,6 +2482,18 @@ paths:
                     format: date
                     nullable: true
                     description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+                  startTime:
+                    type: string
+                    nullable: true
+                    description: Start time (HH:MM, null if not set)
+                  endTime:
+                    type: string
+                    nullable: true
+                    description: End time (HH:MM, null if not set)
+                  duration:
+                    type: integer
+                    nullable: true
+                    description: Duration in minutes (null if not set)
                   meta:
                     type: object
                     additionalProperties: {}
@@ -2362,6 +2524,9 @@ paths:
                   - bodyMd
                   - status
                   - scheduledOn
+                  - startTime
+                  - endTime
+                  - duration
                   - meta
                   - isBookmarked
                   - isDeleted
@@ -3936,10 +4101,12 @@ paths:
                             status:
                               type: string
                               enum:
+                                - inbox
                                 - open
                                 - next
                                 - waiting
                                 - scheduled
+                                - someday
                                 - done
                                 - canceled
                               nullable: true
