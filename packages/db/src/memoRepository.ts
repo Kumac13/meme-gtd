@@ -33,6 +33,7 @@ const memoRowToMemo = (row: any): Memo => ({
   status: null,
   scheduledOn: null,
   startTime: null,
+  endDate: null,
   endTime: null,
   duration: null,
   meta: row.meta ? JSON.parse(row.meta) : null,

@@ -17,7 +17,8 @@ const migrations = [
   { version: '001_init', file: path.join(schemaDir, '001_init.sql') },
   { version: '002_add_project_view_meta', file: path.join(schemaDir, '002_add_project_view_meta.sql') },
   { version: '003_add_fts5', file: path.join(schemaDir, '003_add_fts5.sql') },
-  { version: '004_add_task_time_fields', file: path.join(schemaDir, '004_add_task_time_fields.sql') }
+  { version: '004_add_task_time_fields', file: path.join(schemaDir, '004_add_task_time_fields.sql') },
+  { version: '005_add_task_end_date', file: path.join(schemaDir, '005_add_task_end_date.sql') }
 ] as const;
 
 const prepareDatabase = (db: Database.Database): void => {
@@ -58,7 +59,20 @@ export const applyMigrations = (dbPath: string): MigrationResult => {
     }
 
     const sql = fs.readFileSync(migration.file, 'utf-8');
-    db.exec(sql);
+    try {
+      db.exec(sql);
+    } catch (error: any) {
+      // If the error is "duplicate column name", it means the column already exists.
+      // This can happen if the migration failed halfway or was manually applied.
+      // We can safely ignore this error and mark the migration as applied.
+      if (error.code === 'SQLITE_ERROR' && error.message.includes('duplicate column name')) {
+        // console.warn(`Migration ${migration.version} warning: Column already exists, skipping execution but marking as applied.`);
+      } else {
+        throw error;
+      }
+    }
+
+    db.prepare('INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)').run(migration.version);
     result.applied.push(migration.version);
   }
 
