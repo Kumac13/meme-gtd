@@ -7,6 +7,8 @@ dist/
 .tmp/
 .claude/
 .specify/
+.github/agents/
+.github/prompts/
 
 # Environment files
 .env
