@@ -5,6 +5,7 @@ import { ProjectDetail as ProjectDetailType } from '../types/project';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EditableContent from '../components/EditableContent';
+import { ProjectScheduleSection } from '../components/ProjectScheduleSection';
 import { createBackUrl } from '../utils/navigationHelpers';
 
 export default function ProjectDetail() {
@@ -62,15 +63,13 @@ export default function ProjectDetail() {
     }
   };
 
-  const handleDateChange = async (field: 'startDate' | 'endDate', value: string | null) => {
+  const handleScheduleChange = async (updates: { startDate?: string | null; endDate?: string | null }) => {
     if (!id) return;
     try {
-      const updated = await ProjectsService.updateProject(id, {
-        [field]: value || null,
-      });
+      const updated = await ProjectsService.updateProject(id, updates);
       setProject(updated as ProjectDetailType);
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Failed to update ${field}`);
+      setError(err instanceof Error ? err.message : 'Failed to update schedule');
       throw err;
     }
   };
@@ -139,39 +138,12 @@ export default function ProjectDetail() {
       </div>
 
       {/* Project Schedule */}
-      <div className="mb-6 bg-white border border-gray-200 rounded-lg p-4">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">Schedule</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="startDate" className="block text-xs font-medium text-gray-600 mb-1">
-              Start Date
-            </label>
-            <input
-              type="date"
-              id="startDate"
-              value={project.startDate || ''}
-              onChange={(e) => handleDateChange('startDate', e.target.value || null)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500"
-            />
-          </div>
-          <div>
-            <label htmlFor="endDate" className="block text-xs font-medium text-gray-600 mb-1">
-              End Date
-            </label>
-            <input
-              type="date"
-              id="endDate"
-              value={project.endDate || ''}
-              onChange={(e) => handleDateChange('endDate', e.target.value || null)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500"
-            />
-          </div>
-        </div>
-        {project.startDate && project.endDate && project.startDate > project.endDate && (
-          <p className="mt-2 text-xs text-red-600">
-            Warning: Start date is after end date
-          </p>
-        )}
+      <div className="mb-6">
+        <ProjectScheduleSection
+          startDate={project.startDate}
+          endDate={project.endDate}
+          onScheduleChange={handleScheduleChange}
+        />
       </div>
 
       {/* View Tabs */}
