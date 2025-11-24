@@ -25,6 +25,9 @@ interface Project {
   id: number;
   name: string;
   description: string | null;
+  status: string;
+  startDate: string | null;
+  endDate: string | null;
   createdAt: string;
 }
 
@@ -105,143 +108,156 @@ export default function ItemList({ items, itemType: _itemType, basePath, current
         }
 
         return (
-        <div key={item.id} className="relative">
-          <Link
-            to={itemPath}
-            className="block p-4 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              {isProject(item) ? (
-                <>
-                  <h2 className="text-base font-semibold text-gray-900 mb-1">
-                    {item.name}
-                  </h2>
-                  <div className="flex items-center text-xs text-gray-500 space-x-3">
-                    <span>#{item.id}</span>
-                    <span>{formatRelativeTime(item.createdAt)}</span>
-                  </div>
-                </>
-              ) : isTask(item) ? (
-                <>
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <h2 className="text-base text-gray-900">
-                      {item.title || `Task #${item.id}`}
-                    </h2>
-                    {item.labels && item.labels.length > 0 && (
-                      <>
-                        {item.labels.slice(0, 3).map((label, idx) => (
-                          <LabelBadge key={idx} name={label} />
-                        ))}
-                        {item.labels.length > 3 && (
-                          <span className="px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-gray-600">
-                            +{item.labels.length - 3} more
+          <div key={item.id} className="relative">
+            <Link
+              to={itemPath}
+              className="block p-4 hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  {isProject(item) ? (
+                    <>
+                      <h2 className="text-base font-semibold text-gray-900 mb-1">
+                        {item.name}
+                      </h2>
+                      <div className="flex items-center text-xs text-gray-500 space-x-3">
+                        <span>#{item.id}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${item.status === 'active' ? 'bg-green-100 text-green-800' :
+                            item.status === 'done' ? 'bg-blue-100 text-blue-800' :
+                              item.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
+                                item.status === 'canceled' ? 'bg-gray-100 text-gray-800' :
+                                  'bg-gray-100 text-gray-600'
+                          }`}>
+                          {item.status}
+                        </span>
+                        {(item.startDate || item.endDate) && (
+                          <span>
+                            {item.startDate || '...'} - {item.endDate || '...'}
                           </span>
                         )}
-                      </>
-                    )}
-                  </div>
-                  <div className="flex items-center text-xs text-gray-500 space-x-3">
-                    <span>#{item.id}</span>
-                    {isTask(item) && item.scheduledOn && (
-                      <span>
-                        Scheduled: {formatDateTime(item.scheduledOn).split(' ')[0]}
-                      </span>
-                    )}
-                    <span title={formatDateTime(item.createdAt)}>
-                      {formatRelativeTime(item.createdAt)}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <p className="text-gray-900 text-sm">
-                      {item.bodyMd && item.bodyMd.trim() ? (
-                        <InlineMarkdownRenderer content={extractFirstLine(item.bodyMd, 150)} />
-                      ) : (
-                        <span className="text-gray-500">Memo #{item.id}</span>
-                      )}
-                    </p>
-                  </div>
-                  {item.labels && item.labels.length > 0 && (
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      {item.labels.slice(0, 3).map((label, idx) => (
-                        <LabelBadge key={idx} name={label} />
-                      ))}
-                      {item.labels.length > 3 && (
-                        <span className="px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-gray-600">
-                          +{item.labels.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  <div className="flex items-center text-xs text-gray-500 space-x-3">
-                    <span>#{item.id}</span>
-                    <span title={formatDateTime(item.createdAt)}>
-                      {formatRelativeTime(item.createdAt)}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-            <div className="flex-shrink-0 flex items-center gap-2">
-              {!isProject(item) && (
-                <>
-                  {(item.commentCount ?? 0) > 0 && (
-                    <span className="flex items-center gap-1 text-xs text-gray-500">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M1 2.75C1 1.784 1.784 1 2.75 1h10.5c.966 0 1.75.784 1.75 1.75v7.5A1.75 1.75 0 0 1 13.25 12H9.06l-2.573 2.573A1.458 1.458 0 0 1 4 13.543V12H2.75A1.75 1.75 0 0 1 1 10.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h4.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path>
-                      </svg>
-                      {item.commentCount ?? 0}
-                    </span>
-                  )}
-                  {item.isBookmarked && (
-                    <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 16 16">
-                      <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Z"></path>
-                    </svg>
-                  )}
-                </>
-              )}
-              {onDelete && (
-                <div className="relative">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setMenuOpenId(menuOpenId === item.id ? null : item.id);
-                    }}
-                    className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
-                    aria-label="More options"
-                    disabled={deleting === item.id}
-                  >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                      <path d="M8 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"></path>
-                    </svg>
-                  </button>
-                  {menuOpenId === item.id && (
+                        <span>{formatRelativeTime(item.createdAt)}</span>
+                      </div>
+                    </>
+                  ) : isTask(item) ? (
                     <>
-                      <div
-                        className="fixed inset-0 z-10"
-                        onClick={() => setMenuOpenId(null)}
-                      />
-                      <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-20">
-                        <button
-                          onClick={(e) => handleDelete(e, item.id)}
-                          disabled={deleting === item.id}
-                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {deleting === item.id ? 'Deleting...' : 'Delete'}
-                        </button>
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h2 className="text-base text-gray-900">
+                          {item.title || `Task #${item.id}`}
+                        </h2>
+                        {item.labels && item.labels.length > 0 && (
+                          <>
+                            {item.labels.slice(0, 3).map((label, idx) => (
+                              <LabelBadge key={idx} name={label} />
+                            ))}
+                            {item.labels.length > 3 && (
+                              <span className="px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-gray-600">
+                                +{item.labels.length - 3} more
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      <div className="flex items-center text-xs text-gray-500 space-x-3">
+                        <span>#{item.id}</span>
+                        {isTask(item) && item.scheduledOn && (
+                          <span>
+                            Scheduled: {formatDateTime(item.scheduledOn).split(' ')[0]}
+                          </span>
+                        )}
+                        <span title={formatDateTime(item.createdAt)}>
+                          {formatRelativeTime(item.createdAt)}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <p className="text-gray-900 text-sm">
+                          {item.bodyMd && item.bodyMd.trim() ? (
+                            <InlineMarkdownRenderer content={extractFirstLine(item.bodyMd, 150)} />
+                          ) : (
+                            <span className="text-gray-500">Memo #{item.id}</span>
+                          )}
+                        </p>
+                      </div>
+                      {item.labels && item.labels.length > 0 && (
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          {item.labels.slice(0, 3).map((label, idx) => (
+                            <LabelBadge key={idx} name={label} />
+                          ))}
+                          {item.labels.length > 3 && (
+                            <span className="px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-gray-600">
+                              +{item.labels.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <div className="flex items-center text-xs text-gray-500 space-x-3">
+                        <span>#{item.id}</span>
+                        <span title={formatDateTime(item.createdAt)}>
+                          {formatRelativeTime(item.createdAt)}
+                        </span>
                       </div>
                     </>
                   )}
                 </div>
-              )}
-            </div>
+                <div className="flex-shrink-0 flex items-center gap-2">
+                  {!isProject(item) && (
+                    <>
+                      {(item.commentCount ?? 0) > 0 && (
+                        <span className="flex items-center gap-1 text-xs text-gray-500">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M1 2.75C1 1.784 1.784 1 2.75 1h10.5c.966 0 1.75.784 1.75 1.75v7.5A1.75 1.75 0 0 1 13.25 12H9.06l-2.573 2.573A1.458 1.458 0 0 1 4 13.543V12H2.75A1.75 1.75 0 0 1 1 10.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h4.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path>
+                          </svg>
+                          {item.commentCount ?? 0}
+                        </span>
+                      )}
+                      {item.isBookmarked && (
+                        <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 16 16">
+                          <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Z"></path>
+                        </svg>
+                      )}
+                    </>
+                  )}
+                  {onDelete && (
+                    <div className="relative">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setMenuOpenId(menuOpenId === item.id ? null : item.id);
+                        }}
+                        className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
+                        aria-label="More options"
+                        disabled={deleting === item.id}
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                          <path d="M8 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"></path>
+                        </svg>
+                      </button>
+                      {menuOpenId === item.id && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-10"
+                            onClick={() => setMenuOpenId(null)}
+                          />
+                          <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-20">
+                            <button
+                              onClick={(e) => handleDelete(e, item.id)}
+                              disabled={deleting === item.id}
+                              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {deleting === item.id ? 'Deleting...' : 'Delete'}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Link>
           </div>
-        </Link>
-      </div>
         );
       })}
     </div>

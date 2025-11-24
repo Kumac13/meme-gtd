@@ -27,6 +27,18 @@ export class ProjectsService {
              * View type (defaults to board)
              */
             view?: 'board' | 'table';
+            /**
+             * Project status
+             */
+            status?: 'planned' | 'active' | 'paused' | 'done' | 'canceled';
+            /**
+             * Start date (YYYY-MM-DD)
+             */
+            startDate?: string | null;
+            /**
+             * End date (YYYY-MM-DD)
+             */
+            endDate?: string | null;
         },
     ): CancelablePromise<{
         /**
@@ -41,6 +53,18 @@ export class ProjectsService {
          * Project description
          */
         description: string | null;
+        /**
+         * Project status
+         */
+        status: 'planned' | 'active' | 'paused' | 'done' | 'canceled';
+        /**
+         * Start date (YYYY-MM-DD)
+         */
+        startDate: string | null;
+        /**
+         * End date (YYYY-MM-DD)
+         */
+        endDate: string | null;
         /**
          * View configuration
          */
@@ -91,6 +115,18 @@ export class ProjectsService {
          */
         description: string | null;
         /**
+         * Project status
+         */
+        status: 'planned' | 'active' | 'paused' | 'done' | 'canceled';
+        /**
+         * Start date (YYYY-MM-DD)
+         */
+        startDate: string | null;
+        /**
+         * End date (YYYY-MM-DD)
+         */
+        endDate: string | null;
+        /**
          * View configuration
          */
         viewMeta: {
@@ -138,6 +174,18 @@ export class ProjectsService {
          * Project description
          */
         description: string | null;
+        /**
+         * Project status
+         */
+        status: 'planned' | 'active' | 'paused' | 'done' | 'canceled';
+        /**
+         * Start date (YYYY-MM-DD)
+         */
+        startDate: string | null;
+        /**
+         * End date (YYYY-MM-DD)
+         */
+        endDate: string | null;
         /**
          * View configuration
          */
@@ -243,6 +291,18 @@ export class ProjectsService {
              * Project description
              */
             description?: string | null;
+            /**
+             * Project status
+             */
+            status?: 'planned' | 'active' | 'paused' | 'done' | 'canceled';
+            /**
+             * Start date (YYYY-MM-DD)
+             */
+            startDate?: string | null;
+            /**
+             * End date (YYYY-MM-DD)
+             */
+            endDate?: string | null;
         },
     ): CancelablePromise<{
         /**
@@ -257,6 +317,18 @@ export class ProjectsService {
          * Project description
          */
         description: string | null;
+        /**
+         * Project status
+         */
+        status: 'planned' | 'active' | 'paused' | 'done' | 'canceled';
+        /**
+         * Start date (YYYY-MM-DD)
+         */
+        startDate: string | null;
+        /**
+         * End date (YYYY-MM-DD)
+         */
+        endDate: string | null;
         /**
          * View configuration
          */
@@ -500,6 +572,18 @@ export class ProjectsService {
          * Project description
          */
         description: string | null;
+        /**
+         * Project status
+         */
+        status: 'planned' | 'active' | 'paused' | 'done' | 'canceled';
+        /**
+         * Start date (YYYY-MM-DD)
+         */
+        startDate: string | null;
+        /**
+         * End date (YYYY-MM-DD)
+         */
+        endDate: string | null;
         /**
          * View configuration
          */
