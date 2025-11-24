@@ -19,11 +19,15 @@ import type {
  * Create a new project
  * POST /api/projects
  */
+/**
+ * Create a new project
+ * POST /api/projects
+ */
 export async function createProjectHandler(
   request: FastifyRequest<{ Body: CreateProjectRequest }>,
   reply: FastifyReply
 ) {
-  const { name, description, view } = request.body;
+  const { name, description, view, status, startDate, endDate } = request.body;
   const projectService = new ProjectService({ db: request.server.db });
 
   try {
@@ -31,6 +35,9 @@ export async function createProjectHandler(
       name,
       description: description ?? null,
       view,
+      status,
+      startDate,
+      endDate,
     });
     return reply.status(201).send(project);
   } catch (error) {
@@ -85,7 +92,7 @@ export async function getProjectHandler(
 }
 
 /**
- * Update a project (name, description)
+ * Update a project (name, description, status, dates)
  * PATCH /api/projects/:id
  */
 export async function updateProjectHandler(
@@ -93,11 +100,17 @@ export async function updateProjectHandler(
   reply: FastifyReply
 ) {
   const projectId = parseInt(request.params.id, 10);
-  const { name, description } = request.body;
+  const { name, description, status, startDate, endDate } = request.body;
   const projectService = new ProjectService({ db: request.server.db });
 
   try {
-    const project = projectService.update(projectId, { name, description });
+    const project = projectService.update(projectId, {
+      name,
+      description,
+      status,
+      startDate,
+      endDate,
+    });
     return reply.status(200).send(project);
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
