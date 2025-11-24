@@ -6,22 +6,36 @@ import FilterBar from '../components/FilterBar';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
-import { validateBookmarked, updateBookmarkedParam } from '../utils/urlFilterHelpers';
+import {
+  validateBookmarked,
+  updateBookmarkedParam,
+} from '../utils/urlFilterHelpers';
 
 interface Project {
   id: number;
   name: string;
   description: string | null;
-  status: string;
+  status: 'planned' | 'active' | 'paused' | 'done' | 'canceled';
   startDate: string | null;
   endDate: string | null;
   createdAt: string;
 }
 
+const statusLabels: Record<string, string> = {
+  planned: 'Planned',
+  active: 'Active',
+  paused: 'Paused',
+  done: 'Done',
+  canceled: 'Canceled',
+};
+
 export default function ProjectsList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const bookmarkFilter = validateBookmarked(searchParams.get('bookmarked'));
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const statusParam = searchParams.get('status') || 'all';
+  const statusFilter = ['all', 'planned', 'active', 'paused', 'done', 'canceled'].includes(statusParam)
+    ? statusParam
+    : 'all';
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +71,16 @@ export default function ProjectsList() {
     });
   }, [projects, bookmarkFilter, statusFilter]);
 
+  const handleStatusFilterChange = (newStatus: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (newStatus === 'all') {
+      params.delete('status');
+    } else {
+      params.set('status', newStatus);
+    }
+    setSearchParams(params);
+  };
+
   const handleBookmarkFilterChange = (newBookmarked: boolean) => {
     const params = updateBookmarkedParam(searchParams, newBookmarked);
     setSearchParams(params);
@@ -77,27 +101,29 @@ export default function ProjectsList() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-2">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="block w-32 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-github-green-500 focus:border-github-green-500 sm:text-sm rounded-md"
-          >
-            <option value="all">All Status</option>
-            <option value="planned">Planned</option>
-            <option value="active">Active</option>
-            <option value="paused">Paused</option>
-            <option value="done">Done</option>
-            <option value="canceled">Canceled</option>
-          </select>
-        </div>
+      <div className="flex items-center justify-end mb-3">
         <Link
           to="/projects/new"
           className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500"
         >
           New project
         </Link>
+      </div>
+
+      {/* Status filter buttons */}
+      <div className="mb-6 flex flex-wrap gap-2">
+        {['all', 'planned', 'active', 'paused', 'done', 'canceled'].map((status) => (
+          <button
+            key={status}
+            onClick={() => handleStatusFilterChange(status)}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${statusFilter === status
+                ? 'bg-github-green-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+          >
+            {status === 'all' ? 'All' : statusLabels[status] || status}
+          </button>
+        ))}
       </div>
 
       <FilterBar
