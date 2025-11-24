@@ -24,6 +24,9 @@ export interface Project {
   id: number;
   name: string;
   description: string | null;
+  status: 'planned' | 'active' | 'paused' | 'done' | 'canceled';
+  startDate: string | null; // YYYY-MM-DD
+  endDate: string | null; // YYYY-MM-DD
   viewMeta: ViewMeta;
   createdAt: string; // ISO 8601
 }

@@ -10,10 +10,16 @@ import type { SqliteRow } from './index.js';
 /**
  * Input for creating a new project
  */
+/**
+ * Input for creating a new project
+ */
 export interface CreateProjectInput {
   name: string;
   description?: string | null;
   viewMeta: ViewMeta;
+  status?: 'planned' | 'active' | 'paused' | 'done' | 'canceled';
+  startDate?: string | null;
+  endDate?: string | null;
 }
 
 /**
@@ -24,6 +30,9 @@ export const projectRowToProject = (row: SqliteRow): Project => {
     id: row.id as number,
     name: row.name as string,
     description: (row.description as string | null) ?? null,
+    status: (row.status as any) ?? 'planned',
+    startDate: (row.start_date as string | null) ?? null,
+    endDate: (row.end_date as string | null) ?? null,
     viewMeta: row.view_meta ? JSON.parse(row.view_meta as string) : { viewType: 'board', columns: ['To Do', 'In Progress', 'Done'] },
     createdAt: row.created_at as string
   };
@@ -38,14 +47,21 @@ export const projectRowToProject = (row: SqliteRow): Project => {
  */
 export const createProject = (db: Database.Database, input: CreateProjectInput): Project => {
   const stmt = db.prepare(`
-    INSERT INTO projects (name, description, view_meta)
-    VALUES (?, ?, ?)
+    INSERT INTO projects (name, description, view_meta, status, start_date, end_date)
+    VALUES (?, ?, ?, ?, ?, ?)
   `);
 
   const viewMetaJson = JSON.stringify(input.viewMeta);
 
   try {
-    const result = stmt.run(input.name, input.description ?? null, viewMetaJson);
+    const result = stmt.run(
+      input.name,
+      input.description ?? null,
+      viewMetaJson,
+      input.status ?? 'planned',
+      input.startDate ?? null,
+      input.endDate ?? null
+    );
     const projectId = result.lastInsertRowid as number;
 
     const selectStmt = db.prepare('SELECT * FROM projects WHERE id = ?');
