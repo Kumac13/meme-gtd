@@ -27,6 +27,9 @@ interface Project {
   id: number;
   name: string;
   description: string | null;
+  status: 'planned' | 'active' | 'paused' | 'done' | 'canceled';
+  startDate: string | null;
+  endDate: string | null;
   viewMeta: {
     viewType: 'board' | 'table';
     columns?: string[];

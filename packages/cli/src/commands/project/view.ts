@@ -46,6 +46,13 @@ export default class ProjectView extends Command {
       if (project.description) {
         this.log(`Description: ${project.description}`);
       }
+      this.log(`Status: ${project.status}`);
+      if (project.startDate) {
+        this.log(`Start Date: ${project.startDate}`);
+      }
+      if (project.endDate) {
+        this.log(`End Date: ${project.endDate}`);
+      }
       this.log(`View: ${project.viewMeta.viewType}`);
       if (project.viewMeta.columns) {
         this.log(`Columns: ${project.viewMeta.columns.join(', ')}`);

@@ -257,9 +257,10 @@ pnpm test
 | `mgtd link add` | issue間のリンク作成（`--type`, `--source`, `--target`, `--json` など） |
 | `mgtd link list` | 指定issueのリンク一覧表示（`--type`, `--json` など） |
 | `mgtd link remove` | リンク削除（確認プロンプト、`--yes`, `--json` など） |
-| `mgtd project create` | 新規プロジェクト作成（`--description`, `--view`, `--json` など） |
-| `mgtd project list` | プロジェクト一覧表示（`--json` など） |
+| `mgtd project create` | 新規プロジェクト作成（`--description`, `--view`, `--status`, `--start-date`, `--end-date`, `--json` など） |
+| `mgtd project list` | プロジェクト一覧表示（`--status`, `--json` など） |
 | `mgtd project view` | プロジェクト詳細とアイテム一覧表示（`--json` など） |
+| `mgtd project update` | プロジェクト更新（`--name`, `--description`, `--status`, `--start-date`, `--end-date`, `--json` など） |
 | `mgtd project add` | プロジェクトにissueを追加（`--column`, `--json` など） |
 | `mgtd project remove` | プロジェクトからissueを削除（`--yes`, `--json` など） |
 | `mgtd project move` | アイテムの位置や列を変更（`--after`, `--column`, `--json` など） |

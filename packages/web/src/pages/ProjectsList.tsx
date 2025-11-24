@@ -6,18 +6,31 @@ import FilterBar from '../components/FilterBar';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
-import { validateBookmarked, updateBookmarkedParam } from '../utils/urlFilterHelpers';
 
 interface Project {
   id: number;
   name: string;
   description: string | null;
+  status: 'planned' | 'active' | 'paused' | 'done' | 'canceled';
+  startDate: string | null;
+  endDate: string | null;
   createdAt: string;
 }
 
+const statusLabels: Record<string, string> = {
+  planned: 'Planned',
+  active: 'Active',
+  paused: 'Paused',
+  done: 'Done',
+  canceled: 'Canceled',
+};
+
 export default function ProjectsList() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const bookmarkFilter = validateBookmarked(searchParams.get('bookmarked'));
+  const statusParam = searchParams.get('status') || 'active';
+  const statusFilter = ['all', 'planned', 'active', 'paused', 'done', 'canceled'].includes(statusParam)
+    ? statusParam
+    : 'active';
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,17 +55,20 @@ export default function ProjectsList() {
   }, []);
 
   const filteredProjects = useMemo(() => {
-    // Note: Projects don't have isBookmarked property yet
-    // This is a placeholder for when bookmark support is added
-    return projects.filter((_project) => {
-      // Uncomment when projects support bookmarking:
-      // if (bookmarkFilter && !_project.isBookmarked) return false;
+    return projects.filter((project) => {
+      // Status filter
+      if (statusFilter !== 'all' && project.status !== statusFilter) return false;
       return true;
     });
-  }, [projects, bookmarkFilter]);
+  }, [projects, statusFilter]);
 
-  const handleBookmarkFilterChange = (newBookmarked: boolean) => {
-    const params = updateBookmarkedParam(searchParams, newBookmarked);
+  const handleStatusFilterChange = (newStatus: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (newStatus === 'active') {
+      params.delete('status');
+    } else {
+      params.set('status', newStatus);
+    }
     setSearchParams(params);
   };
 
@@ -81,14 +97,18 @@ export default function ProjectsList() {
       </div>
 
       <FilterBar
-        bookmarkFilter={bookmarkFilter}
-        onBookmarkFilterChange={handleBookmarkFilterChange}
+        showStatusFilter
+        statusFilter={statusFilter}
+        onStatusFilterChange={handleStatusFilterChange}
+        statusOptions={['all', 'planned', 'active', 'paused', 'done', 'canceled']}
+        statusLabels={statusLabels}
+        showBookmarkFilter={false}
       />
 
       {filteredProjects.length === 0 ? (
         <EmptyState
-          message={bookmarkFilter ? 'No bookmarked projects' : 'No projects yet'}
-          submessage={!bookmarkFilter ? 'Create your first project to get started' : undefined}
+          message="No projects found"
+          submessage="Create your first project or adjust filters"
         />
       ) : (
         <ItemList items={filteredProjects} itemType="project" basePath="/projects" currentFilters={searchParams} onDelete={handleDelete} />

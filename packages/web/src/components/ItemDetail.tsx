@@ -8,7 +8,19 @@ import { ProjectsSection } from './ProjectsSection';
 import { LabelsSection } from './LabelsSection';
 import { ScheduleSection } from './ScheduleSection';
 import { LabelBadge } from './LabelBadge';
+import { StatusSelector } from './StatusSelector';
 import { createBackUrl } from '../utils/navigationHelpers';
+
+const TASK_STATUS_OPTIONS = [
+  { value: 'inbox', label: 'Inbox' },
+  { value: 'someday', label: 'Someday' },
+  { value: 'open', label: 'Open' },
+  { value: 'next', label: 'Next' },
+  { value: 'waiting', label: 'Waiting' },
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'done', label: 'Done' },
+  { value: 'canceled', label: 'Canceled' },
+];
 
 
 export interface BaseItem {
@@ -106,20 +118,11 @@ export default function ItemDetail({
           </h1>
           <div className="flex items-center gap-2">
             {itemType === 'task' && 'status' in item && onStatusChange && (
-              <select
+              <StatusSelector
                 value={item.status || 'inbox'}
-                onChange={(e) => onStatusChange(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500"
-              >
-                <option value="inbox">Inbox</option>
-                <option value="someday">Someday</option>
-                <option value="open">Open</option>
-                <option value="next">Next</option>
-                <option value="waiting">Waiting</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="done">Done</option>
-                <option value="canceled">Canceled</option>
-              </select>
+                onChange={onStatusChange}
+                options={TASK_STATUS_OPTIONS}
+              />
             )}
             {customActions}
             <button

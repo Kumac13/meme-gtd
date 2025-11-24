@@ -1287,6 +1287,11 @@ paths:
                     type: string
                     nullable: true
                     description: Start time (HH:MM, null if not set)
+                  endDate:
+                    type: string
+                    format: date
+                    nullable: true
+                    description: End date for the task (YYYY-MM-DD, null if not scheduled)
                   endTime:
                     type: string
                     nullable: true
@@ -1326,6 +1331,7 @@ paths:
                   - status
                   - scheduledOn
                   - startTime
+                  - endDate
                   - endTime
                   - duration
                   - meta
@@ -1448,6 +1454,11 @@ paths:
                       type: string
                       nullable: true
                       description: Start time (HH:MM, null if not set)
+                    endDate:
+                      type: string
+                      format: date
+                      nullable: true
+                      description: End date for the task (YYYY-MM-DD, null if not scheduled)
                     endTime:
                       type: string
                       nullable: true
@@ -1494,6 +1505,7 @@ paths:
                     - status
                     - scheduledOn
                     - startTime
+                    - endDate
                     - endTime
                     - duration
                     - meta
@@ -1587,6 +1599,11 @@ paths:
                     type: string
                     nullable: true
                     description: Start time (HH:MM, null if not set)
+                  endDate:
+                    type: string
+                    format: date
+                    nullable: true
+                    description: End date for the task (YYYY-MM-DD, null if not scheduled)
                   endTime:
                     type: string
                     nullable: true
@@ -1630,6 +1647,7 @@ paths:
                   - status
                   - scheduledOn
                   - startTime
+                  - endDate
                   - endTime
                   - duration
                   - meta
@@ -1703,6 +1721,11 @@ paths:
                   pattern: ^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$
                   nullable: true
                   description: Updated start time (HH:MM, null to clear)
+                endDate:
+                  type: string
+                  format: date
+                  nullable: true
+                  description: Updated end date (YYYY-MM-DD, null to clear)
                 endTime:
                   type: string
                   pattern: ^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$
@@ -1714,6 +1737,18 @@ paths:
                   minimum: 0
                   nullable: true
                   description: Updated duration in minutes (null to clear)
+                addLabels:
+                  type: array
+                  items:
+                    type: string
+                removeLabels:
+                  type: array
+                  items:
+                    type: string
+                projectIds:
+                  type: array
+                  items:
+                    type: integer
               additionalProperties: false
       parameters:
         - schema:
@@ -1768,6 +1803,11 @@ paths:
                     type: string
                     nullable: true
                     description: Start time (HH:MM, null if not set)
+                  endDate:
+                    type: string
+                    format: date
+                    nullable: true
+                    description: End date for the task (YYYY-MM-DD, null if not scheduled)
                   endTime:
                     type: string
                     nullable: true
@@ -1807,6 +1847,7 @@ paths:
                   - status
                   - scheduledOn
                   - startTime
+                  - endDate
                   - endTime
                   - duration
                   - meta
@@ -1962,6 +2003,11 @@ paths:
                     type: string
                     nullable: true
                     description: Start time (HH:MM, null if not set)
+                  endDate:
+                    type: string
+                    format: date
+                    nullable: true
+                    description: End date for the task (YYYY-MM-DD, null if not scheduled)
                   endTime:
                     type: string
                     nullable: true
@@ -2001,6 +2047,7 @@ paths:
                   - status
                   - scheduledOn
                   - startTime
+                  - endDate
                   - endTime
                   - duration
                   - meta
@@ -2093,6 +2140,11 @@ paths:
                     type: string
                     nullable: true
                     description: Start time (HH:MM, null if not set)
+                  endDate:
+                    type: string
+                    format: date
+                    nullable: true
+                    description: End date for the task (YYYY-MM-DD, null if not scheduled)
                   endTime:
                     type: string
                     nullable: true
@@ -2132,6 +2184,7 @@ paths:
                   - status
                   - scheduledOn
                   - startTime
+                  - endDate
                   - endTime
                   - duration
                   - meta
@@ -2224,6 +2277,11 @@ paths:
                     type: string
                     nullable: true
                     description: Start time (HH:MM, null if not set)
+                  endDate:
+                    type: string
+                    format: date
+                    nullable: true
+                    description: End date for the task (YYYY-MM-DD, null if not scheduled)
                   endTime:
                     type: string
                     nullable: true
@@ -2263,6 +2321,7 @@ paths:
                   - status
                   - scheduledOn
                   - startTime
+                  - endDate
                   - endTime
                   - duration
                   - meta
@@ -2355,6 +2414,11 @@ paths:
                     type: string
                     nullable: true
                     description: Start time (HH:MM, null if not set)
+                  endDate:
+                    type: string
+                    format: date
+                    nullable: true
+                    description: End date for the task (YYYY-MM-DD, null if not scheduled)
                   endTime:
                     type: string
                     nullable: true
@@ -2394,6 +2458,7 @@ paths:
                   - status
                   - scheduledOn
                   - startTime
+                  - endDate
                   - endTime
                   - duration
                   - meta
@@ -2486,6 +2551,11 @@ paths:
                     type: string
                     nullable: true
                     description: Start time (HH:MM, null if not set)
+                  endDate:
+                    type: string
+                    format: date
+                    nullable: true
+                    description: End date for the task (YYYY-MM-DD, null if not scheduled)
                   endTime:
                     type: string
                     nullable: true
@@ -2525,6 +2595,7 @@ paths:
                   - status
                   - scheduledOn
                   - startTime
+                  - endDate
                   - endTime
                   - duration
                   - meta
@@ -3783,6 +3854,26 @@ paths:
                     - table
                   default: board
                   description: View type (defaults to board)
+                status:
+                  type: string
+                  enum:
+                    - planned
+                    - active
+                    - paused
+                    - done
+                    - canceled
+                  default: planned
+                  description: Project status
+                startDate:
+                  type: string
+                  pattern: ^\d{4}-\d{2}-\d{2}$
+                  nullable: true
+                  description: Start date (YYYY-MM-DD)
+                endDate:
+                  type: string
+                  pattern: ^\d{4}-\d{2}-\d{2}$
+                  nullable: true
+                  description: End date (YYYY-MM-DD)
               required:
                 - name
               additionalProperties: false
@@ -3807,6 +3898,23 @@ paths:
                     type: string
                     nullable: true
                     description: Project description
+                  status:
+                    type: string
+                    enum:
+                      - planned
+                      - active
+                      - paused
+                      - done
+                      - canceled
+                    description: Project status
+                  startDate:
+                    type: string
+                    nullable: true
+                    description: Start date (YYYY-MM-DD)
+                  endDate:
+                    type: string
+                    nullable: true
+                    description: End date (YYYY-MM-DD)
                   viewMeta:
                     type: object
                     properties:
@@ -3833,6 +3941,9 @@ paths:
                   - id
                   - name
                   - description
+                  - status
+                  - startDate
+                  - endDate
                   - viewMeta
                   - createdAt
                 additionalProperties: false
@@ -3933,6 +4044,23 @@ paths:
                       type: string
                       nullable: true
                       description: Project description
+                    status:
+                      type: string
+                      enum:
+                        - planned
+                        - active
+                        - paused
+                        - done
+                        - canceled
+                      description: Project status
+                    startDate:
+                      type: string
+                      nullable: true
+                      description: Start date (YYYY-MM-DD)
+                    endDate:
+                      type: string
+                      nullable: true
+                      description: End date (YYYY-MM-DD)
                     viewMeta:
                       type: object
                       properties:
@@ -3959,6 +4087,9 @@ paths:
                     - id
                     - name
                     - description
+                    - status
+                    - startDate
+                    - endDate
                     - viewMeta
                     - createdAt
                   additionalProperties: false
@@ -4020,6 +4151,23 @@ paths:
                     type: string
                     nullable: true
                     description: Project description
+                  status:
+                    type: string
+                    enum:
+                      - planned
+                      - active
+                      - paused
+                      - done
+                      - canceled
+                    description: Project status
+                  startDate:
+                    type: string
+                    nullable: true
+                    description: Start date (YYYY-MM-DD)
+                  endDate:
+                    type: string
+                    nullable: true
+                    description: End date (YYYY-MM-DD)
                   viewMeta:
                     type: object
                     properties:
@@ -4133,6 +4281,9 @@ paths:
                   - id
                   - name
                   - description
+                  - status
+                  - startDate
+                  - endDate
                   - viewMeta
                   - createdAt
                   - items
@@ -4204,6 +4355,25 @@ paths:
                   type: string
                   nullable: true
                   description: Project description
+                status:
+                  type: string
+                  enum:
+                    - planned
+                    - active
+                    - paused
+                    - done
+                    - canceled
+                  description: Project status
+                startDate:
+                  type: string
+                  pattern: ^\d{4}-\d{2}-\d{2}$
+                  nullable: true
+                  description: Start date (YYYY-MM-DD)
+                endDate:
+                  type: string
+                  pattern: ^\d{4}-\d{2}-\d{2}$
+                  nullable: true
+                  description: End date (YYYY-MM-DD)
               additionalProperties: false
       parameters:
         - schema:
@@ -4233,6 +4403,23 @@ paths:
                     type: string
                     nullable: true
                     description: Project description
+                  status:
+                    type: string
+                    enum:
+                      - planned
+                      - active
+                      - paused
+                      - done
+                      - canceled
+                    description: Project status
+                  startDate:
+                    type: string
+                    nullable: true
+                    description: Start date (YYYY-MM-DD)
+                  endDate:
+                    type: string
+                    nullable: true
+                    description: End date (YYYY-MM-DD)
                   viewMeta:
                     type: object
                     properties:
@@ -4259,6 +4446,9 @@ paths:
                   - id
                   - name
                   - description
+                  - status
+                  - startDate
+                  - endDate
                   - viewMeta
                   - createdAt
                 additionalProperties: false
@@ -4819,6 +5009,23 @@ paths:
                       type: string
                       nullable: true
                       description: Project description
+                    status:
+                      type: string
+                      enum:
+                        - planned
+                        - active
+                        - paused
+                        - done
+                        - canceled
+                      description: Project status
+                    startDate:
+                      type: string
+                      nullable: true
+                      description: Start date (YYYY-MM-DD)
+                    endDate:
+                      type: string
+                      nullable: true
+                      description: End date (YYYY-MM-DD)
                     viewMeta:
                       type: object
                       properties:
@@ -4845,6 +5052,9 @@ paths:
                     - id
                     - name
                     - description
+                    - status
+                    - startDate
+                    - endDate
                     - viewMeta
                     - createdAt
                   additionalProperties: false

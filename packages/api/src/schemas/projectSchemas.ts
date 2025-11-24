@@ -19,12 +19,30 @@ export const ViewMetaSchema = z.object({
 export type ViewMeta = z.infer<typeof ViewMetaSchema>;
 
 /**
+ * Schema for project status
+ */
+export const ProjectStatusSchema = z.enum(['planned', 'active', 'paused', 'done', 'canceled']);
+
+export type ProjectStatus = z.infer<typeof ProjectStatusSchema>;
+
+/**
  * Schema for creating a new project
  */
 export const CreateProjectRequestSchema = z.object({
   name: z.string().min(1).max(255).describe('Project name (must be unique)'),
   description: z.string().optional().nullable().describe('Optional project description'),
   view: ViewTypeSchema.optional().default('board').describe('View type (defaults to board)'),
+  status: ProjectStatusSchema.optional().default('planned').describe('Project status'),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional().nullable().describe('Start date (YYYY-MM-DD)'),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional().nullable().describe('End date (YYYY-MM-DD)'),
+}).refine((data) => {
+  if (data.startDate && data.endDate) {
+    return data.startDate <= data.endDate;
+  }
+  return true;
+}, {
+  message: 'Start date must be before or equal to end date',
+  path: ['startDate'],
 });
 
 export type CreateProjectRequest = z.infer<typeof CreateProjectRequestSchema>;
@@ -36,6 +54,9 @@ export const ProjectSchema = z.object({
   id: z.number().int().positive().describe('Unique project ID'),
   name: z.string().describe('Project name'),
   description: z.string().nullable().describe('Project description'),
+  status: ProjectStatusSchema.describe('Project status'),
+  startDate: z.string().nullable().describe('Start date (YYYY-MM-DD)'),
+  endDate: z.string().nullable().describe('End date (YYYY-MM-DD)'),
   viewMeta: ViewMetaSchema.describe('View configuration'),
   createdAt: z.string().datetime().describe('Creation timestamp'),
 });
@@ -116,11 +137,22 @@ export const UpdateProjectItemRequestSchema = z.object({
 export type UpdateProjectItemRequest = z.infer<typeof UpdateProjectItemRequestSchema>;
 
 /**
- * Schema for updating a project (name, description)
+ * Schema for updating a project (name, description, status, dates)
  */
 export const UpdateProjectRequestSchema = z.object({
   name: z.string().min(1).max(255).optional().describe('Project name'),
   description: z.string().optional().nullable().describe('Project description'),
+  status: ProjectStatusSchema.optional().describe('Project status'),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional().nullable().describe('Start date (YYYY-MM-DD)'),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional().nullable().describe('End date (YYYY-MM-DD)'),
+}).refine((data) => {
+  if (data.startDate && data.endDate) {
+    return data.startDate <= data.endDate;
+  }
+  return true;
+}, {
+  message: 'Start date must be before or equal to end date',
+  path: ['startDate'],
 });
 
 export type UpdateProjectRequest = z.infer<typeof UpdateProjectRequestSchema>;

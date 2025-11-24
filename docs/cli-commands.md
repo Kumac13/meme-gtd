@@ -269,9 +269,104 @@ mgtd task list --label urgent --json | jq '.[].title'
 mgtd task list --label bug --json | jq '.[] | {id, title, status}'
 ```
 
+## Project Commands
+
+### Project Create
+
+Create a new project with optional status and schedule.
+
+```bash
+mgtd project create "Sprint 1" --status active --start-date 2025-01-01 --end-date 2025-03-31
+mgtd project create "Q4 Goals" --description "Year-end objectives" --status planned
+mgtd project create "Bug Tracker" --view table --json
+```
+
+**Options:**
+- `--description, -d` - Project description
+- `--view, -v` - View type: `board` (default) or `table`
+- `--status` - Project status: `planned` (default), `active`, `paused`, `done`, `canceled`
+- `--start-date` - Start date in YYYY-MM-DD format
+- `--end-date` - End date in YYYY-MM-DD format
+- `--json, -j` - Output in JSON format
+
+### Project List
+
+List all projects with optional status filter.
+
+```bash
+mgtd project list
+mgtd project list --status active
+mgtd project list --json
+```
+
+**Options:**
+- `--status` - Filter by project status
+- `--json, -j` - Output in JSON format
+
+### Project View
+
+View project details including status, schedule, and associated items.
+
+```bash
+mgtd project view 5
+mgtd project view 5 --json
+```
+
+### Project Update
+
+Update project properties including status and schedule.
+
+```bash
+mgtd project update 5 --status done
+mgtd project update 5 --start-date 2025-01-01 --end-date 2025-12-31
+mgtd project update 5 --name "Updated Name" --description "New description"
+mgtd project update 5 --status active --json
+```
+
+**Options:**
+- `--name` - Update project name
+- `--description` - Update project description
+- `--status` - Update project status
+- `--start-date` - Update start date (YYYY-MM-DD)
+- `--end-date` - Update end date (YYYY-MM-DD)
+- `--json, -j` - Output in JSON format
+
+**Status Values:**
+- `planned` - Project is in planning phase
+- `active` - Project is actively being worked on
+- `paused` - Project is temporarily paused
+- `done` - Project is completed
+- `canceled` - Project is canceled
+
+### Project Add/Remove/Move
+
+Manage items within projects.
+
+```bash
+# Add task/memo to project
+mgtd project add 5 12 --column "In Progress"
+
+# Remove item from project
+mgtd project remove 5 12
+
+# Move item to different position/column
+mgtd project move 5 12 --column "Done" --after 15
+```
+
+### Project Delete
+
+Delete a project (requires confirmation).
+
+```bash
+mgtd project delete 5
+mgtd project delete 5 --yes --json
+```
+
 ## Notes
 
 - **Case Sensitivity**: Label matching is case-insensitive
 - **Whitespace**: Leading and trailing spaces in label names are automatically trimmed
 - **Empty Results**: If no items match the filter criteria, an empty list is returned
 - **Warning**: Using `--status` flag with `mgtd memo list` will display a warning since memos don't have status
+- **Date Validation**: Project start date must be before or equal to end date
+- **Project Status**: Default status for new projects is `planned`

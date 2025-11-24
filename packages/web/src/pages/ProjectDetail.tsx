@@ -5,7 +5,17 @@ import { ProjectDetail as ProjectDetailType } from '../types/project';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EditableContent from '../components/EditableContent';
+import { ProjectScheduleSection } from '../components/ProjectScheduleSection';
+import { StatusSelector } from '../components/StatusSelector';
 import { createBackUrl } from '../utils/navigationHelpers';
+
+const PROJECT_STATUS_OPTIONS = [
+  { value: 'planned', label: 'Planned' },
+  { value: 'active', label: 'Active' },
+  { value: 'paused', label: 'Paused' },
+  { value: 'done', label: 'Done' },
+  { value: 'canceled', label: 'Canceled' },
+];
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -49,6 +59,30 @@ export default function ProjectDetail() {
     }
   };
 
+  const handleStatusChange = async (status: string) => {
+    if (!id) return;
+    try {
+      const updated = await ProjectsService.updateProject(id, {
+        status: status as 'planned' | 'active' | 'paused' | 'done' | 'canceled',
+      });
+      setProject(updated as ProjectDetailType);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update status');
+      throw err;
+    }
+  };
+
+  const handleScheduleChange = async (updates: { startDate?: string | null; endDate?: string | null }) => {
+    if (!id) return;
+    try {
+      const updated = await ProjectsService.updateProject(id, updates);
+      setProject(updated as ProjectDetailType);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update schedule');
+      throw err;
+    }
+  };
+
   const handleDelete = async () => {
     if (!id) return;
     try {
@@ -81,7 +115,14 @@ export default function ProjectDetail() {
         >
           ← Back to projects
         </Link>
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">{project.name}</h1>
+        <div className="flex items-start justify-between mb-4">
+          <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
+          <StatusSelector
+            value={project.status}
+            onChange={handleStatusChange}
+            options={PROJECT_STATUS_OPTIONS}
+          />
+        </div>
       </div>
 
       {/* Editable Content Section */}
@@ -97,25 +138,32 @@ export default function ProjectDetail() {
         />
       </div>
 
+      {/* Project Schedule */}
+      <div className="mb-6">
+        <ProjectScheduleSection
+          startDate={project.startDate}
+          endDate={project.endDate}
+          onScheduleChange={handleScheduleChange}
+        />
+      </div>
+
       {/* View Tabs */}
       <div className="flex gap-4 mb-4 border-b border-gray-200">
         <Link
           to={`/projects/${id}/kanban`}
-          className={`px-4 py-2 ${
-            isKanban
+          className={`px-4 py-2 ${isKanban
               ? 'border-b-2 border-github-green-500 text-gray-900 font-medium'
               : 'text-gray-500 hover:text-gray-700'
-          }`}
+            }`}
         >
           Kanban
         </Link>
         <Link
           to={`/projects/${id}/list`}
-          className={`px-4 py-2 ${
-            isList
+          className={`px-4 py-2 ${isList
               ? 'border-b-2 border-github-green-500 text-gray-900 font-medium'
               : 'text-gray-500 hover:text-gray-700'
-          }`}
+            }`}
         >
           Lists
         </Link>

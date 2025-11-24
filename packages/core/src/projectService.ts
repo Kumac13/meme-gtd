@@ -38,6 +38,9 @@ export interface CreateProjectServiceInput {
   name: string;
   description?: string | null;
   view?: ViewType;
+  status?: 'planned' | 'active' | 'paused' | 'done' | 'canceled';
+  startDate?: string | null;
+  endDate?: string | null;
 }
 
 export interface AddProjectItemServiceInput {
@@ -93,7 +96,10 @@ export class ProjectService {
     const dbInput: CreateProjectInput = {
       name: input.name,
       description: input.description,
-      viewMeta
+      viewMeta,
+      status: input.status,
+      startDate: input.startDate,
+      endDate: input.endDate
     };
 
     return dbCreateProject(this.db, dbInput);
@@ -137,13 +143,22 @@ export class ProjectService {
   }
 
   /**
-   * Update a project (name and/or description)
+   * Update a project (name, description, status, dates)
    * @param id Project ID
    * @param updates Update data
    * @returns Updated project
    * @throws Error if project not found
    */
-  update(id: number, updates: { name?: string; description?: string | null }): Project {
+  update(
+    id: number,
+    updates: {
+      name?: string;
+      description?: string | null;
+      status?: 'planned' | 'active' | 'paused' | 'done' | 'canceled';
+      startDate?: string | null;
+      endDate?: string | null;
+    }
+  ): Project {
     // Get current project
     const project = dbGetProjectById(this.db, id);
     if (!project) {
@@ -155,13 +170,19 @@ export class ProjectService {
       UPDATE projects
       SET
         name = COALESCE(?, name),
-        description = ?
+        description = ?,
+        status = COALESCE(?, status),
+        start_date = ?,
+        end_date = ?
       WHERE id = ?
     `);
 
     stmt.run(
       updates.name ?? null,
       updates.description !== undefined ? updates.description : project.description,
+      updates.status ?? null,
+      updates.startDate !== undefined ? updates.startDate : project.startDate,
+      updates.endDate !== undefined ? updates.endDate : project.endDate,
       id
     );
 
