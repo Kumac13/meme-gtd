@@ -106,22 +106,20 @@ export default function ProjectDetail() {
         >
           ← Back to projects
         </Link>
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">{project.name}</h1>
-      </div>
-
-      {/* Status Selector */}
-      <div className="mb-4">
-        <select
-          value={project.status}
-          onChange={(e) => handleStatusChange(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500"
-        >
-          <option value="planned">Planned</option>
-          <option value="active">Active</option>
-          <option value="paused">Paused</option>
-          <option value="done">Done</option>
-          <option value="canceled">Canceled</option>
-        </select>
+        <div className="flex items-start justify-between mb-4">
+          <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
+          <select
+            value={project.status}
+            onChange={(e) => handleStatusChange(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500"
+          >
+            <option value="planned">Planned</option>
+            <option value="active">Active</option>
+            <option value="paused">Paused</option>
+            <option value="done">Done</option>
+            <option value="canceled">Canceled</option>
+          </select>
+        </div>
       </div>
 
       {/* Editable Content Section */}
