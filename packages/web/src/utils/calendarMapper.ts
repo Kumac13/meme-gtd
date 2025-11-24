@@ -1,5 +1,3 @@
-import type { CalendarEvent as ScheduleXEvent } from '@schedule-x/calendar';
-
 export interface Task {
   id: number;
   title: string | null;
@@ -10,7 +8,17 @@ export interface Task {
   endDate: string | null;
 }
 
-export function taskToCalendarEvent(task: Task): ScheduleXEvent | null {
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  _options?: {
+    additionalClasses?: string[];
+  };
+}
+
+export function taskToCalendarEvent(task: Task): CalendarEvent | null {
   if (!task.scheduledOn) {
     return null;
   }
@@ -45,11 +53,11 @@ export function taskToCalendarEvent(task: Task): ScheduleXEvent | null {
   };
 }
 
-export function tasksToCalendarEvents(tasks: Task[]): ScheduleXEvent[] {
+export function tasksToCalendarEvents(tasks: Task[]): CalendarEvent[] {
   return tasks
     .filter((task) => task.status !== 'canceled')
     .map(taskToCalendarEvent)
-    .filter((event): event is ScheduleXEvent => event !== null);
+    .filter((event): event is CalendarEvent => event !== null);
 }
 
 export function getDateRange(date: string, view: 'month' | 'week' | 'day'): { from: string; to: string } {

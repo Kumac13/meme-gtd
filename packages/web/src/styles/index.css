@@ -6,3 +6,23 @@
   --color-github-green-700: #1a7f37;
   --color-github-green-800: #116329;
 }
+
+/* Calendar view styling */
+.sx-react-calendar-wrapper {
+  width: 100%;
+  height: 700px;
+  max-height: 80vh;
+}
+
+/* Task status colors for calendar events */
+.task-done {
+  background-color: #238636 !important;
+  color: white !important;
+  border-color: #1a7f37 !important;
+}
+
+.task-pending {
+  background-color: white !important;
+  color: #1f2937 !important;
+  border: 1px solid #d1d5db !important;
+}
