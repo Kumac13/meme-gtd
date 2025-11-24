@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.14.0 - 2025-11-24
+
+### New Features
+
+- **Project Status and Schedule Management**: Complete project lifecycle tracking with status and date management.
+  - **Database**: Added `status`, `start_date`, `end_date` columns to `projects` table.
+    - Status options: `planned`, `active`, `paused`, `done`, `canceled`
+    - Date validation triggers ensure `start_date <= end_date`
+  - **CLI**: Enhanced project commands with status and schedule support.
+    - `mgtd project create --status active --start-date 2025-01-01 --end-date 2025-12-31`
+    - `mgtd project update <id> --status done`: New command for updating projects
+    - `mgtd project list --status active`: Filter projects by status
+    - `mgtd project view`: Display status and schedule information
+  - **Web UI**:
+    - Status selector in ProjectDetail header with custom dropdown styling
+    - ProjectScheduleSection component matching TaskDetail UX pattern
+    - ProjectsList status filter (defaults to 'active')
+    - Removed bookmark filter from projects (not applicable to projects)
+    - Shared StatusSelector component for consistent UI across Project/Task forms
+  - **API**:
+    - Updated project schemas with Zod validation for status and dates
+    - PATCH `/api/projects/:id` supports status and schedule updates
+    - OpenAPI specification updated with new fields
+
+### Improvements
+
+- **UI Consistency**: Created shared StatusSelector component used across ProjectDetail, TaskDetail, and forms
+- **Better UX**: Status dropdown icon properly positioned with `pr-2` spacing
+- **Code Quality**: Eliminated duplicate status selector implementations
+
 ## 0.13.0 - 2025-11-20
 
 ### New Features
