@@ -27,9 +27,9 @@ description: "Task list for Calendar View Web UI feature implementation"
 
 **Purpose**: Install new dependencies and configure adapters
 
-- [ ] T001 Install @schedule-x/react @schedule-x/calendar @schedule-x/theme-default in packages/web
-- [ ] T002 Install nuqs in packages/web
-- [ ] T003 Configure NuqsAdapter in packages/web/src/App.tsx (wrap BrowserRouter)
+- [x] T001 Install @schedule-x/react @schedule-x/calendar @schedule-x/theme-default in packages/web
+- [x] T002 Install nuqs in packages/web
+- [x] T003 Configure NuqsAdapter in packages/web/src/App.tsx (wrap BrowserRouter)
 
 ---
 
@@ -39,11 +39,11 @@ description: "Task list for Calendar View Web UI feature implementation"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 [P] Extend TaskQuerySchema with scheduledFrom/scheduledTo in packages/api/src/schemas/taskSchemas.ts
-- [ ] T005 [P] Create calendar route in packages/web/src/App.tsx (/calendar)
-- [ ] T006 Add Calendar tab to navigation in packages/web/src/components/Layout.tsx
-- [ ] T007 Implement date range filter logic in packages/api/src/routes/tasks.ts
-- [ ] T008 Create Calendar.tsx page component in packages/web/src/pages/Calendar.tsx
+- [x] T004 [P] Extend TaskQuerySchema with scheduledFrom/scheduledTo in packages/api/src/schemas/taskSchemas.ts
+- [x] T005 [P] Create calendar route in packages/web/src/App.tsx (/calendar)
+- [x] T006 Add Calendar tab to navigation in packages/web/src/components/Layout.tsx
+- [x] T007 Implement date range filter logic in packages/api/src/routes/tasks.ts
+- [x] T008 Create Calendar.tsx page component in packages/web/src/pages/Calendar.tsx
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -57,15 +57,15 @@ description: "Task list for Calendar View Web UI feature implementation"
 
 ### Implementation for User Story 1
 
-- [ ] T009 [P] [US1] Create useCalendarState.ts hook in packages/web/src/hooks/useCalendarState.ts (manage view/date/taskId with nuqs)
-- [ ] T010 [P] [US1] Create Task to CalendarEvent mapper utility in packages/web/src/utils/calendarMapper.ts
-- [ ] T011 [US1] Implement CalendarView.tsx component in packages/web/src/components/calendar/CalendarView.tsx (integrate @schedule-x/calendar)
-- [ ] T012 [US1] Add month view configuration to CalendarView.tsx
-- [ ] T013 [US1] Implement task fetching in Calendar.tsx page with scheduledFrom/scheduledTo parameters
-- [ ] T014 [US1] Map Task status to calendar tile colors in packages/web/src/components/calendar/TaskTile.tsx (Done=green-600, others=white)
-- [ ] T015 [US1] Filter out status=canceled tasks in Calendar.tsx
+- [x] T009 [P] [US1] Create useCalendarState.ts hook in packages/web/src/hooks/useCalendarState.ts (manage view/date/taskId with nuqs)
+- [x] T010 [P] [US1] Create Task to CalendarEvent mapper utility in packages/web/src/utils/calendarMapper.ts
+- [x] T011 [US1] Implement CalendarView.tsx component in packages/web/src/components/calendar/CalendarView.tsx (integrate @schedule-x/calendar)
+- [x] T012 [US1] Add month view configuration to CalendarView.tsx
+- [x] T013 [US1] Implement task fetching in Calendar.tsx page with scheduledFrom/scheduledTo parameters
+- [x] T014 [US1] Map Task status to calendar tile colors in packages/web/src/styles/index.css (Done=green-600, others=white)
+- [x] T015 [US1] Filter out status=canceled tasks in Calendar.tsx
 - [ ] T016 [US1] Implement 10-item display limit with scroll in CalendarView.tsx for monthly view cells
-- [ ] T017 [US1] Connect useCalendarState to Calendar.tsx and CalendarView.tsx
+- [x] T017 [US1] Connect useCalendarState to Calendar.tsx and CalendarView.tsx
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - monthly calendar displays scheduled tasks with proper color coding
 
@@ -79,13 +79,13 @@ description: "Task list for Calendar View Web UI feature implementation"
 
 ### Implementation for User Story 2
 
-- [ ] T018 [P] [US2] Add week view configuration to CalendarView.tsx in packages/web/src/components/calendar/CalendarView.tsx
-- [ ] T019 [P] [US2] Add day view configuration to CalendarView.tsx in packages/web/src/components/calendar/CalendarView.tsx
-- [ ] T020 [US2] Create CalendarToolbar.tsx for view mode toggle in packages/web/src/components/calendar/CalendarToolbar.tsx
-- [ ] T021 [US2] Implement time-slot logic in calendarMapper.ts (start_time present → time slot, absent → all-day)
-- [ ] T022 [US2] Handle multi-day events (end_date > scheduled_on) in calendarMapper.ts for all-day area
-- [ ] T023 [US2] Update useCalendarState to manage view mode (month/week/day)
-- [ ] T024 [US2] Connect CalendarToolbar view toggle to useCalendarState in Calendar.tsx
+- [x] T018 [P] [US2] Add week view configuration to CalendarView.tsx in packages/web/src/components/calendar/CalendarView.tsx
+- [x] T019 [P] [US2] Add day view configuration to CalendarView.tsx in packages/web/src/components/calendar/CalendarView.tsx
+- [x] T020 [US2] Create CalendarToolbar.tsx for view mode toggle in packages/web/src/components/calendar/CalendarToolbar.tsx
+- [x] T021 [US2] Implement time-slot logic in calendarMapper.ts (start_time present → time slot, absent → all-day)
+- [x] T022 [US2] Handle multi-day events (end_date > scheduled_on) in calendarMapper.ts for all-day area
+- [x] T023 [US2] Update useCalendarState to manage view mode (month/week/day)
+- [x] T024 [US2] Connect CalendarToolbar view toggle to useCalendarState in Calendar.tsx
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work - month/week/day views all functional
 
@@ -99,13 +99,13 @@ description: "Task list for Calendar View Web UI feature implementation"
 
 ### Implementation for User Story 3
 
-- [ ] T025 [P] [US3] Add Today button to CalendarToolbar.tsx in packages/web/src/components/calendar/CalendarToolbar.tsx
-- [ ] T026 [P] [US3] Add Previous button to CalendarToolbar.tsx
-- [ ] T027 [P] [US3] Add Next button to CalendarToolbar.tsx
-- [ ] T028 [US3] Implement Today action in useCalendarState (reset date to today)
-- [ ] T029 [US3] Implement Previous action in useCalendarState (decrement period based on view mode)
-- [ ] T030 [US3] Implement Next action in useCalendarState (increment period based on view mode)
-- [ ] T031 [US3] Update Calendar.tsx to refetch tasks when date changes
+- [x] T025 [P] [US3] Add Today button to CalendarToolbar.tsx in packages/web/src/components/calendar/CalendarToolbar.tsx
+- [x] T026 [P] [US3] Add Previous button to CalendarToolbar.tsx
+- [x] T027 [P] [US3] Add Next button to CalendarToolbar.tsx
+- [x] T028 [US3] Implement Today action in useCalendarState (reset date to today)
+- [x] T029 [US3] Implement Previous action in useCalendarState (decrement period based on view mode)
+- [x] T030 [US3] Implement Next action in useCalendarState (increment period based on view mode)
+- [x] T031 [US3] Update Calendar.tsx to refetch tasks when date changes
 
 **Checkpoint**: All navigation should work - users can browse different periods and return to today
 
@@ -141,12 +141,12 @@ description: "Task list for Calendar View Web UI feature implementation"
 
 ### Implementation for User Story 5
 
-- [ ] T041 [P] [US5] Configure view parameter serialization in useCalendarState.ts (parseAsStringEnum for month/week/day)
-- [ ] T042 [P] [US5] Configure date parameter serialization in useCalendarState.ts (parseAsString with YYYY-MM-DD format)
-- [ ] T043 [P] [US5] Configure taskId parameter serialization in useCalendarState.ts (parseAsInteger)
-- [ ] T044 [US5] Test URL state restoration on Calendar.tsx mount (read from URL params)
-- [ ] T045 [US5] Verify URL updates when view mode changes
-- [ ] T046 [US5] Verify URL updates when date navigation occurs
+- [x] T041 [P] [US5] Configure view parameter serialization in useCalendarState.ts (parseAsStringEnum for month/week/day)
+- [x] T042 [P] [US5] Configure date parameter serialization in useCalendarState.ts (parseAsString with YYYY-MM-DD format)
+- [x] T043 [P] [US5] Configure taskId parameter serialization in useCalendarState.ts (parseAsInteger)
+- [x] T044 [US5] Test URL state restoration on Calendar.tsx mount (read from URL params)
+- [x] T045 [US5] Verify URL updates when view mode changes
+- [x] T046 [US5] Verify URL updates when date navigation occurs
 - [ ] T047 [US5] Verify URL updates when task modal opens/closes
 
 **Checkpoint**: All state should round-trip through URL - bookmark any calendar state and restore perfectly
@@ -157,11 +157,11 @@ description: "Task list for Calendar View Web UI feature implementation"
 
 **Purpose**: Refinements and documentation that affect the overall feature
 
-- [ ] T048 [P] Add CSS classes for task status colors in packages/web/src/index.css (.task-done, .task-pending)
-- [ ] T049 [P] Import @schedule-x theme CSS in packages/web/src/App.tsx
-- [ ] T050 Optimize task fetching to minimize API calls (only fetch visible date range)
-- [ ] T051 Add loading states to Calendar.tsx during task fetches
-- [ ] T052 Add error handling for task fetch failures in Calendar.tsx
+- [x] T048 [P] Add CSS classes for task status colors in packages/web/src/styles/index.css (.task-done, .task-pending)
+- [x] T049 [P] Import @schedule-x theme CSS in packages/web/src/components/calendar/CalendarView.tsx
+- [x] T050 Optimize task fetching to minimize API calls (only fetch visible date range)
+- [x] T051 Add loading states to Calendar.tsx during task fetches
+- [x] T052 Add error handling for task fetch failures in Calendar.tsx
 - [ ] T053 Test performance with 100 tasks in a single month
 - [ ] T054 Test scroll performance with 50 tasks in a single day
 - [ ] T055 Validate against quickstart.md manual testing steps
