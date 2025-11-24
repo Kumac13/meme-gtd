@@ -106,7 +106,7 @@ export default function ProjectDetail() {
         >
           ← Back to projects
         </Link>
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start gap-4 mb-4">
           <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
           <select
             value={project.status}
