@@ -122,17 +122,14 @@ export default function ItemList({ items, itemType: _itemType, basePath, current
                       </h2>
                       <div className="flex items-center text-xs text-gray-500 space-x-3">
                         <span>#{item.id}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${item.status === 'active' ? 'bg-green-100 text-green-800' :
-                            item.status === 'done' ? 'bg-blue-100 text-blue-800' :
-                              item.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
-                                item.status === 'canceled' ? 'bg-gray-100 text-gray-800' :
-                                  'bg-gray-100 text-gray-600'
-                          }`}>
-                          {item.status}
-                        </span>
                         {(item.startDate || item.endDate) && (
                           <span>
-                            {item.startDate || '...'} - {item.endDate || '...'}
+                            {item.startDate && item.endDate
+                              ? `${item.startDate} → ${item.endDate}`
+                              : item.startDate
+                                ? `From ${item.startDate}`
+                                : `Until ${item.endDate}`
+                            }
                           </span>
                         )}
                         <span>{formatRelativeTime(item.createdAt)}</span>

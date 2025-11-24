@@ -6,10 +6,6 @@ import FilterBar from '../components/FilterBar';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
-import {
-  validateBookmarked,
-  updateBookmarkedParam,
-} from '../utils/urlFilterHelpers';
 
 interface Project {
   id: number;
@@ -31,11 +27,10 @@ const statusLabels: Record<string, string> = {
 
 export default function ProjectsList() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const bookmarkFilter = validateBookmarked(searchParams.get('bookmarked'));
-  const statusParam = searchParams.get('status') || 'all';
+  const statusParam = searchParams.get('status') || 'active';
   const statusFilter = ['all', 'planned', 'active', 'paused', 'done', 'canceled'].includes(statusParam)
     ? statusParam
-    : 'all';
+    : 'active';
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,26 +58,17 @@ export default function ProjectsList() {
     return projects.filter((project) => {
       // Status filter
       if (statusFilter !== 'all' && project.status !== statusFilter) return false;
-
-      // Note: Projects don't have isBookmarked property yet
-      // This is a placeholder for when bookmark support is added
-      // if (bookmarkFilter && !project.isBookmarked) return false;
       return true;
     });
-  }, [projects, bookmarkFilter, statusFilter]);
+  }, [projects, statusFilter]);
 
   const handleStatusFilterChange = (newStatus: string) => {
     const params = new URLSearchParams(searchParams);
-    if (newStatus === 'all') {
+    if (newStatus === 'active') {
       params.delete('status');
     } else {
       params.set('status', newStatus);
     }
-    setSearchParams(params);
-  };
-
-  const handleBookmarkFilterChange = (newBookmarked: boolean) => {
-    const params = updateBookmarkedParam(searchParams, newBookmarked);
     setSearchParams(params);
   };
 
@@ -110,31 +96,19 @@ export default function ProjectsList() {
         </Link>
       </div>
 
-      {/* Status filter buttons */}
-      <div className="mb-6 flex flex-wrap gap-2">
-        {['all', 'planned', 'active', 'paused', 'done', 'canceled'].map((status) => (
-          <button
-            key={status}
-            onClick={() => handleStatusFilterChange(status)}
-            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${statusFilter === status
-                ? 'bg-github-green-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-          >
-            {status === 'all' ? 'All' : statusLabels[status] || status}
-          </button>
-        ))}
-      </div>
-
       <FilterBar
-        bookmarkFilter={bookmarkFilter}
-        onBookmarkFilterChange={handleBookmarkFilterChange}
+        showStatusFilter
+        statusFilter={statusFilter}
+        onStatusFilterChange={handleStatusFilterChange}
+        statusOptions={['all', 'planned', 'active', 'paused', 'done', 'canceled']}
+        statusLabels={statusLabels}
+        showBookmarkFilter={false}
       />
 
       {filteredProjects.length === 0 ? (
         <EmptyState
-          message={bookmarkFilter ? 'No bookmarked projects' : 'No projects found'}
-          submessage={!bookmarkFilter ? 'Create your first project or adjust filters' : undefined}
+          message="No projects found"
+          submessage="Create your first project or adjust filters"
         />
       ) : (
         <ItemList items={filteredProjects} itemType="project" basePath="/projects" currentFilters={searchParams} onDelete={handleDelete} />

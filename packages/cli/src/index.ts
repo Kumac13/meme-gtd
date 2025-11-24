@@ -43,6 +43,7 @@ const MULTIWORD_COMMANDS = [
   ['project', 'create'],
   ['project', 'list'],
   ['project', 'view'],
+  ['project', 'update'],
   ['project', 'add'],
   ['project', 'remove'],
   ['project', 'move'],
