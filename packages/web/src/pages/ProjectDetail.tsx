@@ -6,7 +6,16 @@ import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EditableContent from '../components/EditableContent';
 import { ProjectScheduleSection } from '../components/ProjectScheduleSection';
+import { StatusSelector } from '../components/StatusSelector';
 import { createBackUrl } from '../utils/navigationHelpers';
+
+const PROJECT_STATUS_OPTIONS = [
+  { value: 'planned', label: 'Planned' },
+  { value: 'active', label: 'Active' },
+  { value: 'paused', label: 'Paused' },
+  { value: 'done', label: 'Done' },
+  { value: 'canceled', label: 'Canceled' },
+];
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -108,24 +117,11 @@ export default function ProjectDetail() {
         </Link>
         <div className="flex items-start justify-between mb-4">
           <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
-          <div className="relative">
-            <select
-              value={project.status}
-              onChange={(e) => handleStatusChange(e.target.value)}
-              className="px-3 py-2 pr-8 border border-gray-300 rounded-md shadow-sm text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 bg-white"
-            >
-              <option value="planned">Planned</option>
-              <option value="active">Active</option>
-              <option value="paused">Paused</option>
-              <option value="done">Done</option>
-              <option value="canceled">Canceled</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-gray-500">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
+          <StatusSelector
+            value={project.status}
+            onChange={handleStatusChange}
+            options={PROJECT_STATUS_OPTIONS}
+          />
         </div>
       </div>
 
