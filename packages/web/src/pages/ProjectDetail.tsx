@@ -49,6 +49,32 @@ export default function ProjectDetail() {
     }
   };
 
+  const handleStatusChange = async (status: string) => {
+    if (!id) return;
+    try {
+      const updated = await ProjectsService.updateProject(id, {
+        status: status as 'planned' | 'active' | 'paused' | 'done' | 'canceled',
+      });
+      setProject(updated as ProjectDetailType);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update status');
+      throw err;
+    }
+  };
+
+  const handleDateChange = async (field: 'startDate' | 'endDate', value: string | null) => {
+    if (!id) return;
+    try {
+      const updated = await ProjectsService.updateProject(id, {
+        [field]: value || null,
+      });
+      setProject(updated as ProjectDetailType);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to update ${field}`);
+      throw err;
+    }
+  };
+
   const handleDelete = async () => {
     if (!id) return;
     try {
@@ -84,6 +110,21 @@ export default function ProjectDetail() {
         <h1 className="text-3xl font-bold text-gray-900 mb-4">{project.name}</h1>
       </div>
 
+      {/* Status Selector */}
+      <div className="mb-4">
+        <select
+          value={project.status}
+          onChange={(e) => handleStatusChange(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500"
+        >
+          <option value="planned">Planned</option>
+          <option value="active">Active</option>
+          <option value="paused">Paused</option>
+          <option value="done">Done</option>
+          <option value="canceled">Canceled</option>
+        </select>
+      </div>
+
       {/* Editable Content Section */}
       <div className="mb-4">
         <EditableContent
@@ -97,26 +138,39 @@ export default function ProjectDetail() {
         />
       </div>
 
-      {/* Project Metadata */}
-      <div className="mb-6 flex flex-wrap gap-4 text-sm text-gray-600">
-        <div className="flex items-center gap-2">
-          <span className="font-medium">Status:</span>
-          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${project.status === 'active' ? 'bg-green-100 text-green-800' :
-              project.status === 'done' ? 'bg-blue-100 text-blue-800' :
-                project.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
-                  project.status === 'canceled' ? 'bg-gray-100 text-gray-800' :
-                    'bg-gray-100 text-gray-600'
-            }`}>
-            {project.status}
-          </span>
-        </div>
-        {(project.startDate || project.endDate) && (
-          <div className="flex items-center gap-2">
-            <span className="font-medium">Schedule:</span>
-            <span>
-              {project.startDate || '...'} - {project.endDate || '...'}
-            </span>
+      {/* Project Schedule */}
+      <div className="mb-6 bg-white border border-gray-200 rounded-lg p-4">
+        <h2 className="text-sm font-semibold text-gray-700 mb-3">Schedule</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="startDate" className="block text-xs font-medium text-gray-600 mb-1">
+              Start Date
+            </label>
+            <input
+              type="date"
+              id="startDate"
+              value={project.startDate || ''}
+              onChange={(e) => handleDateChange('startDate', e.target.value || null)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500"
+            />
           </div>
+          <div>
+            <label htmlFor="endDate" className="block text-xs font-medium text-gray-600 mb-1">
+              End Date
+            </label>
+            <input
+              type="date"
+              id="endDate"
+              value={project.endDate || ''}
+              onChange={(e) => handleDateChange('endDate', e.target.value || null)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500"
+            />
+          </div>
+        </div>
+        {project.startDate && project.endDate && project.startDate > project.endDate && (
+          <p className="mt-2 text-xs text-red-600">
+            Warning: Start date is after end date
+          </p>
         )}
       </div>
 
