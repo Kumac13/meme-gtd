@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { NuqsAdapter } from 'nuqs/adapters/react-router/v7';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import MemosList from './pages/MemosList';
@@ -14,31 +15,35 @@ import ProjectNew from './pages/ProjectNew';
 import ProjectDetail from './pages/ProjectDetail';
 import KanbanView from './pages/KanbanView';
 import ListView from './pages/ListView';
+import Calendar from './pages/Calendar';
 
 function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Navigate to="/memos" replace />} />
-            <Route path="memos" element={<MemosList />} />
-            <Route path="memos/new" element={<MemoNew />} />
-            <Route path="memos/:id" element={<MemoDetail />} />
-            <Route path="memos/:id/edit" element={<MemoEdit />} />
-            <Route path="tasks" element={<TasksList />} />
-            <Route path="tasks/new" element={<TaskNew />} />
-            <Route path="tasks/:id" element={<TaskDetail />} />
-            <Route path="tasks/:id/edit" element={<TaskEdit />} />
-            <Route path="projects" element={<ProjectsList />} />
-            <Route path="projects/new" element={<ProjectNew />} />
-            <Route path="projects/:id" element={<ProjectDetail />}>
-              <Route index element={<Navigate to="kanban" replace />} />
-              <Route path="kanban" element={<KanbanView />} />
-              <Route path="list" element={<ListView />} />
+        <NuqsAdapter>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Navigate to="/memos" replace />} />
+              <Route path="memos" element={<MemosList />} />
+              <Route path="memos/new" element={<MemoNew />} />
+              <Route path="memos/:id" element={<MemoDetail />} />
+              <Route path="memos/:id/edit" element={<MemoEdit />} />
+              <Route path="tasks" element={<TasksList />} />
+              <Route path="tasks/new" element={<TaskNew />} />
+              <Route path="tasks/:id" element={<TaskDetail />} />
+              <Route path="tasks/:id/edit" element={<TaskEdit />} />
+              <Route path="projects" element={<ProjectsList />} />
+              <Route path="projects/new" element={<ProjectNew />} />
+              <Route path="projects/:id" element={<ProjectDetail />}>
+                <Route index element={<Navigate to="kanban" replace />} />
+                <Route path="kanban" element={<KanbanView />} />
+                <Route path="list" element={<ListView />} />
+              </Route>
+              <Route path="calendar" element={<Calendar />} />
             </Route>
-          </Route>
-        </Routes>
+          </Routes>
+        </NuqsAdapter>
       </BrowserRouter>
     </ErrorBoundary>
   );

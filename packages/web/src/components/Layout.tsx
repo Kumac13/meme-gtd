@@ -5,6 +5,7 @@ export default function Layout() {
   const isMemosActive = location.pathname.startsWith('/memos');
   const isTasksActive = location.pathname.startsWith('/tasks');
   const isProjectsActive = location.pathname.startsWith('/projects');
+  const isCalendarActive = location.pathname.startsWith('/calendar');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -45,6 +46,16 @@ export default function Layout() {
                   }`}
                 >
                   Projects
+                </Link>
+                <Link
+                  to="/calendar"
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                    isCalendarActive
+                      ? 'border-github-green-500 text-gray-900'
+                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                  }`}
+                >
+                  Calendar
                 </Link>
               </div>
             </div>
