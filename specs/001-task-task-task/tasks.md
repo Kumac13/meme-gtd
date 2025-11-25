@@ -56,7 +56,7 @@ export interface PendingLink {
   - AddLinkInline コンポーネントのパターンを参考に実装
   - アコーディオン形式（Schedule/Projects/Labelsと同じパターン）
 
-- [ ] T003 [Foundation] `packages/web/src/components/TaskForm.tsx` を修正
+- [x] T003 [Foundation] `packages/web/src/components/TaskForm.tsx` を修正
 
   - `initialLinks?: PendingLink[]` props を追加
   - `pendingLinks` state を追加
@@ -75,7 +75,7 @@ export interface PendingLink {
 
 ### Implementation for User Story 1
 
-- [ ] T004 [P] [US1] `packages/web/src/components/CreateTaskModal.tsx` を新規作成
+- [x] T004 [P] [US1] `packages/web/src/components/CreateTaskModal.tsx` を新規作成
 
   - Props: `isOpen`, `onClose`, `sourceTask: {id, title}`, `onTaskCreated?`
   - TaskDetailPanel と同じモーダルパターン（右半分オーバーレイ）
@@ -84,7 +84,7 @@ export interface PendingLink {
   - コンテンツ: TaskForm（mode='create'）をラップ
   - TaskForm に `initialLinks` として元タスクへの `relates` リンクを渡す
 
-- [ ] T005 [US1] `packages/web/src/pages/TaskDetail.tsx` を修正
+- [x] T005 [US1] `packages/web/src/pages/TaskDetail.tsx` を修正
 
   - `isCreateModalOpen` state を追加
   - `handleOpenCreateModal`, `handleCloseCreateModal` ハンドラを追加
@@ -104,13 +104,13 @@ export interface PendingLink {
 
 ### Implementation for User Story 2
 
-- [ ] T006 [US2] `packages/web/src/components/CreateTaskModal.tsx` を修正
+- [x] T006 [US2] `packages/web/src/components/CreateTaskModal.tsx` を修正
 
   - デフォルトリンク（relates）が設定済み状態で表示されることを確認
   - ユーザーがリンクを削除できることを確認
   - ユーザーが追加のリンクを設定できることを確認
 
-- [ ] T007 [US2] `packages/web/src/components/TaskForm.tsx` を修正
+- [x] T007 [US2] `packages/web/src/components/TaskForm.tsx` を修正
 
   - フォーム送信後のリンク作成ロジックを実装
   - タスク作成成功後、pendingLinks の各リンクに対して LinksService.createLink() を呼び出し
@@ -128,7 +128,7 @@ export interface PendingLink {
 
 ### Implementation for User Story 3
 
-- [ ] T008 [US3] `packages/web/src/pages/TaskNew.tsx` を確認・修正（必要に応じて）
+- [x] T008 [US3] `packages/web/src/pages/TaskNew.tsx` を確認・修正（必要に応じて）
 
   - TaskForm にLinks UIが表示されることを確認
   - initialLinks が渡されない場合、空の状態で表示されることを確認
@@ -146,12 +146,13 @@ export interface PendingLink {
 
 ### Implementation for User Story 4
 
-- [ ] T009 [US4] `packages/web/src/pages/TaskDetail.tsx` を修正
+- [x] T009 [US4] `packages/web/src/pages/TaskDetail.tsx` を修正
 
   - ItemDetail の `mode` prop に基づいて「新規タスク」ボタンの表示を制御
   - `mode === 'page'` の場合のみ customActions を渡す
+  - 注: TaskDetailは常にmode='page'、TaskDetailPanelはmode='panel'でcustomActionsなし
 
-- [ ] T010 [US4] 動作確認
+- [x] T010 [US4] 動作確認
 
   - /tasks/:id ページ: 「新規タスク」ボタンが表示される
   - Project画面からのモーダル: ボタン非表示
@@ -165,11 +166,11 @@ export interface PendingLink {
 
 **Purpose**: 仕上げと品質向上
 
-- [ ] T011 [P] エラーハンドリングの改善
-  - リンク作成失敗時のユーザーフィードバック
+- [x] T011 [P] エラーハンドリングの改善
+  - リンク作成失敗時のユーザーフィードバック（Promise.allSettledで実装）
   - 元タスク削除時の graceful degradation
 
-- [ ] T012 [P] スタイル調整
+- [x] T012 [P] スタイル調整
   - モーダルのレスポンシブ対応
   - TaskFormLinks のスタイル統一
 
