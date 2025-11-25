@@ -249,6 +249,7 @@ git tag vX.Y.Z
 - TypeScript 5.5.4 / Node.js 22+ + React 19.2.0, React Router DOM 7.9.4, Vite 7.1.11, Tailwind CSS 4.1.14 (029-task)
 - N/A (クライアント側のみ、既存のAPIから取得したデータを使用) (029-task)
 - SQLite (better-sqlite3) - 既存のissuesテーブルを使用 (001-webui)
+- SQLite (better-sqlite3) - 既存の`links`テーブルを使用 (001-task-task-task)
 
 ## Recent Changes
 - 020-web-label-management: Added TypeScript 5.5.4 / React 19.2.0 / Node.js 22+
