@@ -389,6 +389,9 @@ importers:
       '@schedule-x/calendar':
         specifier: ^3.4.2
         version: 3.4.2(@preact/signals@2.5.1(preact@10.27.2))(preact@10.27.2)(temporal-polyfill@0.3.0)
+      '@schedule-x/calendar-controls':
+        specifier: ^3.4.2
+        version: 3.4.2
       '@schedule-x/react':
         specifier: ^3.4.0
         version: 3.4.0(@schedule-x/calendar@3.4.2(@preact/signals@2.5.1(preact@10.27.2))(preact@10.27.2)(temporal-polyfill@0.3.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -1384,6 +1387,9 @@ packages:
     resolution: {integrity: sha512-bf9PtUa0u8IXDVxzRToFQKsNCRz9qLYfR/MpECxl4mRoWYjAeFjgxj1XdZr2M/GNVpT05p+LgQOHopYDlUu6/w==}
     cpu: [x64]
     os: [win32]
+
+  '@schedule-x/calendar-controls@3.4.2':
+    resolution: {integrity: sha512-r/3v/B8mPyZL+45jes/dChndYIuZfGci/GScEEk/0ihDu6pnRdDDLaRotIj7+RrmlGxEF3HhnUOoRdY32F0eAw==}
 
   '@schedule-x/calendar@3.4.2':
     resolution: {integrity: sha512-TOL3SM2dXBgS94n1t3cY7OAE3Eh0qFG6g/LcxaDIwyJ0a1NT9wi/YOr3BwzBCt5+XsfdAbeVMVIaQdQnKnLboQ==}
@@ -5086,6 +5092,8 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.52.4':
     optional: true
+
+  '@schedule-x/calendar-controls@3.4.2': {}
 
   '@schedule-x/calendar@3.4.2(@preact/signals@2.5.1(preact@10.27.2))(preact@10.27.2)(temporal-polyfill@0.3.0)':
     dependencies:

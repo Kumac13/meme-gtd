@@ -1,3 +1,5 @@
+import type { CalendarEventExternal } from '@schedule-x/calendar';
+
 export interface Task {
   id: number;
   title: string | null;
@@ -8,17 +10,7 @@ export interface Task {
   endDate: string | null;
 }
 
-export interface CalendarEvent {
-  id: string;
-  title: string;
-  start: string;
-  end: string;
-  _options?: {
-    additionalClasses?: string[];
-  };
-}
-
-export function taskToCalendarEvent(task: Task): CalendarEvent | null {
+export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
   if (!task.scheduledOn) {
     return null;
   }
@@ -26,24 +18,31 @@ export function taskToCalendarEvent(task: Task): CalendarEvent | null {
   const isDone = task.status === 'done';
   const title = task.title || `Task #${task.id}`;
 
-  let start: string;
-  let end: string;
+  let start: Temporal.PlainDate | Temporal.ZonedDateTime;
+  let end: Temporal.PlainDate | Temporal.ZonedDateTime;
+
+  const timezone = Temporal.Now.timeZoneId();
 
   if (task.startTime) {
-    start = `${task.scheduledOn} ${task.startTime}`;
+    // Task has a specific time - use ZonedDateTime
+    const startDateTime = Temporal.PlainDateTime.from(`${task.scheduledOn}T${task.startTime}`);
+    start = startDateTime.toZonedDateTime(timezone);
     if (task.endTime) {
       const endDateStr = task.endDate || task.scheduledOn;
-      end = `${endDateStr} ${task.endTime}`;
+      const endDateTime = Temporal.PlainDateTime.from(`${endDateStr}T${task.endTime}`);
+      end = endDateTime.toZonedDateTime(timezone);
     } else {
-      end = start;
+      // Default to 1 hour duration
+      end = start.add({ hours: 1 });
     }
   } else {
-    start = task.scheduledOn;
-    end = task.endDate || task.scheduledOn;
+    // All-day event - use PlainDate
+    start = Temporal.PlainDate.from(task.scheduledOn);
+    end = Temporal.PlainDate.from(task.endDate || task.scheduledOn);
   }
 
   return {
-    id: String(task.id),
+    id: task.id,
     title,
     start,
     end,
@@ -53,11 +52,11 @@ export function taskToCalendarEvent(task: Task): CalendarEvent | null {
   };
 }
 
-export function tasksToCalendarEvents(tasks: Task[]): CalendarEvent[] {
+export function tasksToCalendarEvents(tasks: Task[]): CalendarEventExternal[] {
   return tasks
     .filter((task) => task.status !== 'canceled')
     .map(taskToCalendarEvent)
-    .filter((event): event is CalendarEvent => event !== null);
+    .filter((event): event is CalendarEventExternal => event !== null);
 }
 
 export function getDateRange(date: string, view: 'month' | 'week' | 'day'): { from: string; to: string } {

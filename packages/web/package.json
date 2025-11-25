@@ -19,6 +19,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@schedule-x/calendar": "^3.4.2",
+    "@schedule-x/calendar-controls": "^3.4.2",
     "@schedule-x/react": "^3.4.0",
     "@schedule-x/theme-default": "^3.4.2",
     "meme-gtd-shared": "workspace:^",

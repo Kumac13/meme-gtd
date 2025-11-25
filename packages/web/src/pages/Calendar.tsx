@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useCalendarState } from '../hooks/useCalendarState';
 import CalendarView from '../components/calendar/CalendarView';
 import CalendarToolbar from '../components/calendar/CalendarToolbar';
-import { tasksToCalendarEvents, getDateRange, type Task } from '../utils/calendarMapper';
+import { tasksToCalendarEvents, getDateRange } from '../utils/calendarMapper';
+import type { Task } from '../utils/calendarMapper';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 
