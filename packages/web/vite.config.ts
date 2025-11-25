@@ -8,8 +8,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'meme-gtd',
-        short_name: 'meme-gtd',
+        name: 'Mëmo',
+        short_name: 'Mëmo',
         description: 'GTD-style task and memo management',
         theme_color: '#238636',
         background_color: '#ffffff',
