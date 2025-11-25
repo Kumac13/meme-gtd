@@ -59,8 +59,16 @@ export function tasksToCalendarEvents(tasks: Task[]): CalendarEventExternal[] {
     .filter((event): event is CalendarEventExternal => event !== null);
 }
 
+function formatLocalDate(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function getDateRange(date: string, view: 'month' | 'week' | 'day'): { from: string; to: string } {
-  const currentDate = new Date(date);
+  // Parse date as local time by adding time component
+  const currentDate = new Date(date + 'T00:00:00');
 
   if (view === 'month') {
     const year = currentDate.getFullYear();
@@ -68,8 +76,8 @@ export function getDateRange(date: string, view: 'month' | 'week' | 'day'): { fr
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     return {
-      from: firstDay.toISOString().split('T')[0],
-      to: lastDay.toISOString().split('T')[0],
+      from: formatLocalDate(firstDay),
+      to: formatLocalDate(lastDay),
     };
   } else if (view === 'week') {
     const dayOfWeek = currentDate.getDay();
@@ -78,8 +86,8 @@ export function getDateRange(date: string, view: 'month' | 'week' | 'day'): { fr
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     return {
-      from: startOfWeek.toISOString().split('T')[0],
-      to: endOfWeek.toISOString().split('T')[0],
+      from: formatLocalDate(startOfWeek),
+      to: formatLocalDate(endOfWeek),
     };
   } else {
     return {
