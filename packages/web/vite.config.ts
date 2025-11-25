@@ -11,7 +11,7 @@ export default defineConfig({
         name: 'meme-gtd',
         short_name: 'meme-gtd',
         description: 'GTD-style task and memo management',
-        theme_color: '#3b82f6',
+        theme_color: '#238636',
         background_color: '#ffffff',
         display: 'standalone',
         icons: [
