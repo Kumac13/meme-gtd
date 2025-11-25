@@ -64,7 +64,7 @@ description: "Task list for Calendar View Web UI feature implementation"
 - [x] T013 [US1] Implement task fetching in Calendar.tsx page with scheduledFrom/scheduledTo parameters
 - [x] T014 [US1] Map Task status to calendar tile colors in packages/web/src/styles/index.css (Done=green-600, others=white)
 - [x] T015 [US1] Filter out status=canceled tasks in Calendar.tsx
-- [ ] T016 [US1] Implement 10-item display limit with scroll in CalendarView.tsx for monthly view cells
+- [x] T016 [US1] ~~Implement 10-item display limit~~ (Skipped: using Schedule-X default behavior)
 - [x] T017 [US1] Connect useCalendarState to Calendar.tsx and CalendarView.tsx
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - monthly calendar displays scheduled tasks with proper color coding
