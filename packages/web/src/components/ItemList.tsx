@@ -39,6 +39,7 @@ interface ItemListProps {
   basePath: string;
   currentFilters?: URLSearchParams;
   onDelete?: (id: number) => Promise<void>;
+  onItemClick?: (id: number, type: 'memo' | 'task') => void;
 }
 
 function isTask(item: Item): item is Task {
@@ -49,7 +50,7 @@ function isProject(item: Item): item is Project {
   return 'name' in item && 'description' in item;
 }
 
-export default function ItemList({ items, itemType: _itemType, basePath, currentFilters, onDelete }: ItemListProps) {
+export default function ItemList({ items, itemType: _itemType, basePath, currentFilters, onDelete, onItemClick }: ItemListProps) {
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
 
@@ -107,10 +108,19 @@ export default function ItemList({ items, itemType: _itemType, basePath, current
           });
         }
 
+        const handleClick = (e: React.MouseEvent) => {
+          if (onItemClick && !isProject(item)) {
+            e.preventDefault();
+            const type = isTask(item) ? 'task' : 'memo';
+            onItemClick(item.id, type);
+          }
+        };
+
         return (
           <div key={item.id} className="relative">
             <Link
               to={itemPath}
+              onClick={handleClick}
               className="block p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-center justify-between gap-3">

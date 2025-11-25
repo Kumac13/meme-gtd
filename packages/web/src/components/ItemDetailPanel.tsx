@@ -1,0 +1,209 @@
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { TasksService } from '../api/services/TasksService';
+import { MemosService } from '../api/services/MemosService';
+import ItemDetail, { type Item } from './ItemDetail';
+import LoadingState from './LoadingState';
+import ErrorState from './ErrorState';
+
+interface BaseItem {
+  id: number;
+  title: string | null;
+  bodyMd: string;
+  isBookmarked: boolean;
+  labels?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Task extends BaseItem {
+  status: string | null;
+  scheduledOn: string | null;
+  endDate: string | null;
+}
+
+type ItemType = 'memo' | 'task';
+
+interface ItemDetailPanelProps {
+  itemId: number | null;
+  itemType: ItemType | null;
+  onClose: () => void;
+  onItemUpdated?: () => void;
+}
+
+export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: ItemDetailPanelProps) {
+  const [item, setItem] = useState<BaseItem | Task | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [bookmarking, setBookmarking] = useState(false);
+
+  useEffect(() => {
+    if (!itemId || !itemType) {
+      setItem(null);
+      return;
+    }
+
+    const fetchItem = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = itemType === 'task'
+          ? await TasksService.getTask(String(itemId))
+          : await MemosService.getMemo(String(itemId));
+        setItem(response as BaseItem | Task);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : `Failed to load ${itemType}`);
+        console.error(`Error fetching ${itemType}:`, err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchItem();
+  }, [itemId, itemType]);
+
+  if (!itemId || !itemType) return null;
+
+  const handleDelete = async () => {
+    if (!itemId) return;
+
+    try {
+      setDeleting(true);
+      if (itemType === 'task') {
+        await TasksService.deleteTask(String(itemId));
+      } else {
+        await MemosService.deleteMemo(String(itemId));
+      }
+      onItemUpdated?.();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to delete ${itemType}`);
+      console.error(`Error deleting ${itemType}:`, err);
+      setDeleting(false);
+    }
+  };
+
+  const handleBookmarkToggle = async () => {
+    if (!itemId || !item) return;
+
+    try {
+      setBookmarking(true);
+      if (itemType === 'task') {
+        if (item.isBookmarked) {
+          await TasksService.unbookmarkTask(String(itemId));
+        } else {
+          await TasksService.bookmarkTask(String(itemId));
+        }
+      } else {
+        if (item.isBookmarked) {
+          await MemosService.unbookmarkMemo(String(itemId));
+        } else {
+          await MemosService.bookmarkMemo(String(itemId));
+        }
+      }
+      setItem({ ...item, isBookmarked: !item.isBookmarked });
+      onItemUpdated?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update bookmark');
+      console.error('Error toggling bookmark:', err);
+    } finally {
+      setBookmarking(false);
+    }
+  };
+
+  const handleUpdate = (updatedItem: Item) => {
+    setItem(updatedItem as BaseItem | Task);
+    onItemUpdated?.();
+  };
+
+  const handleStatusChange = async (status: string) => {
+    if (!itemId || itemType !== 'task') return;
+
+    try {
+      const updatedTask = await TasksService.updateTask(String(itemId), {
+        status: status as 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled'
+      });
+      setItem(updatedTask as Task);
+      onItemUpdated?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update status');
+      console.error('Error updating status:', err);
+    }
+  };
+
+  const basePath = itemType === 'task' ? '/tasks' : '/memos';
+  const displayTitle = item?.title || (itemType === 'task' ? 'Task' : 'Memo');
+
+  return (
+    <>
+      {/* Invisible backdrop for click-outside-to-close */}
+      <div
+        className="fixed inset-0 z-40"
+        onClick={onClose}
+      />
+
+      {/* Right 1/2 Panel */}
+      <div className="fixed top-0 right-0 bottom-0 w-1/2 bg-white shadow-xl border-l border-gray-200 z-50 flex flex-col overflow-hidden">
+        {/* Header with title, #ID link and close button */}
+        <div className="flex items-center justify-between p-3 border-b border-gray-200 flex-shrink-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <h2 className="text-lg font-semibold text-gray-900 truncate">
+              {loading ? 'Loading...' : displayTitle}
+            </h2>
+            <Link
+              to={`${basePath}/${itemId}`}
+              className="text-gray-500 hover:text-github-green-600 text-sm font-medium flex-shrink-0"
+            >
+              #{itemId}
+            </Link>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0 ml-2"
+            aria-label="Close"
+          >
+            <svg
+              className="w-5 h-5 text-gray-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto">
+          {loading && <LoadingState message={`Loading ${itemType}...`} />}
+
+          {error && !loading && (
+            <ErrorState error={error} title={`Error loading ${itemType}`} />
+          )}
+
+          {!loading && !error && item && (
+            <ItemDetail
+              item={item as Item}
+              itemType={itemType}
+              basePath={basePath}
+              returnFilters={null}
+              onDelete={handleDelete}
+              onBookmarkToggle={handleBookmarkToggle}
+              onUpdate={handleUpdate}
+              onStatusChange={itemType === 'task' ? handleStatusChange : undefined}
+              deleting={deleting}
+              bookmarking={bookmarking}
+              mode="panel"
+            />
+          )}
+        </div>
+      </div>
+    </>
+  );
+}

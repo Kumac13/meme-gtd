@@ -1,14 +1,13 @@
 import { useDraggable } from '@dnd-kit/core';
-import { useNavigate } from 'react-router-dom';
 import { ProjectItemWithIssue } from '../types/project';
 import { InlineMarkdownRenderer, extractFirstLine } from '../utils/markdown';
 
 interface KanbanCardProps {
   item: ProjectItemWithIssue;
+  onItemClick?: (issueId: number, issueType: 'memo' | 'task') => void;
 }
 
-export default function KanbanCard({ item }: KanbanCardProps) {
-  const navigate = useNavigate();
+export default function KanbanCard({ item, onItemClick }: KanbanCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: item.issueId.toString(),
     data: {
@@ -23,12 +22,10 @@ export default function KanbanCard({ item }: KanbanCardProps) {
       }
     : undefined;
 
-  const detailPath = `/${item.issue.type}s/${item.issueId}`;
-
   const handleClick = () => {
-    // Only navigate if not dragging
-    if (!isDragging) {
-      navigate(detailPath);
+    // Only handle click if not dragging
+    if (!isDragging && onItemClick) {
+      onItemClick(item.issueId, item.issue.type);
     }
   };
 

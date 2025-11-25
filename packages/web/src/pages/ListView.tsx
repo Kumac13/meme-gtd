@@ -1,14 +1,16 @@
 import { useOutletContext } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ProjectDetail } from '../types/project';
 import ItemList from '../components/ItemList';
 import EmptyState from '../components/EmptyState';
 import LoadingState from '../components/LoadingState';
 import { TasksService } from '../api/services/TasksService';
 import { MemosService } from '../api/services/MemosService';
+import { ItemDetailPanel } from '../components/ItemDetailPanel';
 
 interface OutletContext {
   project: ProjectDetail;
+  setProject: (project: ProjectDetail) => void;
 }
 
 interface Task {
@@ -36,10 +38,11 @@ interface Memo {
 }
 
 export default function ListView() {
-  const { project } = useOutletContext<OutletContext>();
+  const { project, setProject } = useOutletContext<OutletContext>();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [memos, setMemos] = useState<Memo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'memo' | 'task' } | null>(null);
 
   useEffect(() => {
     async function fetchItems() {
@@ -79,6 +82,27 @@ export default function ListView() {
     return <LoadingState message="Loading items..." />;
   }
 
+  const handleItemClick = useCallback((id: number, type: 'memo' | 'task') => {
+    setSelectedItem({ id, type });
+  }, []);
+
+  const handlePanelClose = useCallback(() => {
+    setSelectedItem(null);
+  }, []);
+
+  const handleItemUpdated = useCallback(async () => {
+    // Refetch project to update list
+    try {
+      const response = await fetch(`/api/projects/${project.id}`);
+      if (response.ok) {
+        const updatedProject = await response.json();
+        setProject(updatedProject);
+      }
+    } catch (err) {
+      console.error('Error refetching project:', err);
+    }
+  }, [project.id, setProject]);
+
   if (tasks.length === 0 && memos.length === 0) {
     return <EmptyState message="No items in this project. Add tasks or memos to get started." />;
   }
@@ -86,5 +110,15 @@ export default function ListView() {
   // Combine tasks and memos into a single list
   const allItems = [...tasks, ...memos];
 
-  return <ItemList items={allItems} itemType="task" basePath="" />;
+  return (
+    <>
+      <ItemList items={allItems} itemType="task" basePath="" onItemClick={handleItemClick} />
+      <ItemDetailPanel
+        itemId={selectedItem?.id ?? null}
+        itemType={selectedItem?.type ?? null}
+        onClose={handlePanelClose}
+        onItemUpdated={handleItemUpdated}
+      />
+    </>
+  );
 }
