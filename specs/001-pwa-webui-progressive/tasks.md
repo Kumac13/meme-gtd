@@ -53,14 +53,14 @@
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Update vite.config.ts: Add VitePWA plugin with manifest configuration in `packages/web/vite.config.ts`
+- [x] T006 [US1] Update vite.config.ts: Add VitePWA plugin with manifest configuration in `packages/web/vite.config.ts`
   - Import `VitePWA` from 'vite-plugin-pwa'
   - Add to plugins array with:
     - `registerType: 'autoUpdate'`
     - manifest: name, short_name, theme_color (#3b82f6), background_color (#ffffff), display: 'standalone'
     - icons: pwa-192x192.png, pwa-512x512.png
 
-- [ ] T007 [US1] Update index.html: Add PWA meta tags in `packages/web/index.html`
+- [x] T007 [US1] Update index.html: Add PWA meta tags in `packages/web/index.html`
   - `<meta name="theme-color" content="#3b82f6">`
   - `<meta name="apple-mobile-web-app-capable" content="yes">`
   - `<meta name="apple-mobile-web-app-status-bar-style" content="default">`
@@ -87,7 +87,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T009 [US2] Configure Workbox caching in vite.config.ts: Add workbox options to VitePWA config in `packages/web/vite.config.ts`
+- [x] T009 [US2] Configure Workbox caching in vite.config.ts: Add workbox options to VitePWA config in `packages/web/vite.config.ts`
   - `globPatterns: ['**/*.{js,css,html,ico,png,svg}']`
   - `cleanupOutdatedCaches: true`
 
