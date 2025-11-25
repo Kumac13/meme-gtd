@@ -15,6 +15,7 @@ interface CalendarViewProps {
   view: ViewType;
   selectedDate: string;
   onEventClick?: (eventId: string) => void;
+  onViewChange?: (view: ViewType) => void;
 }
 
 export default function CalendarView({
@@ -22,12 +23,19 @@ export default function CalendarView({
   view,
   selectedDate,
   onEventClick,
+  onViewChange,
 }: CalendarViewProps) {
   const viewMap = useMemo(() => ({
     month: 'month-grid',
     week: 'week',
     day: 'day',
   } as const), []);
+
+  const reverseViewMap: Record<string, ViewType> = {
+    'month-grid': 'month',
+    'week': 'week',
+    'day': 'day',
+  };
 
   const [calendarControls] = useState(() => createCalendarControlsPlugin());
 
@@ -42,10 +50,23 @@ export default function CalendarView({
     selectedDate: selectedDateTemporal,
     defaultView: viewMap[view],
     plugins: [calendarControls],
+    timezone: 'Asia/Tokyo',
+    weekOptions: {
+      gridHeight: 1400,
+    },
     callbacks: {
       onEventClick: (event) => {
         if (onEventClick) {
           onEventClick(String(event.id));
+        }
+      },
+      onRangeUpdate: () => {
+        if (onViewChange) {
+          const currentView = calendarControls.getView();
+          const mappedView = reverseViewMap[currentView];
+          if (mappedView && mappedView !== view) {
+            onViewChange(mappedView);
+          }
         }
       },
     },

@@ -9,7 +9,7 @@ const today = () => {
 
 export function useCalendarState() {
   const [state, setState] = useQueryStates({
-    view: parseAsStringEnum<CalendarView>(['month', 'week', 'day']).withDefault('month'),
+    view: parseAsStringEnum<CalendarView>(['month', 'week', 'day']).withDefault('month').withOptions({ clearOnDefault: false }),
     date: parseAsString.withDefault(today()),
     task: parseAsInteger,
   });

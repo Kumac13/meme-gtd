@@ -7,9 +7,10 @@ import KanbanCard from './KanbanCard';
 interface KanbanBoardProps {
   project: ProjectDetail;
   onProjectUpdate: (project: ProjectDetail) => void;
+  onItemClick?: (issueId: number, issueType: 'memo' | 'task') => void;
 }
 
-export default function KanbanBoard({ project, onProjectUpdate }: KanbanBoardProps) {
+export default function KanbanBoard({ project, onProjectUpdate, onItemClick }: KanbanBoardProps) {
   const [dragError, setDragError] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   // Column order: Documents first, then task status columns
@@ -149,6 +150,7 @@ export default function KanbanBoard({ project, onProjectUpdate }: KanbanBoardPro
               key={column}
               column={column}
               items={itemsByColumn[column] || []}
+              onItemClick={onItemClick}
             />
           ))}
         </div>
