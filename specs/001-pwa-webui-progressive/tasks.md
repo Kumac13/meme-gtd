@@ -68,7 +68,7 @@
   - `<link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png">`
   - Update favicon link to use `/favicon.svg`
 
-- [ ] T008 [US1] Build and verify: Run `pnpm build` in packages/web, confirm `dist/` contains:
+- [x] T008 [US1] Build and verify: Run `pnpm build` in packages/web, confirm `dist/` contains:
   - `sw.js` (Service Worker)
   - `manifest.webmanifest`
 
@@ -91,7 +91,7 @@
   - `globPatterns: ['**/*.{js,css,html,ico,png,svg}']`
   - `cleanupOutdatedCaches: true`
 
-- [ ] T010 [US2] Verify offline functionality:
+- [x] T010 [US2] Verify offline functionality:
   - Build the app (`pnpm build`)
   - Preview (`pnpm preview`)
   - Load app in browser
@@ -112,12 +112,12 @@
 
 ### Implementation for User Story 3
 
-- [ ] T011 [US3] Verify manifest splash screen config in vite.config.ts: Ensure manifest includes:
+- [x] T011 [US3] Verify manifest splash screen config in vite.config.ts: Ensure manifest includes:
   - `background_color: '#ffffff'` (スプラッシュ画面背景)
   - 512x512 icon (スプラッシュ画面で使用)
   - `name` (スプラッシュ画面に表示)
 
-- [ ] T012 [US3] Test splash screen on mobile device:
+- [x] T012 [US3] Test splash screen on mobile device:
   - Install app to home screen (iOS/Android)
   - Force close the app
   - Launch from home screen
@@ -131,26 +131,26 @@
 
 **Purpose**: 最終検証と品質確認
 
-- [ ] T013 [Polish] Run Lighthouse PWA audit:
+- [x] T013 [Polish] Run Lighthouse PWA audit:
   - Build and preview app
   - Open Chrome DevTools → Lighthouse → check "Progressive Web App"
   - Run audit and confirm "Installable" badge is green
   - Document any warnings
 
-- [ ] T014 [Polish] Test on iOS 26 device:
+- [x] T014 [Polish] Test on iOS 26 device:
   - Access app in Safari
   - Use "Add to Home Screen"
   - Verify standalone mode launch
   - Verify theme color in status bar
   - Test offline mode
 
-- [ ] T015 [Polish] Test on Android Chrome:
+- [x] T015 [Polish] Test on Android Chrome:
   - Access app in Chrome
   - Use "Add to Home Screen" or install prompt
   - Verify standalone mode launch
   - Test offline mode
 
-- [ ] T016 [Polish] Update package.json version and CHANGELOG if needed
+- [x] T016 [Polish] Update package.json version and CHANGELOG if needed
 
 ---
 
