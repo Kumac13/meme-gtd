@@ -44,6 +44,27 @@ export default function ListView() {
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'memo' | 'task' } | null>(null);
 
+  const handleItemClick = useCallback((id: number, type: 'memo' | 'task') => {
+    setSelectedItem({ id, type });
+  }, []);
+
+  const handlePanelClose = useCallback(() => {
+    setSelectedItem(null);
+  }, []);
+
+  const handleItemUpdated = useCallback(async () => {
+    // Refetch project to update list
+    try {
+      const response = await fetch(`/api/projects/${project.id}`);
+      if (response.ok) {
+        const updatedProject = await response.json();
+        setProject(updatedProject);
+      }
+    } catch (err) {
+      console.error('Error refetching project:', err);
+    }
+  }, [project.id, setProject]);
+
   useEffect(() => {
     async function fetchItems() {
       if (project.items.length === 0) {
@@ -81,27 +102,6 @@ export default function ListView() {
   if (loading) {
     return <LoadingState message="Loading items..." />;
   }
-
-  const handleItemClick = useCallback((id: number, type: 'memo' | 'task') => {
-    setSelectedItem({ id, type });
-  }, []);
-
-  const handlePanelClose = useCallback(() => {
-    setSelectedItem(null);
-  }, []);
-
-  const handleItemUpdated = useCallback(async () => {
-    // Refetch project to update list
-    try {
-      const response = await fetch(`/api/projects/${project.id}`);
-      if (response.ok) {
-        const updatedProject = await response.json();
-        setProject(updatedProject);
-      }
-    } catch (err) {
-      console.error('Error refetching project:', err);
-    }
-  }, [project.id, setProject]);
 
   if (tasks.length === 0 && memos.length === 0) {
     return <EmptyState message="No items in this project. Add tasks or memos to get started." />;
