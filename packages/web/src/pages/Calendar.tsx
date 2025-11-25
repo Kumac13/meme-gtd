@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useCalendarState } from '../hooks/useCalendarState';
 import CalendarView from '../components/calendar/CalendarView';
-import CalendarToolbar from '../components/calendar/CalendarToolbar';
 import { tasksToCalendarEvents, getDateRange } from '../utils/calendarMapper';
 import type { Task } from '../utils/calendarMapper';
 import LoadingState from '../components/LoadingState';
@@ -20,7 +19,7 @@ async function fetchTasks(scheduledFrom: string, scheduledTo: string): Promise<T
 }
 
 export default function Calendar() {
-  const { view, date, setView, setTaskId, goToToday, goToPrevious, goToNext } = useCalendarState();
+  const { view, date, setTaskId } = useCalendarState();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,14 +60,6 @@ export default function Calendar() {
 
   return (
     <div className="px-4 sm:px-0">
-      <CalendarToolbar
-        view={view}
-        onViewChange={setView}
-        onToday={goToToday}
-        onPrevious={goToPrevious}
-        onNext={goToNext}
-        currentDate={date}
-      />
       <CalendarView
         events={events}
         view={view}
