@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { IoSearch, IoClose } from 'react-icons/io5';
-import { parseSearchQuery, isValidStatus } from '../utils/queryParser';
+import { validateSearchQuery, type QueryValidationError } from '../utils/queryParser';
 
 interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  showStatusHint?: boolean;
   itemType?: 'task' | 'memo';
 }
 
@@ -23,50 +22,31 @@ export default function SearchInput({
   value,
   onChange,
   placeholder = 'Search tasks',
-  showStatusHint = true,
   itemType = 'task',
 }: SearchInputProps) {
   const [localValue, setLocalValue] = useState(value);
-  const [showHint, setShowHint] = useState(false);
-  const [showMemoWarning, setShowMemoWarning] = useState(false);
+  const [validationError, setValidationError] = useState<QueryValidationError | null>(null);
 
   // Sync local value when prop changes
   useEffect(() => {
     setLocalValue(value);
   }, [value]);
 
-  // Validate query and show hint for invalid syntax
+  // Validate query syntax
   useEffect(() => {
-    if (!localValue || localValue.trim() === '') {
-      setShowHint(false);
-      setShowMemoWarning(false);
-      return;
-    }
-
-    const parsed = parseSearchQuery(localValue);
-
-    // Show warning if status filter is used with memos
-    if (itemType === 'memo' && parsed.status) {
-      setShowMemoWarning(true);
-      setShowHint(false);
-      return;
-    } else {
-      setShowMemoWarning(false);
-    }
-
-    // Show hint if status is invalid (for tasks)
-    if (showStatusHint && parsed.status && !isValidStatus(parsed.status)) {
-      setShowHint(true);
-    } else {
-      setShowHint(false);
-    }
-  }, [localValue, showStatusHint, itemType]);
+    const error = validateSearchQuery(localValue, { itemType });
+    setValidationError(error);
+  }, [localValue, itemType]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalValue(e.target.value);
   };
 
   const handleSearch = () => {
+    // Block submission only for syntax/status errors, not warnings
+    if (validationError && validationError.type !== 'warning') {
+      return;
+    }
     onChange(localValue);
   };
 
@@ -105,21 +85,14 @@ export default function SearchInput({
         )}
       </div>
 
-      {/* Hint for invalid syntax - positioned absolutely to not affect layout */}
-      {showHint && (
-        <div className="absolute left-0 top-full mt-1 text-sm text-gray-600 bg-white border border-gray-200 rounded-md shadow-sm p-2 z-10">
-          Example: label:bug status:open
-          <br />
-          <span className="text-xs text-gray-500">
-            Valid statuses: inbox, open, next, waiting, scheduled, someday, done, canceled
-          </span>
-        </div>
-      )}
-
-      {/* Warning for status filter on memos */}
-      {showMemoWarning && (
-        <div className="absolute left-0 top-full mt-1 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md shadow-sm p-2 z-10">
-          Note: Status filters do not apply to memos
+      {/* Validation error/warning message */}
+      {validationError && (
+        <div className={`absolute left-0 top-full mt-1 text-sm rounded-md shadow-sm p-2 z-10 ${
+          validationError.type === 'warning'
+            ? 'text-amber-700 bg-amber-50 border border-amber-200'
+            : 'text-red-700 bg-red-50 border border-red-200'
+        }`}>
+          {validationError.message}
         </div>
       )}
     </div>

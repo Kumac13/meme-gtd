@@ -94,3 +94,52 @@ export function isValidStatus(status: string): boolean {
   const validStatuses = ['inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled'];
   return validStatuses.includes(status);
 }
+
+export interface QueryValidationError {
+  type: 'syntax' | 'status' | 'warning';
+  message: string;
+}
+
+export interface ValidateOptions {
+  itemType?: 'task' | 'memo';
+}
+
+/**
+ * Validate search query syntax and return errors if any
+ */
+export function validateSearchQuery(query: string, options: ValidateOptions = {}): QueryValidationError | null {
+  if (!query || query.trim() === '') {
+    return null;
+  }
+
+  // Check for common syntax errors: using = instead of :
+  const invalidSyntax = query.match(/\b(label|status)=([^\s]*)/i);
+  if (invalidSyntax) {
+    const keyword = invalidSyntax[1].toLowerCase();
+    const value = invalidSyntax[2];
+    return {
+      type: 'syntax',
+      message: `Invalid syntax: "${invalidSyntax[0]}". Use colon instead: ${keyword}:${value}`,
+    };
+  }
+
+  const parsed = parseSearchQuery(query);
+
+  // Warning for status filter on memos
+  if (options.itemType === 'memo' && parsed.status) {
+    return {
+      type: 'warning',
+      message: 'Note: Status filters do not apply to memos',
+    };
+  }
+
+  // Validate status value if present
+  if (parsed.status && !isValidStatus(parsed.status)) {
+    return {
+      type: 'status',
+      message: `Invalid status: "${parsed.status}". Valid: inbox, open, next, waiting, scheduled, someday, done, canceled`,
+    };
+  }
+
+  return null;
+}
