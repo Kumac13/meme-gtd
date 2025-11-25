@@ -147,12 +147,12 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
   }
 
   if (filters.labels && filters.labels.length > 0) {
-    const labelPlaceholders = filters.labels.map((_, i) => `@label${i} `).join(', ');
+    const labelPlaceholders = filters.labels.map((_, i) => `@label${i}`).join(', ');
     conditions.push(
       `id IN(SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name IN(${labelPlaceholders}))`
     );
     filters.labels.forEach((labelName, i) => {
-      params[`label${i} `] = labelName;
+      params[`label${i}`] = labelName;
     });
   }
 
@@ -231,7 +231,7 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
       );
     }
     if (filters.labels && filters.labels.length > 0) {
-      const labelPlaceholders = filters.labels.map((_, i) => `@label${i} `).join(', ');
+      const labelPlaceholders = filters.labels.map((_, i) => `@label${i}`).join(', ');
       searchConditions.push(
         `i.id IN(SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name IN(${labelPlaceholders}))`
       );
