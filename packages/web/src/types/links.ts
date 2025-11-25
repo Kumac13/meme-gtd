@@ -80,3 +80,22 @@ export interface DeleteConfirmationState {
   /** Whether delete confirmation prompt is showing */
   isConfirming: boolean;
 }
+
+/**
+ * Pending link - represents a link to be created with a new task
+ *
+ * Used in TaskForm to track links that will be created after
+ * the task is successfully created.
+ */
+export interface PendingLink {
+  /** Target issue ID to link to */
+  targetIssueId: number;
+  /** Type of relationship */
+  linkType: LinkType;
+  /** Target issue information (for display purposes) */
+  targetIssue?: {
+    id: number;
+    type: 'task' | 'memo';
+    title: string;
+  };
+}
