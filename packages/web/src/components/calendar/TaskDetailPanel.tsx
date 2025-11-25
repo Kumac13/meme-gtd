@@ -167,8 +167,6 @@ export function TaskDetailPanel({ taskId, onClose, onTaskUpdated }: TaskDetailPa
             <ItemDetail
               item={task}
               itemType="task"
-              basePath="/tasks"
-              returnFilters={null}
               onDelete={handleDelete}
               onBookmarkToggle={handleBookmarkToggle}
               onUpdate={handleUpdate}

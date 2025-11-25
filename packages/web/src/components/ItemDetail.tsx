@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import { TasksService } from '../api/services/TasksService';
 import EditableContent from './EditableContent';
@@ -8,7 +7,6 @@ import { ProjectsSection } from './ProjectsSection';
 import { LabelsSection } from './LabelsSection';
 import { ScheduleSection } from './ScheduleSection';
 import { StatusSelector } from './StatusSelector';
-import { createBackUrl } from '../utils/navigationHelpers';
 
 const TASK_STATUS_OPTIONS = [
   { value: 'inbox', label: 'Inbox' },
@@ -43,8 +41,6 @@ export type Item = BaseItem | Task;
 interface ItemDetailProps {
   item: Item;
   itemType: 'memo' | 'task';
-  basePath: string;
-  returnFilters?: string | null;
   onDelete: () => Promise<void>;
   onBookmarkToggle: () => Promise<void>;
   onUpdate: (updatedItem: Item) => void;
@@ -59,8 +55,6 @@ interface ItemDetailProps {
 export default function ItemDetail({
   item,
   itemType,
-  basePath,
-  returnFilters,
   onDelete,
   onBookmarkToggle,
   onUpdate,
@@ -99,23 +93,10 @@ export default function ItemDetail({
     fetchUpdatedItem();
   };
 
-  const backUrl = createBackUrl({
-    basePath,
-    returnFiltersEncoded: returnFilters,
-  });
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-2">
       {/* Header - Full width */}
       <div className="mb-4">
-        {mode === 'page' && (
-          <Link
-            to={backUrl}
-            className="text-github-green-600 hover:text-github-green-800 text-sm font-medium mb-4 inline-block"
-          >
-            ← Back to {itemType === 'memo' ? 'memos' : 'tasks'}
-          </Link>
-        )}
         <div className="flex items-start justify-between mb-3">
           {mode === 'page' && (
             <h1 className="text-3xl font-bold text-gray-900">

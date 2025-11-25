@@ -191,8 +191,6 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
             <ItemDetail
               item={item as Item}
               itemType={itemType}
-              basePath={basePath}
-              returnFilters={null}
               onDelete={handleDelete}
               onBookmarkToggle={handleBookmarkToggle}
               onUpdate={handleUpdate}
