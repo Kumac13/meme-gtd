@@ -119,15 +119,15 @@ description: "Task list for Calendar View Web UI feature implementation"
 
 ### Implementation for User Story 4
 
-- [ ] T032 [US4] Add mode prop ('page' | 'modal') to ItemDetail.tsx in packages/web/src/components/ItemDetail.tsx
-- [ ] T033 [US4] Add onClose prop to ItemDetail.tsx and hide back link in modal mode
-- [ ] T034 [US4] Create TaskDetailModal.tsx wrapper in packages/web/src/components/calendar/TaskDetailModal.tsx
-- [ ] T035 [US4] Style TaskDetailModal for right 1/3 panel layout (w-1/3, fixed right positioning)
-- [ ] T036 [US4] Implement tile click handler in CalendarView.tsx to set taskId in useCalendarState
-- [ ] T037 [US4] Render TaskDetailModal in Calendar.tsx when taskId is set
-- [ ] T038 [US4] Implement modal close on outside click in TaskDetailModal.tsx
-- [ ] T039 [US4] Handle task update events in Calendar.tsx to refetch and update calendar display
-- [ ] T040 [US4] Update calendar tile when task status changes to done (green) or other (white)
+- [x] T032 [US4] ~~Add mode prop ('page' | 'modal') to ItemDetail.tsx~~ (Skipped: ItemDetail used directly in panel wrapper)
+- [x] T033 [US4] ~~Add onClose prop to ItemDetail.tsx~~ (Skipped: Close handled by panel wrapper)
+- [x] T034 [US4] Create TaskDetailPanel.tsx wrapper in packages/web/src/components/calendar/TaskDetailPanel.tsx (uses ItemDetail)
+- [x] T035 [US4] Style TaskDetailPanel for right 1/3 panel layout (w-1/3, fixed right positioning)
+- [x] T036 [US4] Implement tile click handler in CalendarView.tsx to set taskId in useCalendarState
+- [x] T037 [US4] Render TaskDetailPanel in Calendar.tsx when taskId is set
+- [x] T038 [US4] Implement modal close on outside click in TaskDetailPanel.tsx
+- [x] T039 [US4] Handle task update events in Calendar.tsx to refetch and update calendar display
+- [x] T040 [US4] Update calendar tile when task status changes to done (green) or other (white)
 
 **Checkpoint**: Task editing from calendar should be fully functional - edits immediately reflected
 
@@ -147,7 +147,7 @@ description: "Task list for Calendar View Web UI feature implementation"
 - [x] T044 [US5] Test URL state restoration on Calendar.tsx mount (read from URL params)
 - [x] T045 [US5] Verify URL updates when view mode changes
 - [x] T046 [US5] Verify URL updates when date navigation occurs
-- [ ] T047 [US5] Verify URL updates when task modal opens/closes
+- [x] T047 [US5] Verify URL updates when task modal opens/closes
 
 **Checkpoint**: All state should round-trip through URL - bookmark any calendar state and restore perfectly
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useCalendarState } from '../hooks/useCalendarState';
 import CalendarView from '../components/calendar/CalendarView';
-import { TaskDetailModal } from '../components/calendar/TaskDetailModal';
+import { TaskDetailPanel } from '../components/calendar/TaskDetailPanel';
 import { tasksToCalendarEvents, getDateRange } from '../utils/calendarMapper';
 import type { Task } from '../utils/calendarMapper';
 import LoadingState from '../components/LoadingState';
@@ -85,7 +85,7 @@ export default function Calendar() {
         onEventClick={handleEventClick}
         onViewChange={setView}
       />
-      <TaskDetailModal
+      <TaskDetailPanel
         taskId={taskId}
         onClose={handleModalClose}
         onTaskUpdated={handleTaskUpdated}
