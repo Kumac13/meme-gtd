@@ -4,6 +4,7 @@ import { TasksService } from '../api/services/TasksService';
 import { MemosService } from '../api/services/MemosService';
 import { ProjectsService } from '../api/services/ProjectsService';
 import { LabelsService } from '../api/services/LabelsService';
+import { LinksService } from '../api/services/LinksService';
 import { validateTaskForm } from '../utils/validation';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
@@ -11,6 +12,8 @@ import { ScheduleInput } from './ScheduleInput';
 import { useRecentProjects } from '../hooks/useRecentProjects';
 import { useRecentLabels } from '../hooks/useRecentLabels';
 import { LabelBadge } from './LabelBadge';
+import TaskFormLinks from './TaskFormLinks';
+import type { PendingLink } from '../types/links';
 
 type TaskStatus = 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
 
@@ -18,9 +21,11 @@ interface TaskFormProps {
   initialTitle?: string;
   initialBodyMd?: string;
   initialStatus?: TaskStatus;
+  initialLinks?: PendingLink[];
   taskId?: number;
   fromMemoId?: number;
   mode: 'create' | 'edit';
+  onTaskCreated?: (taskId: number) => void;
 }
 
 interface Project {
@@ -48,9 +53,11 @@ export default function TaskForm({
   initialTitle = '',
   initialBodyMd = '',
   initialStatus = 'inbox',
+  initialLinks = [],
   taskId,
   fromMemoId,
   mode,
+  onTaskCreated,
 }: TaskFormProps) {
   const navigate = useNavigate();
   const [title, setTitle] = useState(initialTitle);
@@ -82,6 +89,8 @@ export default function TaskForm({
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [isProjectOpen, setIsProjectOpen] = useState(false);
   const [isLabelOpen, setIsLabelOpen] = useState(false);
+  const [isLinksOpen, setIsLinksOpen] = useState(initialLinks.length > 0);
+  const [pendingLinks, setPendingLinks] = useState<PendingLink[]>(initialLinks);
 
   const { addRecentProject, getRecentProjects } = useRecentProjects();
   const { addRecentLabel, getRecentLabels } = useRecentLabels();
@@ -164,7 +173,31 @@ export default function TaskForm({
           );
         }
 
-        navigate(`/tasks/${task.id}`);
+        // Create links
+        if (pendingLinks.length > 0) {
+          const linkResults = await Promise.allSettled(
+            pendingLinks.map(link =>
+              LinksService.createLink({
+                sourceIssueId: task.id,
+                targetIssueId: link.targetIssueId,
+                linkType: link.linkType,
+              })
+            )
+          );
+
+          // Check for any failed link creations
+          const failedLinks = linkResults.filter(result => result.status === 'rejected');
+          if (failedLinks.length > 0) {
+            console.warn(`Failed to create ${failedLinks.length} link(s):`, failedLinks);
+          }
+        }
+
+        // Call onTaskCreated callback if provided (for modal usage)
+        if (onTaskCreated) {
+          onTaskCreated(task.id);
+        } else {
+          navigate(`/tasks/${task.id}`);
+        }
       } else if (mode === 'edit' && taskId) {
         await TasksService.updateTask(taskId.toString(), {
           title,
@@ -234,6 +267,14 @@ export default function TaskForm({
       console.error('Failed to create label:', err);
       setError(err instanceof Error ? err.message : 'Failed to create label');
     }
+  };
+
+  const handleAddLink = (link: PendingLink) => {
+    setPendingLinks(prev => [...prev, link]);
+  };
+
+  const handleRemoveLink = (targetIssueId: number) => {
+    setPendingLinks(prev => prev.filter(l => l.targetIssueId !== targetIssueId));
   };
 
   const filteredProjects = allProjects.filter(p =>
@@ -692,6 +733,54 @@ export default function TaskForm({
                   </div>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Links Section - Only for create mode */}
+      {mode === 'create' && !fromMemoId && (
+        <div className="border-b border-gray-200 pb-4">
+          <button
+            type="button"
+            onClick={() => setIsLinksOpen(!isLinksOpen)}
+            className="flex items-center justify-between w-full text-left mb-2 group"
+          >
+            <label className="block text-sm font-medium text-gray-700 cursor-pointer group-hover:text-gray-900">
+              Links
+              {pendingLinks.length > 0 && (
+                <span className="ml-2 text-xs text-gray-500">
+                  ({pendingLinks.length})
+                </span>
+              )}
+            </label>
+            <span className="text-gray-400 group-hover:text-gray-600">
+              {isLinksOpen ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              )}
+            </span>
+          </button>
+
+          {isLinksOpen && (
+            <div className="mt-2">
+              <TaskFormLinks
+                links={pendingLinks}
+                onAdd={handleAddLink}
+                onRemove={handleRemoveLink}
+                disabled={submitting}
+              />
+            </div>
+          )}
+
+          {!isLinksOpen && pendingLinks.length > 0 && (
+            <div className="text-sm text-gray-600 mt-1">
+              {pendingLinks.length} link(s) configured
             </div>
           )}
         </div>
