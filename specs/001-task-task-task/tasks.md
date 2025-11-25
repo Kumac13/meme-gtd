@@ -48,7 +48,7 @@ export interface PendingLink {
 
 **⚠️ CRITICAL**: User Story 1, 2 はこのフェーズ完了後に開始可能
 
-- [ ] T002 [Foundation] `packages/web/src/components/TaskFormLinks.tsx` を新規作成
+- [x] T002 [Foundation] `packages/web/src/components/TaskFormLinks.tsx` を新規作成
 
   - Props: `links: PendingLink[]`, `onAdd`, `onRemove`
   - リンク一覧表示（削除ボタン付き）
