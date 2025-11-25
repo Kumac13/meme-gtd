@@ -111,7 +111,6 @@ export default function ItemDetail({
                 options={TASK_STATUS_OPTIONS}
               />
             )}
-            {customActions}
             <button
               onClick={onBookmarkToggle}
               disabled={bookmarking}
@@ -128,6 +127,7 @@ export default function ItemDetail({
                 </svg>
               )}
             </button>
+            {customActions}
           </div>
         </div>
       </div>
