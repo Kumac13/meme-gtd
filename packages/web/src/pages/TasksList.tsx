@@ -14,6 +14,7 @@ import {
   updateStatusParam,
   updateBookmarkedParam,
 } from '../utils/urlFilterHelpers';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 interface Task {
   id: number;
@@ -45,6 +46,9 @@ export default function TasksList() {
   const { filters, actions } = useUrlFilters();
   const statusFilter = validateStatus(searchParams.get('status'));
   const bookmarkFilter = validateBookmarked(searchParams.get('bookmarked'));
+
+  // Set document title for tasks list
+  useDocumentTitle('Tasks');
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);

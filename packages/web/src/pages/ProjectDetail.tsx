@@ -8,6 +8,7 @@ import EditableContent from '../components/EditableContent';
 import { ProjectScheduleSection } from '../components/ProjectScheduleSection';
 import { StatusSelector } from '../components/StatusSelector';
 import { createBackUrl } from '../utils/navigationHelpers';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 const PROJECT_STATUS_OPTIONS = [
   { value: 'planned', label: 'Planned' },
@@ -27,6 +28,9 @@ export default function ProjectDetail() {
   const [project, setProject] = useState<ProjectDetailType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Set document title based on project name
+  useDocumentTitle(project?.name);
 
   useEffect(() => {
     async function fetchProject() {

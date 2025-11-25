@@ -4,6 +4,7 @@ import { MemosService } from '../api/services/MemosService';
 import ItemDetail, { type Item } from '../components/ItemDetail';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
+import { useDocumentTitle, truncateForTitle } from '../hooks/useDocumentTitle';
 
 interface Memo {
   id: number;
@@ -24,6 +25,10 @@ export default function MemoDetail() {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
+
+  // Set document title based on memo body preview (memos don't have titles)
+  const titleText = memo?.bodyMd ? truncateForTitle(memo.bodyMd) : null;
+  useDocumentTitle(titleText);
 
   useEffect(() => {
     async function fetchMemo() {
