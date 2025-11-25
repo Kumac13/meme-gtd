@@ -19,7 +19,7 @@ async function fetchTasks(scheduledFrom: string, scheduledTo: string): Promise<T
 }
 
 export default function Calendar() {
-  const { view, date, setTaskId } = useCalendarState();
+  const { view, date, setTaskId, setView } = useCalendarState();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +65,7 @@ export default function Calendar() {
         view={view}
         selectedDate={date}
         onEventClick={handleEventClick}
+        onViewChange={setView}
       />
     </div>
   );

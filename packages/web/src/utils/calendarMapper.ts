@@ -21,7 +21,7 @@ export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
   let start: Temporal.PlainDate | Temporal.ZonedDateTime;
   let end: Temporal.PlainDate | Temporal.ZonedDateTime;
 
-  const timezone = Temporal.Now.timeZoneId();
+  const timezone = 'Asia/Tokyo';
 
   if (task.startTime) {
     // Task has a specific time - use ZonedDateTime

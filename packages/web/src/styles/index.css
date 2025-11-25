@@ -10,8 +10,21 @@
 /* Calendar view styling */
 .sx-react-calendar-wrapper {
   width: 100%;
-  height: 700px;
-  max-height: 80vh;
+  height: calc(100vh - 140px);
+}
+
+/* Calendar header layout */
+.sx__calendar-header {
+  flex-wrap: nowrap;
+}
+
+.sx__calendar-header-content {
+  flex-wrap: nowrap;
+}
+
+/* Minimum event height: 30min equivalent for readability (gridHeight 1400 / 24h / 2 = ~29px) */
+.sx__time-grid-event {
+  min-height: 29px !important;
 }
 
 /* Task status colors for calendar events */
