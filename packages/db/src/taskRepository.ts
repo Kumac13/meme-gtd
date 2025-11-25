@@ -39,6 +39,8 @@ export interface ListTaskFilters {
   limit?: number;
   order?: 'asc' | 'desc';
   isBookmarked?: boolean;
+  scheduledFrom?: string;  // Filter tasks where scheduled_on >= this date (YYYY-MM-DD)
+  scheduledTo?: string;    // Filter tasks where scheduled_on <= this date (YYYY-MM-DD)
 }
 
 const taskRowToTask = (row: any): Task => ({
@@ -159,6 +161,17 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
     params.isBookmarked = filters.isBookmarked ? 1 : 0;
   }
 
+  // Date range filters for calendar view
+  if (filters.scheduledFrom) {
+    conditions.push('scheduled_on >= @scheduledFrom');
+    params.scheduledFrom = filters.scheduledFrom;
+  }
+
+  if (filters.scheduledTo) {
+    conditions.push('scheduled_on <= @scheduledTo');
+    params.scheduledTo = filters.scheduledTo;
+  }
+
   let orderBy = 'updated_at DESC';
   if (filters.order === 'asc') {
     orderBy = 'updated_at ASC';
@@ -225,6 +238,13 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
     }
     if (filters.isBookmarked !== undefined) {
       searchConditions.push('i.is_bookmarked = @isBookmarked');
+    }
+    // Date range filters for calendar view (also apply to search)
+    if (filters.scheduledFrom) {
+      searchConditions.push('i.scheduled_on >= @scheduledFrom');
+    }
+    if (filters.scheduledTo) {
+      searchConditions.push('i.scheduled_on <= @scheduledTo');
     }
     sql = `
       SELECT i.*,

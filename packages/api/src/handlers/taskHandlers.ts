@@ -35,12 +35,19 @@ export async function createTaskHandler(
  */
 export async function listTasksHandler(
   request: FastifyRequest<{
-    Querystring: { status?: string; bookmarked?: string; label?: string; search?: string };
+    Querystring: {
+      status?: string;
+      bookmarked?: string;
+      label?: string;
+      search?: string;
+      scheduledFrom?: string;
+      scheduledTo?: string;
+    };
   }>,
   reply: FastifyReply
 ) {
   const taskService = new TaskService({ db: request.server.db });
-  const { status, bookmarked, label, search } = request.query;
+  const { status, bookmarked, label, search, scheduledFrom, scheduledTo } = request.query;
 
   const filters: any = {};
   if (status) {
@@ -54,6 +61,12 @@ export async function listTasksHandler(
   }
   if (search) {
     filters.search = search;
+  }
+  if (scheduledFrom) {
+    filters.scheduledFrom = scheduledFrom;
+  }
+  if (scheduledTo) {
+    filters.scheduledTo = scheduledTo;
   }
 
   try {

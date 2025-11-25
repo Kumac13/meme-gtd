@@ -101,6 +101,8 @@ export const TaskQuerySchema = z.object({
   bookmarked: z.enum(['true', 'false']).optional().describe('Filter by bookmark status'),
   label: z.string().optional().describe('Filter by label name(s). Supports comma-separated values for OR logic (e.g., bug,enhancement)'),
   search: z.string().optional().describe('Search tasks by title using free-text partial matching'),
+  scheduledFrom: z.string().date().optional().describe('Filter tasks where scheduled_on >= this date (YYYY-MM-DD)'),
+  scheduledTo: z.string().date().optional().describe('Filter tasks where scheduled_on <= this date (YYYY-MM-DD)'),
 });
 
 export type TaskQuery = z.infer<typeof TaskQuerySchema>;
