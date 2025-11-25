@@ -5,6 +5,7 @@ import ItemDetail, { type Item } from '../components/ItemDetail';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import CreateTaskModal from '../components/CreateTaskModal';
+import { useDocumentTitle, truncateForTitle } from '../hooks/useDocumentTitle';
 
 interface Task {
   id: number;
@@ -28,6 +29,10 @@ export default function TaskDetail() {
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // Set document title based on task title or body preview
+  const titleText = task?.title || (task?.bodyMd ? truncateForTitle(task.bodyMd) : null);
+  useDocumentTitle(titleText);
 
   useEffect(() => {
     async function fetchTask() {

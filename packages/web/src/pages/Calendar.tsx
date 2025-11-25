@@ -6,6 +6,7 @@ import { tasksToCalendarEvents, getDateRange } from '../utils/calendarMapper';
 import type { Task } from '../utils/calendarMapper';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 async function fetchTasks(scheduledFrom: string, scheduledTo: string): Promise<Task[]> {
   const params = new URLSearchParams({
@@ -24,6 +25,9 @@ export default function Calendar() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Set document title for calendar
+  useDocumentTitle('Calendar');
 
   const dateRange = useMemo(() => getDateRange(date, view), [date, view]);
 

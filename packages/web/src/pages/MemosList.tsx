@@ -9,6 +9,7 @@ import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
 import { useUrlFilters } from '../hooks/useUrlFilters';
 import { validateBookmarked, updateBookmarkedParam } from '../utils/urlFilterHelpers';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 interface Memo {
   id: number;
@@ -26,6 +27,9 @@ export default function MemosList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { filters, actions } = useUrlFilters();
   const bookmarkFilter = validateBookmarked(searchParams.get('bookmarked'));
+
+  // Set document title for memos list
+  useDocumentTitle('Memos');
 
   const [memos, setMemos] = useState<Memo[]>([]);
   const [loading, setLoading] = useState(true);

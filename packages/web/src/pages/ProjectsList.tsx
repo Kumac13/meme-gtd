@@ -6,6 +6,7 @@ import FilterBar from '../components/FilterBar';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 interface Project {
   id: number;
@@ -31,6 +32,9 @@ export default function ProjectsList() {
   const statusFilter = ['all', 'planned', 'active', 'paused', 'done', 'canceled'].includes(statusParam)
     ? statusParam
     : 'active';
+
+  // Set document title for projects list
+  useDocumentTitle('Projects');
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
