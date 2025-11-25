@@ -16,6 +16,7 @@ import ProjectDetail from './pages/ProjectDetail';
 import KanbanView from './pages/KanbanView';
 import ListView from './pages/ListView';
 import Calendar from './pages/Calendar';
+import ProjectDefaultRedirect from './components/ProjectDefaultRedirect';
 
 function App() {
   return (
@@ -36,7 +37,7 @@ function App() {
               <Route path="projects" element={<ProjectsList />} />
               <Route path="projects/new" element={<ProjectNew />} />
               <Route path="projects/:id" element={<ProjectDetail />}>
-                <Route index element={<Navigate to="kanban" replace />} />
+                <Route index element={<ProjectDefaultRedirect />} />
                 <Route path="kanban" element={<KanbanView />} />
                 <Route path="list" element={<ListView />} />
               </Route>

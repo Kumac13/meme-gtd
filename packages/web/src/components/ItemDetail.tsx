@@ -97,13 +97,14 @@ export default function ItemDetail({
     <div className="max-w-7xl mx-auto px-4 py-2">
       {/* Header - Full width */}
       <div className="mb-4">
-        <div className="flex items-start justify-between mb-3">
+        {/* Mobile: stack vertically, Desktop: side by side */}
+        <div className={`flex flex-col gap-3 mb-3 ${mode === 'page' ? 'sm:flex-row sm:items-start sm:justify-between' : ''}`}>
           {mode === 'page' && (
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
               {item.title || `${itemType === 'memo' ? 'Memo' : 'Task'} #${item.id}`}
             </h1>
           )}
-          <div className={`flex items-center gap-2 ${mode === 'panel' ? 'w-full justify-end' : ''}`}>
+          <div className={`flex items-center gap-2 flex-wrap justify-end ${mode === 'panel' ? 'w-full' : 'sm:flex-nowrap'}`}>
             {itemType === 'task' && 'status' in item && onStatusChange && (
               <StatusSelector
                 value={item.status || 'inbox'}
@@ -111,7 +112,6 @@ export default function ItemDetail({
                 options={TASK_STATUS_OPTIONS}
               />
             )}
-            {customActions}
             <button
               onClick={onBookmarkToggle}
               disabled={bookmarking}
@@ -128,6 +128,7 @@ export default function ItemDetail({
                 </svg>
               )}
             </button>
+            {customActions}
           </div>
         </div>
       </div>

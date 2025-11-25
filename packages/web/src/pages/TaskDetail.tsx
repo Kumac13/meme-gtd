@@ -4,6 +4,7 @@ import { TasksService } from '../api/services/TasksService';
 import ItemDetail, { type Item } from '../components/ItemDetail';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
+import CreateTaskModal from '../components/CreateTaskModal';
 
 interface Task {
   id: number;
@@ -26,6 +27,7 @@ export default function TaskDetail() {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     async function fetchTask() {
@@ -110,16 +112,42 @@ export default function TaskDetail() {
     }
   };
 
+  const handleOpenCreateModal = () => setIsCreateModalOpen(true);
+  const handleCloseCreateModal = () => setIsCreateModalOpen(false);
+  const handleTaskCreated = (newTaskId: number) => {
+    // Navigate to the newly created task
+    navigate(`/tasks/${newTaskId}`);
+  };
+
+  // Custom action button for creating new task
+  const newTaskButton = (
+    <button
+      onClick={handleOpenCreateModal}
+      className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500"
+    >
+      New Task
+    </button>
+  );
+
   return (
-    <ItemDetail
-      item={task}
-      itemType="task"
-      onDelete={handleDelete}
-      onBookmarkToggle={handleBookmarkToggle}
-      onUpdate={handleUpdate}
-      onStatusChange={handleStatusChange}
-      deleting={deleting}
-      bookmarking={bookmarking}
-    />
+    <>
+      <ItemDetail
+        item={task}
+        itemType="task"
+        onDelete={handleDelete}
+        onBookmarkToggle={handleBookmarkToggle}
+        onUpdate={handleUpdate}
+        onStatusChange={handleStatusChange}
+        deleting={deleting}
+        bookmarking={bookmarking}
+        customActions={newTaskButton}
+      />
+      <CreateTaskModal
+        isOpen={isCreateModalOpen}
+        onClose={handleCloseCreateModal}
+        sourceTask={{ id: task.id, title: task.title || 'Untitled Task' }}
+        onTaskCreated={handleTaskCreated}
+      />
+    </>
   );
 }
