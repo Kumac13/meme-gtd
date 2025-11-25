@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useCalendarState } from '../hooks/useCalendarState';
 import CalendarView from '../components/calendar/CalendarView';
+import { TaskDetailModal } from '../components/calendar/TaskDetailModal';
 import { tasksToCalendarEvents, getDateRange } from '../utils/calendarMapper';
 import type { Task } from '../utils/calendarMapper';
 import LoadingState from '../components/LoadingState';
@@ -19,7 +20,7 @@ async function fetchTasks(scheduledFrom: string, scheduledTo: string): Promise<T
 }
 
 export default function Calendar() {
-  const { view, date, setTaskId, setView } = useCalendarState();
+  const { view, date, taskId, setTaskId, setView } = useCalendarState();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +51,23 @@ export default function Calendar() {
     setTaskId(Number(eventId));
   };
 
+  const handleModalClose = () => {
+    setTaskId(null);
+  };
+
+  const handleTaskUpdated = useCallback(() => {
+    // Refetch tasks when task is updated in modal
+    const loadTasks = async () => {
+      try {
+        const fetchedTasks = await fetchTasks(dateRange.from, dateRange.to);
+        setTasks(fetchedTasks);
+      } catch (err) {
+        console.error('Error refetching tasks:', err);
+      }
+    };
+    loadTasks();
+  }, [dateRange.from, dateRange.to]);
+
   if (loading) {
     return <LoadingState message="Loading calendar..." />;
   }
@@ -66,6 +84,11 @@ export default function Calendar() {
         selectedDate={date}
         onEventClick={handleEventClick}
         onViewChange={setView}
+      />
+      <TaskDetailModal
+        taskId={taskId}
+        onClose={handleModalClose}
+        onTaskUpdated={handleTaskUpdated}
       />
     </div>
   );
