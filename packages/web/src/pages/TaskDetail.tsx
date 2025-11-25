@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
 import ItemDetail, { type Item } from '../components/ItemDetail';
 import LoadingState from '../components/LoadingState';
@@ -20,8 +20,6 @@ interface Task {
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const returnFiltersEncoded = searchParams.get('returnFilters');
 
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
@@ -116,8 +114,6 @@ export default function TaskDetail() {
     <ItemDetail
       item={task}
       itemType="task"
-      basePath="/tasks"
-      returnFilters={returnFiltersEncoded}
       onDelete={handleDelete}
       onBookmarkToggle={handleBookmarkToggle}
       onUpdate={handleUpdate}

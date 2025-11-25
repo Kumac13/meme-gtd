@@ -5,9 +5,10 @@ import KanbanCard from './KanbanCard';
 interface KanbanColumnProps {
   column: string;
   items: ProjectItemWithIssue[];
+  onItemClick?: (issueId: number, issueType: 'memo' | 'task') => void;
 }
 
-export default function KanbanColumn({ column, items }: KanbanColumnProps) {
+export default function KanbanColumn({ column, items, onItemClick }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: column,
     data: {
@@ -39,7 +40,7 @@ export default function KanbanColumn({ column, items }: KanbanColumnProps) {
             No items
           </p>
         ) : (
-          items.map(item => <KanbanCard key={item.id} item={item} />)
+          items.map(item => <KanbanCard key={item.id} item={item} onItemClick={onItemClick} />)
         )}
       </div>
     </div>

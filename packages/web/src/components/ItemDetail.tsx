@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import { TasksService } from '../api/services/TasksService';
 import EditableContent from './EditableContent';
@@ -7,9 +6,7 @@ import LinkSection from './LinkSection';
 import { ProjectsSection } from './ProjectsSection';
 import { LabelsSection } from './LabelsSection';
 import { ScheduleSection } from './ScheduleSection';
-import { LabelBadge } from './LabelBadge';
 import { StatusSelector } from './StatusSelector';
-import { createBackUrl } from '../utils/navigationHelpers';
 
 const TASK_STATUS_OPTIONS = [
   { value: 'inbox', label: 'Inbox' },
@@ -44,8 +41,6 @@ export type Item = BaseItem | Task;
 interface ItemDetailProps {
   item: Item;
   itemType: 'memo' | 'task';
-  basePath: string;
-  returnFilters?: string | null;
   onDelete: () => Promise<void>;
   onBookmarkToggle: () => Promise<void>;
   onUpdate: (updatedItem: Item) => void;
@@ -53,19 +48,20 @@ interface ItemDetailProps {
   deleting: boolean;
   bookmarking: boolean;
   customActions?: React.ReactNode;
+  /** 'page' shows full layout with sidebar, 'panel' hides sidebar for compact view */
+  mode?: 'page' | 'panel';
 }
 
 export default function ItemDetail({
   item,
   itemType,
-  basePath,
-  returnFilters,
   onDelete,
   onBookmarkToggle,
   onUpdate,
   onStatusChange,
   bookmarking,
   customActions,
+  mode = 'page',
 }: ItemDetailProps) {
 
   const handleUpdateBody = async (newBody: string, newTitle?: string) => {
@@ -97,26 +93,17 @@ export default function ItemDetail({
     fetchUpdatedItem();
   };
 
-  const backUrl = createBackUrl({
-    basePath,
-    returnFiltersEncoded: returnFilters,
-  });
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-2">
       {/* Header - Full width */}
       <div className="mb-4">
-        <Link
-          to={backUrl}
-          className="text-github-green-600 hover:text-github-green-800 text-sm font-medium mb-4 inline-block"
-        >
-          ← Back to {itemType === 'memo' ? 'memos' : 'tasks'}
-        </Link>
         <div className="flex items-start justify-between mb-3">
-          <h1 className="text-3xl font-bold text-gray-900">
-            {item.title || `${itemType === 'memo' ? 'Memo' : 'Task'} #${item.id}`}
-          </h1>
-          <div className="flex items-center gap-2">
+          {mode === 'page' && (
+            <h1 className="text-3xl font-bold text-gray-900">
+              {item.title || `${itemType === 'memo' ? 'Memo' : 'Task'} #${item.id}`}
+            </h1>
+          )}
+          <div className={`flex items-center gap-2 ${mode === 'panel' ? 'w-full justify-end' : ''}`}>
             {itemType === 'task' && 'status' in item && onStatusChange && (
               <StatusSelector
                 value={item.status || 'inbox'}
@@ -143,17 +130,10 @@ export default function ItemDetail({
             </button>
           </div>
         </div>
-        {item.labels && item.labels.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            {item.labels.map((label, idx) => (
-              <LabelBadge key={idx} name={label} />
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* Two column layout */}
-      <div className="flex gap-6 flex-col lg:flex-row lg:items-start">
+      {/* Two column layout - panel mode forces single column like mobile */}
+      <div className={`flex gap-6 flex-col ${mode === 'page' ? 'lg:flex-row lg:items-start' : ''}`}>
         {/* Main content (left column) */}
         <div className="flex-1 min-w-0">
           {/* Body content */}
@@ -174,8 +154,8 @@ export default function ItemDetail({
           <CommentSection itemId={item.id} itemType={itemType} />
         </div>
 
-        {/* Sidebar (right column) */}
-        <div className="w-full lg:w-80 flex-shrink-0 space-y-6">
+        {/* Sidebar (right column on page, bottom on panel) */}
+        <div className={`w-full flex-shrink-0 space-y-6 ${mode === 'page' ? 'lg:w-80' : ''}`}>
           {/* Projects Section */}
           <ProjectsSection itemId={item.id} itemType={itemType} />
 
