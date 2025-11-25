@@ -28,10 +28,12 @@ export default function CalendarView({
     day: 'day',
   } as const), []);
 
+  // Schedule-X types expect Temporal API types, but string dates work at runtime
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const calendar = useCalendarApp({
     views: [createViewMonthGrid(), createViewWeek(), createViewDay()],
-    events,
-    selectedDate,
+    events: events as any,
+    selectedDate: selectedDate as any,
     defaultView: viewMap[view],
     callbacks: {
       onEventClick: (event) => {
