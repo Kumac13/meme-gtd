@@ -2,10 +2,93 @@
  * Markdown rendering utilities for meme-gtd Web UI
  */
 
+import { useState, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import type { Components } from 'react-markdown';
+
+/**
+ * Recursively extract plain text from React children
+ * Used to get code content for clipboard copy
+ */
+function extractTextFromChildren(children: ReactNode): string {
+  if (typeof children === 'string') return children;
+  if (typeof children === 'number') return String(children);
+  if (children == null) return '';
+  if (Array.isArray(children)) {
+    return children.map(extractTextFromChildren).join('');
+  }
+  if (typeof children === 'object' && 'props' in children) {
+    const props = children.props as { children?: ReactNode };
+    if (props.children) {
+      return extractTextFromChildren(props.children);
+    }
+  }
+  return '';
+}
+
+/**
+ * Clipboard icon (copy state)
+ */
+function ClipboardIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Checkmark icon (copied state)
+ */
+function CheckIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}
+
+/**
+ * Code block wrapper with copy button
+ * Wraps fenced code blocks with a copy-to-clipboard button
+ */
+function CodeBlockWithCopy({ children }: { children: ReactNode }) {
+  const [copied, setCopied] = useState(false);
+  const codeText = extractTextFromChildren(children).replace(/\n$/, ''); // Remove trailing newline
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(codeText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+    }
+  };
+
+  return (
+    <div className="relative mb-4">
+      <button
+        onClick={handleCopy}
+        className="absolute top-2 right-2 p-1.5 rounded bg-gray-700/80 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors z-10"
+        title={copied ? 'Copied!' : 'Copy code'}
+        type="button"
+      >
+        {copied ? <CheckIcon /> : <ClipboardIcon />}
+      </button>
+      <pre className="bg-gray-900 text-gray-100 py-3 px-4 pr-12 rounded-lg overflow-x-auto text-sm font-mono">
+        <code className="text-gray-100 text-sm font-mono">{codeText}</code>
+      </pre>
+    </div>
+  );
+}
 
 /**
  * Default markdown components configuration with Tailwind CSS styling
@@ -53,7 +136,7 @@ const defaultComponents: Components = {
     </a>
   ),
 
-  // Code blocks
+  // Code blocks (inline only - fenced code blocks are handled by pre component)
   code: ({ className, children }) => {
     const isInline = !className;
     if (isInline) {
@@ -63,8 +146,9 @@ const defaultComponents: Components = {
         </code>
       );
     }
+    // Fenced code block - styles are applied by parent pre/CodeBlockWithCopy
     return (
-      <code className="block bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono mb-4">
+      <code className="text-gray-100 text-sm font-mono">
         {children}
       </code>
     );
@@ -99,6 +183,9 @@ const defaultComponents: Components = {
 
   // Horizontal rule
   hr: () => <hr className="my-6 border-gray-300" />,
+
+  // Pre element wrapper for fenced code blocks with copy button
+  pre: ({ children }) => <CodeBlockWithCopy>{children}</CodeBlockWithCopy>,
 };
 
 export interface MarkdownRendererProps {
