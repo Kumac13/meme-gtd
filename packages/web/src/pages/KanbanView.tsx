@@ -36,7 +36,9 @@ export default function KanbanView() {
   }, [project.id, setProject]);
 
   if (!project.items || project.items.length === 0) {
-    return <EmptyState message="No items in this project. Add tasks or memos to get started." />;
+    return (
+      <EmptyState message="No items in this project. Add tasks or memos to get started." />
+    );
   }
 
   return (

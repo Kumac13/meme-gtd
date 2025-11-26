@@ -26,6 +26,12 @@ interface TaskFormProps {
   fromMemoId?: number;
   mode: 'create' | 'edit';
   onTaskCreated?: (taskId: number) => void;
+  /** Pre-select this project when the form loads */
+  initialProjectId?: number;
+  /** This project cannot be deselected (locked) */
+  lockedProjectId?: number;
+  /** Callback when cancel is clicked (for modal usage) */
+  onCancel?: () => void;
 }
 
 interface Project {
@@ -58,6 +64,9 @@ export default function TaskForm({
   fromMemoId,
   mode,
   onTaskCreated,
+  initialProjectId,
+  lockedProjectId,
+  onCancel,
 }: TaskFormProps) {
   const navigate = useNavigate();
   const [title, setTitle] = useState(initialTitle);
@@ -77,7 +86,9 @@ export default function TaskForm({
   });
 
   // Project/Label state
-  const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
+  const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>(
+    initialProjectId ? [initialProjectId] : []
+  );
   const [selectedLabelIds, setSelectedLabelIds] = useState<number[]>([]);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allLabels, setAllLabels] = useState<Label[]>([]);
@@ -215,6 +226,12 @@ export default function TaskForm({
   };
 
   const handleCancel = () => {
+    // If onCancel callback is provided (modal usage), use it
+    if (onCancel) {
+      onCancel();
+      return;
+    }
+    // Otherwise, use default navigation behavior
     if (mode === 'edit' && taskId) {
       navigate(`/tasks/${taskId}`);
     } else {
@@ -230,6 +247,10 @@ export default function TaskForm({
   }, { disabled: submitting });
 
   const handleToggleProject = (projectId: number) => {
+    // Prevent deselecting the locked project
+    if (lockedProjectId && projectId === lockedProjectId && selectedProjectIds.includes(projectId)) {
+      return;
+    }
     if (selectedProjectIds.includes(projectId)) {
       setSelectedProjectIds(selectedProjectIds.filter(id => id !== projectId));
     } else {
@@ -466,16 +487,21 @@ export default function TaskForm({
             <div className="mb-2 flex flex-wrap gap-2">
               {selectedProjectIds.map(id => {
                 const project = allProjects.find(p => p.id === id);
+                const isLocked = lockedProjectId === id;
                 return project ? (
-                  <span key={id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
+                  <span key={id} className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${isLocked ? 'bg-github-green-100 text-github-green-800' : 'bg-gray-100 text-gray-800'}`}>
                     {project.name}
-                    <button
-                      type="button"
-                      onClick={() => handleToggleProject(id)}
-                      className="ml-1.5 inline-flex items-center justify-center hover:text-gray-600"
-                    >
-                      ×
-                    </button>
+                    {isLocked ? (
+                      <span className="ml-1.5 text-github-green-600" title="This project cannot be removed">✓</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleProject(id)}
+                        className="ml-1.5 inline-flex items-center justify-center hover:text-gray-600"
+                      >
+                        ×
+                      </button>
+                    )}
                   </span>
                 ) : null;
               })}
@@ -505,18 +531,22 @@ export default function TaskForm({
                     <div className="mb-4">
                       <h4 className="text-xs font-semibold text-gray-500 uppercase px-2 mb-2">Recent</h4>
                       <div className="space-y-1">
-                        {recentProjects.map(project => (
-                          <label key={project.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer">
+                        {recentProjects.map(project => {
+                          const isLocked = lockedProjectId === project.id;
+                          return (
+                          <label key={project.id} className={`flex items-center gap-2 px-2 py-1.5 rounded ${isLocked ? 'bg-gray-50 cursor-not-allowed' : 'hover:bg-gray-50 cursor-pointer'}`}>
                             <input
                               type="checkbox"
                               checked={selectedProjectIds.includes(project.id)}
                               onChange={() => handleToggleProject(project.id)}
+                              disabled={isLocked}
                               style={{ accentColor: '#16a34a', colorScheme: 'light' }}
                               className="w-4 h-4 rounded border-gray-300"
                             />
                             <span className="text-sm text-gray-900 truncate">{project.name}</span>
+                            {isLocked && <span className="text-xs text-gray-400">(locked)</span>}
                           </label>
-                        ))}
+                        );})}
                       </div>
                     </div>
                   )}
@@ -530,18 +560,22 @@ export default function TaskForm({
                           {searchProjectQuery.trim() ? 'No projects match your search' : 'No projects available'}
                         </div>
                       ) : (
-                        filteredProjects.map(project => (
-                          <label key={project.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer">
+                        filteredProjects.map(project => {
+                          const isLocked = lockedProjectId === project.id;
+                          return (
+                          <label key={project.id} className={`flex items-center gap-2 px-2 py-1.5 rounded ${isLocked ? 'bg-gray-50 cursor-not-allowed' : 'hover:bg-gray-50 cursor-pointer'}`}>
                             <input
                               type="checkbox"
                               checked={selectedProjectIds.includes(project.id)}
                               onChange={() => handleToggleProject(project.id)}
+                              disabled={isLocked}
                               style={{ accentColor: '#16a34a', colorScheme: 'light' }}
                               className="w-4 h-4 rounded border-gray-300"
                             />
                             <span className="text-sm text-gray-900 truncate">{project.name}</span>
+                            {isLocked && <span className="text-xs text-gray-400">(locked)</span>}
                           </label>
-                        ))
+                        );})
                       )}
                     </div>
                   </div>
