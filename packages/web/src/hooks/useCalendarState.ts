@@ -4,7 +4,11 @@ export type CalendarView = 'month' | 'week' | 'day';
 
 const today = () => {
   const now = new Date();
-  return now.toISOString().split('T')[0];
+  // Use local date components to avoid UTC timezone issues
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 export function useCalendarState() {
@@ -14,8 +18,8 @@ export function useCalendarState() {
     task: parseAsInteger,
   });
 
-  const setView = (view: CalendarView) => {
-    setState({ view });
+  const setView = (newView: CalendarView) => {
+    setState({ view: newView });
   };
 
   const setDate = (date: string) => {
@@ -30,8 +34,16 @@ export function useCalendarState() {
     setState({ date: today() });
   };
 
+  const formatLocalDate = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const goToPrevious = () => {
-    const currentDate = new Date(state.date);
+    // Parse date as local time by adding time component
+    const currentDate = new Date(state.date + 'T00:00:00');
     if (state.view === 'month') {
       currentDate.setMonth(currentDate.getMonth() - 1);
     } else if (state.view === 'week') {
@@ -39,11 +51,12 @@ export function useCalendarState() {
     } else {
       currentDate.setDate(currentDate.getDate() - 1);
     }
-    setState({ date: currentDate.toISOString().split('T')[0] });
+    setState({ date: formatLocalDate(currentDate) });
   };
 
   const goToNext = () => {
-    const currentDate = new Date(state.date);
+    // Parse date as local time by adding time component
+    const currentDate = new Date(state.date + 'T00:00:00');
     if (state.view === 'month') {
       currentDate.setMonth(currentDate.getMonth() + 1);
     } else if (state.view === 'week') {
@@ -51,7 +64,7 @@ export function useCalendarState() {
     } else {
       currentDate.setDate(currentDate.getDate() + 1);
     }
-    setState({ date: currentDate.toISOString().split('T')[0] });
+    setState({ date: formatLocalDate(currentDate) });
   };
 
   return {

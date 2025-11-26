@@ -6,7 +6,7 @@ import {
   type CalendarEventExternal,
 } from '@schedule-x/calendar';
 import { createCalendarControlsPlugin } from '@schedule-x/calendar-controls';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import type { CalendarView as ViewType } from '../../hooks/useCalendarState';
 import '@schedule-x/theme-default/dist/index.css';
 
@@ -15,7 +15,8 @@ interface CalendarViewProps {
   view: ViewType;
   selectedDate: string;
   onEventClick?: (eventId: string) => void;
-  onViewChange?: (view: ViewType) => void;
+  onViewChange: (view: ViewType) => void;
+  onDateChange: (date: string) => void;
 }
 
 export default function CalendarView({
@@ -24,6 +25,7 @@ export default function CalendarView({
   selectedDate,
   onEventClick,
   onViewChange,
+  onDateChange,
 }: CalendarViewProps) {
   const viewMap = useMemo(() => ({
     month: 'month-grid',
@@ -44,6 +46,19 @@ export default function CalendarView({
     [selectedDate]
   );
 
+  // Use refs to access latest values in callbacks (avoid stale closures)
+  const viewRef = useRef(view);
+  const selectedDateRef = useRef(selectedDate);
+  const onViewChangeRef = useRef(onViewChange);
+  const onDateChangeRef = useRef(onDateChange);
+
+  useEffect(() => {
+    viewRef.current = view;
+    selectedDateRef.current = selectedDate;
+    onViewChangeRef.current = onViewChange;
+    onDateChangeRef.current = onDateChange;
+  }, [view, selectedDate, onViewChange, onDateChange]);
+
   const calendar = useCalendarApp({
     views: [createViewMonthGrid(), createViewWeek(), createViewDay()],
     events,
@@ -61,25 +76,40 @@ export default function CalendarView({
         }
       },
       onRangeUpdate: () => {
-        if (onViewChange) {
-          const currentView = calendarControls.getView();
-          const mappedView = reverseViewMap[currentView];
-          if (mappedView && mappedView !== view) {
-            onViewChange(mappedView);
-          }
+        // Sync view changes from calendar to URL
+        const currentView = calendarControls.getView();
+        const mappedView = reverseViewMap[currentView];
+        if (mappedView && mappedView !== viewRef.current) {
+          onViewChangeRef.current(mappedView);
+        }
+
+        // Sync date changes from calendar to URL
+        const currentDate = calendarControls.getDate();
+        const newDate = String(currentDate);
+        if (newDate !== selectedDateRef.current) {
+          onDateChangeRef.current(newDate);
         }
       },
     },
   });
 
+  // Sync view from URL to calendar
   useEffect(() => {
-    calendarControls.setView(viewMap[view]);
+    const currentView = calendarControls.getView();
+    if (viewMap[view] !== currentView) {
+      calendarControls.setView(viewMap[view]);
+    }
   }, [calendarControls, view, viewMap]);
 
+  // Sync date from URL to calendar
   useEffect(() => {
-    calendarControls.setDate(selectedDateTemporal);
-  }, [calendarControls, selectedDateTemporal]);
+    const currentDate = String(calendarControls.getDate());
+    if (selectedDate !== currentDate) {
+      calendarControls.setDate(selectedDateTemporal);
+    }
+  }, [calendarControls, selectedDate, selectedDateTemporal]);
 
+  // Sync events from props to calendar
   useEffect(() => {
     if (calendar) {
       calendar.events.set(events);
