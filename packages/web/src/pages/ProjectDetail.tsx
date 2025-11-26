@@ -9,6 +9,7 @@ import { ProjectScheduleSection } from '../components/ProjectScheduleSection';
 import { StatusSelector } from '../components/StatusSelector';
 import { createBackUrl } from '../utils/navigationHelpers';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import CreateTaskFromProjectModal from '../components/CreateTaskFromProjectModal';
 
 const PROJECT_STATUS_OPTIONS = [
   { value: 'planned', label: 'Planned' },
@@ -28,6 +29,7 @@ export default function ProjectDetail() {
   const [project, setProject] = useState<ProjectDetailType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Set document title based on project name
   useDocumentTitle(project?.name);
@@ -98,6 +100,25 @@ export default function ProjectDetail() {
     }
   };
 
+  const handleOpenCreateModal = () => {
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCloseCreateModal = () => {
+    setIsCreateModalOpen(false);
+  };
+
+  const handleTaskCreated = async () => {
+    // Refresh the project to show the new task
+    if (!id) return;
+    try {
+      const data = await ProjectsService.getProject(id);
+      setProject(data as ProjectDetailType);
+    } catch (err) {
+      console.error('Error refetching project:', err);
+    }
+  };
+
   if (loading) return <LoadingState message="Loading project..." />;
   if (error) return <ErrorState error={error} />;
   if (!project) return <ErrorState error="Project not found" />;
@@ -119,13 +140,22 @@ export default function ProjectDetail() {
         >
           ← Back to projects
         </Link>
-        <div className="flex items-start justify-between mb-4">
-          <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
-          <StatusSelector
-            value={project.status}
-            onChange={handleStatusChange}
-            options={PROJECT_STATUS_OPTIONS}
-          />
+        {/* Mobile: stack vertically, Desktop: side by side */}
+        <div className="flex flex-col gap-3 mb-3 sm:flex-row sm:items-start sm:justify-between">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{project.name}</h1>
+          <div className="flex items-center gap-2 flex-wrap justify-end sm:flex-nowrap">
+            <StatusSelector
+              value={project.status}
+              onChange={handleStatusChange}
+              options={PROJECT_STATUS_OPTIONS}
+            />
+            <button
+              onClick={handleOpenCreateModal}
+              className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500"
+            >
+              New Task
+            </button>
+          </div>
         </div>
       </div>
 
@@ -175,6 +205,14 @@ export default function ProjectDetail() {
 
       {/* Child View (Kanban or List) */}
       <Outlet context={{ project, setProject }} />
+
+      {/* Create Task Modal */}
+      <CreateTaskFromProjectModal
+        isOpen={isCreateModalOpen}
+        onClose={handleCloseCreateModal}
+        project={{ id: project.id, name: project.name }}
+        onTaskCreated={handleTaskCreated}
+      />
     </div>
   );
 }
