@@ -10,19 +10,8 @@ import { getShortcutHint } from '../utils/keyboard';
 import { useRecentProjects } from '../hooks/useRecentProjects';
 import { useRecentLabels } from '../hooks/useRecentLabels';
 import { LabelBadge } from './LabelBadge';
-
-interface IssueLink {
-  id: number;
-  sourceIssueId: number;
-  targetIssueId: number;
-  linkType: 'parent' | 'child' | 'relates' | 'derived_from';
-  direction: 'outgoing' | 'incoming';
-  targetIssue: {
-    id: number;
-    type: 'task' | 'memo';
-    title: string;
-  };
-}
+import LinkItem from './LinkItem';
+import type { LinkDisplayItem } from '../types/links';
 
 interface MemoFormProps {
   initialBodyMd?: string;
@@ -31,7 +20,7 @@ interface MemoFormProps {
   fromTaskId?: number;
   initialLabels?: string[];
   initialProjectIds?: number[];
-  initialLinks?: IssueLink[];
+  initialLinks?: LinkDisplayItem[];
 }
 
 interface Project {
@@ -65,7 +54,7 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
   // Project/Label/Links state
   const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
   const [selectedLabelIds, setSelectedLabelIds] = useState<number[]>([]);
-  const [selectedLinks, setSelectedLinks] = useState<IssueLink[]>([]);
+  const [selectedLinks, setSelectedLinks] = useState<LinkDisplayItem[]>([]);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allLabels, setAllLabels] = useState<Label[]>([]);
   const [loadingData, setLoadingData] = useState(false);
@@ -662,51 +651,19 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
             </button>
           </div>
 
-          {/* Selected Links Display */}
-          <div className="mb-2 flex flex-wrap gap-2">
-            {selectedLinks.map(link => (
-              <span key={link.id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
-                {link.direction === 'outgoing' ? '→' : '←'} {link.linkType}: {link.targetIssue.title}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveLink(link.id)}
-                  className="ml-1.5 inline-flex items-center justify-center hover:text-blue-600"
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-
           {/* Accordion Content */}
           {isLinksOpen && (
-            <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-sm p-3">
-              <p className="text-sm text-gray-500 mb-2">
+            <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-sm">
+              <p className="text-sm text-gray-500 p-3 border-b border-gray-100">
                 These links will be copied from the original task to the new memo.
-                Click × to remove a link.
               </p>
-              <div className="space-y-2">
+              <div className="divide-y divide-gray-100">
                 {selectedLinks.map(link => (
-                  <div key={link.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-gray-500">
-                        {link.direction === 'outgoing' ? 'Outgoing' : 'Incoming'}
-                      </span>
-                      <span className="text-xs px-1.5 py-0.5 bg-gray-200 rounded">
-                        {link.linkType}
-                      </span>
-                      <span className="text-sm">
-                        {link.targetIssue.type === 'task' ? '📋' : '📝'} {link.targetIssue.title}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveLink(link.id)}
-                      className="text-red-500 hover:text-red-700 text-sm"
-                    >
-                      Remove
-                    </button>
-                  </div>
+                  <LinkItem
+                    key={link.id}
+                    link={link}
+                    onDelete={handleRemoveLink}
+                  />
                 ))}
               </div>
             </div>

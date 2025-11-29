@@ -38,6 +38,7 @@ interface IssueLink {
     type: 'task' | 'memo';
     title: string;
   };
+  createdAt: string;
 }
 
 export default function MemoNew() {
