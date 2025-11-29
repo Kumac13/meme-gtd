@@ -62,9 +62,10 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Project/Label state
+  // Project/Label/Links state
   const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
   const [selectedLabelIds, setSelectedLabelIds] = useState<number[]>([]);
+  const [selectedLinks, setSelectedLinks] = useState<IssueLink[]>(initialLinks || []);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allLabels, setAllLabels] = useState<Label[]>([]);
   const [loadingData, setLoadingData] = useState(false);
@@ -74,6 +75,7 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
   const [newLabelName, setNewLabelName] = useState('');
   const [isProjectOpen, setIsProjectOpen] = useState(false);
   const [isLabelOpen, setIsLabelOpen] = useState(false);
+  const [isLinksOpen, setIsLinksOpen] = useState(false);
 
   const { addRecentProject, getRecentProjects } = useRecentProjects();
   const { addRecentLabel, getRecentLabels } = useRecentLabels();
@@ -140,9 +142,9 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
           });
 
           // Copy links from task to memo
-          if (initialLinks && initialLinks.length > 0) {
+          if (selectedLinks && selectedLinks.length > 0) {
             await Promise.all(
-              initialLinks.map(link => {
+              selectedLinks.map(link => {
                 // For outgoing links, create same link from new memo
                 // For incoming links, create link from source to new memo
                 if (link.direction === 'outgoing') {
@@ -225,6 +227,10 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
       setSelectedLabelIds([...selectedLabelIds, labelId]);
       addRecentLabel(labelId);
     }
+  };
+
+  const handleRemoveLink = (linkId: number) => {
+    setSelectedLinks(selectedLinks.filter(link => link.id !== linkId));
   };
 
   const handleCreateLabel = async () => {
@@ -621,8 +627,85 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
             </div>
           )}
         </div>
-      )
-      }
+      )}
+
+      {/* Links Section - Only when coming from a task */}
+      {mode === 'create' && fromTaskId && selectedLinks.length > 0 && (
+        <div className="border-b border-gray-200 pb-4">
+          <div className="flex items-center justify-between mb-2">
+            <button
+              type="button"
+              onClick={() => setIsLinksOpen(!isLinksOpen)}
+              className="flex items-center justify-between w-full text-left group"
+            >
+              <label className="block text-sm font-medium text-gray-700 cursor-pointer group-hover:text-gray-900">
+                Links ({selectedLinks.length})
+              </label>
+              <span className="text-gray-400 group-hover:text-gray-600">
+                {isLinksOpen ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                )}
+              </span>
+            </button>
+          </div>
+
+          {/* Selected Links Display */}
+          <div className="mb-2 flex flex-wrap gap-2">
+            {selectedLinks.map(link => (
+              <span key={link.id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                {link.direction === 'outgoing' ? '→' : '←'} {link.linkType}: {link.targetIssue.title}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveLink(link.id)}
+                  className="ml-1.5 inline-flex items-center justify-center hover:text-blue-600"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+
+          {/* Accordion Content */}
+          {isLinksOpen && (
+            <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-sm p-3">
+              <p className="text-sm text-gray-500 mb-2">
+                These links will be copied from the original task to the new memo.
+                Click × to remove a link.
+              </p>
+              <div className="space-y-2">
+                {selectedLinks.map(link => (
+                  <div key={link.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-gray-500">
+                        {link.direction === 'outgoing' ? 'Outgoing' : 'Incoming'}
+                      </span>
+                      <span className="text-xs px-1.5 py-0.5 bg-gray-200 rounded">
+                        {link.linkType}
+                      </span>
+                      <span className="text-sm">
+                        {link.targetIssue.type === 'task' ? '📋' : '📝'} {link.targetIssue.title}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveLink(link.id)}
+                      className="text-red-500 hover:text-red-700 text-sm"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center justify-end space-x-3">
         <button
