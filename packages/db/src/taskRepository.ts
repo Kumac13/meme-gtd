@@ -742,6 +742,9 @@ export const demoteTask = (
     attachProjects(db, memoId, projectIds);
   }
 
+  // Copy existing links from task to memo
+  copyTaskLinks(db, input.taskId, memoId, now);
+
   return { task, memoId };
 };
 
@@ -781,4 +784,53 @@ const getTaskProjectIds = (db: Database.Database, taskId: number): number[] => {
     .prepare('SELECT project_id FROM project_items WHERE issue_id = @taskId ORDER BY position')
     .all({ taskId }) as Array<{ project_id: number }>;
   return rows.map((row) => row.project_id);
+};
+
+/**
+ * Copy existing links from task to memo
+ * - Outgoing links (source = taskId): create new link with source = memoId
+ * - Incoming links (target = taskId): create new link with target = memoId
+ */
+const copyTaskLinks = (
+  db: Database.Database,
+  taskId: number,
+  memoId: number,
+  createdAt: string
+): void => {
+  // Get all links for the task (excluding the derived_from link we just created)
+  const links = db.prepare(`
+    SELECT source_issue_id, target_issue_id, link_type
+    FROM links
+    WHERE (source_issue_id = @taskId OR target_issue_id = @taskId)
+      AND NOT (source_issue_id = @memoId AND link_type = 'derived_from')
+  `).all({ taskId, memoId }) as Array<{
+    source_issue_id: number;
+    target_issue_id: number;
+    link_type: string;
+  }>;
+
+  const insertLink = db.prepare(`
+    INSERT INTO links (source_issue_id, target_issue_id, link_type, created_at)
+    VALUES (@source, @target, @linkType, @createdAt)
+  `);
+
+  for (const link of links) {
+    if (link.source_issue_id === taskId) {
+      // Outgoing link: task -> other, create memo -> other
+      insertLink.run({
+        source: memoId,
+        target: link.target_issue_id,
+        linkType: link.link_type,
+        createdAt,
+      });
+    } else {
+      // Incoming link: other -> task, create other -> memo
+      insertLink.run({
+        source: link.source_issue_id,
+        target: memoId,
+        linkType: link.link_type,
+        createdAt,
+      });
+    }
+  }
 };

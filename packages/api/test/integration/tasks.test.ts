@@ -893,6 +893,110 @@ describe('Task Demote Operations', () => {
     assert.strictEqual(task.status, 'next');
   });
 
+  it('should copy existing links from task to memo', async () => {
+    // Create task to demote
+    const taskResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task with links' }),
+    });
+    const task = JSON.parse(taskResponse.body);
+
+    // Create another task to link to
+    const relatedTaskResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Related task' }),
+    });
+    const relatedTask = JSON.parse(relatedTaskResponse.body);
+
+    // Create a "relates" link from task to relatedTask
+    await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: {
+        sourceIssueId: task.id,
+        targetIssueId: relatedTask.id,
+        linkType: 'relates',
+      },
+    });
+
+    // Demote the task
+    const demoteResponse = await app.inject({
+      method: 'POST',
+      url: `/api/tasks/${task.id}/demote`,
+      payload: {},
+    });
+
+    assert.strictEqual(demoteResponse.statusCode, 201);
+    const result = JSON.parse(demoteResponse.body);
+
+    // Verify links were copied to memo
+    const linksResponse = await app.inject({
+      method: 'GET',
+      url: `/api/issues/${result.memoId}/links`,
+    });
+    assert.strictEqual(linksResponse.statusCode, 200);
+    const links = JSON.parse(linksResponse.body);
+
+    // Should have derived_from link AND the relates link
+    const derivedFromLink = links.find((l: any) => l.linkType === 'derived_from' && l.targetIssueId === task.id);
+    assert.ok(derivedFromLink, 'Should have derived_from link to original task');
+
+    const relatesLink = links.find((l: any) => l.linkType === 'relates' && l.targetIssueId === relatedTask.id);
+    assert.ok(relatesLink, 'Should have copied relates link to related task');
+  });
+
+  it('should copy incoming links to memo', async () => {
+    // Create task to demote
+    const taskResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task with incoming link' }),
+    });
+    const task = JSON.parse(taskResponse.body);
+
+    // Create a memo that links to the task
+    const memoResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'A memo linking to task' },
+    });
+    const sourceMemo = JSON.parse(memoResponse.body);
+
+    // Create an incoming link: sourceMemo -> task (relates)
+    await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: {
+        sourceIssueId: sourceMemo.id,
+        targetIssueId: task.id,
+        linkType: 'relates',
+      },
+    });
+
+    // Demote the task
+    const demoteResponse = await app.inject({
+      method: 'POST',
+      url: `/api/tasks/${task.id}/demote`,
+      payload: {},
+    });
+
+    assert.strictEqual(demoteResponse.statusCode, 201);
+    const result = JSON.parse(demoteResponse.body);
+
+    // Verify incoming link was copied
+    const linksResponse = await app.inject({
+      method: 'GET',
+      url: `/api/issues/${result.memoId}/links`,
+    });
+    const links = JSON.parse(linksResponse.body);
+
+    // The incoming link should now point to the new memo
+    const copiedLink = links.find((l: any) => l.linkType === 'relates' && l.sourceIssueId === sourceMemo.id);
+    assert.ok(copiedLink, 'Should have copied incoming relates link from source memo');
+  });
+
   it('should return 404 when demoting non-existent task', async () => {
     const response = await app.inject({
       method: 'POST',

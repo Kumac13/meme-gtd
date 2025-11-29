@@ -406,6 +406,14 @@ mgtd task demote <id> [--body <text>] [--body-file <path>] [--label <name>...] [
 - `--no-editor` - Skip editor, use auto-generated or provided body directly
 - `--json, -j` - Output in JSON format
 
+### Inheritance
+
+The new memo automatically inherits from the original task:
+- **Labels** - All labels assigned to the task (unless `--label` is specified)
+- **Projects** - All project memberships
+- **Links** - All existing links (parent, child, relates, derived_from)
+- A `derived_from` link to the original task is automatically created
+
 ### Editor Behavior
 
 By default, an editor opens with auto-generated content:
