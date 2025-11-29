@@ -61,9 +61,11 @@ export {
   setTaskStatus,
   listTaskLabels,
   setTaskLabels,
+  demoteTask,
   type CreateTaskInput,
   type UpdateTaskInput,
-  type ListTaskFilters
+  type ListTaskFilters,
+  type DemoteTaskInput
 } from './taskRepository.js';
 
 // Task-specific aliases for shared functions
