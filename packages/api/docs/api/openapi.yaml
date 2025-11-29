@@ -1229,6 +1229,10 @@ paths:
                   type: string
                   pattern: ^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$
                   description: Start time (HH:MM)
+                endDate:
+                  type: string
+                  format: date
+                  description: End date for the task (YYYY-MM-DD)
                 endTime:
                   type: string
                   pattern: ^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$

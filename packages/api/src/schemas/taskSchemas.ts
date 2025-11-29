@@ -16,6 +16,7 @@ export const CreateTaskRequestSchema = z.object({
   status: TaskStatusSchema.optional().describe('Task status (defaults to "inbox")'),
   scheduledOn: z.string().date().optional().describe('Scheduled date for the task (YYYY-MM-DD)'),
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').optional().describe('Start time (HH:MM)'),
+  endDate: z.string().date().optional().describe('End date for the task (YYYY-MM-DD)'),
   endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').optional().describe('End time (HH:MM)'),
   duration: z.number().int().positive().optional().describe('Duration in minutes'),
 });

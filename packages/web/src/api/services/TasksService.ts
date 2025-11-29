@@ -36,6 +36,10 @@ export class TasksService {
              */
             startTime?: string;
             /**
+             * End date for the task (YYYY-MM-DD)
+             */
+            endDate?: string;
+            /**
              * End time (HH:MM)
              */
             endTime?: string;
