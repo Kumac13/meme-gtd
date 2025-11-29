@@ -12,6 +12,7 @@ import {
   reopenTaskHandler,
   bookmarkTaskHandler,
   unbookmarkTaskHandler,
+  demoteTaskHandler,
 } from '../handlers/taskHandlers.js';
 import {
   listTaskCommentsHandler,
@@ -27,6 +28,8 @@ import {
   TaskDetailSchema,
   TaskIdParamsSchema,
   TaskQuerySchema,
+  DemoteTaskRequestSchema,
+  DemoteTaskResponseSchema,
 } from '../schemas/taskSchemas.js';
 import {
   CreateCommentRequestSchema,
@@ -234,6 +237,26 @@ export async function taskRoutes(app: FastifyInstance) {
       },
     },
     unbookmarkTaskHandler
+  );
+
+  // POST /api/tasks/:id/demote - Demote task to memo
+  server.post(
+    '/api/tasks/:id/demote',
+    {
+      schema: {
+        tags: ['Tasks'],
+        summary: 'Demote task to memo',
+        description: 'Copy task content (title, body, comments) to create a new memo. The original task remains unchanged.',
+        operationId: 'demoteTask',
+        params: TaskIdParamsSchema,
+        body: DemoteTaskRequestSchema,
+        response: {
+          201: DemoteTaskResponseSchema,
+          404: ErrorResponseSchema,
+        },
+      },
+    },
+    demoteTaskHandler
   );
 
   // GET /api/tasks/:taskId/comments - List comments
