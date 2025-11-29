@@ -256,7 +256,7 @@ export class ProjectsService {
                 /**
                  * Task status (null for memos)
                  */
-                status: 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled' | null;
+                status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled' | null;
             };
         }>;
     }> {

@@ -24,7 +24,7 @@ export class TasksService {
              */
             bodyMd?: string;
             /**
-             * Task status (defaults to "open")
+             * Task status (defaults to "inbox")
              */
             status?: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
             /**
@@ -35,10 +35,6 @@ export class TasksService {
              * Start time (HH:MM)
              */
             startTime?: string;
-            /**
-             * End date for the task (YYYY-MM-DD)
-             */
-            endDate?: string;
             /**
              * End time (HH:MM)
              */
@@ -74,13 +70,13 @@ export class TasksService {
          */
         scheduledOn: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
-         */
-        endDate: string | null;
-        /**
          * Start time (HH:MM, null if not set)
          */
         startTime: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
         /**
          * End time (HH:MM, null if not set)
          */
@@ -131,6 +127,8 @@ export class TasksService {
      * @param bookmarked Filter by bookmark status
      * @param label Filter by label name(s). Supports comma-separated values for OR logic (e.g., bug,enhancement)
      * @param search Search tasks by title using free-text partial matching
+     * @param scheduledFrom Filter tasks where scheduled_on >= this date (YYYY-MM-DD)
+     * @param scheduledTo Filter tasks where scheduled_on <= this date (YYYY-MM-DD)
      * @returns any Default Response
      * @throws ApiError
      */
@@ -139,6 +137,8 @@ export class TasksService {
         bookmarked?: 'true' | 'false',
         label?: string,
         search?: string,
+        scheduledFrom?: string,
+        scheduledTo?: string,
     ): CancelablePromise<Array<{
         /**
          * Unique task ID
@@ -165,13 +165,13 @@ export class TasksService {
          */
         scheduledOn: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
-         */
-        endDate: string | null;
-        /**
          * Start time (HH:MM, null if not set)
          */
         startTime: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
         /**
          * End time (HH:MM, null if not set)
          */
@@ -221,6 +221,8 @@ export class TasksService {
                 'bookmarked': bookmarked,
                 'label': label,
                 'search': search,
+                'scheduledFrom': scheduledFrom,
+                'scheduledTo': scheduledTo,
             },
             errors: {
                 400: `Default Response`,
@@ -262,13 +264,13 @@ export class TasksService {
          */
         scheduledOn: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
-         */
-        endDate: string | null;
-        /**
          * Start time (HH:MM, null if not set)
          */
         startTime: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
         /**
          * End time (HH:MM, null if not set)
          */
@@ -345,13 +347,13 @@ export class TasksService {
              */
             scheduledOn?: string | null;
             /**
-             * Updated end date (YYYY-MM-DD, null to clear)
-             */
-            endDate?: string | null;
-            /**
              * Updated start time (HH:MM, null to clear)
              */
             startTime?: string | null;
+            /**
+             * Updated end date (YYYY-MM-DD, null to clear)
+             */
+            endDate?: string | null;
             /**
              * Updated end time (HH:MM, null to clear)
              */
@@ -360,6 +362,9 @@ export class TasksService {
              * Updated duration in minutes (null to clear)
              */
             duration?: number | null;
+            addLabels?: Array<string>;
+            removeLabels?: Array<string>;
+            projectIds?: Array<number>;
         },
     ): CancelablePromise<{
         /**
@@ -387,13 +392,13 @@ export class TasksService {
          */
         scheduledOn: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
-         */
-        endDate: string | null;
-        /**
          * Start time (HH:MM, null if not set)
          */
         startTime: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
         /**
          * End time (HH:MM, null if not set)
          */
@@ -497,13 +502,13 @@ export class TasksService {
          */
         scheduledOn: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
-         */
-        endDate: string | null;
-        /**
          * Start time (HH:MM, null if not set)
          */
         startTime: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
         /**
          * End time (HH:MM, null if not set)
          */
@@ -583,13 +588,13 @@ export class TasksService {
          */
         scheduledOn: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
-         */
-        endDate: string | null;
-        /**
          * Start time (HH:MM, null if not set)
          */
         startTime: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
         /**
          * End time (HH:MM, null if not set)
          */
@@ -669,13 +674,13 @@ export class TasksService {
          */
         scheduledOn: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
-         */
-        endDate: string | null;
-        /**
          * Start time (HH:MM, null if not set)
          */
         startTime: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
         /**
          * End time (HH:MM, null if not set)
          */
@@ -755,13 +760,13 @@ export class TasksService {
          */
         scheduledOn: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
-         */
-        endDate: string | null;
-        /**
          * Start time (HH:MM, null if not set)
          */
         startTime: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
         /**
          * End time (HH:MM, null if not set)
          */
@@ -841,13 +846,13 @@ export class TasksService {
          */
         scheduledOn: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
-         */
-        endDate: string | null;
-        /**
          * Start time (HH:MM, null if not set)
          */
         startTime: string | null;
+        /**
+         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         */
+        endDate: string | null;
         /**
          * End time (HH:MM, null if not set)
          */
@@ -887,6 +892,114 @@ export class TasksService {
             path: {
                 'id': id,
             },
+            errors: {
+                404: `Default Response`,
+            },
+        });
+    }
+    /**
+     * Demote task to memo
+     * Copy task content (title, body, comments) to create a new memo. The original task remains unchanged.
+     * @param id Task ID
+     * @param requestBody
+     * @returns any Default Response
+     * @throws ApiError
+     */
+    public static demoteTask(
+        id: string,
+        requestBody?: {
+            /**
+             * Custom body for the memo (if not provided, body is auto-generated from task content)
+             */
+            bodyMd?: string;
+            /**
+             * Labels to apply to the new memo (if not provided, inherits from task)
+             */
+            labels?: Array<string>;
+        },
+    ): CancelablePromise<{
+        /**
+         * The original task (unchanged)
+         */
+        task: {
+            /**
+             * Unique task ID
+             */
+            id: number;
+            /**
+             * Issue type (always "task")
+             */
+            type: 'task';
+            /**
+             * Task title
+             */
+            title: string;
+            /**
+             * Task description in Markdown format
+             */
+            bodyMd: string;
+            /**
+             * Current task status
+             */
+            status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
+            /**
+             * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+             */
+            scheduledOn: string | null;
+            /**
+             * Start time (HH:MM, null if not set)
+             */
+            startTime: string | null;
+            /**
+             * End date for the task (YYYY-MM-DD, null if not scheduled)
+             */
+            endDate: string | null;
+            /**
+             * End time (HH:MM, null if not set)
+             */
+            endTime: string | null;
+            /**
+             * Duration in minutes (null if not set)
+             */
+            duration: number | null;
+            /**
+             * Metadata object
+             */
+            meta: Record<string, any>;
+            /**
+             * Whether the task is bookmarked
+             */
+            isBookmarked: boolean;
+            /**
+             * Whether the task is soft-deleted
+             */
+            isDeleted: boolean;
+            /**
+             * Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * Last update timestamp
+             */
+            updatedAt: string;
+            /**
+             * Array of label names assigned to this task
+             */
+            labels: Array<string>;
+        };
+        /**
+         * ID of the newly created memo
+         */
+        memoId: number;
+    }> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/tasks/{id}/demote',
+            path: {
+                'id': id,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 404: `Default Response`,
             },

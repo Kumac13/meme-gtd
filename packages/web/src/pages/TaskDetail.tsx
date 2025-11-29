@@ -28,6 +28,7 @@ export default function TaskDetail() {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
+  const [demoting, setDemoting] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Set document title based on task title or body preview
@@ -124,14 +125,38 @@ export default function TaskDetail() {
     navigate(`/tasks/${newTaskId}`);
   };
 
-  // Custom action button for creating new task
-  const newTaskButton = (
-    <button
-      onClick={handleOpenCreateModal}
-      className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500"
-    >
-      New Task
-    </button>
+  const handleDemote = async () => {
+    if (!id) return;
+
+    try {
+      setDemoting(true);
+      const result = await TasksService.demoteTask(id, {});
+      // Navigate to the newly created memo
+      navigate(`/memos/${result.memoId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to demote task');
+      console.error('Error demoting task:', err);
+      setDemoting(false);
+    }
+  };
+
+  // Custom action buttons for creating new task and demoting to memo
+  const customActions = (
+    <div className="flex gap-2">
+      <button
+        onClick={handleDemote}
+        disabled={demoting}
+        className="inline-flex items-center px-3 py-2 border border-github-border-default rounded-md shadow-sm text-sm font-medium text-github-fg-default bg-github-canvas-subtle hover:bg-github-canvas-default focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-accent-emphasis disabled:opacity-50"
+      >
+        {demoting ? 'Copying...' : 'Copy to Memo'}
+      </button>
+      <button
+        onClick={handleOpenCreateModal}
+        className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500"
+      >
+        New Task
+      </button>
+    </div>
   );
 
   return (
@@ -145,7 +170,7 @@ export default function TaskDetail() {
         onStatusChange={handleStatusChange}
         deleting={deleting}
         bookmarking={bookmarking}
-        customActions={newTaskButton}
+        customActions={customActions}
       />
       <CreateTaskModal
         isOpen={isCreateModalOpen}

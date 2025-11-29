@@ -161,7 +161,6 @@ export default function TaskForm({
           status,
           scheduledOn: scheduleData.scheduledOn || undefined,
           startTime: scheduleData.startTime || undefined,
-          endDate: scheduleData.endDate || undefined,
           endTime: scheduleData.endTime || undefined,
           duration: scheduleData.duration ? parseInt(scheduleData.duration, 10) : undefined,
         });

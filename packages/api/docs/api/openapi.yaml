@@ -1407,6 +1407,20 @@ paths:
           name: search
           required: false
           description: Search tasks by title using free-text partial matching
+        - schema:
+            type: string
+            format: date
+          in: query
+          name: scheduledFrom
+          required: false
+          description: Filter tasks where scheduled_on >= this date (YYYY-MM-DD)
+        - schema:
+            type: string
+            format: date
+          in: query
+          name: scheduledTo
+          required: false
+          description: Filter tasks where scheduled_on <= this date (YYYY-MM-DD)
       responses:
         "200":
           description: Default Response
@@ -2604,6 +2618,171 @@ paths:
                   - createdAt
                   - updatedAt
                   - labels
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks/{id}/demote:
+    post:
+      operationId: demoteTask
+      summary: Demote task to memo
+      tags:
+        - Tasks
+      description: Copy task content (title, body, comments) to create a new memo. The original task remains unchanged.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bodyMd:
+                  type: string
+                  description: Custom body for the memo (if not provided, body is auto-generated from task content)
+                labels:
+                  type: array
+                  items:
+                    type: string
+                  description: Labels to apply to the new memo (if not provided, inherits from task)
+              additionalProperties: false
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Task ID
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        exclusiveMinimum: true
+                        minimum: 0
+                        description: Unique task ID
+                      type:
+                        type: string
+                        enum:
+                          - task
+                        description: Issue type (always "task")
+                      title:
+                        type: string
+                        description: Task title
+                      bodyMd:
+                        type: string
+                        description: Task description in Markdown format
+                      status:
+                        type: string
+                        enum:
+                          - inbox
+                          - open
+                          - next
+                          - waiting
+                          - scheduled
+                          - someday
+                          - done
+                          - canceled
+                        description: Current task status
+                      scheduledOn:
+                        type: string
+                        format: date
+                        nullable: true
+                        description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+                      startTime:
+                        type: string
+                        nullable: true
+                        description: Start time (HH:MM, null if not set)
+                      endDate:
+                        type: string
+                        format: date
+                        nullable: true
+                        description: End date for the task (YYYY-MM-DD, null if not scheduled)
+                      endTime:
+                        type: string
+                        nullable: true
+                        description: End time (HH:MM, null if not set)
+                      duration:
+                        type: integer
+                        nullable: true
+                        description: Duration in minutes (null if not set)
+                      meta:
+                        type: object
+                        additionalProperties: {}
+                        description: Metadata object
+                      isBookmarked:
+                        type: boolean
+                        description: Whether the task is bookmarked
+                      isDeleted:
+                        type: boolean
+                        description: Whether the task is soft-deleted
+                      createdAt:
+                        type: string
+                        format: date-time
+                        description: Creation timestamp
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        description: Last update timestamp
+                      labels:
+                        type: array
+                        items:
+                          type: string
+                        description: Array of label names assigned to this task
+                    required:
+                      - id
+                      - type
+                      - title
+                      - bodyMd
+                      - status
+                      - scheduledOn
+                      - startTime
+                      - endDate
+                      - endTime
+                      - duration
+                      - meta
+                      - isBookmarked
+                      - isDeleted
+                      - createdAt
+                      - updatedAt
+                      - labels
+                    additionalProperties: false
+                    description: The original task (unchanged)
+                  memoId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: ID of the newly created memo
+                required:
+                  - task
+                  - memoId
                 additionalProperties: false
         "404":
           description: Default Response
