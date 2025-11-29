@@ -5,6 +5,29 @@ import { InlineMarkdownRenderer, extractFirstLine } from '../utils/markdown';
 import { LabelBadge } from './LabelBadge';
 import { createItemDetailUrl } from '../utils/navigationHelpers';
 
+// Status badge labels and colors
+const statusLabels: Record<string, string> = {
+  inbox: 'Inbox',
+  open: 'Open',
+  next: 'Next',
+  waiting: 'Waiting',
+  scheduled: 'Scheduled',
+  someday: 'Someday',
+  done: 'Done',
+  canceled: 'Canceled',
+};
+
+const statusBadgeClasses: Record<string, string> = {
+  inbox: 'bg-gray-100 text-gray-700',
+  open: 'bg-blue-100 text-blue-700',
+  next: 'bg-green-100 text-green-700',
+  waiting: 'bg-yellow-100 text-yellow-700',
+  scheduled: 'bg-purple-100 text-purple-700',
+  someday: 'bg-orange-100 text-orange-700',
+  done: 'bg-gray-200 text-gray-500',
+  canceled: 'bg-red-100 text-red-500',
+};
+
 interface BaseItem {
   id: number;
   title: string | null;
@@ -151,6 +174,11 @@ export default function ItemList({ items, itemType: _itemType, basePath, current
                         <h2 className="text-base text-gray-900">
                           {item.title || `Task #${item.id}`}
                         </h2>
+                        {item.status && (
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded ${statusBadgeClasses[item.status] || 'bg-gray-100 text-gray-700'}`}>
+                            {statusLabels[item.status] || item.status}
+                          </span>
+                        )}
                         {item.labels && item.labels.length > 0 && (
                           <>
                             {item.labels.slice(0, 3).map((label, idx) => (
