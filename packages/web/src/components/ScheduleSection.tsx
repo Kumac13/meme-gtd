@@ -122,7 +122,7 @@ export function ScheduleSection({ scheduledOn, startTime, endDate, endTime, dura
             )}
 
             {isEditing ? (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col space-y-3">
                     <div className="grid grid-cols-2 gap-2">
                         <div>
                             <label className="block text-xs text-gray-500 mb-1">Start Date</label>
@@ -177,7 +177,7 @@ export function ScheduleSection({ scheduledOn, startTime, endDate, endTime, dura
                         />
                     </div>
 
-                    <div className="flex justify-end gap-2 mt-2">
+                    <div className="flex justify-end space-x-2 mt-2">
                         <button
                             type="button"
                             onClick={handleClear}
@@ -204,12 +204,12 @@ export function ScheduleSection({ scheduledOn, startTime, endDate, endTime, dura
             ) : (
                 <div
                     onClick={() => setIsEditing(true)}
-                    className="text-sm text-gray-700 hover:bg-gray-100 p-2 -mx-2 rounded cursor-pointer flex items-center gap-2"
+                    className="text-sm text-gray-700 hover:bg-gray-100 p-2 -mx-2 rounded cursor-pointer flex items-center"
                 >
                     <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    <span>{formatDisplay()}</span>
+                    <span className="ml-2">{formatDisplay()}</span>
                 </div>
             )}
         </div>
