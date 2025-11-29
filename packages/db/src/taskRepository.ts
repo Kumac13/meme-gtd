@@ -298,9 +298,50 @@ export const updateTask = (db: Database.Database, input: UpdateTaskInput): Task 
     params.bodyMd = input.bodyMd;
   }
 
+  // Detect status change for auto-setting date/time fields
+  const isStatusChange = input.status !== undefined && input.status !== task.status;
+  const now = new Date();
+  const currentDate = now.toISOString().split('T')[0];
+  const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
   if (input.status !== undefined) {
     updates.push('status = @status');
     params.status = input.status;
+
+    // Auto-set date/time fields on status change (only if not explicitly provided)
+    if (isStatusChange) {
+      if (input.status === 'done') {
+        // Auto-set end_date if not explicitly provided
+        if (input.endDate === undefined) {
+          updates.push('end_date = @autoEndDate');
+          params.autoEndDate = currentDate;
+        }
+        // Check for same-day completion to set end_time
+        const effectiveScheduledOn = input.scheduledOn !== undefined ? input.scheduledOn : task.scheduledOn;
+        if (effectiveScheduledOn === currentDate && input.endTime === undefined) {
+          updates.push('end_time = @autoEndTime');
+          params.autoEndTime = currentTime;
+        }
+      } else if (input.status === 'next') {
+        // Auto-set scheduled_on if not explicitly provided
+        if (input.scheduledOn === undefined) {
+          updates.push('scheduled_on = @autoScheduledOn');
+          params.autoScheduledOn = currentDate;
+        }
+        // Auto-set start_time if not explicitly provided
+        if (input.startTime === undefined) {
+          updates.push('start_time = @autoStartTime');
+          params.autoStartTime = currentTime;
+        }
+        // Clear end fields unless explicitly set
+        if (input.endDate === undefined) {
+          updates.push('end_date = NULL');
+        }
+        if (input.endTime === undefined) {
+          updates.push('end_time = NULL');
+        }
+      }
+    }
   }
 
   if (input.scheduledOn !== undefined) {
@@ -379,9 +420,34 @@ export const setTaskStatus = (
   status: TaskStatus
 ): Task => {
   const task = getTask(db, id); // Validates type
-  db.prepare(
-    `UPDATE issues SET status = @status, updated_at = @updatedAt WHERE id = @id`
-  ).run({ id, status, updatedAt: nowIso() });
+  const now = new Date();
+  const currentDate = now.toISOString().split('T')[0];
+  const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+  const updates: string[] = ['status = @status', 'updated_at = @updatedAt'];
+  const params: Record<string, unknown> = { id, status, updatedAt: nowIso() };
+
+  if (status === 'done') {
+    // Set end_date to current date
+    updates.push('end_date = @endDate');
+    params.endDate = currentDate;
+
+    // If scheduled_on equals end_date (same day completion), also set end_time
+    if (task.scheduledOn === currentDate) {
+      updates.push('end_time = @endTime');
+      params.endTime = currentTime;
+    }
+  } else if (status === 'next') {
+    // Set scheduled_on and start_time to current date/time
+    updates.push('scheduled_on = @scheduledOn', 'start_time = @startTime');
+    params.scheduledOn = currentDate;
+    params.startTime = currentTime;
+
+    // Clear end_date and end_time
+    updates.push('end_date = NULL', 'end_time = NULL');
+  }
+
+  db.prepare(`UPDATE issues SET ${updates.join(', ')} WHERE id = @id`).run(params);
   return getTask(db, id);
 };
 
