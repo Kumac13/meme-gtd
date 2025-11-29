@@ -167,16 +167,26 @@ export default function ListView() {
       items = items.filter(item => item.isBookmarked);
     }
 
-    // Sort: Done/Canceled at end, memos after that
+    // Sort: Active tasks first, then Documents, then Done/Canceled
     return items.sort((a, b) => {
       const aIsMemo = !('status' in a) || (a as Task).status === null;
       const bIsMemo = !('status' in b) || (b as Task).status === null;
+      const aStatus = aIsMemo ? null : (a as Task).status;
+      const bStatus = bIsMemo ? null : (b as Task).status;
+      const aIsDoneOrCanceled = aStatus === 'done' || aStatus === 'canceled';
+      const bIsDoneOrCanceled = bStatus === 'done' || bStatus === 'canceled';
+
+      // Done/Canceled always last
+      if (aIsDoneOrCanceled && !bIsDoneOrCanceled) return 1;
+      if (!aIsDoneOrCanceled && bIsDoneOrCanceled) return -1;
+
+      // Memos after active tasks but before Done/Canceled
       if (aIsMemo && !bIsMemo) return 1;
       if (!aIsMemo && bIsMemo) return -1;
       if (aIsMemo && bIsMemo) return 0;
 
-      const aOrder = statusOrder[(a as Task).status ?? ''] ?? 5;
-      const bOrder = statusOrder[(b as Task).status ?? ''] ?? 5;
+      const aOrder = statusOrder[aStatus ?? ''] ?? 5;
+      const bOrder = statusOrder[bStatus ?? ''] ?? 5;
       return aOrder - bOrder;
     });
   }, [tasks, memos, statusFilter, bookmarkFilter]);
