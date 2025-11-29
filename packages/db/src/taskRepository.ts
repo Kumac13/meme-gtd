@@ -691,3 +691,146 @@ const diffMinutes = (start: string, end: string): number => {
   if (diff < 0) diff += 24 * 60; // Assume wrap around midnight
   return diff;
 };
+
+// Demote task to memo
+export interface DemoteTaskInput {
+  taskId: number;
+  bodyMd?: string;
+  labels?: string[];
+}
+
+export const demoteTask = (
+  db: Database.Database,
+  input: DemoteTaskInput
+): { task: Task; memoId: number } => {
+  const task = getTask(db, input.taskId);
+  const comments = listComments(db, input.taskId);
+
+  // Build memo body from task title, body, and comments
+  const bodyMd = input.bodyMd ?? buildDemoteBody(task, comments);
+
+  const now = nowIso();
+
+  // Create memo
+  const insertMemo = db.prepare(
+    `INSERT INTO issues (type, title, body_md, status, scheduled_on, meta, created_at, updated_at, is_bookmarked, is_deleted)
+     VALUES ('memo', NULL, @body, NULL, NULL, json('{}'), @createdAt, @createdAt, 0, 0)`
+  );
+
+  const result = insertMemo.run({
+    body: bodyMd,
+    createdAt: now
+  });
+
+  const memoId = Number(result.lastInsertRowid);
+
+  // Create link from memo to task (derived_from)
+  db.prepare(
+    `INSERT INTO links (source_issue_id, target_issue_id, link_type, created_at)
+     VALUES (@source, @target, 'derived_from', @createdAt)`
+  ).run({ source: memoId, target: task.id, createdAt: now });
+
+  // Copy labels from task to memo
+  const taskLabels = input.labels ?? listTaskLabels(db, input.taskId);
+  if (taskLabels.length > 0) {
+    attachLabels(db, memoId, taskLabels);
+  }
+
+  // Copy projects from task to memo
+  const projectIds = getTaskProjectIds(db, input.taskId);
+  if (projectIds.length > 0) {
+    attachProjects(db, memoId, projectIds);
+  }
+
+  // Copy existing links from task to memo
+  copyTaskLinks(db, input.taskId, memoId, now);
+
+  return { task, memoId };
+};
+
+const buildDemoteBody = (task: Task, comments: Comment[]): string => {
+  const parts: string[] = [];
+
+  // Add title as heading
+  if (task.title) {
+    parts.push(`# ${task.title}`);
+    parts.push('');
+  }
+
+  // Add body
+  if (task.bodyMd) {
+    parts.push(task.bodyMd);
+  }
+
+  // Add comments section if there are comments
+  if (comments.length > 0) {
+    parts.push('');
+    parts.push('---');
+    parts.push('## コメント');
+    parts.push('');
+
+    for (const comment of comments) {
+      parts.push(`### ${comment.createdAt}`);
+      parts.push(comment.bodyMd);
+      parts.push('');
+    }
+  }
+
+  return parts.join('\n').trim();
+};
+
+const getTaskProjectIds = (db: Database.Database, taskId: number): number[] => {
+  const rows = db
+    .prepare('SELECT project_id FROM project_items WHERE issue_id = @taskId ORDER BY position')
+    .all({ taskId }) as Array<{ project_id: number }>;
+  return rows.map((row) => row.project_id);
+};
+
+/**
+ * Copy existing links from task to memo
+ * - Outgoing links (source = taskId): create new link with source = memoId
+ * - Incoming links (target = taskId): create new link with target = memoId
+ */
+const copyTaskLinks = (
+  db: Database.Database,
+  taskId: number,
+  memoId: number,
+  createdAt: string
+): void => {
+  // Get all links for the task (excluding the derived_from link we just created)
+  const links = db.prepare(`
+    SELECT source_issue_id, target_issue_id, link_type
+    FROM links
+    WHERE (source_issue_id = @taskId OR target_issue_id = @taskId)
+      AND NOT (source_issue_id = @memoId AND link_type = 'derived_from')
+  `).all({ taskId, memoId }) as Array<{
+    source_issue_id: number;
+    target_issue_id: number;
+    link_type: string;
+  }>;
+
+  const insertLink = db.prepare(`
+    INSERT INTO links (source_issue_id, target_issue_id, link_type, created_at)
+    VALUES (@source, @target, @linkType, @createdAt)
+  `);
+
+  for (const link of links) {
+    if (link.source_issue_id === taskId) {
+      // Outgoing link: task -> other, create memo -> other
+      insertLink.run({
+        source: memoId,
+        target: link.target_issue_id,
+        linkType: link.link_type,
+        createdAt,
+      });
+    } else {
+      // Incoming link: other -> task, create other -> memo
+      insertLink.run({
+        source: link.source_issue_id,
+        target: memoId,
+        linkType: link.link_type,
+        createdAt,
+      });
+    }
+  }
+};

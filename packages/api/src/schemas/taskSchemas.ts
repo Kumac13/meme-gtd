@@ -16,6 +16,7 @@ export const CreateTaskRequestSchema = z.object({
   status: TaskStatusSchema.optional().describe('Task status (defaults to "inbox")'),
   scheduledOn: z.string().date().optional().describe('Scheduled date for the task (YYYY-MM-DD)'),
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').optional().describe('Start time (HH:MM)'),
+  endDate: z.string().date().optional().describe('End date for the task (YYYY-MM-DD)'),
   endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').optional().describe('End time (HH:MM)'),
   duration: z.number().int().positive().optional().describe('Duration in minutes'),
 });
@@ -106,3 +107,23 @@ export const TaskQuerySchema = z.object({
 });
 
 export type TaskQuery = z.infer<typeof TaskQuerySchema>;
+
+/**
+ * Schema for demoting a task to a memo
+ */
+export const DemoteTaskRequestSchema = z.object({
+  bodyMd: z.string().optional().describe('Custom body for the memo (if not provided, body is auto-generated from task content)'),
+  labels: z.array(z.string()).optional().describe('Labels to apply to the new memo (if not provided, inherits from task)'),
+});
+
+export type DemoteTaskRequest = z.infer<typeof DemoteTaskRequestSchema>;
+
+/**
+ * Schema for demote task response
+ */
+export const DemoteTaskResponseSchema = z.object({
+  task: TaskSchema.describe('The original task (unchanged)'),
+  memoId: z.number().int().positive().describe('ID of the newly created memo'),
+});
+
+export type DemoteTaskResponse = z.infer<typeof DemoteTaskResponseSchema>;

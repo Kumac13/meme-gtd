@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.15.0 - 2025-11-29
+
+### New Features
+
+- **Task Demote to Memo**: Copy a task's content to create a new memo while keeping the original task unchanged.
+  - **Database**: Added `demoteTask` function that creates a memo from task content (title, body, comments).
+    - Auto-generates memo body with title as heading and comments in chronological order
+    - Creates `derived_from` link from new memo to original task
+    - Inherits labels, projects, and existing links from the original task
+  - **CLI**: New `mgtd task demote` command with editor support.
+    - `mgtd task demote <id>`: Opens editor with auto-generated content
+    - `mgtd task demote <id> --no-editor`: Skip editor, use auto-generated content
+    - `mgtd task demote <id> --body "content"`: Provide custom body
+    - `mgtd task demote <id> --body-file notes.md`: Load body from file
+    - `mgtd task demote <id> --label doc`: Override labels
+  - **Web UI**: Added "Archive to Memo" button to TaskDetail page.
+    - Navigate to editing screen before saving (like Promote to Task pattern)
+    - Inherit labels, projects, and links with option to remove before saving
+  - **API**: New `POST /api/tasks/:id/demote` endpoint.
+    - Optional `bodyMd` and `labels` parameters
+    - Returns original task and new memo ID
+    - Automatically copies all existing links to the new memo
+
+### Bug Fixes
+
+- **API**: Added missing `endDate` parameter to `CreateTaskRequestSchema`.
+- **Tests**: Fixed incorrect default status assertion in task creation test (expected `inbox`, not `open`).
+
 ## 0.14.0 - 2025-11-24
 
 ### New Features

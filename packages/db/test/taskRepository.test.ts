@@ -30,7 +30,7 @@ const createTempDb = () => {
 };
 
 // T004: Test createTask() - Verify task creation with type='task'
-test('createTask() creates task with type=task and default status=open', () => {
+test('createTask() creates task with type=task and default status=inbox', () => {
   const { dir, db } = createTempDb();
   const task = createTask(db, { title: 'Test Task', bodyMd: 'Task body content' });
 
@@ -38,7 +38,7 @@ test('createTask() creates task with type=task and default status=open', () => {
   assert.equal(task.type, 'task');
   assert.equal(task.title, 'Test Task');
   assert.equal(task.bodyMd, 'Task body content');
-  assert.equal(task.status, 'open');
+  assert.equal(task.status, 'inbox');
   assert.equal(task.scheduledOn, null);
   assert.equal(task.isBookmarked, false);
   assert.equal(task.isDeleted, false);

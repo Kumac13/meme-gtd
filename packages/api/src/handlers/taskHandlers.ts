@@ -4,6 +4,7 @@ import { NotFoundError } from '../errors/index.js';
 import type {
   CreateTaskRequest,
   UpdateTaskRequest,
+  DemoteTaskRequest,
 } from '../schemas/taskSchemas.js';
 
 /**
@@ -256,6 +257,39 @@ export async function unbookmarkTaskHandler(
     taskService.setBookmark(taskId, false);
     const task = taskService.show(taskId);
     return reply.status(200).send(task);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw new NotFoundError('Task', taskId);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Demote a task to a memo (copy task content to create a new memo).
+ */
+export async function demoteTaskHandler(
+  request: FastifyRequest<{
+    Params: { id: string };
+    Body: DemoteTaskRequest;
+  }>,
+  reply: FastifyReply
+) {
+  const taskId = parseInt(request.params.id, 10);
+  const taskService = new TaskService({ db: request.server.db });
+
+  try {
+    const result = taskService.demote({
+      taskId,
+      bodyMd: request.body.bodyMd,
+      labels: request.body.labels,
+    });
+    // Add labels to the task in response (schema requires it)
+    const labels = taskService.listLabels(taskId);
+    return reply.status(201).send({
+      task: { ...result.task, labels },
+      memoId: result.memoId,
+    });
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
       throw new NotFoundError('Task', taskId);

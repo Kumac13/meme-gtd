@@ -1,0 +1,186 @@
+openapi: 3.0.3
+info:
+  title: Demote Task API
+  version: 1.0.0
+  description: タスクをメモにdemote（コピー）するAPI
+
+paths:
+  /api/tasks/{id}/demote:
+    post:
+      summary: タスクをメモにdemote
+      description: |
+        指定したタスクの内容（タイトル・本文・コメント）をメモとしてコピー作成する。
+        元タスクは変更されない。
+      operationId: demoteTask
+      tags:
+        - Tasks
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: demote対象のタスクID
+          schema:
+            type: integer
+            example: 123
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DemoteTaskRequest'
+      responses:
+        '200':
+          description: demote成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemoteTaskResponse'
+        '400':
+          description: リクエスト不正
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: タスクが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    DemoteTaskRequest:
+      type: object
+      properties:
+        bodyMd:
+          type: string
+          description: |
+            メモの本文。省略時はタスクのタイトル・本文・コメントから自動生成。
+          example: "# 調査結果\n\n調査内容をここに記載..."
+        labelIds:
+          type: array
+          items:
+            type: integer
+          description: |
+            メモに付与するラベルID。省略時はタスクのラベルを継承。
+          example: [1, 2, 3]
+
+    DemoteTaskResponse:
+      type: object
+      required:
+        - memo
+        - taskId
+      properties:
+        memo:
+          $ref: '#/components/schemas/Memo'
+        taskId:
+          type: integer
+          description: 元タスクのID
+          example: 123
+
+    Memo:
+      type: object
+      required:
+        - id
+        - type
+        - bodyMd
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          example: 456
+        type:
+          type: string
+          enum: [memo]
+          example: memo
+        bodyMd:
+          type: string
+          example: "# タスクタイトル\n\n本文内容..."
+        isBookmarked:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-11-29T10:00:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-11-29T10:00:00.000Z"
+        labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label'
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+
+    Label:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "documentation"
+
+    Project:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          example: 10
+        name:
+          type: string
+          example: "研究プロジェクト"
+
+    Link:
+      type: object
+      required:
+        - id
+        - source
+        - target
+        - linkType
+      properties:
+        id:
+          type: integer
+          example: 100
+        source:
+          type: integer
+          description: リンク元（新規メモ）のID
+          example: 456
+        target:
+          type: integer
+          description: リンク先（元タスク）のID
+          example: 123
+        linkType:
+          type: string
+          enum: [derived_from]
+          example: derived_from
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          example: "NOT_FOUND"
+        message:
+          type: string
+          example: "Task not found"

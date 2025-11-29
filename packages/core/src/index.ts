@@ -22,6 +22,7 @@ import {
   createTask,
   deleteTaskComment,
   deleteTask,
+  demoteTask,
   getTask,
   listTaskComments,
   listTaskLabels,
@@ -42,6 +43,7 @@ import {
   // Types
   type CreateMemoInput,
   type CreateTaskInput,
+  type DemoteTaskInput,
   type ListMemoFilters,
   type ListTaskFilters,
   type PromoteMemoInput,
@@ -220,6 +222,10 @@ export class TaskService {
 
   public setBookmark(id: number, isBookmarked: boolean) {
     return setTaskBookmark(this.db, id, isBookmarked);
+  }
+
+  public demote(input: DemoteTaskInput) {
+    return demoteTask(this.db, input);
   }
 }
 

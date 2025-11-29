@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
 import ItemDetail, { type Item } from '../components/ItemDetail';
 import LoadingState from '../components/LoadingState';
@@ -124,14 +124,21 @@ export default function TaskDetail() {
     navigate(`/tasks/${newTaskId}`);
   };
 
-  // Custom action button for creating new task
-  const newTaskButton = (
-    <button
-      onClick={handleOpenCreateModal}
-      className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500"
-    >
-      New Task
-    </button>
+  // Custom action buttons for creating new task and archiving to memo
+  const customActions = (
+    <div className="flex gap-2">
+      <Link to={`/memos/new?fromTask=${id}`}>
+        <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500">
+          Archive to Memo
+        </button>
+      </Link>
+      <button
+        onClick={handleOpenCreateModal}
+        className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500"
+      >
+        New Task
+      </button>
+    </div>
   );
 
   return (
@@ -145,7 +152,7 @@ export default function TaskDetail() {
         onStatusChange={handleStatusChange}
         deleting={deleting}
         bookmarking={bookmarking}
-        customActions={newTaskButton}
+        customActions={customActions}
       />
       <CreateTaskModal
         isOpen={isCreateModalOpen}

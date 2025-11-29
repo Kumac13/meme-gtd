@@ -3,17 +3,30 @@ import { useNavigate } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import { ProjectsService } from '../api/services/ProjectsService';
 import { LabelsService } from '../api/services/LabelsService';
+import { LinksService } from '../api/services/LinksService';
 import { validateMemoBody } from '../utils/validation';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
 import { useRecentProjects } from '../hooks/useRecentProjects';
 import { useRecentLabels } from '../hooks/useRecentLabels';
 import { LabelBadge } from './LabelBadge';
+import type { LinkDisplayItem } from '../types/links';
+
+const linkTypeLabels: Record<string, string> = {
+  parent: 'PARENT',
+  child: 'CHILD',
+  relates: 'RELATED',
+  derived_from: 'DERIVED FROM',
+};
 
 interface MemoFormProps {
   initialBodyMd?: string;
   memoId?: number;
   mode: 'create' | 'edit';
+  fromTaskId?: number;
+  initialLabels?: string[];
+  initialProjectIds?: number[];
+  initialLinks?: LinkDisplayItem[];
 }
 
 interface Project {
@@ -37,16 +50,17 @@ interface Label {
   createdAt: string;
 }
 
-export default function MemoForm({ initialBodyMd = '', memoId, mode }: MemoFormProps) {
+export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId, initialLabels, initialProjectIds, initialLinks }: MemoFormProps) {
   const navigate = useNavigate();
   const [bodyMd, setBodyMd] = useState(initialBodyMd);
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Project/Label state
+  // Project/Label/Links state
   const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
   const [selectedLabelIds, setSelectedLabelIds] = useState<number[]>([]);
+  const [selectedLinks, setSelectedLinks] = useState<LinkDisplayItem[]>([]);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allLabels, setAllLabels] = useState<Label[]>([]);
   const [loadingData, setLoadingData] = useState(false);
@@ -56,9 +70,17 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode }: MemoFormP
   const [newLabelName, setNewLabelName] = useState('');
   const [isProjectOpen, setIsProjectOpen] = useState(false);
   const [isLabelOpen, setIsLabelOpen] = useState(false);
+  const [isLinksOpen, setIsLinksOpen] = useState(false);
 
   const { addRecentProject, getRecentProjects } = useRecentProjects();
   const { addRecentLabel, getRecentLabels } = useRecentLabels();
+
+  // Update selectedLinks when initialLinks changes (async fetch)
+  useEffect(() => {
+    if (initialLinks && initialLinks.length > 0) {
+      setSelectedLinks(initialLinks);
+    }
+  }, [initialLinks]);
 
   // Fetch projects and labels on mount (only for create mode)
   useEffect(() => {
@@ -72,6 +94,19 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode }: MemoFormP
           ]);
           setAllProjects(projects);
           setAllLabels(labels);
+
+          // Pre-select labels from initialLabels (when coming from a task)
+          if (initialLabels && initialLabels.length > 0) {
+            const labelIds = labels
+              .filter((l: Label) => initialLabels.includes(l.name))
+              .map((l: Label) => l.id);
+            setSelectedLabelIds(labelIds);
+          }
+
+          // Pre-select projects from initialProjectIds (when coming from a task)
+          if (initialProjectIds && initialProjectIds.length > 0) {
+            setSelectedProjectIds(initialProjectIds);
+          }
         } catch (err) {
           console.error('Failed to fetch projects/labels:', err);
         } finally {
@@ -80,7 +115,7 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode }: MemoFormP
       };
       fetchData();
     }
-  }, [mode]);
+  }, [mode, initialLabels, initialProjectIds]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -99,6 +134,38 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode }: MemoFormP
 
       if (mode === 'create') {
         const memo = await MemosService.createMemo({ bodyMd });
+
+        // Create derived_from link if coming from a task
+        if (fromTaskId) {
+          await LinksService.createLink({
+            sourceIssueId: memo.id,
+            targetIssueId: fromTaskId,
+            linkType: 'derived_from',
+          });
+
+          // Copy links from task to memo
+          if (selectedLinks && selectedLinks.length > 0) {
+            await Promise.all(
+              selectedLinks.map(link => {
+                // For outgoing links, create same link from new memo
+                // For incoming links, create link from source to new memo
+                if (link.direction === 'outgoing') {
+                  return LinksService.createLink({
+                    sourceIssueId: memo.id,
+                    targetIssueId: link.targetIssue.id,
+                    linkType: link.linkType,
+                  });
+                } else {
+                  return LinksService.createLink({
+                    sourceIssueId: link.sourceIssueId,
+                    targetIssueId: memo.id,
+                    linkType: link.linkType,
+                  });
+                }
+              })
+            );
+          }
+        }
 
         // Assign labels
         if (selectedLabelIds.length > 0) {
@@ -162,6 +229,10 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode }: MemoFormP
       setSelectedLabelIds([...selectedLabelIds, labelId]);
       addRecentLabel(labelId);
     }
+  };
+
+  const handleRemoveLink = (linkId: number) => {
+    setSelectedLinks(selectedLinks.filter(link => link.id !== linkId));
   };
 
   const handleCreateLabel = async () => {
@@ -558,8 +629,66 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode }: MemoFormP
             </div>
           )}
         </div>
-      )
-      }
+      )}
+
+      {/* Links Section - Only when coming from a task */}
+      {mode === 'create' && fromTaskId && selectedLinks.length > 0 && (
+        <div className="border-b border-gray-200 pb-4">
+          <div className="flex items-center justify-between mb-2">
+            <button
+              type="button"
+              onClick={() => setIsLinksOpen(!isLinksOpen)}
+              className="flex items-center justify-between w-full text-left group"
+            >
+              <label className="block text-sm font-medium text-gray-700 cursor-pointer group-hover:text-gray-900">
+                Links ({selectedLinks.length})
+              </label>
+              <span className="text-gray-400 group-hover:text-gray-600">
+                {isLinksOpen ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                )}
+              </span>
+            </button>
+          </div>
+
+          {/* Links List - matching TaskFormLinks design */}
+          {isLinksOpen && (
+            <div className="space-y-2">
+              {selectedLinks.map(link => (
+                <div
+                  key={link.id}
+                  className="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-200 rounded-md"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-500 uppercase">
+                      {linkTypeLabels[link.linkType] || link.linkType.toUpperCase()}
+                    </span>
+                    <span className="text-sm text-gray-700">
+                      #{link.targetIssue.id} - {link.targetIssue.title}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveLink(link.id)}
+                    className="text-gray-400 hover:text-red-500"
+                    title="Remove link"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center justify-end space-x-3">
         <button

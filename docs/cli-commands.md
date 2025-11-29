@@ -362,6 +362,78 @@ mgtd project delete 5
 mgtd project delete 5 --yes --json
 ```
 
+## Task Demote
+
+Copy a task's content (title, body, comments) to create a new memo. The original task remains unchanged.
+
+### Basic Usage
+
+```bash
+mgtd task demote 21
+mgtd task demote 8 --no-editor --json
+```
+
+### With Custom Body
+
+```bash
+# Provide body inline
+mgtd task demote 5 --body "Custom memo content"
+
+# Load body from file
+mgtd task demote 5 --body-file notes.md
+
+# Load from stdin
+echo "Content" | mgtd task demote 5 --body-file -
+```
+
+### With Labels
+
+```bash
+# Override labels (instead of inheriting from task)
+mgtd task demote 5 --label documentation --label archive
+```
+
+### Options
+
+```bash
+mgtd task demote <id> [--body <text>] [--body-file <path>] [--label <name>...] [--no-editor] [--json]
+```
+
+**Options:**
+- `--body, -b` - Override memo body inline
+- `--body-file, -f` - Load body from file or stdin (use `-` for stdin)
+- `--label, -l` - Labels to apply to memo (inherits from task if not specified)
+- `--no-editor` - Skip editor, use auto-generated or provided body directly
+- `--json, -j` - Output in JSON format
+
+### Inheritance
+
+The new memo automatically inherits from the original task:
+- **Labels** - All labels assigned to the task (unless `--label` is specified)
+- **Projects** - All project memberships
+- **Links** - All existing links (parent, child, relates, derived_from)
+- A `derived_from` link to the original task is automatically created
+
+### Editor Behavior
+
+By default, an editor opens with auto-generated content:
+- Task title as `# Title` heading
+- Task body
+- Comments in chronological order with timestamps
+
+Use `--no-editor` to skip the editor and use the auto-generated content directly.
+
+### Output
+
+Returns the original task (unchanged) and the new memo ID:
+
+```json
+{
+  "task": { "id": 21, "title": "Research OAuth", ... },
+  "memoId": 45
+}
+```
+
 ## Notes
 
 - **Case Sensitivity**: Label matching is case-insensitive
