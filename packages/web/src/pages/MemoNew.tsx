@@ -7,6 +7,7 @@ import { LinksService } from '../api/services/LinksService';
 import MemoForm from '../components/MemoForm';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
+import { buildMemoBodyFromTask } from '../utils/archiveTaskToMemo';
 
 interface Task {
   id: number;
@@ -86,35 +87,7 @@ export default function MemoNew() {
   }
 
   // Build initial body from task content
-  const buildInitialBody = (): string => {
-    if (!task) return '';
-
-    const parts: string[] = [];
-
-    if (task.title) {
-      parts.push(`# ${task.title}`);
-      parts.push('');
-    }
-
-    if (task.bodyMd) {
-      parts.push(task.bodyMd);
-    }
-
-    if (comments.length > 0) {
-      parts.push('');
-      parts.push('---');
-      parts.push('## コメント');
-      parts.push('');
-
-      for (const comment of comments) {
-        parts.push(`### ${comment.createdAt}`);
-        parts.push(comment.bodyMd);
-        parts.push('');
-      }
-    }
-
-    return parts.join('\n').trim();
-  };
+  const initialBody = task ? buildMemoBodyFromTask(task, comments) : '';
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-2">
@@ -133,7 +106,7 @@ export default function MemoNew() {
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <MemoForm
           mode="create"
-          initialBodyMd={buildInitialBody()}
+          initialBodyMd={initialBody}
           fromTaskId={task?.id}
           initialLabels={task?.labels}
           initialProjectIds={projects.map(p => p.id)}
