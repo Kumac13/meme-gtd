@@ -366,16 +366,16 @@ export default function TaskForm({
         </p>
       </div>
 
-      {(mode === 'edit' || fromMemoId) && (
+      {(mode === 'edit' || mode === 'create') && (
         <div>
           <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
-            {fromMemoId ? 'Initial Status' : 'Task Status'}
+            Status
           </label>
           <select
             id="status"
             value={status}
             onChange={(e) => setStatus(e.target.value as TaskStatus)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500"
+            className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 appearance-none bg-white bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3d%22http%3a%2f%2fwww.w3.org%2f2000%2fsvg%22%20viewBox%3d%220%200%2020%2020%22%20fill%3d%22%236b7280%22%3e%3cpath%20fill-rule%3d%22evenodd%22%20d%3d%22M5.23%207.21a.75.75%200%20011.06.02L10%2011.168l3.71-3.938a.75.75%200%20111.08%201.04l-4.25%204.5a.75.75%200%2001-1.08%200l-4.25-4.5a.75.75%200%2001.02-1.06z%22%20clip-rule%3d%22evenodd%22%2f%3e%3c%2fsvg%3e')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
           >
             <option value="inbox">Inbox</option>
             <option value="open">Open</option>
@@ -383,18 +383,9 @@ export default function TaskForm({
             <option value="waiting">Waiting</option>
             <option value="scheduled">Scheduled</option>
             <option value="someday">Someday</option>
-            {mode === 'edit' && (
-              <>
-                <option value="done">Done</option>
-                <option value="canceled">Canceled</option>
-              </>
-            )}
+            <option value="done">Done</option>
+            <option value="canceled">Canceled</option>
           </select>
-          <p className="mt-1 text-xs text-gray-500">
-            {fromMemoId
-              ? 'Select initial status for this task.'
-              : 'Update the task status to track its progress.'}
-          </p>
         </div>
       )}
 
