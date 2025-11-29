@@ -284,7 +284,12 @@ export async function demoteTaskHandler(
       bodyMd: request.body.bodyMd,
       labels: request.body.labels,
     });
-    return reply.status(201).send(result);
+    // Add labels to the task in response (schema requires it)
+    const labels = taskService.listLabels(taskId);
+    return reply.status(201).send({
+      task: { ...result.task, labels },
+      memoId: result.memoId,
+    });
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
       throw new NotFoundError('Task', taskId);
