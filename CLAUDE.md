@@ -250,6 +250,7 @@ git tag vX.Y.Z
 - N/A (クライアント側のみ、既存のAPIから取得したデータを使用) (029-task)
 - SQLite (better-sqlite3) - 既存のissuesテーブルを使用 (001-webui)
 - SQLite (better-sqlite3) - 既存の`links`テーブルを使用 (001-task-task-task)
+- N/A（クライアントサイドのみ、既存APIを使用） (001-task-112-project)
 
 ## Recent Changes
 - 020-web-label-management: Added TypeScript 5.5.4 / React 19.2.0 / Node.js 22+
