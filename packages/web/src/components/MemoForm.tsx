@@ -65,7 +65,7 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
   // Project/Label/Links state
   const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
   const [selectedLabelIds, setSelectedLabelIds] = useState<number[]>([]);
-  const [selectedLinks, setSelectedLinks] = useState<IssueLink[]>(initialLinks || []);
+  const [selectedLinks, setSelectedLinks] = useState<IssueLink[]>([]);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allLabels, setAllLabels] = useState<Label[]>([]);
   const [loadingData, setLoadingData] = useState(false);
@@ -79,6 +79,13 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
 
   const { addRecentProject, getRecentProjects } = useRecentProjects();
   const { addRecentLabel, getRecentLabels } = useRecentLabels();
+
+  // Update selectedLinks when initialLinks changes (async fetch)
+  useEffect(() => {
+    if (initialLinks && initialLinks.length > 0) {
+      setSelectedLinks(initialLinks);
+    }
+  }, [initialLinks]);
 
   // Fetch projects and labels on mount (only for create mode)
   useEffect(() => {
