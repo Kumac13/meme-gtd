@@ -34,6 +34,7 @@ const MULTIWORD_COMMANDS = [
   ['task', 'close'],
   ['task', 'cancel'],
   ['task', 'reopen'],
+  ['task', 'demote'],
   ['task'],
   ['label', 'create'],
   ['label', 'set'],
