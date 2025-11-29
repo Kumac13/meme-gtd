@@ -509,3 +509,183 @@ test('listTasks() without search does not include preview field', () => {
   db.close();
   fs.removeSync(dir);
 });
+
+// Tests for auto-setting date/time fields on status change
+test('setTaskStatus() to done sets end_date to current date', () => {
+  const { dir, db } = createTempDb();
+  const task = createTask(db, { title: 'Task', bodyMd: 'Body', status: 'open' });
+
+  const updated = setTaskStatus(db, task.id, 'done');
+
+  const today = new Date().toISOString().split('T')[0];
+  assert.equal(updated.status, 'done');
+  assert.equal(updated.endDate, today);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('setTaskStatus() to done sets end_time when scheduled_on is today', () => {
+  const { dir, db } = createTempDb();
+  const today = new Date().toISOString().split('T')[0];
+  const task = createTask(db, { title: 'Task', bodyMd: 'Body', status: 'open', scheduledOn: today });
+
+  const updated = setTaskStatus(db, task.id, 'done');
+
+  assert.equal(updated.status, 'done');
+  assert.equal(updated.endDate, today);
+  assert.ok(updated.endTime); // end_time should be set
+  assert.match(updated.endTime, /^\d{2}:\d{2}$/); // HH:MM format
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('setTaskStatus() to done does not set end_time when scheduled_on is different day', () => {
+  const { dir, db } = createTempDb();
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const task = createTask(db, { title: 'Task', bodyMd: 'Body', status: 'open', scheduledOn: yesterday });
+
+  const updated = setTaskStatus(db, task.id, 'done');
+
+  const today = new Date().toISOString().split('T')[0];
+  assert.equal(updated.status, 'done');
+  assert.equal(updated.endDate, today);
+  assert.equal(updated.endTime, null); // end_time should NOT be set
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('setTaskStatus() to next sets scheduled_on and start_time', () => {
+  const { dir, db } = createTempDb();
+  const task = createTask(db, { title: 'Task', bodyMd: 'Body', status: 'open' });
+
+  const updated = setTaskStatus(db, task.id, 'next');
+
+  const today = new Date().toISOString().split('T')[0];
+  assert.equal(updated.status, 'next');
+  assert.equal(updated.scheduledOn, today);
+  assert.ok(updated.startTime);
+  assert.match(updated.startTime, /^\d{2}:\d{2}$/); // HH:MM format
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('setTaskStatus() to next clears end_date and end_time', () => {
+  const { dir, db } = createTempDb();
+  // Create task with end_date and end_time set
+  const task = createTask(db, {
+    title: 'Task',
+    bodyMd: 'Body',
+    status: 'done',
+    endDate: '2025-11-01',
+    endTime: '14:00'
+  });
+
+  const updated = setTaskStatus(db, task.id, 'next');
+
+  assert.equal(updated.status, 'next');
+  assert.equal(updated.endDate, null);
+  assert.equal(updated.endTime, null);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('setTaskStatus() to next overwrites existing scheduled_on', () => {
+  const { dir, db } = createTempDb();
+  const task = createTask(db, { title: 'Task', bodyMd: 'Body', status: 'scheduled', scheduledOn: '2025-12-01' });
+
+  const updated = setTaskStatus(db, task.id, 'next');
+
+  const today = new Date().toISOString().split('T')[0];
+  assert.equal(updated.status, 'next');
+  assert.equal(updated.scheduledOn, today); // Should be overwritten to today
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('updateTask() with status=done auto-sets end_date', () => {
+  const { dir, db } = createTempDb();
+  const task = createTask(db, { title: 'Task', bodyMd: 'Body', status: 'open' });
+
+  const updated = updateTask(db, { id: task.id, status: 'done' });
+
+  const today = new Date().toISOString().split('T')[0];
+  assert.equal(updated.status, 'done');
+  assert.equal(updated.endDate, today);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('updateTask() with status=next auto-sets scheduled_on and start_time', () => {
+  const { dir, db } = createTempDb();
+  const task = createTask(db, { title: 'Task', bodyMd: 'Body', status: 'open' });
+
+  const updated = updateTask(db, { id: task.id, status: 'next' });
+
+  const today = new Date().toISOString().split('T')[0];
+  assert.equal(updated.status, 'next');
+  assert.equal(updated.scheduledOn, today);
+  assert.ok(updated.startTime);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('updateTask() with explicit endDate does not auto-set', () => {
+  const { dir, db } = createTempDb();
+  const task = createTask(db, { title: 'Task', bodyMd: 'Body', status: 'open' });
+
+  const updated = updateTask(db, {
+    id: task.id,
+    status: 'done',
+    endDate: '2025-12-31' // Explicit value
+  });
+
+  assert.equal(updated.status, 'done');
+  assert.equal(updated.endDate, '2025-12-31'); // Should keep explicit value
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('updateTask() with explicit scheduledOn does not auto-set on next', () => {
+  const { dir, db } = createTempDb();
+  const task = createTask(db, { title: 'Task', bodyMd: 'Body', status: 'open' });
+
+  const updated = updateTask(db, {
+    id: task.id,
+    status: 'next',
+    scheduledOn: '2025-12-31' // Explicit value
+  });
+
+  assert.equal(updated.status, 'next');
+  assert.equal(updated.scheduledOn, '2025-12-31'); // Should keep explicit value
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('updateTask() does not auto-set when status is not changing', () => {
+  const { dir, db } = createTempDb();
+  const task = createTask(db, { title: 'Task', bodyMd: 'Body', status: 'done' });
+
+  // Update title without changing status
+  const updated = updateTask(db, {
+    id: task.id,
+    status: 'done', // Same status
+    title: 'Updated Title'
+  });
+
+  assert.equal(updated.title, 'Updated Title');
+  // end_date should not be auto-set since status didn't actually change
+  assert.equal(updated.endDate, null);
+
+  db.close();
+  fs.removeSync(dir);
+});
