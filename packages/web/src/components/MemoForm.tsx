@@ -11,12 +11,27 @@ import { useRecentProjects } from '../hooks/useRecentProjects';
 import { useRecentLabels } from '../hooks/useRecentLabels';
 import { LabelBadge } from './LabelBadge';
 
+interface IssueLink {
+  id: number;
+  sourceIssueId: number;
+  targetIssueId: number;
+  linkType: 'parent' | 'child' | 'relates' | 'derived_from';
+  direction: 'outgoing' | 'incoming';
+  targetIssue: {
+    id: number;
+    type: 'task' | 'memo';
+    title: string;
+  };
+}
+
 interface MemoFormProps {
   initialBodyMd?: string;
   memoId?: number;
   mode: 'create' | 'edit';
   fromTaskId?: number;
   initialLabels?: string[];
+  initialProjectIds?: number[];
+  initialLinks?: IssueLink[];
 }
 
 interface Project {
@@ -40,7 +55,7 @@ interface Label {
   createdAt: string;
 }
 
-export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId, initialLabels }: MemoFormProps) {
+export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId, initialLabels, initialProjectIds, initialLinks }: MemoFormProps) {
   const navigate = useNavigate();
   const [bodyMd, setBodyMd] = useState(initialBodyMd);
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +98,11 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
               .map((l: Label) => l.id);
             setSelectedLabelIds(labelIds);
           }
+
+          // Pre-select projects from initialProjectIds (when coming from a task)
+          if (initialProjectIds && initialProjectIds.length > 0) {
+            setSelectedProjectIds(initialProjectIds);
+          }
         } catch (err) {
           console.error('Failed to fetch projects/labels:', err);
         } finally {
@@ -91,7 +111,7 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
       };
       fetchData();
     }
-  }, [mode, initialLabels]);
+  }, [mode, initialLabels, initialProjectIds]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -118,6 +138,29 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
             targetIssueId: fromTaskId,
             linkType: 'derived_from',
           });
+
+          // Copy links from task to memo
+          if (initialLinks && initialLinks.length > 0) {
+            await Promise.all(
+              initialLinks.map(link => {
+                // For outgoing links, create same link from new memo
+                // For incoming links, create link from source to new memo
+                if (link.direction === 'outgoing') {
+                  return LinksService.createLink({
+                    sourceIssueId: memo.id,
+                    targetIssueId: link.targetIssue.id,
+                    linkType: link.linkType,
+                  });
+                } else {
+                  return LinksService.createLink({
+                    sourceIssueId: link.sourceIssueId,
+                    targetIssueId: memo.id,
+                    linkType: link.linkType,
+                  });
+                }
+              })
+            );
+          }
         }
 
         // Assign labels
