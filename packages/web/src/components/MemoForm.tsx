@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import { ProjectsService } from '../api/services/ProjectsService';
 import { LabelsService } from '../api/services/LabelsService';
+import { LinksService } from '../api/services/LinksService';
 import { validateMemoBody } from '../utils/validation';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
@@ -14,6 +15,8 @@ interface MemoFormProps {
   initialBodyMd?: string;
   memoId?: number;
   mode: 'create' | 'edit';
+  fromTaskId?: number;
+  initialLabels?: string[];
 }
 
 interface Project {
@@ -37,7 +40,7 @@ interface Label {
   createdAt: string;
 }
 
-export default function MemoForm({ initialBodyMd = '', memoId, mode }: MemoFormProps) {
+export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId, initialLabels }: MemoFormProps) {
   const navigate = useNavigate();
   const [bodyMd, setBodyMd] = useState(initialBodyMd);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +75,14 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode }: MemoFormP
           ]);
           setAllProjects(projects);
           setAllLabels(labels);
+
+          // Pre-select labels from initialLabels (when coming from a task)
+          if (initialLabels && initialLabels.length > 0) {
+            const labelIds = labels
+              .filter((l: Label) => initialLabels.includes(l.name))
+              .map((l: Label) => l.id);
+            setSelectedLabelIds(labelIds);
+          }
         } catch (err) {
           console.error('Failed to fetch projects/labels:', err);
         } finally {
@@ -80,7 +91,7 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode }: MemoFormP
       };
       fetchData();
     }
-  }, [mode]);
+  }, [mode, initialLabels]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -99,6 +110,15 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode }: MemoFormP
 
       if (mode === 'create') {
         const memo = await MemosService.createMemo({ bodyMd });
+
+        // Create derived_from link if coming from a task
+        if (fromTaskId) {
+          await LinksService.createLink({
+            sourceIssueId: memo.id,
+            targetIssueId: fromTaskId,
+            linkType: 'derived_from',
+          });
+        }
 
         // Assign labels
         if (selectedLabelIds.length > 0) {

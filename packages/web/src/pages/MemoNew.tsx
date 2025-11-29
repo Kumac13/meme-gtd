@@ -1,7 +1,95 @@
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { TasksService } from '../api/services/TasksService';
+import { CommentsService } from '../api/services/CommentsService';
 import MemoForm from '../components/MemoForm';
+import LoadingState from '../components/LoadingState';
+import ErrorState from '../components/ErrorState';
+
+interface Task {
+  id: number;
+  title: string | null;
+  bodyMd: string;
+  labels?: string[];
+}
+
+interface Comment {
+  id: number;
+  bodyMd: string;
+  createdAt: string;
+}
 
 export default function MemoNew() {
+  const [searchParams] = useSearchParams();
+  const fromTaskId = searchParams.get('fromTask');
+
+  const [task, setTask] = useState<Task | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (fromTaskId) {
+      async function fetchTask() {
+        try {
+          setLoading(true);
+          setError(null);
+          const [taskData, commentsData] = await Promise.all([
+            TasksService.getTask(fromTaskId as string),
+            CommentsService.listTaskComments(fromTaskId as string),
+          ]);
+          setTask(taskData as Task);
+          setComments(commentsData as Comment[]);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to load task');
+          console.error('Error fetching task:', err);
+        } finally {
+          setLoading(false);
+        }
+      }
+      fetchTask();
+    }
+  }, [fromTaskId]);
+
+  if (loading) {
+    return <LoadingState message="Loading task..." />;
+  }
+
+  if (error) {
+    return <ErrorState error={error} title="Error loading task" />;
+  }
+
+  // Build initial body from task content
+  const buildInitialBody = (): string => {
+    if (!task) return '';
+
+    const parts: string[] = [];
+
+    if (task.title) {
+      parts.push(`# ${task.title}`);
+      parts.push('');
+    }
+
+    if (task.bodyMd) {
+      parts.push(task.bodyMd);
+    }
+
+    if (comments.length > 0) {
+      parts.push('');
+      parts.push('---');
+      parts.push('## コメント');
+      parts.push('');
+
+      for (const comment of comments) {
+        parts.push(`### ${comment.createdAt}`);
+        parts.push(comment.bodyMd);
+        parts.push('');
+      }
+    }
+
+    return parts.join('\n').trim();
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-2">
       <div className="mb-6">
@@ -11,11 +99,18 @@ export default function MemoNew() {
         >
           ← Back to memos
         </Link>
-        <h1 className="text-3xl font-bold text-gray-900">Create New Memo</h1>
+        <h1 className="text-3xl font-bold text-gray-900">
+          {task ? 'Archive Task to Memo' : 'Create New Memo'}
+        </h1>
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <MemoForm mode="create" />
+        <MemoForm
+          mode="create"
+          initialBodyMd={buildInitialBody()}
+          fromTaskId={task?.id}
+          initialLabels={task?.labels}
+        />
       </div>
     </div>
   );
