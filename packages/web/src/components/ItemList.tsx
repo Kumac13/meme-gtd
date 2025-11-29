@@ -214,6 +214,9 @@ export default function ItemList({ items, itemType: _itemType, basePath, current
                             <span className="text-gray-500">Memo #{item.id}</span>
                           )}
                         </p>
+                        <span className="px-2 py-0.5 text-xs font-medium rounded bg-indigo-100 text-indigo-700">
+                          Documents
+                        </span>
                       </div>
                       {item.labels && item.labels.length > 0 && (
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
