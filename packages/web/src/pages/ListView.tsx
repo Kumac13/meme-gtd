@@ -222,7 +222,7 @@ export default function ListView() {
           }
         />
       ) : (
-        <ItemList items={filteredAndSortedItems} itemType="task" basePath="" onItemClick={handleItemClick} />
+        <ItemList items={filteredAndSortedItems} itemType="task" basePath="" onItemClick={handleItemClick} showStatusBadges />
       )}
       <ItemDetailPanel
         itemId={selectedItem?.id ?? null}

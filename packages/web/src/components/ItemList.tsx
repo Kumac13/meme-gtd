@@ -63,6 +63,8 @@ interface ItemListProps {
   currentFilters?: URLSearchParams;
   onDelete?: (id: number) => Promise<void>;
   onItemClick?: (id: number, type: 'memo' | 'task') => void;
+  /** Show status badges on tasks and "Documents" badge on memos (only for project ListView) */
+  showStatusBadges?: boolean;
 }
 
 function isTask(item: Item): item is Task {
@@ -73,7 +75,7 @@ function isProject(item: Item): item is Project {
   return 'name' in item && 'description' in item;
 }
 
-export default function ItemList({ items, itemType: _itemType, basePath, currentFilters, onDelete, onItemClick }: ItemListProps) {
+export default function ItemList({ items, itemType: _itemType, basePath, currentFilters, onDelete, onItemClick, showStatusBadges = false }: ItemListProps) {
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
 
@@ -174,7 +176,7 @@ export default function ItemList({ items, itemType: _itemType, basePath, current
                         <h2 className="text-base text-gray-900">
                           {item.title || `Task #${item.id}`}
                         </h2>
-                        {item.status && (
+                        {showStatusBadges && item.status && (
                           <span className={`px-2 py-0.5 text-xs font-medium rounded ${statusBadgeClasses[item.status] || 'bg-gray-100 text-gray-700'}`}>
                             {statusLabels[item.status] || item.status}
                           </span>
@@ -214,9 +216,11 @@ export default function ItemList({ items, itemType: _itemType, basePath, current
                             <span className="text-gray-500">Memo #{item.id}</span>
                           )}
                         </p>
-                        <span className="px-2 py-0.5 text-xs font-medium rounded bg-indigo-100 text-indigo-700">
-                          Documents
-                        </span>
+                        {showStatusBadges && (
+                          <span className="px-2 py-0.5 text-xs font-medium rounded bg-indigo-100 text-indigo-700">
+                            Documents
+                          </span>
+                        )}
                       </div>
                       {item.labels && item.labels.length > 0 && (
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
