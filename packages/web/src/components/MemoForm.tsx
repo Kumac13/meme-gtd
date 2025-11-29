@@ -10,8 +10,14 @@ import { getShortcutHint } from '../utils/keyboard';
 import { useRecentProjects } from '../hooks/useRecentProjects';
 import { useRecentLabels } from '../hooks/useRecentLabels';
 import { LabelBadge } from './LabelBadge';
-import LinkItem from './LinkItem';
 import type { LinkDisplayItem } from '../types/links';
+
+const linkTypeLabels: Record<string, string> = {
+  parent: 'PARENT',
+  child: 'CHILD',
+  relates: 'RELATED',
+  derived_from: 'DERIVED FROM',
+};
 
 interface MemoFormProps {
   initialBodyMd?: string;
@@ -651,21 +657,34 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
             </button>
           </div>
 
-          {/* Accordion Content */}
+          {/* Links List - matching TaskFormLinks design */}
           {isLinksOpen && (
-            <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-sm">
-              <p className="text-sm text-gray-500 p-3 border-b border-gray-100">
-                These links will be copied from the original task to the new memo.
-              </p>
-              <div className="divide-y divide-gray-100">
-                {selectedLinks.map(link => (
-                  <LinkItem
-                    key={link.id}
-                    link={link}
-                    onDelete={handleRemoveLink}
-                  />
-                ))}
-              </div>
+            <div className="space-y-2">
+              {selectedLinks.map(link => (
+                <div
+                  key={link.id}
+                  className="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-200 rounded-md"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-500 uppercase">
+                      {linkTypeLabels[link.linkType] || link.linkType.toUpperCase()}
+                    </span>
+                    <span className="text-sm text-gray-700">
+                      #{link.targetIssue.id} - {link.targetIssue.title}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveLink(link.id)}
+                    className="text-gray-400 hover:text-red-500"
+                    title="Remove link"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
