@@ -251,6 +251,8 @@ git tag vX.Y.Z
 - SQLite (better-sqlite3) - 既存のissuesテーブルを使用 (001-webui)
 - SQLite (better-sqlite3) - 既存の`links`テーブルを使用 (001-task-task-task)
 - N/A（クライアントサイドのみ、既存APIを使用） (001-task-112-project)
+- TypeScript 5.5.4 / Node.js 22.0.0+ + Fastify 5.2.0, @oclif/core 4.0.0, better-sqlite3 9.0.0, Zod 3.23.8 (001-demote)
+- SQLite (既存のissues, links, issue_labels, issue_projectsテーブルを使用) (001-demote)
 
 ## Recent Changes
 - 020-web-label-management: Added TypeScript 5.5.4 / React 19.2.0 / Node.js 22+
