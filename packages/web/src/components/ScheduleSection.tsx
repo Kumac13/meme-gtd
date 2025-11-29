@@ -130,7 +130,8 @@ export function ScheduleSection({ scheduledOn, startTime, endDate, endTime, dura
                                 type="date"
                                 value={formDate}
                                 onChange={(e) => setFormDate(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
+                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border"
+                                style={{ WebkitAppearance: 'none', appearance: 'none' }}
                                 autoFocus
                             />
                         </div>
@@ -140,7 +141,8 @@ export function ScheduleSection({ scheduledOn, startTime, endDate, endTime, dura
                                 type="date"
                                 value={formEndDate}
                                 onChange={(e) => setFormEndDate(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
+                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border"
+                                style={{ WebkitAppearance: 'none', appearance: 'none' }}
                             />
                         </div>
                     </div>
@@ -152,7 +154,8 @@ export function ScheduleSection({ scheduledOn, startTime, endDate, endTime, dura
                                 type="time"
                                 value={formStart}
                                 onChange={(e) => setFormStart(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
+                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border"
+                                style={{ WebkitAppearance: 'none', appearance: 'none' }}
                             />
                         </div>
                         <div>
@@ -161,7 +164,8 @@ export function ScheduleSection({ scheduledOn, startTime, endDate, endTime, dura
                                 type="time"
                                 value={formEnd}
                                 onChange={(e) => setFormEnd(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
+                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border"
+                                style={{ WebkitAppearance: 'none', appearance: 'none' }}
                             />
                         </div>
                     </div>
