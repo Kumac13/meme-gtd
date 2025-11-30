@@ -135,9 +135,10 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
   const searchTerm = filters.search || filters.searchBody;
 
   if (searchTerm) {
-    const searchConditions = ["i.type = 'memo'", 'i.is_deleted = 0', 'f.body_md MATCH @search'];
-    // Add prefix matching (*) to each word for partial matching
-    params.search = searchTerm.split(/\s+/).filter(Boolean).map(word => word + '*').join(' ');
+    const searchConditions = ["i.type = 'memo'", 'i.is_deleted = 0'];
+    // Use LIKE for simple substring matching (supports %Memo% style search)
+    searchConditions.push('i.body_md LIKE @search');
+    params.search = `%${searchTerm}%`;
 
     if (filters.label) {
       searchConditions.push(
@@ -155,11 +156,10 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
     }
     sql = `
       SELECT i.*,
-        snippet(issues_fts, -1, '<mark>', '</mark>', '...', 15) as preview,
+        NULL as preview,
         (SELECT COUNT(*) FROM comments c
          WHERE c.issue_id = i.id AND c.is_deleted = 0) as comment_count
       FROM issues i
-      JOIN issues_fts f ON f.issue_id = i.id
       WHERE ${searchConditions.join(' AND ')}
       ORDER BY i.updated_at ${filters.order === 'asc' ? 'ASC' : 'DESC'}`;
     if (filters.limit) {
