@@ -60,7 +60,7 @@ const taskRowToTask = (row: any): Task => ({
   isBookmarked: toBoolean(row.is_bookmarked),
   isDeleted: toBoolean(row.is_deleted),
   commentCount: row.comment_count ?? 0,
-  ...(row.preview !== undefined && { preview: row.preview })
+  ...(row.preview != null && { preview: row.preview })
 });
 
 const commentRowToComment = (row: any): Comment => ({
@@ -194,14 +194,16 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
 
   if (hasSearch) {
     const searchConditions = ["i.type = 'task'", 'i.is_deleted = 0'];
+    let useFts = false;
 
-    // Build FTS5 MATCH conditions
+    // Build search conditions
     if (filters.search) {
-      // Search both title and body (default FTS5 behavior searches all indexed columns)
-      searchConditions.push('issues_fts MATCH @search');
-      params.search = filters.search;
+      // Use LIKE for simple substring matching (title only)
+      searchConditions.push('i.title LIKE @search');
+      params.search = `%${filters.search}%`;
     } else {
-      // Search specific fields
+      // Use FTS5 for specific field searches
+      useFts = true;
       const ftsConditions: string[] = [];
       if (filters.searchTitle) {
         ftsConditions.push('f.title MATCH @searchTitle');
@@ -246,15 +248,29 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
     if (filters.scheduledTo) {
       searchConditions.push('i.scheduled_on <= @scheduledTo');
     }
-    sql = `
-      SELECT i.*,
-  snippet(issues_fts, -1, '<mark>', '</mark>', '...', 15) as preview,
-  (SELECT COUNT(*) FROM comments c
-         WHERE c.issue_id = i.id AND c.is_deleted = 0) as comment_count
-      FROM issues i
-      JOIN issues_fts f ON f.issue_id = i.id
-      WHERE ${searchConditions.join(' AND ')}
-      ORDER BY i.updated_at ${filters.order === 'asc' ? 'ASC' : 'DESC'} `;
+
+    if (useFts) {
+      // FTS5 query with snippet preview
+      sql = `
+        SELECT i.*,
+    snippet(issues_fts, -1, '<mark>', '</mark>', '...', 15) as preview,
+    (SELECT COUNT(*) FROM comments c
+           WHERE c.issue_id = i.id AND c.is_deleted = 0) as comment_count
+        FROM issues i
+        JOIN issues_fts f ON f.issue_id = i.id
+        WHERE ${searchConditions.join(' AND ')}
+        ORDER BY i.updated_at ${filters.order === 'asc' ? 'ASC' : 'DESC'} `;
+    } else {
+      // Simple LIKE query without FTS5
+      sql = `
+        SELECT i.*,
+    NULL as preview,
+    (SELECT COUNT(*) FROM comments c
+           WHERE c.issue_id = i.id AND c.is_deleted = 0) as comment_count
+        FROM issues i
+        WHERE ${searchConditions.join(' AND ')}
+        ORDER BY i.updated_at ${filters.order === 'asc' ? 'ASC' : 'DESC'} `;
+    }
     if (filters.limit) {
       sql += ' LIMIT @limit';
     }

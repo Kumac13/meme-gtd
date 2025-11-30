@@ -99,3 +99,22 @@ export interface PendingLink {
     title: string;
   };
 }
+
+/**
+ * IssuePicker item - unified type for Task and Memo in the issue picker
+ *
+ * Used by IssuePicker component to display searchable/selectable issues.
+ * For Memo items, title is derived from the first line of bodyMd.
+ */
+export interface IssuePickerItem {
+  /** Issue ID */
+  id: number;
+  /** Issue type */
+  type: 'task' | 'memo';
+  /** Display title (Task: title, Memo: first line of bodyMd) */
+  title: string;
+  /** Status (Task only, null for Memo) */
+  status: string | null;
+  /** Last update timestamp for sorting */
+  updatedAt: string;
+}

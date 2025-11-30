@@ -409,7 +409,7 @@ test('listTasks returns commentCount field', () => {
   fs.removeSync(dir);
 });
 
-// Test listTasks() with search filter
+// Test listTasks() with search filter (uses LIKE for substring matching)
 test('listTasks() with search filter returns matching tasks', () => {
   const { dir, db } = createTempDb();
 
@@ -418,30 +418,30 @@ test('listTasks() with search filter returns matching tasks', () => {
   createTask(db, { title: 'Fix authentication bug', bodyMd: 'Session handling' });
   createTask(db, { title: 'Add user settings', bodyMd: 'Profile page' });
 
-  // Search by title
+  // Search by title (LIKE search, no preview)
   const results = listTasks(db, { search: 'login' });
 
   assert.equal(results.length, 1);
   assert.equal(results[0].title, 'Implement login feature');
-  assert.ok(results[0].preview); // Preview should be present
-  assert.ok(results[0].preview.includes('<mark>login</mark>')); // Highlighted
+  assert.equal(results[0].preview, undefined); // LIKE search does not include preview
 
   db.close();
   fs.removeSync(dir);
 });
 
-test('listTasks() with multi-word search', () => {
+test('listTasks() with substring search', () => {
   const { dir, db } = createTempDb();
 
-  createTask(db, { title: 'Implement OAuth login screen', bodyMd: 'Frontend UI' });
-  createTask(db, { title: 'Update screen layout for login', bodyMd: 'CSS changes' });
-  createTask(db, { title: 'Add screen transitions', bodyMd: 'Animation' });
+  createTask(db, { title: 'TaskToMemo conversion', bodyMd: 'Feature' });
+  createTask(db, { title: 'Add Memo feature', bodyMd: 'Another feature' });
+  createTask(db, { title: 'Unrelated task', bodyMd: 'Nothing' });
 
-  // Multi-word implicit AND
-  const results = listTasks(db, { search: 'login screen' });
+  // Substring search matches partial words
+  const results = listTasks(db, { search: 'Memo' });
 
-  assert.equal(results.length, 2); // Both tasks have "login" AND "screen"
-  assert.ok(results.every(t => t.preview)); // All results should have preview
+  assert.equal(results.length, 2);
+  assert.ok(results.some(t => t.title === 'TaskToMemo conversion'));
+  assert.ok(results.some(t => t.title === 'Add Memo feature'));
 
   db.close();
   fs.removeSync(dir);

@@ -7,7 +7,8 @@
  */
 
 import { useState } from 'react';
-import type { LinkType, PendingLink } from '../types/links';
+import type { LinkType, PendingLink, IssuePickerItem } from '../types/links';
+import IssuePicker from './IssuePicker';
 
 interface TaskFormLinksProps {
   /** List of pending links */
@@ -42,7 +43,6 @@ export default function TaskFormLinks({
 }: TaskFormLinksProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [selectedType, setSelectedType] = useState<LinkType | null>(null);
-  const [targetId, setTargetId] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const handleTypeSelect = (type: LinkType) => {
@@ -50,46 +50,35 @@ export default function TaskFormLinks({
     setError(null);
   };
 
-  const handleTargetIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTargetId(e.target.value);
-    setError(null);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const targetIdNum = parseInt(targetId, 10);
-    if (!targetId || isNaN(targetIdNum) || targetIdNum <= 0) {
-      setError('Please enter a valid issue ID');
-      return;
-    }
-
+  const handleIssueSelect = (issue: IssuePickerItem) => {
     if (!selectedType) {
-      setError('Please select a link type');
       return;
     }
 
     // Check for duplicate
-    if (links.some(l => l.targetIssueId === targetIdNum)) {
+    if (links.some(l => l.targetIssueId === issue.id)) {
       setError('Link to this issue already exists');
       return;
     }
 
     onAdd({
-      targetIssueId: targetIdNum,
+      targetIssueId: issue.id,
       linkType: selectedType,
+      targetIssue: {
+        id: issue.id,
+        type: issue.type,
+        title: issue.title,
+      },
     });
 
     // Reset form
     setSelectedType(null);
-    setTargetId('');
     setIsAdding(false);
     setError(null);
   };
 
   const handleCancel = () => {
     setSelectedType(null);
-    setTargetId('');
     setIsAdding(false);
     setError(null);
   };
@@ -168,53 +157,27 @@ export default function TaskFormLinks({
             </div>
           )}
 
-          {/* Step 2: ID Input */}
+          {/* Step 2: Issue Search and Selection */}
           {selectedType && (
-            <form onSubmit={handleSubmit}>
+            <div>
               <div className="text-xs font-medium text-gray-700 mb-2">
                 Adding {linkTypeLabels[selectedType].toLowerCase()} link:
               </div>
 
-              <div className="flex items-start gap-2">
-                <div className="flex-1">
-                  <input
-                    type="number"
-                    value={targetId}
-                    onChange={handleTargetIdChange}
-                    placeholder="Enter issue ID (e.g., 5)"
-                    disabled={disabled}
-                    autoFocus
-                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 disabled:opacity-50 disabled:bg-gray-100"
-                  />
-
-                  {error && (
-                    <div className="mt-1 text-xs text-red-600 flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 0a8 8 0 100 16A8 8 0 008 0zM7.002 11a1 1 0 112 0 1 1 0 01-2 0zM7.1 4.995a.905.905 0 111.8 0l-.35 3.507a.552.552 0 01-1.1 0z" />
-                      </svg>
-                      {error}
-                    </div>
-                  )}
+              {error && (
+                <div className="mb-2 text-xs text-red-600 flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M8 0a8 8 0 100 16A8 8 0 008 0zM7.002 11a1 1 0 112 0 1 1 0 01-2 0zM7.1 4.995a.905.905 0 111.8 0l-.35 3.507a.552.552 0 01-1.1 0z" />
+                  </svg>
+                  {error}
                 </div>
+              )}
 
-                <button
-                  type="submit"
-                  disabled={disabled || !targetId}
-                  className="px-3 py-1.5 text-sm bg-github-green-600 text-white rounded hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-github-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Add
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  disabled={disabled}
-                  className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+              <IssuePicker
+                onSelect={handleIssueSelect}
+                onCancel={handleCancel}
+              />
+            </div>
           )}
         </div>
       ) : (
