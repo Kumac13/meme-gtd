@@ -29,6 +29,17 @@ const createTempDb = () => {
   return { dir, db, dbPath };
 };
 
+/**
+ * Get local date in YYYY-MM-DD format
+ * Uses local timezone to match taskRepository behavior
+ */
+const getLocalDate = (date: Date = new Date()): string => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // T004: Test createTask() - Verify task creation with type='task'
 test('createTask() creates task with type=task and default status=inbox', () => {
   const { dir, db } = createTempDb();
@@ -517,7 +528,7 @@ test('setTaskStatus() to done sets end_date to current date', () => {
 
   const updated = setTaskStatus(db, task.id, 'done');
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
   assert.equal(updated.status, 'done');
   assert.equal(updated.endDate, today);
 
@@ -527,7 +538,7 @@ test('setTaskStatus() to done sets end_date to current date', () => {
 
 test('setTaskStatus() to done sets end_time when scheduled_on is today', () => {
   const { dir, db } = createTempDb();
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
   const task = createTask(db, { title: 'Task', bodyMd: 'Body', status: 'open', scheduledOn: today });
 
   const updated = setTaskStatus(db, task.id, 'done');
@@ -543,12 +554,12 @@ test('setTaskStatus() to done sets end_time when scheduled_on is today', () => {
 
 test('setTaskStatus() to done does not set end_time when scheduled_on is different day', () => {
   const { dir, db } = createTempDb();
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const yesterday = getLocalDate(new Date(Date.now() - 86400000));
   const task = createTask(db, { title: 'Task', bodyMd: 'Body', status: 'open', scheduledOn: yesterday });
 
   const updated = setTaskStatus(db, task.id, 'done');
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
   assert.equal(updated.status, 'done');
   assert.equal(updated.endDate, today);
   assert.equal(updated.endTime, null); // end_time should NOT be set
@@ -563,7 +574,7 @@ test('setTaskStatus() to next sets scheduled_on and start_time', () => {
 
   const updated = setTaskStatus(db, task.id, 'next');
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
   assert.equal(updated.status, 'next');
   assert.equal(updated.scheduledOn, today);
   assert.ok(updated.startTime);
@@ -600,7 +611,7 @@ test('setTaskStatus() to next overwrites existing scheduled_on', () => {
 
   const updated = setTaskStatus(db, task.id, 'next');
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
   assert.equal(updated.status, 'next');
   assert.equal(updated.scheduledOn, today); // Should be overwritten to today
 
@@ -614,7 +625,7 @@ test('updateTask() with status=done auto-sets end_date', () => {
 
   const updated = updateTask(db, { id: task.id, status: 'done' });
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
   assert.equal(updated.status, 'done');
   assert.equal(updated.endDate, today);
 
@@ -628,7 +639,7 @@ test('updateTask() with status=next auto-sets scheduled_on and start_time', () =
 
   const updated = updateTask(db, { id: task.id, status: 'next' });
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
   assert.equal(updated.status, 'next');
   assert.equal(updated.scheduledOn, today);
   assert.ok(updated.startTime);
