@@ -50,6 +50,10 @@ interface ItemDetailProps {
   customActions?: React.ReactNode;
   /** 'page' shows full layout with sidebar, 'panel' hides sidebar for compact view */
   mode?: 'page' | 'panel';
+  /** Optional callback when a linked item is clicked (used in page mode for modal) */
+  onItemClick?: (id: number, type: 'memo' | 'task') => void;
+  /** Optional callback before navigation (used in panel mode to close modal first) */
+  onBeforeNavigate?: () => void;
 }
 
 export default function ItemDetail({
@@ -62,6 +66,8 @@ export default function ItemDetail({
   bookmarking,
   customActions,
   mode = 'page',
+  onItemClick,
+  onBeforeNavigate,
 }: ItemDetailProps) {
 
   const handleUpdateBody = async (newBody: string, newTitle?: string) => {
@@ -149,7 +155,7 @@ export default function ItemDetail({
           />
 
           {/* Links section */}
-          <LinkSection itemId={item.id} itemType={itemType} />
+          <LinkSection itemId={item.id} itemType={itemType} onItemClick={onItemClick} onBeforeNavigate={onBeforeNavigate} />
 
           {/* Comments section */}
           <CommentSection itemId={item.id} itemType={itemType} />

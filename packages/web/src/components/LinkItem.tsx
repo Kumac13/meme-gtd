@@ -18,9 +18,13 @@ interface LinkItemProps {
   onDelete: (linkId: number) => void;
   /** Whether a delete operation is in progress for this link */
   isDeleting?: boolean;
+  /** Optional callback when target link is clicked (used in page mode for modal) */
+  onItemClick?: (id: number, type: 'memo' | 'task') => void;
+  /** Optional callback before navigation (used in panel mode to close modal first) */
+  onBeforeNavigate?: () => void;
 }
 
-export default function LinkItem({ link, onDelete, isDeleting = false }: LinkItemProps) {
+export default function LinkItem({ link, onDelete, isDeleting = false, onItemClick, onBeforeNavigate }: LinkItemProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const isDeleted = link.targetIssue.title.includes('(deleted)');
   const targetPath = link.targetIssue.type === 'memo'
@@ -64,9 +68,18 @@ export default function LinkItem({ link, onDelete, isDeleting = false }: LinkIte
             <span className="text-sm text-gray-400 truncate" title={link.targetIssue.title}>
               {displayTitle}
             </span>
+          ) : onItemClick ? (
+            <button
+              onClick={() => onItemClick(link.targetIssue.id, link.targetIssue.type)}
+              className="text-sm text-github-green-600 hover:text-github-green-800 hover:underline truncate text-left"
+              title={link.targetIssue.title}
+            >
+              {link.targetIssue.type === 'task' ? 'Task' : 'Memo'} #{link.targetIssue.id}: {displayTitle}
+            </button>
           ) : (
             <Link
               to={targetPath}
+              onClick={onBeforeNavigate}
               className="text-sm text-github-green-600 hover:text-github-green-800 hover:underline truncate"
               title={link.targetIssue.title}
             >

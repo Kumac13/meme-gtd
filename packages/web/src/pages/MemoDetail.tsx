@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import ItemDetail, { type Item } from '../components/ItemDetail';
+import { ItemDetailPanel } from '../components/ItemDetailPanel';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import { useDocumentTitle, truncateForTitle } from '../hooks/useDocumentTitle';
@@ -25,6 +26,7 @@ export default function MemoDetail() {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'memo' | 'task' } | null>(null);
 
   // Set document title based on memo body preview (memos don't have titles)
   const titleText = memo?.bodyMd ? truncateForTitle(memo.bodyMd) : null;
@@ -87,6 +89,14 @@ export default function MemoDetail() {
     }
   };
 
+  const handleItemClick = useCallback((itemId: number, itemType: 'memo' | 'task') => {
+    setSelectedItem({ id: itemId, type: itemType });
+  }, []);
+
+  const handlePanelClose = useCallback(() => {
+    setSelectedItem(null);
+  }, []);
+
   if (loading) {
     return <LoadingState message="Loading memo..." />;
   }
@@ -100,21 +110,29 @@ export default function MemoDetail() {
   };
 
   return (
-    <ItemDetail
-      item={memo}
-      itemType="memo"
-      onDelete={handleDelete}
-      onBookmarkToggle={handleBookmarkToggle}
-      onUpdate={handleUpdate}
-      deleting={deleting}
-      bookmarking={bookmarking}
-      customActions={
-        <Link to={`/tasks/new?fromMemo=${id}`}>
-          <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500">
-            Promote to Task
-          </button>
-        </Link>
-      }
-    />
+    <>
+      <ItemDetail
+        item={memo}
+        itemType="memo"
+        onDelete={handleDelete}
+        onBookmarkToggle={handleBookmarkToggle}
+        onUpdate={handleUpdate}
+        deleting={deleting}
+        bookmarking={bookmarking}
+        customActions={
+          <Link to={`/tasks/new?fromMemo=${id}`}>
+            <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500">
+              Promote to Task
+            </button>
+          </Link>
+        }
+        onItemClick={handleItemClick}
+      />
+      <ItemDetailPanel
+        itemId={selectedItem?.id ?? null}
+        itemType={selectedItem?.type ?? null}
+        onClose={handlePanelClose}
+      />
+    </>
   );
 }
