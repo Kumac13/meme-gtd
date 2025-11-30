@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
 import ItemDetail, { type Item } from '../components/ItemDetail';
+import { ItemDetailPanel } from '../components/ItemDetailPanel';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import CreateTaskModal from '../components/CreateTaskModal';
@@ -29,6 +30,7 @@ export default function TaskDetail() {
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'memo' | 'task' } | null>(null);
 
   // Set document title based on task title or body preview
   const titleText = task?.title || (task?.bodyMd ? truncateForTitle(task.bodyMd) : null);
@@ -124,6 +126,14 @@ export default function TaskDetail() {
     navigate(`/tasks/${newTaskId}`);
   };
 
+  const handleItemClick = useCallback((itemId: number, itemType: 'memo' | 'task') => {
+    setSelectedItem({ id: itemId, type: itemType });
+  }, []);
+
+  const handlePanelClose = useCallback(() => {
+    setSelectedItem(null);
+  }, []);
+
   // Custom action buttons for creating new task and archiving to memo
   const customActions = (
     <div className="flex gap-2">
@@ -153,12 +163,18 @@ export default function TaskDetail() {
         deleting={deleting}
         bookmarking={bookmarking}
         customActions={customActions}
+        onItemClick={handleItemClick}
       />
       <CreateTaskModal
         isOpen={isCreateModalOpen}
         onClose={handleCloseCreateModal}
         sourceTask={{ id: task.id, title: task.title || 'Untitled Task' }}
         onTaskCreated={handleTaskCreated}
+      />
+      <ItemDetailPanel
+        itemId={selectedItem?.id ?? null}
+        itemType={selectedItem?.type ?? null}
+        onClose={handlePanelClose}
       />
     </>
   );
