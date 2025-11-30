@@ -42,7 +42,7 @@ const memoRowToMemo = (row: any): Memo => ({
   isBookmarked: toBoolean(row.is_bookmarked),
   isDeleted: toBoolean(row.is_deleted),
   commentCount: row.comment_count ?? 0,
-  ...(row.preview !== undefined && { preview: row.preview })
+  ...(row.preview != null && { preview: row.preview })
 });
 
 const commentRowToComment = (row: any): Comment => ({
