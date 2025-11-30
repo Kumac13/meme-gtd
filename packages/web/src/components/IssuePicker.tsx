@@ -50,7 +50,7 @@ function memoToPickerItem(memo: {
   updatedAt: string;
 }): IssuePickerItem {
   // Extract first line as title
-  const firstLine = memo.bodyMd.split('\n')[0]?.trim() || '(無題)';
+  const firstLine = memo.bodyMd.split('\n')[0]?.trim() || '(Untitled)';
   // Truncate if too long
   const title = firstLine.length > 50 ? firstLine.slice(0, 47) + '...' : firstLine;
 
@@ -112,7 +112,7 @@ export default function IssuePicker({
       setItems(merged);
     } catch (err) {
       console.error('Failed to fetch issues:', err);
-      setError('検索に失敗しました');
+      setError('Search failed');
       setItems([]);
     } finally {
       setIsLoading(false);
@@ -233,7 +233,7 @@ export default function IssuePicker({
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
-            <span className="mt-2 block">検索中...</span>
+            <span className="mt-2 block">Searching...</span>
           </div>
         )}
 
@@ -247,7 +247,7 @@ export default function IssuePicker({
         {/* Empty State */}
         {!isLoading && !error && items.length === 0 && (
           <div className="p-4 text-center text-sm text-gray-500">
-            該当するアイテムがありません
+            No matching items found
           </div>
         )}
 
@@ -256,7 +256,7 @@ export default function IssuePicker({
           <>
             {/* Label */}
             <div className="px-3 py-1.5 text-xs font-medium text-gray-500 bg-gray-50 border-b border-gray-200">
-              {searchTerm ? '検索結果:' : 'Recent:'}
+              {searchTerm ? 'Results:' : 'Recent:'}
             </div>
 
             <ul
