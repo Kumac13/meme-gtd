@@ -198,8 +198,9 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
     // Build FTS5 MATCH conditions
     if (filters.search) {
       // Search both title and body (default FTS5 behavior searches all indexed columns)
+      // Add prefix matching (*) to each word for partial matching
       searchConditions.push('issues_fts MATCH @search');
-      params.search = filters.search;
+      params.search = filters.search.split(/\s+/).filter(Boolean).map(word => word + '*').join(' ');
     } else {
       // Search specific fields
       const ftsConditions: string[] = [];

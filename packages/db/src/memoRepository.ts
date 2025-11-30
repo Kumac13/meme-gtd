@@ -136,7 +136,8 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
 
   if (searchTerm) {
     const searchConditions = ["i.type = 'memo'", 'i.is_deleted = 0', 'f.body_md MATCH @search'];
-    params.search = searchTerm;
+    // Add prefix matching (*) to each word for partial matching
+    params.search = searchTerm.split(/\s+/).filter(Boolean).map(word => word + '*').join(' ');
 
     if (filters.label) {
       searchConditions.push(
