@@ -80,6 +80,7 @@ export default function LinkSection({ itemId, itemType: _itemType }: LinkSection
   };
 
   const handleAddClick = () => {
+    setIsExpanded(true); // Always expand when adding
     setCreationState({
       isAdding: true,
       selectedType: null,
