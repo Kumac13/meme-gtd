@@ -316,9 +316,7 @@ export const updateTask = (db: Database.Database, input: UpdateTaskInput): Task 
 
   // Detect status change for auto-setting date/time fields
   const isStatusChange = input.status !== undefined && input.status !== task.status;
-  const now = new Date();
-  const currentDate = now.toISOString().split('T')[0];
-  const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+  const { date: currentDate, time: currentTime } = getLocalDateTime();
 
   if (input.status !== undefined) {
     updates.push('status = @status');
@@ -436,9 +434,7 @@ export const setTaskStatus = (
   status: TaskStatus
 ): Task => {
   const task = getTask(db, id); // Validates type
-  const now = new Date();
-  const currentDate = now.toISOString().split('T')[0];
-  const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+  const { date: currentDate, time: currentTime } = getLocalDateTime();
 
   const updates: string[] = ['status = @status', 'updated_at = @updatedAt'];
   const params: Record<string, unknown> = { id, status, updatedAt: nowIso() };
@@ -706,6 +702,24 @@ const diffMinutes = (start: string, end: string): number => {
   let diff = timeToMinutes(end) - timeToMinutes(start);
   if (diff < 0) diff += 24 * 60; // Assume wrap around midnight
   return diff;
+};
+
+/**
+ * Get current local date and time
+ * Returns date in YYYY-MM-DD format and time in HH:MM format
+ * Uses local timezone (not UTC) for consistent user experience
+ */
+const getLocalDateTime = (): { date: string; time: string } => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const day = now.getDate().toString().padStart(2, '0');
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  return {
+    date: `${year}-${month}-${day}`,
+    time: `${hours}:${minutes}`
+  };
 };
 
 // Demote task to memo
