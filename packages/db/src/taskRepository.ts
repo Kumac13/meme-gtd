@@ -198,8 +198,8 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
 
     // Build search conditions
     if (filters.search) {
-      // Use LIKE for simple substring matching (supports %Memo% style search)
-      searchConditions.push('(i.title LIKE @search OR i.body_md LIKE @search)');
+      // Use LIKE for simple substring matching (title only)
+      searchConditions.push('i.title LIKE @search');
       params.search = `%${filters.search}%`;
     } else {
       // Use FTS5 for specific field searches
