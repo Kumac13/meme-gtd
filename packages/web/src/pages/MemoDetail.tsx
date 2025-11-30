@@ -89,6 +89,14 @@ export default function MemoDetail() {
     }
   };
 
+  const handleItemClick = useCallback((itemId: number, itemType: 'memo' | 'task') => {
+    setSelectedItem({ id: itemId, type: itemType });
+  }, []);
+
+  const handlePanelClose = useCallback(() => {
+    setSelectedItem(null);
+  }, []);
+
   if (loading) {
     return <LoadingState message="Loading memo..." />;
   }
@@ -100,14 +108,6 @@ export default function MemoDetail() {
   const handleUpdate = (updatedItem: Item) => {
     setMemo(updatedItem as Memo);
   };
-
-  const handleItemClick = useCallback((itemId: number, itemType: 'memo' | 'task') => {
-    setSelectedItem({ id: itemId, type: itemType });
-  }, []);
-
-  const handlePanelClose = useCallback(() => {
-    setSelectedItem(null);
-  }, []);
 
   return (
     <>

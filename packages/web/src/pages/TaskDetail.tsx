@@ -93,6 +93,14 @@ export default function TaskDetail() {
     }
   };
 
+  const handleItemClick = useCallback((itemId: number, itemType: 'memo' | 'task') => {
+    setSelectedItem({ id: itemId, type: itemType });
+  }, []);
+
+  const handlePanelClose = useCallback(() => {
+    setSelectedItem(null);
+  }, []);
+
   if (loading) {
     return <LoadingState message="Loading task..." />;
   }
@@ -125,14 +133,6 @@ export default function TaskDetail() {
     // Navigate to the newly created task
     navigate(`/tasks/${newTaskId}`);
   };
-
-  const handleItemClick = useCallback((itemId: number, itemType: 'memo' | 'task') => {
-    setSelectedItem({ id: itemId, type: itemType });
-  }, []);
-
-  const handlePanelClose = useCallback(() => {
-    setSelectedItem(null);
-  }, []);
 
   // Custom action buttons for creating new task and archiving to memo
   const customActions = (
