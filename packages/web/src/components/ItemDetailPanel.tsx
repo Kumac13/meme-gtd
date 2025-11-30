@@ -198,6 +198,7 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
               deleting={deleting}
               bookmarking={bookmarking}
               mode="panel"
+              onBeforeNavigate={onClose}
             />
           )}
         </div>

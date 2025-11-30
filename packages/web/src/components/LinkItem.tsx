@@ -20,9 +20,11 @@ interface LinkItemProps {
   isDeleting?: boolean;
   /** Optional callback when target link is clicked (used in page mode for modal) */
   onItemClick?: (id: number, type: 'memo' | 'task') => void;
+  /** Optional callback before navigation (used in panel mode to close modal first) */
+  onBeforeNavigate?: () => void;
 }
 
-export default function LinkItem({ link, onDelete, isDeleting = false, onItemClick }: LinkItemProps) {
+export default function LinkItem({ link, onDelete, isDeleting = false, onItemClick, onBeforeNavigate }: LinkItemProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const isDeleted = link.targetIssue.title.includes('(deleted)');
   const targetPath = link.targetIssue.type === 'memo'
@@ -77,6 +79,7 @@ export default function LinkItem({ link, onDelete, isDeleting = false, onItemCli
           ) : (
             <Link
               to={targetPath}
+              onClick={onBeforeNavigate}
               className="text-sm text-github-green-600 hover:text-github-green-800 hover:underline truncate"
               title={link.targetIssue.title}
             >

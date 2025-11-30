@@ -18,9 +18,11 @@ interface LinkSectionProps {
   itemType: 'memo' | 'task';
   /** Optional callback when a linked item is clicked (used in page mode for modal) */
   onItemClick?: (id: number, type: 'memo' | 'task') => void;
+  /** Optional callback before navigation (used in panel mode to close modal first) */
+  onBeforeNavigate?: () => void;
 }
 
-export default function LinkSection({ itemId, itemType: _itemType, onItemClick }: LinkSectionProps) {
+export default function LinkSection({ itemId, itemType: _itemType, onItemClick, onBeforeNavigate }: LinkSectionProps) {
   const [links, setLinks] = useState<LinkDisplayItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -221,6 +223,7 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick }
                   onDelete={handleDelete}
                   isDeleting={deletingLinkId === link.id}
                   onItemClick={onItemClick}
+                  onBeforeNavigate={onBeforeNavigate}
                 />
               ))}
             </div>

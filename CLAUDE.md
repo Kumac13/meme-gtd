@@ -253,6 +253,8 @@ git tag vX.Y.Z
 - N/A（クライアントサイドのみ、既存APIを使用） (001-task-112-project)
 - TypeScript 5.5.4 / Node.js 22.0.0+ + Fastify 5.2.0, @oclif/core 4.0.0, better-sqlite3 9.0.0, Zod 3.23.8 (001-demote)
 - SQLite (既存のissues, links, issue_labels, issue_projectsテーブルを使用) (001-demote)
+- TypeScript 5.5.4 + React 19.2.0, React Router DOM 7.9.4, Tailwind CSS 4.1.14 (001-link)
+- N/A（既存API使用、バックエンド変更なし） (001-link)
 
 ## Recent Changes
 - 020-web-label-management: Added TypeScript 5.5.4 / React 19.2.0 / Node.js 22+
