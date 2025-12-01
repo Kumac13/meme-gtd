@@ -26,7 +26,8 @@ export function ScheduleInput({ value, onChange }: ScheduleInputProps) {
                         type="date"
                         value={value.scheduledOn}
                         onChange={(e) => handleChange('scheduledOn', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
+                        className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border"
+                        style={{ WebkitAppearance: 'none', appearance: 'none' }}
                     />
                 </div>
                 <div>
@@ -35,7 +36,8 @@ export function ScheduleInput({ value, onChange }: ScheduleInputProps) {
                         type="date"
                         value={value.endDate}
                         onChange={(e) => handleChange('endDate', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
+                        className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border"
+                        style={{ WebkitAppearance: 'none', appearance: 'none' }}
                     />
                 </div>
             </div>
@@ -47,7 +49,8 @@ export function ScheduleInput({ value, onChange }: ScheduleInputProps) {
                         type="time"
                         value={value.startTime}
                         onChange={(e) => handleChange('startTime', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
+                        className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border"
+                        style={{ WebkitAppearance: 'none', appearance: 'none' }}
                     />
                 </div>
                 <div>
@@ -56,7 +59,8 @@ export function ScheduleInput({ value, onChange }: ScheduleInputProps) {
                         type="time"
                         value={value.endTime}
                         onChange={(e) => handleChange('endTime', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
+                        className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border"
+                        style={{ WebkitAppearance: 'none', appearance: 'none' }}
                     />
                 </div>
             </div>
@@ -68,7 +72,8 @@ export function ScheduleInput({ value, onChange }: ScheduleInputProps) {
                     value={value.duration}
                     onChange={(e) => handleChange('duration', e.target.value)}
                     placeholder="e.g. 60"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
+                    className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border"
+                    style={{ WebkitAppearance: 'none', appearance: 'none' }}
                 />
             </div>
         </div>
