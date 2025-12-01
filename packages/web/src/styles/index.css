@@ -39,3 +39,12 @@
   color: #1f2937 !important;
   border: 1px solid #d1d5db !important;
 }
+
+/* Prevent iOS auto-zoom on input focus */
+@media screen and (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
