@@ -134,21 +134,27 @@ export default function TaskDetail() {
     navigate(`/tasks/${newTaskId}`);
   };
 
-  // Custom action buttons for creating new task and archiving to memo
+  // Custom action button for creating new task (in header)
   const customActions = (
-    <div className="flex gap-2">
-      <Link to={`/memos/new?fromTask=${id}`}>
-        <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500">
-          Archive to Memo
-        </button>
-      </Link>
-      <button
-        onClick={handleOpenCreateModal}
-        className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500"
-      >
-        New Task
-      </button>
-    </div>
+    <button
+      onClick={handleOpenCreateModal}
+      className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500"
+    >
+      New Task
+    </button>
+  );
+
+  // Sidebar action for archiving to memo
+  const sidebarActions = (
+    <Link
+      to={`/memos/new?fromTask=${id}`}
+      className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+      </svg>
+      Archive to Memo
+    </Link>
   );
 
   return (
@@ -163,6 +169,7 @@ export default function TaskDetail() {
         deleting={deleting}
         bookmarking={bookmarking}
         customActions={customActions}
+        sidebarActions={sidebarActions}
         onItemClick={handleItemClick}
       />
       <CreateTaskModal

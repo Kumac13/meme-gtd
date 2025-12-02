@@ -48,6 +48,8 @@ interface ItemDetailProps {
   deleting: boolean;
   bookmarking: boolean;
   customActions?: React.ReactNode;
+  /** Actions to display at the bottom of the sidebar (e.g., Archive to Memo, Promote to Task) */
+  sidebarActions?: React.ReactNode;
   /** 'page' shows full layout with sidebar, 'panel' hides sidebar for compact view */
   mode?: 'page' | 'panel';
   /** Optional callback when a linked item is clicked (used in page mode for modal) */
@@ -65,6 +67,7 @@ export default function ItemDetail({
   onStatusChange,
   bookmarking,
   customActions,
+  sidebarActions,
   mode = 'page',
   onItemClick,
   onBeforeNavigate,
@@ -106,7 +109,7 @@ export default function ItemDetail({
         {/* Mobile: stack vertically, Desktop: side by side */}
         <div className={`flex flex-col gap-3 mb-3 ${mode === 'page' ? 'sm:flex-row sm:items-start sm:justify-between' : ''}`}>
           {mode === 'page' && (
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
               {item.title || `${itemType === 'memo' ? 'Memo' : 'Task'} #${item.id}`}
             </h1>
           )}
@@ -125,11 +128,11 @@ export default function ItemDetail({
               title={item.isBookmarked ? 'Unbookmark' : 'Bookmark'}
             >
               {item.isBookmarked ? (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 16 16">
                   <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Z"></path>
                 </svg>
               ) : (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 16 16">
                   <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.91l3.023-2.489a.75.75 0 0 1 .954 0l3.023 2.49V2.75a.25.25 0 0 0-.25-.25Z"></path>
                 </svg>
               )}
@@ -190,6 +193,16 @@ export default function ItemDetail({
             assignedLabels={item.labels || []}
             onLabelsChanged={handleLabelsChanged}
           />
+
+          {/* Sidebar Actions (e.g., Archive to Memo, Promote to Task) */}
+          {sidebarActions && (
+            <div
+              className="border-t border-gray-200 pt-4 mt-4"
+              style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+            >
+              {sidebarActions}
+            </div>
+          )}
         </div>
       </div>
     </div>

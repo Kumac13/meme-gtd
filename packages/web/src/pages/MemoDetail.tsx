@@ -109,6 +109,19 @@ export default function MemoDetail() {
     setMemo(updatedItem as Memo);
   };
 
+  // Sidebar action for promoting to task
+  const sidebarActions = (
+    <Link
+      to={`/tasks/new?fromMemo=${id}`}
+      className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+      </svg>
+      Promote to Task
+    </Link>
+  );
+
   return (
     <>
       <ItemDetail
@@ -119,13 +132,7 @@ export default function MemoDetail() {
         onUpdate={handleUpdate}
         deleting={deleting}
         bookmarking={bookmarking}
-        customActions={
-          <Link to={`/tasks/new?fromMemo=${id}`}>
-            <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500">
-              Promote to Task
-            </button>
-          </Link>
-        }
+        sidebarActions={sidebarActions}
         onItemClick={handleItemClick}
       />
       <ItemDetailPanel
