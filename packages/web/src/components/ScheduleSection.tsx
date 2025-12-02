@@ -124,47 +124,47 @@ export function ScheduleSection({ scheduledOn, startTime, endDate, endTime, dura
             {isEditing ? (
                 <div className="flex flex-col space-y-3">
                     <div className="grid grid-cols-2 gap-2">
-                        <div>
+                        <div className="min-w-0">
                             <label className="block text-xs text-gray-500 mb-1">Start Date</label>
                             <input
                                 type="date"
                                 value={formDate}
                                 onChange={(e) => setFormDate(e.target.value)}
-                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border"
+                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
                                 style={{ WebkitAppearance: 'none', appearance: 'none' }}
                                 autoFocus
                             />
                         </div>
-                        <div>
+                        <div className="min-w-0">
                             <label className="block text-xs text-gray-500 mb-1">End Date</label>
                             <input
                                 type="date"
                                 value={formEndDate}
                                 onChange={(e) => setFormEndDate(e.target.value)}
-                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border"
+                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
                                 style={{ WebkitAppearance: 'none', appearance: 'none' }}
                             />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
-                        <div>
+                        <div className="min-w-0">
                             <label className="block text-xs text-gray-500 mb-1">Start Time</label>
                             <input
                                 type="time"
                                 value={formStart}
                                 onChange={(e) => setFormStart(e.target.value)}
-                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border"
+                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
                                 style={{ WebkitAppearance: 'none', appearance: 'none' }}
                             />
                         </div>
-                        <div>
+                        <div className="min-w-0">
                             <label className="block text-xs text-gray-500 mb-1">End Time</label>
                             <input
                                 type="time"
                                 value={formEnd}
                                 onChange={(e) => setFormEnd(e.target.value)}
-                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border"
+                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
                                 style={{ WebkitAppearance: 'none', appearance: 'none' }}
                             />
                         </div>
@@ -177,7 +177,8 @@ export function ScheduleSection({ scheduledOn, startTime, endDate, endTime, dura
                             value={formDuration}
                             onChange={(e) => setFormDuration(e.target.value)}
                             placeholder="e.g. 60"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
+                            className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
+                            style={{ WebkitAppearance: 'none', appearance: 'none' }}
                         />
                     </div>
 

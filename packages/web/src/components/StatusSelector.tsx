@@ -11,7 +11,7 @@ export function StatusSelector({ value, onChange, options, className = '' }: Sta
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="px-3 py-2 pr-8 border border-gray-300 rounded-md shadow-sm text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 bg-white"
+        className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-md shadow-sm text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 bg-white"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
