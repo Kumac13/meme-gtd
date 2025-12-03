@@ -2,7 +2,7 @@
  * Markdown rendering utilities for meme-gtd Web UI
  */
 
-import { useState, type ReactNode } from 'react';
+import { useState, useRef, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -60,13 +60,17 @@ function CheckIcon() {
 /**
  * Code block wrapper with copy button
  * Wraps fenced code blocks with a copy-to-clipboard button
+ * Uses DOM ref to extract code text, avoiding inclusion of <details>/<summary> tags
  */
 function CodeBlockWithCopy({ children }: { children: ReactNode }) {
   const [copied, setCopied] = useState(false);
-  const codeText = extractTextFromChildren(children).replace(/\n$/, ''); // Remove trailing newline
+  const preRef = useRef<HTMLPreElement>(null);
 
   const handleCopy = async () => {
     try {
+      // Get code text directly from DOM to exclude any wrapper tags like <details>/<summary>
+      const codeElement = preRef.current?.querySelector('code');
+      const codeText = (codeElement?.textContent ?? extractTextFromChildren(children)).replace(/\n$/, '');
       await navigator.clipboard.writeText(codeText);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
@@ -85,8 +89,8 @@ function CodeBlockWithCopy({ children }: { children: ReactNode }) {
       >
         {copied ? <CheckIcon /> : <ClipboardIcon />}
       </button>
-      <pre className="bg-gray-900 text-gray-100 py-3 px-4 pr-12 rounded-lg overflow-x-auto text-sm font-mono">
-        <code className="text-gray-100 text-sm font-mono">{codeText}</code>
+      <pre ref={preRef} className="bg-gray-900 text-gray-100 py-3 px-4 pr-12 rounded-lg overflow-x-auto text-sm font-mono">
+        {children}
       </pre>
     </div>
   );
