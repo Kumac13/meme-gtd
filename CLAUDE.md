@@ -255,6 +255,8 @@ git tag vX.Y.Z
 - SQLite (既存のissues, links, issue_labels, issue_projectsテーブルを使用) (001-demote)
 - TypeScript 5.5.4 + React 19.2.0, React Router DOM 7.9.4, Tailwind CSS 4.1.14 (001-link)
 - N/A（既存API使用、バックエンド変更なし） (001-link)
+- TypeScript 5.5.4 / React 19.2.0 / Node.js 22+ + react-markdown 10.1.0, remark-gfm 4.0.1, remark-breaks 4.0.0, rehype-raw (新規追加), rehype-sanitize (新規追加) (001-task-147-status)
+- N/A (フロントエンドのみ、バックエンド変更なし) (001-task-147-status)
 
 ## Recent Changes
 - 020-web-label-management: Added TypeScript 5.5.4 / React 19.2.0 / Node.js 22+
