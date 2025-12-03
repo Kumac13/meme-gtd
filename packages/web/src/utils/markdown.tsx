@@ -6,6 +6,8 @@ import { useState, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import type { Components } from 'react-markdown';
 
 /**
@@ -213,6 +215,7 @@ export function MarkdownRenderer({ content, components, className = '' }: Markdo
     <div className={`markdown-content ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks]}
+        rehypePlugins={[rehypeRaw, rehypeSanitize]}
         components={{ ...defaultComponents, ...components }}
       >
         {content}
