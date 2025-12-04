@@ -97,9 +97,44 @@ function CodeBlockWithCopy({ children }: { children: ReactNode }) {
 }
 
 /**
+ * Transform attachment absolute paths to API URLs
+ * Converts paths like `/Users/xxx/.mgtd/attachments/42/abc123.png`
+ * to `/api/attachments/42/abc123.png`
+ */
+function transformAttachmentPath(src: string | undefined): string | undefined {
+  if (!src) return src;
+
+  // Match pattern: any path containing .mgtd/attachments/{issueId}/{filename}
+  const attachmentPattern = /\.mgtd\/attachments\/(\d+)\/([a-zA-Z0-9-]+\.(png|jpe?g|gif|webp))$/i;
+  const match = src.match(attachmentPattern);
+
+  if (match) {
+    const issueId = match[1];
+    const filename = match[2];
+    return `/api/attachments/${issueId}/${filename}`;
+  }
+
+  return src;
+}
+
+/**
  * Default markdown components configuration with Tailwind CSS styling
  */
 const defaultComponents: Components = {
+  // Images with attachment path transformation
+  img: ({ src, alt, ...props }) => {
+    const transformedSrc = transformAttachmentPath(src);
+    return (
+      <img
+        src={transformedSrc}
+        alt={alt || ''}
+        className="max-w-full h-auto rounded-lg my-4"
+        loading="lazy"
+        {...props}
+      />
+    );
+  },
+
   // Headings
   h1: ({ children }) => (
     <h1 className="text-2xl font-bold mt-6 mb-4 text-gray-900">{children}</h1>
@@ -295,6 +330,19 @@ export function extractFirstLine(markdown: string, maxLength?: number): string {
  */
 export function InlineMarkdownRenderer({ content }: { content: string }) {
   const inlineComponents: Components = {
+    // Images with attachment path transformation
+    img: ({ src, alt, ...props }) => {
+      const transformedSrc = transformAttachmentPath(src);
+      return (
+        <img
+          src={transformedSrc}
+          alt={alt || ''}
+          className="max-w-full h-auto rounded inline-block max-h-16"
+          loading="lazy"
+          {...props}
+        />
+      );
+    },
     p: ({ children }) => <span className="text-gray-900">{children}</span>,
     h1: ({ children }) => <strong className="text-base font-semibold text-gray-900">{children}</strong>,
     h2: ({ children }) => <strong className="text-base font-semibold text-gray-900">{children}</strong>,
