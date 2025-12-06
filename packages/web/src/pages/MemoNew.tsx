@@ -37,6 +37,7 @@ interface IssueLink {
     id: number;
     type: 'task' | 'memo';
     title: string;
+    status: string | null;
   };
   createdAt: string;
 }
