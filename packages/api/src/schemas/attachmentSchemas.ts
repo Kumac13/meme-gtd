@@ -49,7 +49,6 @@ export type AttachmentResponse = z.infer<typeof AttachmentResponseSchema>;
 export const AttachmentErrorCode = z.enum([
   'INVALID_FILE_TYPE',
   'FILE_TOO_LARGE',
-  'ISSUE_NOT_FOUND',
   'FILE_NOT_FOUND',
   'STORAGE_ERROR',
   'NO_FILE_UPLOADED',
@@ -67,24 +66,15 @@ export const AttachmentErrorSchema = z.object({
 export type AttachmentError = z.infer<typeof AttachmentErrorSchema>;
 
 /**
- * Path parameters schema for issue ID
- */
-export const IssueIdParamsSchema = z.object({
-  issueId: z.coerce.number().int().positive().describe('Issue ID'),
-});
-export type IssueIdParams = z.infer<typeof IssueIdParamsSchema>;
-
-/**
  * Path parameters schema for attachment retrieval
  */
-export const AttachmentParamsSchema = z.object({
-  issueId: z.coerce.number().int().positive().describe('Issue ID'),
+export const FilenameParamsSchema = z.object({
   filename: z.string().regex(
     /^[a-f0-9-]+\.(png|jpg|jpeg|gif|webp)$/i,
     'Invalid filename format'
   ).describe('Attachment filename (uuid.ext format)'),
 });
-export type AttachmentParams = z.infer<typeof AttachmentParamsSchema>;
+export type FilenameParams = z.infer<typeof FilenameParamsSchema>;
 
 /**
  * Validate MIME type against allowed types

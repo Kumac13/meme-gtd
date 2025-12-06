@@ -1,12 +1,10 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
-import { readFile } from 'node:fs/promises';
-import { existsSync, unlinkSync, rmdirSync } from 'node:fs';
+import { existsSync, unlinkSync, readdirSync, rmdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { FastifyInstance } from 'fastify';
 import { createTestServer } from '../helpers/testServer.js';
-import { createMemoFixture } from '../helpers/fixtures.js';
 
 /**
  * Create a minimal PNG file buffer (1x1 transparent pixel)
@@ -58,19 +56,19 @@ function createMultipartBody(
 }
 
 /**
- * Clean up attachment files created during tests
+ * Clean up all attachment files created during tests
  */
-function cleanupAttachments(issueId: number): void {
-  const attachmentsDir = join(homedir(), '.mgtd', 'attachments', String(issueId));
+function cleanupAttachments(): void {
+  const attachmentsDir = join(homedir(), '.mgtd', 'attachments');
   if (existsSync(attachmentsDir)) {
     try {
-      // Remove all files in the directory
-      const { readdirSync } = require('node:fs');
       const files = readdirSync(attachmentsDir);
       for (const file of files) {
-        unlinkSync(join(attachmentsDir, file));
+        // Only delete UUID-pattern files (our test files)
+        if (/^[a-f0-9-]+\.(png|jpg|jpeg|gif|webp)$/i.test(file)) {
+          unlinkSync(join(attachmentsDir, file));
+        }
       }
-      rmdirSync(attachmentsDir);
     } catch {
       // Ignore cleanup errors
     }
@@ -80,35 +78,25 @@ function cleanupAttachments(issueId: number): void {
 describe('Attachment Upload Operations', () => {
   let app: FastifyInstance;
   let cleanup: () => Promise<void>;
-  let testIssueId: number;
 
   beforeEach(async () => {
     const testServer = await createTestServer();
     app = testServer.app;
     cleanup = testServer.cleanup;
-
-    // Create a test memo to attach images to
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/memos',
-      payload: createMemoFixture({ bodyMd: 'Test memo for attachments' }),
-    });
-    const memo = JSON.parse(response.body);
-    testIssueId = memo.id;
   });
 
   afterEach(async () => {
-    cleanupAttachments(testIssueId);
+    cleanupAttachments();
     await cleanup();
   });
 
-  it('should upload a PNG image (POST /api/attachments/:issueId)', async () => {
+  it('should upload a PNG image (POST /api/attachments)', async () => {
     const pngBuffer = createTestPngBuffer();
     const { body, boundary } = createMultipartBody('test.png', 'image/png', pngBuffer);
 
     const response = await app.inject({
       method: 'POST',
-      url: `/api/attachments/${testIssueId}`,
+      url: '/api/attachments',
       headers: {
         'content-type': `multipart/form-data; boundary=${boundary}`,
       },
@@ -121,7 +109,7 @@ describe('Attachment Upload Operations', () => {
     assert.ok(result.id, 'Should have id');
     assert.ok(result.filename.endsWith('.png'), 'Filename should end with .png');
     assert.ok(result.absolutePath.includes('.mgtd/attachments'), 'Path should include .mgtd/attachments');
-    assert.ok(result.absolutePath.includes(String(testIssueId)), 'Path should include issue ID');
+    assert.ok(!result.absolutePath.includes('/1/'), 'Path should NOT include issueId subdirectory');
     assert.ok(result.markdownRef.startsWith('![image]('), 'markdownRef should be markdown format');
     assert.strictEqual(result.mimeType, 'image/png');
     assert.ok(result.size > 0, 'Size should be positive');
@@ -136,7 +124,7 @@ describe('Attachment Upload Operations', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: `/api/attachments/${testIssueId}`,
+      url: '/api/attachments',
       headers: {
         'content-type': `multipart/form-data; boundary=${boundary}`,
       },
@@ -149,28 +137,10 @@ describe('Attachment Upload Operations', () => {
     assert.ok(error.message.includes('PNG, JPEG, GIF, WebP'));
   });
 
-  it('should reject upload to non-existent issue', async () => {
-    const pngBuffer = createTestPngBuffer();
-    const { body, boundary } = createMultipartBody('test.png', 'image/png', pngBuffer);
-
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/attachments/99999',
-      headers: {
-        'content-type': `multipart/form-data; boundary=${boundary}`,
-      },
-      payload: body,
-    });
-
-    assert.strictEqual(response.statusCode, 404);
-    const error = JSON.parse(response.body);
-    assert.strictEqual(error.code, 'ISSUE_NOT_FOUND');
-  });
-
   it('should reject request without file', async () => {
     const response = await app.inject({
       method: 'POST',
-      url: `/api/attachments/${testIssueId}`,
+      url: '/api/attachments',
       headers: {
         'content-type': 'multipart/form-data; boundary=----test',
       },
@@ -193,7 +163,7 @@ describe('Attachment Upload Operations', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: `/api/attachments/${testIssueId}`,
+      url: '/api/attachments',
       headers: {
         'content-type': `multipart/form-data; boundary=${boundary}`,
       },
@@ -225,7 +195,7 @@ describe('Attachment Upload Operations', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: `/api/attachments/${testIssueId}`,
+      url: '/api/attachments',
       headers: {
         'content-type': `multipart/form-data; boundary=${boundary}`,
       },
@@ -259,7 +229,7 @@ describe('Attachment Upload Operations', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: `/api/attachments/${testIssueId}`,
+      url: '/api/attachments',
       headers: {
         'content-type': `multipart/form-data; boundary=${boundary}`,
       },
@@ -280,7 +250,6 @@ describe('Attachment Upload Operations', () => {
 describe('Attachment Download Operations', () => {
   let app: FastifyInstance;
   let cleanup: () => Promise<void>;
-  let testIssueId: number;
   let uploadedFilename: string;
   let uploadedPath: string;
 
@@ -289,22 +258,13 @@ describe('Attachment Download Operations', () => {
     app = testServer.app;
     cleanup = testServer.cleanup;
 
-    // Create a test memo
-    const memoResponse = await app.inject({
-      method: 'POST',
-      url: '/api/memos',
-      payload: createMemoFixture({ bodyMd: 'Test memo for download' }),
-    });
-    const memo = JSON.parse(memoResponse.body);
-    testIssueId = memo.id;
-
     // Upload a test image
     const pngBuffer = createTestPngBuffer();
     const { body, boundary } = createMultipartBody('test.png', 'image/png', pngBuffer);
 
     const uploadResponse = await app.inject({
       method: 'POST',
-      url: `/api/attachments/${testIssueId}`,
+      url: '/api/attachments',
       headers: {
         'content-type': `multipart/form-data; boundary=${boundary}`,
       },
@@ -316,14 +276,14 @@ describe('Attachment Download Operations', () => {
   });
 
   afterEach(async () => {
-    cleanupAttachments(testIssueId);
+    cleanupAttachments();
     await cleanup();
   });
 
-  it('should download an uploaded image (GET /api/attachments/:issueId/:filename)', async () => {
+  it('should download an uploaded image (GET /api/attachments/:filename)', async () => {
     const response = await app.inject({
       method: 'GET',
-      url: `/api/attachments/${testIssueId}/${uploadedFilename}`,
+      url: `/api/attachments/${uploadedFilename}`,
     });
 
     assert.strictEqual(response.statusCode, 200);
@@ -336,7 +296,7 @@ describe('Attachment Download Operations', () => {
     // Use a valid UUID format filename that doesn't exist
     const response = await app.inject({
       method: 'GET',
-      url: `/api/attachments/${testIssueId}/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.png`,
+      url: '/api/attachments/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.png',
     });
 
     assert.strictEqual(response.statusCode, 404);
@@ -344,19 +304,10 @@ describe('Attachment Download Operations', () => {
     assert.strictEqual(error.code, 'FILE_NOT_FOUND');
   });
 
-  it('should return 404 for non-existent issue', async () => {
-    const response = await app.inject({
-      method: 'GET',
-      url: `/api/attachments/99999/${uploadedFilename}`,
-    });
-
-    assert.strictEqual(response.statusCode, 404);
-  });
-
   it('should reject invalid filename format (path traversal attempt)', async () => {
     const response = await app.inject({
       method: 'GET',
-      url: `/api/attachments/${testIssueId}/invalid-filename`,
+      url: '/api/attachments/invalid-filename',
     });
 
     // Should fail due to invalid filename pattern (missing extension)
@@ -366,7 +317,7 @@ describe('Attachment Download Operations', () => {
   it('should reject filenames with invalid characters', async () => {
     const response = await app.inject({
       method: 'GET',
-      url: `/api/attachments/${testIssueId}/test%20file.png`,
+      url: '/api/attachments/test%20file.png',
     });
 
     // Should fail due to invalid filename pattern (space is not allowed)

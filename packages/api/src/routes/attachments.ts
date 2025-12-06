@@ -5,8 +5,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import {
-  IssueIdParamsSchema,
-  AttachmentParamsSchema,
+  FilenameParamsSchema,
   AttachmentResponseSchema,
   AttachmentErrorSchema,
 } from '../schemas/attachmentSchemas.js';
@@ -21,29 +20,27 @@ import {
 export async function attachmentRoutes(app: FastifyInstance) {
   const typedApp = app.withTypeProvider<ZodTypeProvider>();
 
-  // POST /api/attachments/:issueId - Upload an image
-  typedApp.post('/api/attachments/:issueId', {
+  // POST /api/attachments - Upload an image
+  typedApp.post('/api/attachments', {
     schema: {
-      description: 'Upload an image attachment for an issue',
+      description: 'Upload an image attachment',
       tags: ['Attachments'],
-      params: IssueIdParamsSchema,
       consumes: ['multipart/form-data'],
       response: {
         201: AttachmentResponseSchema,
         400: AttachmentErrorSchema,
-        404: AttachmentErrorSchema,
         500: AttachmentErrorSchema,
       },
     },
     handler: uploadAttachment,
   });
 
-  // GET /api/attachments/:issueId/:filename - Get an image
-  typedApp.get('/api/attachments/:issueId/:filename', {
+  // GET /api/attachments/:filename - Get an image
+  typedApp.get('/api/attachments/:filename', {
     schema: {
       description: 'Get an attachment image file',
       tags: ['Attachments'],
-      params: AttachmentParamsSchema,
+      params: FilenameParamsSchema,
       response: {
         404: AttachmentErrorSchema,
         500: AttachmentErrorSchema,

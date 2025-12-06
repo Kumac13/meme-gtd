@@ -12,8 +12,7 @@ import type { MultipartFile } from '@fastify/multipart';
 import {
   type AttachmentResponse,
   type AttachmentError,
-  type IssueIdParams,
-  type AttachmentParams,
+  type FilenameParams,
   type MimeType,
   isAllowedMimeType,
   isAllowedExtension,
@@ -57,27 +56,13 @@ function createErrorResponse(
 }
 
 /**
- * Upload an image attachment for an issue
- * POST /api/attachments/:issueId
+ * Upload an image attachment
+ * POST /api/attachments
  */
 export async function uploadAttachment(
-  request: FastifyRequest<{ Params: IssueIdParams }>,
+  request: FastifyRequest,
   reply: FastifyReply
 ): Promise<AttachmentResponse | AttachmentError> {
-  const { issueId } = request.params;
-
-  // Check if issue exists
-  const db = request.server.db;
-  const issue = db.prepare('SELECT id FROM issues WHERE id = ?').get(issueId);
-  if (!issue) {
-    reply.status(404);
-    return createErrorResponse(
-      'Not Found',
-      'ISSUE_NOT_FOUND',
-      `Issue #${issueId} が見つかりません`
-    );
-  }
-
   // Get the uploaded file
   let file: MultipartFile | undefined;
   try {
@@ -88,7 +73,7 @@ export async function uploadAttachment(
     return createErrorResponse(
       'Bad Request',
       'NO_FILE_UPLOADED',
-      'ファイルがアップロードされていません'
+      'No file was uploaded'
     );
   }
 
@@ -97,7 +82,7 @@ export async function uploadAttachment(
     return createErrorResponse(
       'Bad Request',
       'NO_FILE_UPLOADED',
-      'ファイルがアップロードされていません'
+      'No file was uploaded'
     );
   }
 
@@ -107,7 +92,7 @@ export async function uploadAttachment(
     return createErrorResponse(
       'Bad Request',
       'INVALID_FILE_TYPE',
-      'PNG, JPEG, GIF, WebP形式のみ対応しています'
+      'Only PNG, JPEG, GIF, WebP formats are supported'
     );
   }
 
@@ -118,7 +103,7 @@ export async function uploadAttachment(
     return createErrorResponse(
       'Bad Request',
       'INVALID_FILE_TYPE',
-      'PNG, JPEG, GIF, WebP形式のみ対応しています'
+      'Only PNG, JPEG, GIF, WebP formats are supported'
     );
   }
 
@@ -130,14 +115,14 @@ export async function uploadAttachment(
   // Ensure directory exists
   let attachmentsDir: string;
   try {
-    attachmentsDir = await ensureAttachmentsDir(issueId);
+    attachmentsDir = await ensureAttachmentsDir();
   } catch (error) {
-    request.log.error({ error, issueId }, 'Failed to create attachments directory');
+    request.log.error({ error }, 'Failed to create attachments directory');
     reply.status(500);
     return createErrorResponse(
       'Internal Server Error',
       'STORAGE_ERROR',
-      'サーバーエラー: 画像の保存に失敗しました'
+      'Failed to save image'
     );
   }
 
@@ -166,7 +151,7 @@ export async function uploadAttachment(
       return createErrorResponse(
         'Bad Request',
         'FILE_TOO_LARGE',
-        'ファイルサイズが10MBを超えています'
+        'File size exceeds 10MB limit'
       );
     }
   } catch (error: any) {
@@ -178,7 +163,7 @@ export async function uploadAttachment(
       return createErrorResponse(
         'Bad Request',
         'FILE_TOO_LARGE',
-        'ファイルサイズが10MBを超えています'
+        'File size exceeds 10MB limit'
       );
     }
 
@@ -187,7 +172,7 @@ export async function uploadAttachment(
     return createErrorResponse(
       'Internal Server Error',
       'STORAGE_ERROR',
-      'サーバーエラー: 画像の保存に失敗しました'
+      'Failed to save image'
     );
   }
 
@@ -208,29 +193,29 @@ export async function uploadAttachment(
 
 /**
  * Get an attachment file
- * GET /api/attachments/:issueId/:filename
+ * GET /api/attachments/:filename
  */
 export async function getAttachment(
-  request: FastifyRequest<{ Params: AttachmentParams }>,
+  request: FastifyRequest<{ Params: FilenameParams }>,
   reply: FastifyReply
 ): Promise<void> {
-  const { issueId, filename } = request.params;
+  const { filename } = request.params;
 
   // Check if file exists
-  const exists = await attachmentExists(issueId, filename);
+  const exists = await attachmentExists(filename);
   if (!exists) {
     reply.status(404).send(
       createErrorResponse(
         'Not Found',
         'FILE_NOT_FOUND',
-        '画像が見つかりません'
+        'Image not found'
       )
     );
     return;
   }
 
   // Get file path and determine content type
-  const filePath = getAttachmentPath(issueId, filename);
+  const filePath = getAttachmentPath(filename);
   const ext = path.extname(filename).slice(1);
   const contentType = getMimeTypeFromExtension(ext);
 
@@ -247,7 +232,7 @@ export async function getAttachment(
       createErrorResponse(
         'Internal Server Error',
         'STORAGE_ERROR',
-        'サーバーエラー: 画像の読み込みに失敗しました'
+        'Failed to read image'
       )
     );
   }
