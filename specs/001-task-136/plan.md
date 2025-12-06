@@ -63,7 +63,10 @@ packages/
 │   └── src/
 │       ├── components/
 │       │   ├── EditableContent.tsx   # 更新: textarea上で画像ペースト/D&D対応
-│       │   └── CommentSection.tsx    # 更新: コメント用textareaで画像ペースト対応
+│       │   ├── CommentSection.tsx    # 更新: コメント用textareaで画像ペースト対応
+│       │   ├── MemoForm.tsx          # 更新: メモ作成時のtextareaで画像ペースト/D&D対応
+│       │   ├── TaskForm.tsx          # 更新: タスク作成時のtextareaで画像ペースト/D&D対応
+│       │   └── ProjectForm.tsx       # 更新: プロジェクト作成時のtextareaで画像ペースト/D&D対応
 │       ├── utils/
 │       │   └── markdown.tsx          # 更新: 画像パスをAPIエンドポイントに変換
 │       └── hooks/
