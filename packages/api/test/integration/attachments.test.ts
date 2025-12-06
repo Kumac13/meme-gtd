@@ -1,6 +1,7 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
-import { existsSync, unlinkSync, readdirSync, rmdirSync } from 'node:fs';
+import { Buffer } from 'node:buffer';
+import { existsSync, unlinkSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { FastifyInstance } from 'fastify';
@@ -251,7 +252,6 @@ describe('Attachment Download Operations', () => {
   let app: FastifyInstance;
   let cleanup: () => Promise<void>;
   let uploadedFilename: string;
-  let uploadedPath: string;
 
   beforeEach(async () => {
     const testServer = await createTestServer();
@@ -272,7 +272,6 @@ describe('Attachment Download Operations', () => {
     });
     const uploadResult = JSON.parse(uploadResponse.body);
     uploadedFilename = uploadResult.filename;
-    uploadedPath = uploadResult.absolutePath;
   });
 
   afterEach(async () => {

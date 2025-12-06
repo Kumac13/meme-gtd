@@ -5,7 +5,7 @@
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { ProjectService } from 'meme-gtd-core';
-import { NotFoundError, ValidationError, ConflictError } from '../errors/index.js';
+import { NotFoundError, ConflictError } from '../errors/index.js';
 import type {
   CreateProjectRequest,
   UpdateProjectRequest,

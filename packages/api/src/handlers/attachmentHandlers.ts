@@ -2,6 +2,7 @@
  * Handlers for attachment (image upload/download) operations
  */
 
+import { Buffer } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
