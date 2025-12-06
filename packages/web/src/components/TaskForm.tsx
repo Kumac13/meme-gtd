@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect, useRef } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
 import { MemosService } from '../api/services/MemosService';
@@ -12,7 +12,6 @@ import { ScheduleInput } from './ScheduleInput';
 import { useRecentProjects } from '../hooks/useRecentProjects';
 import { useRecentLabels } from '../hooks/useRecentLabels';
 import { LabelBadge } from './LabelBadge';
-import { ImageUploader } from './ImageUploader';
 import TaskFormLinks from './TaskFormLinks';
 import type { PendingLink } from '../types/links';
 
@@ -76,7 +75,6 @@ export default function TaskForm({
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Schedule state
   const [scheduleData, setScheduleData] = useState({
@@ -312,31 +310,6 @@ export default function TaskForm({
       : true
   );
 
-  const handleImageUploadComplete = (markdownRef: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      // Fallback: append to end
-      setBodyMd(prev => prev + '\n' + markdownRef);
-      return;
-    }
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const before = bodyMd.slice(0, start);
-    const after = bodyMd.slice(end);
-
-    // Insert at cursor position with newlines for readability
-    const newValue = before + (before.endsWith('\n') || before === '' ? '' : '\n') + markdownRef + '\n' + after;
-    setBodyMd(newValue);
-
-    // Restore focus and set cursor after the inserted text
-    setTimeout(() => {
-      textarea.focus();
-      const newCursorPos = before.length + (before.endsWith('\n') || before === '' ? 0 : 1) + markdownRef.length + 1;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
-  };
-
   const recentProjects = getRecentProjects(filteredProjects);
   const recentLabels = getRecentLabels(filteredLabels);
 
@@ -379,7 +352,6 @@ export default function TaskForm({
           Task Description (Markdown, optional)
         </label>
         <textarea
-          ref={textareaRef}
           id="bodyMd"
           value={bodyMd}
           onChange={(e) => setBodyMd(e.target.value)}
@@ -393,20 +365,6 @@ export default function TaskForm({
           Optional. Supports Markdown formatting. Max 10,000 characters.
         </p>
       </div>
-
-      {/* Image Upload Section - Only in edit mode when taskId exists */}
-      {taskId && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            画像を添付
-          </label>
-          <ImageUploader
-            issueId={taskId}
-            onUploadComplete={handleImageUploadComplete}
-            disabled={submitting}
-          />
-        </div>
-      )}
 
       {(mode === 'edit' || mode === 'create') && (
         <div>

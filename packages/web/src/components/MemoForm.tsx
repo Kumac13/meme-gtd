@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect, useRef } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import { ProjectsService } from '../api/services/ProjectsService';
@@ -10,7 +10,6 @@ import { getShortcutHint } from '../utils/keyboard';
 import { useRecentProjects } from '../hooks/useRecentProjects';
 import { useRecentLabels } from '../hooks/useRecentLabels';
 import { LabelBadge } from './LabelBadge';
-import { ImageUploader } from './ImageUploader';
 import type { LinkDisplayItem } from '../types/links';
 
 const linkTypeLabels: Record<string, string> = {
@@ -57,7 +56,6 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Project/Label/Links state
   const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
@@ -271,31 +269,6 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
       : true
   );
 
-  const handleImageUploadComplete = (markdownRef: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      // Fallback: append to end
-      setBodyMd(prev => prev + '\n' + markdownRef);
-      return;
-    }
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const before = bodyMd.slice(0, start);
-    const after = bodyMd.slice(end);
-
-    // Insert at cursor position with newlines for readability
-    const newValue = before + (before.endsWith('\n') || before === '' ? '' : '\n') + markdownRef + '\n' + after;
-    setBodyMd(newValue);
-
-    // Restore focus and set cursor after the inserted text
-    setTimeout(() => {
-      textarea.focus();
-      const newCursorPos = before.length + (before.endsWith('\n') || before === '' ? 0 : 1) + markdownRef.length + 1;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
-  };
-
   const recentProjects = getRecentProjects(filteredProjects);
   const recentLabels = getRecentLabels(filteredLabels);
 
@@ -320,7 +293,6 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
           Memo Content (Markdown)
         </label>
         <textarea
-          ref={textareaRef}
           id="bodyMd"
           value={bodyMd}
           onChange={(e) => setBodyMd(e.target.value)}
@@ -338,20 +310,6 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
           Supports Markdown formatting. Max 10,000 characters.
         </p>
       </div>
-
-      {/* Image Upload Section */}
-      {memoId && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            画像を添付
-          </label>
-          <ImageUploader
-            issueId={memoId}
-            onUploadComplete={handleImageUploadComplete}
-            disabled={submitting}
-          />
-        </div>
-      )}
 
       {/* Projects Section - Only for create mode */}
       {mode === 'create' && (
