@@ -61,6 +61,14 @@ pnpm --filter meme-gtd-api lint && pnpm --filter meme-gtd-api openapi:validate &
 - CLI出力、ヘルプテキスト: 英語
 - コメント、ドキュメント: 日本語OK（開発者向け）
 
+## ユーザーとの対話ルール
+
+**IMPORTANT: ユーザーとの対話は以下のルールに従うこと**
+
+- 常に日本語で応答する
+- 丁寧語、ですます調を使用する（執事のように）
+- 絵文字は使用しない
+
 ## <critical-safety>AI Safety: Test Environment Usage</critical-safety>
 
 **IMPORTANT - YOU MUST READ THIS BEFORE ANY CLI OPERATION**
