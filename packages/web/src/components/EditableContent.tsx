@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, DragEvent, ClipboardEvent } from 'react';
 import { formatRelativeTime } from '../utils/dates';
 import { MarkdownRenderer } from '../utils/markdown';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
+import { useImageUpload } from '../hooks/useImageUpload';
 
 interface EditableContentProps {
   content: string;
@@ -29,7 +30,10 @@ export default function EditableContent({
   const [editingTitle, setEditingTitle] = useState(title || '');
   const [saving, setSaving] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const { copied, copy } = useCopyToClipboard();
+  const { isUploading, uploadImage } = useImageUpload();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleCopy = async () => {
     await copy(content);
@@ -69,6 +73,76 @@ export default function EditableContent({
   const handleKeyDown = useKeyboardShortcut(handleSaveEdit, {
     disabled: saving || !editingContent.trim(),
   });
+
+  const insertMarkdownRef = (markdownRef: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setEditingContent(prev => prev + '\n' + markdownRef);
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = editingContent.slice(0, start);
+    const after = editingContent.slice(end);
+
+    const newValue = before + (before.endsWith('\n') || before === '' ? '' : '\n') + markdownRef + '\n' + after;
+    setEditingContent(newValue);
+
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = before.length + (before.endsWith('\n') || before === '' ? 0 : 1) + markdownRef.length + 1;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
+  const handleImageFile = async (file: File) => {
+    if (isUploading) return;
+    const result = await uploadImage(file);
+    if (result.success && result.markdownRef) {
+      insertMarkdownRef(result.markdownRef);
+    }
+  };
+
+  // Handle paste (Ctrl+V / Cmd+V) for images
+  const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          handleImageFile(file);
+        }
+        return;
+      }
+    }
+  };
+
+  // Handle drag & drop on textarea
+  const handleDragOver = (e: DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0 && files[0].type.startsWith('image/')) {
+      handleImageFile(files[0]);
+    }
+  };
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg py-1 px-4">
@@ -139,12 +213,23 @@ export default function EditableContent({
             </div>
           )}
           <textarea
+            ref={textareaRef}
             value={editingContent}
             onChange={(e) => setEditingContent(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
             aria-keyshortcuts="Control+Enter"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500 min-h-[100px]"
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500 min-h-[100px] ${
+              isDragging ? 'border-github-green-500 bg-github-green-50' : 'border-gray-300'
+            } ${isUploading ? 'opacity-50' : ''}`}
+            disabled={isUploading}
           />
+          {isUploading && (
+            <div className="mt-1 text-xs text-gray-500">Uploading image...</div>
+          )}
           <div className="mt-2 flex justify-end space-x-2">
             <button
               onClick={handleCancelEdit}

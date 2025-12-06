@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.16.0 - 2025-12-06
+
+### New Features
+
+- **Image Attachments**: Upload and attach images to memos, tasks, and projects.
+  - **Storage**: Images stored in flat structure at `~/.mgtd/attachments/{uuid}.{ext}` (PNG, JPEG, GIF, WebP supported, max 10MB)
+  - **Web UI**: Paste images (Cmd+V) or drag & drop directly onto any textarea
+    - Supported in MemoForm, TaskForm, ProjectForm, EditableContent, CommentSection
+    - Visual feedback during drag and upload progress indicator
+  - **API**: New attachment endpoints
+    - `POST /api/attachments`: Upload image file
+    - `GET /api/attachments/:filename`: Download image file
+  - **CLI**: Absolute paths in markdown output for Claude Code compatibility
+
 ## 0.15.0 - 2025-11-29
 
 ### New Features

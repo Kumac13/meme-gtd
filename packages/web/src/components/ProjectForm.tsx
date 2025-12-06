@@ -1,8 +1,9 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useRef, DragEvent, ClipboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
 import { StatusSelector } from './StatusSelector';
+import { useImageUpload } from '../hooks/useImageUpload';
 
 const PROJECT_STATUS_OPTIONS = [
   { value: 'planned', label: 'Planned' },
@@ -25,6 +26,9 @@ export default function ProjectForm(_props: ProjectFormProps) {
   const [endDate, setEndDate] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { isUploading, uploadImage } = useImageUpload();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -79,6 +83,75 @@ export default function ProjectForm(_props: ProjectFormProps) {
     }
   }, { disabled: submitting });
 
+  // Image upload handlers
+  const insertMarkdownRef = (markdownRef: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setDescription(prev => prev + '\n' + markdownRef);
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = description.slice(0, start);
+    const after = description.slice(end);
+
+    const newValue = before + (before.endsWith('\n') || before === '' ? '' : '\n') + markdownRef + '\n' + after;
+    setDescription(newValue);
+
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = before.length + (before.endsWith('\n') || before === '' ? 0 : 1) + markdownRef.length + 1;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
+  const handleImageFile = async (file: File) => {
+    if (isUploading) return;
+    const result = await uploadImage(file);
+    if (result.success && result.markdownRef) {
+      insertMarkdownRef(result.markdownRef);
+    }
+  };
+
+  const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          handleImageFile(file);
+        }
+        return;
+      }
+    }
+  };
+
+  const handleDragOver = (e: DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0 && files[0].type.startsWith('image/')) {
+      handleImageFile(files[0]);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit}>
       {error && (
@@ -111,16 +184,24 @@ export default function ProjectForm(_props: ProjectFormProps) {
             Description
           </label>
           <textarea
+            ref={textareaRef}
             id="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
             aria-keyshortcuts="Control+Enter"
             rows={4}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-transparent"
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-transparent ${isDragging ? 'border-github-green-500 bg-github-green-50' : 'border-gray-300'} ${isUploading ? 'opacity-50' : ''}`}
             placeholder="Enter project description (optional)"
-            disabled={submitting}
+            disabled={submitting || isUploading}
           />
+          {isUploading && (
+            <div className="mt-1 text-xs text-gray-500">Uploading image...</div>
+          )}
         </div>
 
         <div>

@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent, useEffect, useRef, DragEvent, ClipboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import { ProjectsService } from '../api/services/ProjectsService';
@@ -10,6 +10,7 @@ import { getShortcutHint } from '../utils/keyboard';
 import { useRecentProjects } from '../hooks/useRecentProjects';
 import { useRecentLabels } from '../hooks/useRecentLabels';
 import { LabelBadge } from './LabelBadge';
+import { useImageUpload } from '../hooks/useImageUpload';
 import type { LinkDisplayItem } from '../types/links';
 
 const linkTypeLabels: Record<string, string> = {
@@ -56,6 +57,9 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { isUploading, uploadImage } = useImageUpload();
 
   // Project/Label/Links state
   const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
@@ -213,6 +217,75 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
     }
   }, { disabled: submitting });
 
+  // Image upload handlers
+  const insertMarkdownRef = (markdownRef: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setBodyMd(prev => prev + '\n' + markdownRef);
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = bodyMd.slice(0, start);
+    const after = bodyMd.slice(end);
+
+    const newValue = before + (before.endsWith('\n') || before === '' ? '' : '\n') + markdownRef + '\n' + after;
+    setBodyMd(newValue);
+
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = before.length + (before.endsWith('\n') || before === '' ? 0 : 1) + markdownRef.length + 1;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
+  const handleImageFile = async (file: File) => {
+    if (isUploading) return;
+    const result = await uploadImage(file);
+    if (result.success && result.markdownRef) {
+      insertMarkdownRef(result.markdownRef);
+    }
+  };
+
+  const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          handleImageFile(file);
+        }
+        return;
+      }
+    }
+  };
+
+  const handleDragOver = (e: DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0 && files[0].type.startsWith('image/')) {
+      handleImageFile(files[0]);
+    }
+  };
+
   const handleToggleProject = (projectId: number) => {
     if (selectedProjectIds.includes(projectId)) {
       setSelectedProjectIds(selectedProjectIds.filter(id => id !== projectId));
@@ -293,16 +366,24 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
           Memo Content (Markdown)
         </label>
         <textarea
+          ref={textareaRef}
           id="bodyMd"
           value={bodyMd}
           onChange={(e) => setBodyMd(e.target.value)}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
           aria-keyshortcuts="Control+Enter"
           rows={15}
-          className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 font-mono text-sm ${validationError ? 'border-red-300' : 'border-gray-300'
-            }`}
+          className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 font-mono text-sm ${validationError ? 'border-red-300' : 'border-gray-300'} ${isDragging ? 'border-github-green-500 bg-github-green-50' : ''} ${isUploading ? 'opacity-50' : ''}`}
           placeholder="Enter your memo content in Markdown format..."
+          disabled={submitting || isUploading}
         />
+        {isUploading && (
+          <div className="mt-1 text-xs text-gray-500">Uploading image...</div>
+        )}
         {validationError && (
           <p className="mt-1 text-sm text-red-600">{validationError}</p>
         )}

@@ -110,6 +110,14 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   const { registerCors } = await import('./middleware/cors.js');
   await registerCors(app, { allowedOrigins: corsAllowedOrigins });
 
+  // Register multipart plugin for file uploads
+  await app.register(import('@fastify/multipart'), {
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB max file size
+      files: 1, // 1 file at a time
+    },
+  });
+
   // Custom transform using zod-to-json-schema with OpenAPI 3 target
   const openApiTransform = ({ schema, url }: { schema: any; url: string }) => {
     if (!schema) {
@@ -186,6 +194,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
         { name: 'Links', description: 'Link management endpoints' },
         { name: 'Projects', description: 'Project management endpoints' },
         { name: 'Comments', description: 'Comment management endpoints' },
+        { name: 'Attachments', description: 'Image attachment endpoints' },
       ],
     },
     transform: openApiTransform,
@@ -221,6 +230,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   const { projectRoutes } = await import('./routes/projects.js');
   await app.register(projectRoutes);
+
+  const { attachmentRoutes } = await import('./routes/attachments.js');
+  await app.register(attachmentRoutes);
 
   // Register static file serving for Web UI (after API routes)
   await app.register(import('@fastify/static'), {
