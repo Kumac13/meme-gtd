@@ -70,7 +70,7 @@ export async function listLinksHandler(
     );
 
     // Fetch all target issues in one query
-    const issueInfoMap = new Map<number, { type: 'task' | 'memo'; title: string }>();
+    const issueInfoMap = new Map<number, { type: 'task' | 'memo'; title: string; status: string | null }>();
 
     if (targetIds.length > 0) {
       const placeholders = targetIds.map(() => '?').join(',');
@@ -78,7 +78,8 @@ export async function listLinksHandler(
         SELECT
           id,
           type as issue_type,
-          COALESCE(title, SUBSTR(body_md, 1, 100)) as title
+          COALESCE(title, SUBSTR(body_md, 1, 100)) as title,
+          status
         FROM issues
         WHERE id IN (${placeholders}) AND is_deleted = 0
       `;
@@ -88,12 +89,14 @@ export async function listLinksHandler(
         id: number;
         issue_type: 'task' | 'memo';
         title: string;
+        status: string | null;
       }>;
 
       rows.forEach((row) => {
         issueInfoMap.set(row.id, {
           type: row.issue_type,
           title: row.title,
+          status: row.status,
         });
       });
     }
@@ -111,6 +114,7 @@ export async function listLinksHandler(
           id: targetId,
           type: targetInfo?.type || 'task',
           title: targetInfo?.title || `Issue #${targetId}`,
+          status: targetInfo?.status ?? null,
         },
       };
     });
