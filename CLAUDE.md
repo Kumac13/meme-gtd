@@ -31,6 +31,36 @@
 - 実装前に`docs/requirements.md`を必ず参照
 - **新しいコマンド追加時は必ず`packages/cli/src/index.ts`の`MULTIWORD_COMMANDS`配列に登録する**（スペース区切り構文の必須要件）
 
+## <critical-safety>Push前のローカル検証（必須）</critical-safety>
+
+**IMPORTANT: git push する前に必ずローカルでCIと同じチェックを実行すること**
+
+```bash
+pnpm --filter meme-gtd-api lint && pnpm --filter meme-gtd-api openapi:validate && pnpm --filter meme-gtd-api test && pnpm build
+```
+
+1. コード変更
+2. `pnpm --filter meme-gtd-api lint` - ESLintエラーがないことを確認
+3. `pnpm --filter meme-gtd-api openapi:validate` - OpenAPI specが有効であることを確認
+4. `pnpm --filter meme-gtd-api test` - テストが全て通ることを確認
+5. `pnpm build` - ビルドが成功することを確認
+6. 全て通ったら `git commit && git push`
+
+## ユーザーへの確認前にビルドすること
+
+**IMPORTANT: PRやコード変更をユーザーに報告・確認を求める前に、必ずビルドして動作確認すること**
+
+ユーザーに「確認してください」と言う前に自分で確認する。ビルドエラーや動作不良をユーザーに発見させない。
+
+## アプリ内言語の統一（英語）
+
+**IMPORTANT: Web UI、CLI出力、エラーメッセージなど、アプリケーション内の全てのユーザー向けテキストは英語で統一する**
+
+- ボタンラベル、フォームラベル、プレースホルダー: 英語
+- エラーメッセージ、成功メッセージ: 英語
+- CLI出力、ヘルプテキスト: 英語
+- コメント、ドキュメント: 日本語OK（開発者向け）
+
 ## <critical-safety>AI Safety: Test Environment Usage</critical-safety>
 
 **IMPORTANT - YOU MUST READ THIS BEFORE ANY CLI OPERATION**
