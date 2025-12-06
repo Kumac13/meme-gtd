@@ -591,4 +591,65 @@ describe('Link Operations', () => {
     assert.strictEqual(link.targetIssue.type, 'memo');
     assert.ok(link.targetIssue.title.includes('This is my memo content'));
   });
+
+  it('should include status in targetIssue for tasks and null for memos', async () => {
+    // Create a task with specific status
+    const task1Response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task with status', status: 'next' }),
+    });
+    const task1 = JSON.parse(task1Response.body);
+
+    // Create another task to link to
+    const task2Response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Target Task', status: 'waiting' }),
+    });
+    const task2 = JSON.parse(task2Response.body);
+
+    // Create a memo
+    const memoResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Target Memo' }),
+    });
+    const memo = JSON.parse(memoResponse.body);
+
+    // Create links from task1 to task2 and memo
+    await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: { sourceIssueId: task1.id, targetIssueId: task2.id, linkType: 'relates' },
+    });
+
+    await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: { sourceIssueId: task1.id, targetIssueId: memo.id, linkType: 'relates' },
+    });
+
+    // Get links for task1
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/issues/${task1.id}/links`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const links = JSON.parse(response.body);
+    assert.strictEqual(links.length, 2);
+
+    // Find task and memo links
+    const taskLink = links.find((l: any) => l.targetIssue.type === 'task');
+    const memoLink = links.find((l: any) => l.targetIssue.type === 'memo');
+
+    // Task should have status
+    assert.ok(taskLink);
+    assert.strictEqual(taskLink.targetIssue.status, 'waiting');
+
+    // Memo should have null status
+    assert.ok(memoLink);
+    assert.strictEqual(memoLink.targetIssue.status, null);
+  });
 });

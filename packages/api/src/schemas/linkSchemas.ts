@@ -40,6 +40,7 @@ export const LinkWithDirectionSchema = LinkSchema.extend({
     id: z.number().int().positive().describe('Target issue ID'),
     type: z.enum(['task', 'memo']).describe('Target issue type'),
     title: z.string().describe('Target issue title (task title or memo body preview)'),
+    status: z.string().nullable().describe('Target issue status (null for memos)'),
   }).describe('Information about the target issue in this link'),
 });
 

@@ -25,6 +25,8 @@ export interface TargetIssue {
   type: 'task' | 'memo';
   /** Target issue title (or preview text for memos) */
   title: string;
+  /** Target issue status (null for memos) */
+  status: string | null;
 }
 
 /**
