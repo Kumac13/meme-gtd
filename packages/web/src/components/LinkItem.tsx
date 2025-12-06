@@ -86,6 +86,13 @@ export default function LinkItem({ link, onDelete, isDeleting = false, onItemCli
               {link.targetIssue.type === 'task' ? 'Task' : 'Memo'} #{link.targetIssue.id}: {displayTitle}
             </Link>
           )}
+
+          {/* Status (task only) */}
+          {link.targetIssue.status && (
+            <span className="text-xs text-gray-500 capitalize flex-shrink-0">
+              {link.targetIssue.status}
+            </span>
+          )}
         </div>
 
         {/* Delete button */}
