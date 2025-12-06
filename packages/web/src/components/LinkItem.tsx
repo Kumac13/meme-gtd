@@ -74,7 +74,7 @@ export default function LinkItem({ link, onDelete, isDeleting = false, onItemCli
               className="text-sm text-github-green-600 hover:text-github-green-800 hover:underline truncate text-left"
               title={link.targetIssue.title}
             >
-              {link.targetIssue.type === 'task' ? 'Task' : 'Memo'} #{link.targetIssue.id}: {displayTitle}
+              #{link.targetIssue.id}: {displayTitle}
             </button>
           ) : (
             <Link
@@ -83,7 +83,7 @@ export default function LinkItem({ link, onDelete, isDeleting = false, onItemCli
               className="text-sm text-github-green-600 hover:text-github-green-800 hover:underline truncate"
               title={link.targetIssue.title}
             >
-              {link.targetIssue.type === 'task' ? 'Task' : 'Memo'} #{link.targetIssue.id}: {displayTitle}
+              #{link.targetIssue.id}: {displayTitle}
             </Link>
           )}
 
