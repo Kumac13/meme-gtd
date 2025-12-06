@@ -98,13 +98,12 @@ function CodeBlockWithCopy({ children }: { children: ReactNode }) {
 
 /**
  * Transform attachment absolute paths to API URLs
- * Converts paths like `/Users/xxx/.mgtd/attachments/abc123.png`
- * to `/api/attachments/abc123.png`
+ * Converts `/Users/xxx/.mgtd/attachments/abc123.png` to `/api/attachments/abc123.png`
  */
 function transformAttachmentPath(src: string | undefined): string | undefined {
   if (!src) return src;
 
-  // Match pattern: any path containing .mgtd/attachments/{filename}
+  // Match pattern: .mgtd/attachments/{filename}
   const attachmentPattern = /\.mgtd\/attachments\/([a-zA-Z0-9-]+\.(png|jpe?g|gif|webp))$/i;
   const match = src.match(attachmentPattern);
 
