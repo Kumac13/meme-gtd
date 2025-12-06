@@ -59,12 +59,12 @@ export interface UploadResult {
 function validateFile(file: File): string | null {
   // Check MIME type
   if (!ALLOWED_MIME_TYPES.includes(file.type as typeof ALLOWED_MIME_TYPES[number])) {
-    return 'PNG, JPEG, GIF, WebP形式のみ対応しています';
+    return 'Only PNG, JPEG, GIF, WebP formats are supported';
   }
 
   // Check file size
   if (file.size > MAX_FILE_SIZE) {
-    return 'ファイルサイズが10MBを超えています';
+    return 'File size exceeds 10MB limit';
   }
 
   return null;
@@ -81,12 +81,10 @@ export function useImageUpload() {
 
   /**
    * Upload an image file
-   * @param issueId - The issue ID to attach the image to
    * @param file - The file to upload
    * @returns Upload result with markdown reference or error
    */
   const uploadImage = useCallback(async (
-    issueId: number,
     file: File
   ): Promise<UploadResult> => {
     // Validate file
@@ -103,7 +101,7 @@ export function useImageUpload() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(`/api/attachments/${issueId}`, {
+      const response = await fetch('/api/attachments', {
         method: 'POST',
         body: formData,
       });
@@ -118,7 +116,7 @@ export function useImageUpload() {
       setState({ isUploading: false, error: null });
       return { success: true, markdownRef: data.markdownRef };
     } catch (error) {
-      const message = '画像のアップロードに失敗しました。再度お試しください';
+      const message = 'Failed to upload image. Please try again.';
       setState({ isUploading: false, error: message });
       return { success: false, error: message };
     }
