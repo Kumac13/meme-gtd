@@ -1,0 +1,192 @@
+openapi: 3.0.3
+info:
+  title: meme-gtd Attachments API
+  description: 画像添付機能のAPIエンドポイント
+  version: 1.0.0
+
+tags:
+  - name: Attachments
+    description: 画像アップロード・配信エンドポイント
+
+paths:
+  /api/attachments/{issueId}:
+    post:
+      summary: 画像をアップロード
+      description: |
+        指定されたissueに画像をアップロードする。
+        画像は `~/.mgtd/attachments/{issueId}/{uuid}.{ext}` に保存される。
+        レスポンスには保存された画像の絶対パスが含まれる。
+      operationId: uploadAttachment
+      tags:
+        - Attachments
+      parameters:
+        - name: issueId
+          in: path
+          required: true
+          description: 画像を添付するissueのID
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: アップロードする画像ファイル（PNG, JPEG, GIF, WebP）
+      responses:
+        '201':
+          description: 画像アップロード成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentResponse'
+        '400':
+          description: 不正なリクエスト（ファイル形式不正、サイズ超過等）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 指定されたissueが存在しない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/attachments/{issueId}/{filename}:
+    get:
+      summary: 画像を取得
+      description: |
+        指定されたissueの画像ファイルを取得する。
+        Web UIでの画像表示に使用。
+      operationId: getAttachment
+      tags:
+        - Attachments
+      parameters:
+        - name: issueId
+          in: path
+          required: true
+          description: 画像が添付されているissueのID
+          schema:
+            type: integer
+            minimum: 1
+        - name: filename
+          in: path
+          required: true
+          description: 画像ファイル名（{uuid}.{ext}形式）
+          schema:
+            type: string
+            pattern: '^[a-f0-9-]+\.(png|jpg|jpeg|gif|webp)$'
+      responses:
+        '200':
+          description: 画像ファイル
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: 画像が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    AttachmentResponse:
+      type: object
+      required:
+        - id
+        - filename
+        - absolutePath
+        - markdownRef
+        - mimeType
+        - size
+      properties:
+        id:
+          type: string
+          description: 画像のUUID
+          example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+        filename:
+          type: string
+          description: 保存されたファイル名
+          example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890.png'
+        absolutePath:
+          type: string
+          description: 画像の絶対パス
+          example: '/Users/kumac13/.mgtd/attachments/42/a1b2c3d4-e5f6-7890-abcd-ef1234567890.png'
+        markdownRef:
+          type: string
+          description: Markdown画像参照（エディタに挿入用）
+          example: '![image](/Users/kumac13/.mgtd/attachments/42/a1b2c3d4-e5f6-7890-abcd-ef1234567890.png)'
+        mimeType:
+          type: string
+          description: 画像のMIMEタイプ
+          enum:
+            - image/png
+            - image/jpeg
+            - image/gif
+            - image/webp
+          example: 'image/png'
+        size:
+          type: integer
+          description: ファイルサイズ（バイト）
+          example: 102400
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - code
+        - message
+      properties:
+        error:
+          type: string
+          description: エラータイプ
+          example: 'Bad Request'
+        code:
+          type: string
+          description: エラーコード
+          enum:
+            - INVALID_FILE_TYPE
+            - FILE_TOO_LARGE
+            - ISSUE_NOT_FOUND
+            - FILE_NOT_FOUND
+            - STORAGE_ERROR
+          example: 'INVALID_FILE_TYPE'
+        message:
+          type: string
+          description: エラーメッセージ
+          example: 'PNG, JPEG, GIF, WebP形式のみ対応しています'
