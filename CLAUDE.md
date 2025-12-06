@@ -30,6 +30,7 @@
 - コマンド・ファイルは全体を提示（部分的な省略禁止）
 - 実装前に`docs/requirements.md`を必ず参照
 - **新しいコマンド追加時は必ず`packages/cli/src/index.ts`の`MULTIWORD_COMMANDS`配列に登録する**（スペース区切り構文の必須要件）
+- **バックエンド（API/DB）を変更・追加する際は、必ず対応するテストを書くこと**（テストなしでのバックエンド変更は禁止）
 
 ## <critical-safety>Push前のローカル検証（必須）</critical-safety>
 
