@@ -5264,6 +5264,195 @@ paths:
                   - error
                   - message
                 additionalProperties: false
+  /api/attachments:
+    post:
+      operationId: uploadAttachment
+      summary: Upload an image attachment
+      tags:
+        - Attachments
+      description: "Upload an image attachment (PNG, JPEG, GIF, WebP). Max size: 10MB."
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: UUID of the uploaded image
+                  filename:
+                    type: string
+                    description: Saved filename (uuid.ext format)
+                  absolutePath:
+                    type: string
+                    description: Absolute path to the image file
+                  markdownRef:
+                    type: string
+                    description: Markdown image reference for editor insertion
+                  mimeType:
+                    type: string
+                    enum:
+                      - image/png
+                      - image/jpeg
+                      - image/gif
+                      - image/webp
+                    description: MIME type of the image
+                  size:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: File size in bytes
+                required:
+                  - id
+                  - filename
+                  - absolutePath
+                  - markdownRef
+                  - mimeType
+                  - size
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                  code:
+                    type: string
+                    enum:
+                      - INVALID_FILE_TYPE
+                      - FILE_TOO_LARGE
+                      - FILE_NOT_FOUND
+                      - STORAGE_ERROR
+                      - NO_FILE_UPLOADED
+                    description: Error code
+                  message:
+                    type: string
+                    description: User-friendly error message
+                required:
+                  - error
+                  - code
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                  code:
+                    type: string
+                    enum:
+                      - INVALID_FILE_TYPE
+                      - FILE_TOO_LARGE
+                      - FILE_NOT_FOUND
+                      - STORAGE_ERROR
+                      - NO_FILE_UPLOADED
+                    description: Error code
+                  message:
+                    type: string
+                    description: User-friendly error message
+                required:
+                  - error
+                  - code
+                  - message
+                additionalProperties: false
+  /api/attachments/{filename}:
+    get:
+      operationId: getAttachment
+      summary: Get an attachment image
+      tags:
+        - Attachments
+      description: Get an attachment image file by filename
+      parameters:
+        - schema:
+            type: string
+            pattern: ^[a-f0-9-]+\.(png|jpg|jpeg|gif|webp)$
+          in: path
+          name: filename
+          required: true
+          description: Attachment filename (uuid.ext format)
+      responses:
+        "200":
+          description: Image file binary data
+          content:
+            image/png: &a1
+              schema:
+                type: string
+                format: binary
+                description: Image file binary data
+            image/jpeg: *a1
+            image/gif: *a1
+            image/webp: *a1
+        "404":
+          description: Default Response
+          content:
+            image/png: &a2
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                  code:
+                    type: string
+                    enum:
+                      - INVALID_FILE_TYPE
+                      - FILE_TOO_LARGE
+                      - FILE_NOT_FOUND
+                      - STORAGE_ERROR
+                      - NO_FILE_UPLOADED
+                    description: Error code
+                  message:
+                    type: string
+                    description: User-friendly error message
+                required:
+                  - error
+                  - code
+                  - message
+                additionalProperties: false
+            image/jpeg: *a2
+            image/gif: *a2
+            image/webp: *a2
+        "500":
+          description: Default Response
+          content:
+            image/png: &a3
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                  code:
+                    type: string
+                    enum:
+                      - INVALID_FILE_TYPE
+                      - FILE_TOO_LARGE
+                      - FILE_NOT_FOUND
+                      - STORAGE_ERROR
+                      - NO_FILE_UPLOADED
+                    description: Error code
+                  message:
+                    type: string
+                    description: User-friendly error message
+                required:
+                  - error
+                  - code
+                  - message
+                additionalProperties: false
+            image/jpeg: *a3
+            image/gif: *a3
+            image/webp: *a3
 servers:
   - url: http://localhost:3000
     description: Development server
@@ -5280,3 +5469,5 @@ tags:
     description: Project management endpoints
   - name: Comments
     description: Comment management endpoints
+  - name: Attachments
+    description: Image attachment endpoints

@@ -23,7 +23,9 @@ export async function attachmentRoutes(app: FastifyInstance) {
   // POST /api/attachments - Upload an image
   typedApp.post('/api/attachments', {
     schema: {
-      description: 'Upload an image attachment',
+      operationId: 'uploadAttachment',
+      summary: 'Upload an image attachment',
+      description: 'Upload an image attachment (PNG, JPEG, GIF, WebP). Max size: 10MB.',
       tags: ['Attachments'],
       consumes: ['multipart/form-data'],
       response: {
@@ -38,10 +40,18 @@ export async function attachmentRoutes(app: FastifyInstance) {
   // GET /api/attachments/:filename - Get an image
   typedApp.get('/api/attachments/:filename', {
     schema: {
-      description: 'Get an attachment image file',
+      operationId: 'getAttachment',
+      summary: 'Get an attachment image',
+      description: 'Get an attachment image file by filename',
       tags: ['Attachments'],
       params: FilenameParamsSchema,
+      produces: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
       response: {
+        200: {
+          type: 'string',
+          format: 'binary',
+          description: 'Image file binary data',
+        },
         404: AttachmentErrorSchema,
         500: AttachmentErrorSchema,
       },
