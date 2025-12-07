@@ -28,10 +28,6 @@ export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
   const effectiveStart = task.scheduledStart ?? task.actualStart;
   const effectiveEnd = task.scheduledEnd ?? task.actualEnd;
 
-  // Determine if this is a "scheduled" event (lighter color) or "actual" event (status-based color)
-  // Scheduled = isAllDay OR (scheduledStart AND scheduledEnd both exist)
-  const isScheduledEvent = task.isAllDay || (task.scheduledStart !== null && task.scheduledEnd !== null);
-
   // If no scheduling info and no fallback, skip this task
   if (!effectiveStart) {
     // Fallback to deprecated fields for backward compatibility
@@ -41,7 +37,6 @@ export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
     return taskToCalendarEventLegacy(task);
   }
 
-  const isDone = task.status === 'done';
   const title = task.title || `Task #${task.id}`;
 
   let start: Temporal.PlainDate | Temporal.ZonedDateTime;
@@ -77,18 +72,11 @@ export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
     return null;
   }
 
-  // Build classes: time-scheduled (lighter green) or time-actual (status-based)
-  const timeClass = isScheduledEvent ? 'time-scheduled' : 'time-actual';
-  const statusClass = isDone ? 'task-done' : 'task-pending';
-
   return {
     id: task.id,
     title,
     start,
     end,
-    _options: {
-      additionalClasses: [timeClass, statusClass],
-    },
   };
 }
 
@@ -101,7 +89,6 @@ function taskToCalendarEventLegacy(task: Task): CalendarEventExternal | null {
     return null;
   }
 
-  const isDone = task.status === 'done';
   const title = task.title || `Task #${task.id}`;
 
   let start: Temporal.PlainDate | Temporal.ZonedDateTime;
@@ -127,17 +114,11 @@ function taskToCalendarEventLegacy(task: Task): CalendarEventExternal | null {
     end = Temporal.PlainDate.from(task.endDate || task.scheduledOn);
   }
 
-  // Legacy events are treated as scheduled
-  const statusClass = isDone ? 'task-done' : 'task-pending';
-
   return {
     id: task.id,
     title,
     start,
     end,
-    _options: {
-      additionalClasses: ['time-scheduled', statusClass],
-    },
   };
 }
 
