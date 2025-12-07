@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { Temporal } from 'temporal-polyfill';
-import { taskToCalendarEvent, type Task } from './calendarMapper';
+import { taskToCalendarEvent, getDateRange, type Task } from './calendarMapper';
 
 // Make Temporal available globally for the module under test
 beforeAll(() => {
@@ -220,6 +220,80 @@ describe('calendarMapper - taskToCalendarEvent', () => {
       // And scheduledStart is null, so it doesn't hit the "scheduled start without end" case
       // Therefore it should return null (in progress task)
       expect(event).toBeNull();
+    });
+  });
+});
+
+describe('calendarMapper - getDateRange', () => {
+  describe('Month view', () => {
+    it('returns first and last day of the month', () => {
+      const result = getDateRange('2025-12-15', 'month');
+      expect(result.from).toBe('2025-12-01');
+      expect(result.to).toBe('2025-12-31');
+    });
+
+    it('handles February in a non-leap year', () => {
+      const result = getDateRange('2025-02-15', 'month');
+      expect(result.from).toBe('2025-02-01');
+      expect(result.to).toBe('2025-02-28');
+    });
+
+    it('handles February in a leap year', () => {
+      const result = getDateRange('2024-02-15', 'month');
+      expect(result.from).toBe('2024-02-01');
+      expect(result.to).toBe('2024-02-29');
+    });
+  });
+
+  describe('Week view (Monday-based)', () => {
+    it('Sunday: returns previous Monday to this Sunday', () => {
+      // 2025-12-07 is Sunday
+      const result = getDateRange('2025-12-07', 'week');
+      expect(result.from).toBe('2025-12-01'); // Monday
+      expect(result.to).toBe('2025-12-07');   // Sunday
+    });
+
+    it('Monday: returns this Monday to next Sunday', () => {
+      // 2025-12-08 is Monday
+      const result = getDateRange('2025-12-08', 'week');
+      expect(result.from).toBe('2025-12-08'); // Monday
+      expect(result.to).toBe('2025-12-14');   // Sunday
+    });
+
+    it('Wednesday: returns this week Monday to Sunday', () => {
+      // 2025-12-10 is Wednesday
+      const result = getDateRange('2025-12-10', 'week');
+      expect(result.from).toBe('2025-12-08'); // Monday
+      expect(result.to).toBe('2025-12-14');   // Sunday
+    });
+
+    it('Saturday: returns this week Monday to Sunday', () => {
+      // 2025-12-13 is Saturday
+      const result = getDateRange('2025-12-13', 'week');
+      expect(result.from).toBe('2025-12-08'); // Monday
+      expect(result.to).toBe('2025-12-14');   // Sunday
+    });
+
+    it('handles week spanning month boundary', () => {
+      // 2025-12-01 is Monday
+      const result = getDateRange('2025-12-01', 'week');
+      expect(result.from).toBe('2025-12-01'); // Monday
+      expect(result.to).toBe('2025-12-07');   // Sunday
+    });
+
+    it('handles week spanning year boundary', () => {
+      // 2025-12-31 is Wednesday
+      const result = getDateRange('2025-12-31', 'week');
+      expect(result.from).toBe('2025-12-29'); // Monday
+      expect(result.to).toBe('2026-01-04');   // Sunday (next year)
+    });
+  });
+
+  describe('Day view', () => {
+    it('returns the same date for from and to', () => {
+      const result = getDateRange('2025-12-15', 'day');
+      expect(result.from).toBe('2025-12-15');
+      expect(result.to).toBe('2025-12-15');
     });
   });
 });
