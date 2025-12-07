@@ -2,7 +2,7 @@
  * Form validation utilities for meme-gtd Web UI
  */
 
-export interface ValidationResult {
+interface ValidationResult {
   isValid: boolean;
   errors: Record<string, string>;
 }

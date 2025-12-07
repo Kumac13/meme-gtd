@@ -16,15 +16,6 @@ export type {
 } from 'meme-gtd-shared';
 
 /**
- * View metadata stored in project_items.view_meta (Feature 017)
- * Defines how an item appears within a specific project in sidebar
- */
-export interface ProjectViewMeta {
-  status?: ProjectStatus;
-  // Future: column, customFields, etc.
-}
-
-/**
  * Project status values (Feature 017)
  */
 export type ProjectStatus =
@@ -53,18 +44,4 @@ export interface ProjectWithMeta {
 export interface RecentProjectsStorage {
   projectIds: number[];        // Last 5 project IDs (ordered by recency)
   lastUsedAt: Record<number, string>; // projectId -> ISO timestamp
-}
-
-/**
- * Project list item (for modal display) (Feature 017)
- */
-export interface ProjectListItem {
-  project: {
-    id: number;
-    name: string;
-    description: string;
-    createdAt: string;
-  };
-  isAssociated: boolean;       // Checkbox checked state
-  isRecent: boolean;           // Show in Recent section
 }

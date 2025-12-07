@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export interface MigrationResult {
+interface MigrationResult {
   applied: string[];
   skipped: string[];
 }

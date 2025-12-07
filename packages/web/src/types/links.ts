@@ -72,18 +72,6 @@ export interface LinkCreationState {
 }
 
 /**
- * Delete confirmation state - tracks which link is being deleted
- *
- * Managed in the LinkItem component to handle inline deletion confirmation.
- */
-export interface DeleteConfirmationState {
-  /** Link ID being deleted (null when no deletion in progress) */
-  linkId: number | null;
-  /** Whether delete confirmation prompt is showing */
-  isConfirming: boolean;
-}
-
-/**
  * Pending link - represents a link to be created with a new task
  *
  * Used in TaskForm to track links that will be created after

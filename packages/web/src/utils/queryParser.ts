@@ -100,7 +100,7 @@ export interface QueryValidationError {
   message: string;
 }
 
-export interface ValidateOptions {
+interface ValidateOptions {
   itemType?: 'task' | 'memo';
 }
 

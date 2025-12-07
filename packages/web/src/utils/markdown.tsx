@@ -227,7 +227,7 @@ const defaultComponents: Components = {
   pre: ({ children }) => <CodeBlockWithCopy>{children}</CodeBlockWithCopy>,
 };
 
-export interface MarkdownRendererProps {
+interface MarkdownRendererProps {
   /**
    * Markdown content to render
    */

@@ -6,7 +6,7 @@ export interface LegacyFlagMapping {
   [legacyFlag: string]: string; // legacy → modern or special message
 }
 
-export interface LegacyFlagDetectionResult {
+interface LegacyFlagDetectionResult {
   detected: boolean;
   legacyFlag?: string;
   suggestion?: string;
