@@ -45,23 +45,19 @@ export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
 
   const timezone = 'Asia/Tokyo';
 
-  if (task.isAllDay) {
-    // All-day event - extract date part from ISO datetime
+  if (task.isAllDay || !effectiveEnd) {
+    // All-day event or timed event without end - display as all-day
+    // Extract date part from ISO datetime
     const startDate = effectiveStart.split('T')[0];
     const endDate = effectiveEnd ? effectiveEnd.split('T')[0] : startDate;
     start = Temporal.PlainDate.from(startDate);
     end = Temporal.PlainDate.from(endDate);
   } else {
-    // Timed event - use full datetime
+    // Timed event with both start and end - use full datetime
     const startDateTime = Temporal.PlainDateTime.from(effectiveStart);
     start = startDateTime.toZonedDateTime(timezone);
-    if (effectiveEnd) {
-      const endDateTime = Temporal.PlainDateTime.from(effectiveEnd);
-      end = endDateTime.toZonedDateTime(timezone);
-    } else {
-      // Default to 1 hour duration
-      end = start.add({ hours: 1 });
-    }
+    const endDateTime = Temporal.PlainDateTime.from(effectiveEnd);
+    end = endDateTime.toZonedDateTime(timezone);
   }
 
   return {

@@ -148,6 +148,12 @@ export function ScheduleSection({
                 scheduledStart: newScheduledStart,
                 scheduledEnd: newScheduledEnd,
                 isAllDay: formAllDay,
+                // Clear deprecated fields when using new fields
+                scheduledOn: null,
+                startTime: null,
+                endDate: null,
+                endTime: null,
+                duration: null,
             };
 
             // Include actual times if editing them
