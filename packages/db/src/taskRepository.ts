@@ -381,37 +381,25 @@ export const updateTask = (db: Database.Database, input: UpdateTaskInput): Task 
     updates.push('status = @status');
     params.status = input.status;
 
-    // Auto-set date/time fields on status change (only if not explicitly provided)
+    // Auto-set actual_start/actual_end on status change (only if not explicitly provided)
     if (isStatusChange) {
+      const currentDatetime = `${currentDate}T${currentTime}:00`; // ISO 8601 format
+
       if (input.status === 'done') {
-        // Auto-set end_date if not explicitly provided
-        if (input.endDate === undefined) {
-          updates.push('end_date = @autoEndDate');
-          params.autoEndDate = currentDate;
-        }
-        // Check for same-day completion to set end_time
-        const effectiveScheduledOn = input.scheduledOn !== undefined ? input.scheduledOn : task.scheduledOn;
-        if (effectiveScheduledOn === currentDate && input.endTime === undefined) {
-          updates.push('end_time = @autoEndTime');
-          params.autoEndTime = currentTime;
+        // Auto-set actual_end if not explicitly provided
+        if (input.actualEnd === undefined) {
+          updates.push('actual_end = @autoActualEnd');
+          params.autoActualEnd = currentDatetime;
         }
       } else if (input.status === 'next') {
-        // Auto-set scheduled_on if not explicitly provided
-        if (input.scheduledOn === undefined) {
-          updates.push('scheduled_on = @autoScheduledOn');
-          params.autoScheduledOn = currentDate;
+        // Auto-set actual_start if not explicitly provided
+        if (input.actualStart === undefined) {
+          updates.push('actual_start = @autoActualStart');
+          params.autoActualStart = currentDatetime;
         }
-        // Auto-set start_time if not explicitly provided
-        if (input.startTime === undefined) {
-          updates.push('start_time = @autoStartTime');
-          params.autoStartTime = currentTime;
-        }
-        // Clear end fields unless explicitly set
-        if (input.endDate === undefined) {
-          updates.push('end_date = NULL');
-        }
-        if (input.endTime === undefined) {
-          updates.push('end_time = NULL');
+        // Clear actual_end unless explicitly set
+        if (input.actualEnd === undefined) {
+          updates.push('actual_end = NULL');
         }
       }
     }
@@ -492,7 +480,7 @@ export const setTaskStatus = (
   id: number,
   status: TaskStatus
 ): Task => {
-  const task = getTask(db, id); // Validates type
+  getTask(db, id); // Validates type and existence
   const { date: currentDate, time: currentTime } = getLocalDateTime();
   const currentDatetime = `${currentDate}T${currentTime}:00`; // ISO 8601 format
 
@@ -500,32 +488,18 @@ export const setTaskStatus = (
   const params: Record<string, unknown> = { id, status, updatedAt: nowIso() };
 
   if (status === 'done') {
-    // Set actual_end to current datetime (new field)
+    // Set actual_end to current datetime
     updates.push('actual_end = @actualEnd');
     params.actualEnd = currentDatetime;
-
-    // Also set deprecated fields for backward compatibility
-    updates.push('end_date = @endDate');
-    params.endDate = currentDate;
-    if (task.scheduledOn === currentDate) {
-      updates.push('end_time = @endTime');
-      params.endTime = currentTime;
-    }
+    // Note: deprecated fields (end_date, end_time) are NOT written anymore
   } else if (status === 'next') {
-    // Set actual_start to current datetime (new field)
+    // Set actual_start to current datetime
     updates.push('actual_start = @actualStart');
     params.actualStart = currentDatetime;
 
-    // Clear actual_end
+    // Clear actual_end (task is restarted)
     updates.push('actual_end = NULL');
-
-    // Also set deprecated fields for backward compatibility
-    updates.push('scheduled_on = @scheduledOn', 'start_time = @startTime');
-    params.scheduledOn = currentDate;
-    params.startTime = currentTime;
-
-    // Clear deprecated end fields
-    updates.push('end_date = NULL', 'end_time = NULL');
+    // Note: deprecated fields (scheduled_on, start_time) are NOT written anymore
   }
 
   db.prepare(`UPDATE issues SET ${updates.join(', ')} WHERE id = @id`).run(params);
