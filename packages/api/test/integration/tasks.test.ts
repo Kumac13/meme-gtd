@@ -1007,3 +1007,231 @@ describe('Task Demote Operations', () => {
     assert.strictEqual(response.statusCode, 404);
   });
 });
+
+// ============================================================
+// Phase 3: Calendar Datetime Separation API Tests (T013-T015)
+// New fields: scheduledStart, scheduledEnd, isAllDay, actualStart, actualEnd
+// ============================================================
+
+describe('Task Datetime Fields Operations', () => {
+  let app: FastifyInstance;
+  let cleanup: () => Promise<void>;
+
+  beforeEach(async () => {
+    const server = await createTestServer();
+    app = server.app;
+    cleanup = server.cleanup;
+  });
+
+  afterEach(async () => {
+    await cleanup();
+  });
+
+  const createTaskFixture = (overrides = {}) => ({
+    title: 'Test Task',
+    bodyMd: 'Test task body',
+    ...overrides,
+  });
+
+  // T013: POST /api/tasks with scheduledStart/scheduledEnd returns task with new fields
+  it('should create task with scheduledStart and scheduledEnd (POST /api/tasks)', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({
+        title: 'Scheduled Task',
+        scheduledStart: '2025-12-07T10:00:00',
+        scheduledEnd: '2025-12-07T11:00:00',
+      }),
+    });
+
+    assert.strictEqual(response.statusCode, 201);
+    const task = JSON.parse(response.body);
+    assert.strictEqual(task.scheduledStart, '2025-12-07T10:00:00');
+    assert.strictEqual(task.scheduledEnd, '2025-12-07T11:00:00');
+    assert.strictEqual(task.isAllDay, false);
+  });
+
+  it('should create task with isAllDay=true (POST /api/tasks)', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({
+        title: 'All Day Event',
+        scheduledStart: '2025-12-07T00:00:00',
+        scheduledEnd: '2025-12-09T23:59:59',
+        isAllDay: true,
+      }),
+    });
+
+    assert.strictEqual(response.statusCode, 201);
+    const task = JSON.parse(response.body);
+    assert.strictEqual(task.scheduledStart, '2025-12-07T00:00:00');
+    assert.strictEqual(task.scheduledEnd, '2025-12-09T23:59:59');
+    assert.strictEqual(task.isAllDay, true);
+  });
+
+  it('should create task without scheduling fields and return null values', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'No Schedule' }),
+    });
+
+    assert.strictEqual(response.statusCode, 201);
+    const task = JSON.parse(response.body);
+    assert.strictEqual(task.scheduledStart, null);
+    assert.strictEqual(task.scheduledEnd, null);
+    assert.strictEqual(task.isAllDay, false);
+    assert.strictEqual(task.actualStart, null);
+    assert.strictEqual(task.actualEnd, null);
+  });
+
+  // T014: PATCH /api/tasks/{id} with scheduledStart/scheduledEnd updates correctly
+  it('should update task with scheduledStart and scheduledEnd (PATCH /api/tasks/:id)', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture(),
+    });
+    const task = JSON.parse(createResponse.body);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/tasks/${task.id}`,
+      payload: {
+        scheduledStart: '2025-12-08T09:00:00',
+        scheduledEnd: '2025-12-08T10:30:00',
+      },
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const updated = JSON.parse(response.body);
+    assert.strictEqual(updated.scheduledStart, '2025-12-08T09:00:00');
+    assert.strictEqual(updated.scheduledEnd, '2025-12-08T10:30:00');
+  });
+
+  it('should update task isAllDay toggle (PATCH /api/tasks/:id)', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ isAllDay: false }),
+    });
+    const task = JSON.parse(createResponse.body);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/tasks/${task.id}`,
+      payload: {
+        isAllDay: true,
+        scheduledStart: '2025-12-08T00:00:00',
+        scheduledEnd: '2025-12-10T23:59:59',
+      },
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const updated = JSON.parse(response.body);
+    assert.strictEqual(updated.isAllDay, true);
+  });
+
+  it('should update task with actualStart and actualEnd for manual override (PATCH /api/tasks/:id)', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture(),
+    });
+    const task = JSON.parse(createResponse.body);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/tasks/${task.id}`,
+      payload: {
+        actualStart: '2025-12-07T16:00:00',
+        actualEnd: '2025-12-07T17:30:00',
+      },
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const updated = JSON.parse(response.body);
+    assert.strictEqual(updated.actualStart, '2025-12-07T16:00:00');
+    assert.strictEqual(updated.actualEnd, '2025-12-07T17:30:00');
+  });
+
+  it('should clear scheduledStart with null (PATCH /api/tasks/:id)', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({
+        scheduledStart: '2025-12-07T10:00:00',
+        scheduledEnd: '2025-12-07T11:00:00',
+      }),
+    });
+    const task = JSON.parse(createResponse.body);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/tasks/${task.id}`,
+      payload: {
+        scheduledStart: null,
+        scheduledEnd: null,
+      },
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const updated = JSON.parse(response.body);
+    assert.strictEqual(updated.scheduledStart, null);
+    assert.strictEqual(updated.scheduledEnd, null);
+  });
+
+  // T015: GET /api/tasks returns tasks with new datetime fields
+  it('should return tasks with new datetime fields (GET /api/tasks)', async () => {
+    await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({
+        title: 'Task with schedule',
+        scheduledStart: '2025-12-07T14:00:00',
+        scheduledEnd: '2025-12-07T15:00:00',
+      }),
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/tasks',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const tasks = JSON.parse(response.body);
+    assert.strictEqual(tasks.length, 1);
+    assert.strictEqual(tasks[0].scheduledStart, '2025-12-07T14:00:00');
+    assert.strictEqual(tasks[0].scheduledEnd, '2025-12-07T15:00:00');
+    assert.strictEqual(tasks[0].isAllDay, false);
+  });
+
+  it('should return task by ID with new datetime fields (GET /api/tasks/:id)', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({
+        title: 'Task with schedule',
+        scheduledStart: '2025-12-07T14:00:00',
+        scheduledEnd: '2025-12-07T15:00:00',
+        isAllDay: false,
+      }),
+    });
+    const created = JSON.parse(createResponse.body);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/tasks/${created.id}`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const task = JSON.parse(response.body);
+    assert.strictEqual(task.scheduledStart, '2025-12-07T14:00:00');
+    assert.strictEqual(task.scheduledEnd, '2025-12-07T15:00:00');
+    assert.strictEqual(task.isAllDay, false);
+    assert.strictEqual(task.actualStart, null);
+    assert.strictEqual(task.actualEnd, null);
+  });
+});
