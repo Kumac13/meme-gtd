@@ -43,11 +43,3 @@ export class ValidationError extends AppError {
   }
 }
 
-/**
- * 503 Service Unavailable error (e.g., database busy)
- */
-export class ServiceUnavailableError extends AppError {
-  constructor(message: string = 'Service temporarily unavailable') {
-    super(message, 503, 'SERVICE_UNAVAILABLE');
-  }
-}
