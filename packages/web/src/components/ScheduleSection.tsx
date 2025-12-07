@@ -67,13 +67,16 @@ export function ScheduleSection({
     isAllDay,
     actualStart,
     actualEnd,
-    scheduledOn,
-    startTime,
-    endDate,
-    endTime,
-    duration,
+    // Deprecated fields - kept in interface for API compatibility but not displayed
+    scheduledOn: _scheduledOn,
+    startTime: _startTime,
+    endDate: _endDate,
+    endTime: _endTime,
+    duration: _duration,
     onScheduleChange
 }: ScheduleSectionProps) {
+    // Suppress unused variable warnings for deprecated fields
+    void _scheduledOn; void _startTime; void _endDate; void _endTime; void _duration;
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -199,45 +202,30 @@ export function ScheduleSection({
     };
 
     const formatDisplay = () => {
-        // Use new fields first
+        // Only use new scheduling fields (scheduledStart/scheduledEnd)
+        // Deprecated fields (scheduledOn, startTime, etc.) are NOT displayed
         if (scheduledStart) {
             const startDate = scheduledStart.split('T')[0];
             const startTimeStr = scheduledStart.split('T')[1]?.slice(0, 5);
-            const endDate = scheduledEnd?.split('T')[0];
+            const endDateStr = scheduledEnd?.split('T')[0];
             const endTimeStr = scheduledEnd?.split('T')[1]?.slice(0, 5);
 
             if (isAllDay) {
-                if (endDate && endDate !== startDate) {
-                    return `${startDate} - ${endDate} (All day)`;
+                if (endDateStr && endDateStr !== startDate) {
+                    return `${startDate} - ${endDateStr} (All day)`;
                 }
                 return `${startDate} (All day)`;
             } else {
                 let display = `${startDate} ${startTimeStr}`;
-                if (endDate && endTimeStr) {
-                    if (endDate === startDate) {
+                if (endDateStr && endTimeStr) {
+                    if (endDateStr === startDate) {
                         display += ` - ${endTimeStr}`;
                     } else {
-                        display += ` - ${endDate} ${endTimeStr}`;
+                        display += ` - ${endDateStr} ${endTimeStr}`;
                     }
                 }
                 return display;
             }
-        }
-
-        // Fallback to deprecated fields for display only
-        if (scheduledOn) {
-            let display = scheduledOn;
-            if (endDate && endDate !== scheduledOn) {
-                display += ` - ${endDate}`;
-            }
-            if (startTime) {
-                display += ` ${startTime}`;
-                if (endTime) display += ` - ${endTime}`;
-            }
-            if (duration) {
-                display += ` (${duration} min)`;
-            }
-            return display;
         }
 
         return 'No schedule';
