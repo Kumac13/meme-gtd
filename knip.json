@@ -6,7 +6,8 @@
     },
     "packages/api": {
       "entry": ["src/index.ts", "src/server.ts"],
-      "project": ["src/**/*.ts"]
+      "project": ["src/**/*.ts"],
+      "ignore": ["src/schemas/**"]
     },
     "packages/cli": {
       "entry": ["src/index.ts", "src/commands/**/*.ts"],
