@@ -1,0 +1,41 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.mjs"]
+    },
+    "packages/api": {
+      "entry": ["src/index.ts", "src/server.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/cli": {
+      "entry": ["src/index.ts", "src/commands/**/*.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/config": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/core": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/db": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/logger": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/shared": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/web": {
+      "entry": ["src/main.tsx"],
+      "project": ["src/**/*.{ts,tsx}"]
+    }
+  },
+  "ignore": ["specs/**", "test-data/**"]
+}
