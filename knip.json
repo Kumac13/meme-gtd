@@ -26,7 +26,8 @@
     },
     "packages/logger": {
       "entry": ["src/index.ts"],
-      "project": ["src/**/*.ts"]
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": ["pino-pretty"]
     },
     "packages/shared": {
       "entry": ["src/index.ts"],
@@ -34,7 +35,8 @@
     },
     "packages/web": {
       "entry": ["src/main.tsx"],
-      "project": ["src/**/*.{ts,tsx}"]
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["openapi-typescript-codegen"]
     }
   },
   "ignore": ["specs/**", "test-data/**"]
