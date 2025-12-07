@@ -11,8 +11,19 @@ interface Task {
   bodyMd: string;
   status: string | null;
   isBookmarked: boolean;
+  // New scheduling fields (ISO 8601 datetime)
+  scheduledStart: string | null;
+  scheduledEnd: string | null;
+  isAllDay: boolean;
+  // Execution fields
+  actualStart: string | null;
+  actualEnd: string | null;
+  // Deprecated fields (kept for backward compatibility)
   scheduledOn: string | null;
+  startTime: string | null;
   endDate: string | null;
+  endTime: string | null;
+  duration: number | null;
   labels?: string[];
   createdAt: string;
   updatedAt: string;

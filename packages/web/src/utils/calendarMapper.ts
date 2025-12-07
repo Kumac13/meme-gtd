@@ -4,13 +4,81 @@ export interface Task {
   id: number;
   title: string | null;
   status: string;
+  // New scheduling fields (ISO 8601 datetime: YYYY-MM-DDTHH:MM:SS)
+  scheduledStart: string | null;
+  scheduledEnd: string | null;
+  isAllDay: boolean;
+  // New execution fields (for fallback display)
+  actualStart: string | null;
+  actualEnd: string | null;
+  // Deprecated fields (kept for backward compatibility)
   scheduledOn: string | null;
   startTime: string | null;
   endTime: string | null;
   endDate: string | null;
 }
 
+/**
+ * Convert a task to a calendar event.
+ * Priority: scheduledStart > actualStart (fallback for tasks without schedule but with execution time)
+ */
 export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
+  // Determine which datetime to use for positioning
+  // Priority: scheduledStart, then fallback to actualStart
+  const effectiveStart = task.scheduledStart ?? task.actualStart;
+  const effectiveEnd = task.scheduledEnd ?? task.actualEnd;
+
+  // If no scheduling info and no fallback, skip this task
+  if (!effectiveStart) {
+    // Fallback to deprecated fields for backward compatibility
+    if (!task.scheduledOn) {
+      return null;
+    }
+    return taskToCalendarEventLegacy(task);
+  }
+
+  const isDone = task.status === 'done';
+  const title = task.title || `Task #${task.id}`;
+
+  let start: Temporal.PlainDate | Temporal.ZonedDateTime;
+  let end: Temporal.PlainDate | Temporal.ZonedDateTime;
+
+  const timezone = 'Asia/Tokyo';
+
+  if (task.isAllDay) {
+    // All-day event - extract date part from ISO datetime
+    const startDate = effectiveStart.split('T')[0];
+    const endDate = effectiveEnd ? effectiveEnd.split('T')[0] : startDate;
+    start = Temporal.PlainDate.from(startDate);
+    end = Temporal.PlainDate.from(endDate);
+  } else {
+    // Timed event - use full datetime
+    const startDateTime = Temporal.PlainDateTime.from(effectiveStart);
+    start = startDateTime.toZonedDateTime(timezone);
+    if (effectiveEnd) {
+      const endDateTime = Temporal.PlainDateTime.from(effectiveEnd);
+      end = endDateTime.toZonedDateTime(timezone);
+    } else {
+      // Default to 1 hour duration
+      end = start.add({ hours: 1 });
+    }
+  }
+
+  return {
+    id: task.id,
+    title,
+    start,
+    end,
+    _options: {
+      additionalClasses: [isDone ? 'task-done' : 'task-pending'],
+    },
+  };
+}
+
+/**
+ * Legacy conversion for backward compatibility with old fields
+ */
+function taskToCalendarEventLegacy(task: Task): CalendarEventExternal | null {
   if (!task.scheduledOn) {
     return null;
   }

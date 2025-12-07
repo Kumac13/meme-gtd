@@ -114,6 +114,10 @@ export class LinksService {
              * Target issue title (task title or memo body preview)
              */
             title: string;
+            /**
+             * Target issue status (null for memos)
+             */
+            status: string | null;
         };
     }>> {
         return __request(OpenAPI, {
