@@ -37,7 +37,7 @@
 **IMPORTANT: git push する前に必ずローカルでCIと同じチェックを実行すること**
 
 ```bash
-pnpm --filter meme-gtd-api lint && pnpm --filter meme-gtd-api openapi:validate && pnpm --filter meme-gtd-api test && pnpm build
+pnpm --filter meme-gtd-api lint && pnpm --filter meme-gtd-api openapi:validate && pnpm --filter meme-gtd-api test && pnpm build && pnpm knip
 ```
 
 1. コード変更
@@ -45,7 +45,8 @@ pnpm --filter meme-gtd-api lint && pnpm --filter meme-gtd-api openapi:validate &
 3. `pnpm --filter meme-gtd-api openapi:validate` - OpenAPI specが有効であることを確認
 4. `pnpm --filter meme-gtd-api test` - テストが全て通ることを確認
 5. `pnpm build` - ビルドが成功することを確認
-6. 全て通ったら `git commit && git push`
+6. `pnpm knip` - 未使用コード・依存関係がないことを確認
+7. 全て通ったら `git commit && git push`
 
 ## ユーザーへの確認前にビルドすること
 

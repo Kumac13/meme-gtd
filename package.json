@@ -21,9 +21,13 @@
     "mgtd:dev": "pnpm --filter meme-gtd-cli exec tsx ./src/index.ts",
     "bootstrap": "pnpm install && pnpm build",
     "mgtd:install": "node ./scripts/install-cli.mjs",
-    "mgtd:pack": "node ./scripts/package-cli.mjs"
+    "mgtd:pack": "node ./scripts/package-cli.mjs",
+    "knip": "knip"
   },
   "engines": {
     "node": ">=22.0.0"
+  },
+  "devDependencies": {
+    "knip": "^5.70.2"
   }
 }
