@@ -46,7 +46,7 @@ describe('calendarMapper - taskToCalendarEvent', () => {
       expect(event!.end.toString()).toContain('14:00');
     });
 
-    it('Case 2: scheduled start exists, scheduled end missing, actual end exists → use actual end', () => {
+    it('Case 2: scheduled start exists, scheduled end missing, actual end exists → display as all-day', () => {
       const task = createTask({
         scheduledStart: '2025-12-06T13:00:00',
         scheduledEnd: null,
@@ -57,9 +57,9 @@ describe('calendarMapper - taskToCalendarEvent', () => {
       const event = taskToCalendarEvent(task);
 
       expect(event).not.toBeNull();
-      // Should use scheduled start + actual end
-      expect(event!.start.toString()).toContain('13:00');
-      expect(event!.end.toString()).toContain('14:00');
+      // Should display as all-day (actualEnd is ignored when scheduledStart exists without scheduledEnd)
+      expect(event!.start.toString()).toBe('2025-12-06');
+      expect(event!.end.toString()).toBe('2025-12-06');
     });
 
     it('Case 3: scheduled start exists, no end at all → display as all-day', () => {
@@ -110,6 +110,25 @@ describe('calendarMapper - taskToCalendarEvent', () => {
 
       // Task in progress should not appear on calendar
       expect(event).toBeNull();
+    });
+
+    it('Case 5b: no scheduled, actual spans multiple days → timed event across days', () => {
+      const task = createTask({
+        scheduledStart: null,
+        scheduledEnd: null,
+        actualStart: '2025-12-06T23:00:00',
+        actualEnd: '2025-12-07T01:00:00',
+        status: 'done',
+      });
+
+      const event = taskToCalendarEvent(task);
+
+      expect(event).not.toBeNull();
+      // Should be timed event spanning two days
+      expect(event!.start.toString()).toContain('2025-12-06');
+      expect(event!.start.toString()).toContain('23:00');
+      expect(event!.end.toString()).toContain('2025-12-07');
+      expect(event!.end.toString()).toContain('01:00');
     });
   });
 
@@ -180,7 +199,7 @@ describe('calendarMapper - taskToCalendarEvent', () => {
 
   // Real bug case: task 82
   describe('Real bug cases', () => {
-    it('Task 82: scheduled_start exists, scheduled_end null, actual_end exists → timed event', () => {
+    it('Task 82: scheduled_start exists, scheduled_end null, actual_end exists → all-day event', () => {
       const task = createTask({
         id: 82,
         status: 'done',
@@ -194,9 +213,9 @@ describe('calendarMapper - taskToCalendarEvent', () => {
       const event = taskToCalendarEvent(task);
 
       expect(event).not.toBeNull();
-      // Should be timed event (19:55-20:04), NOT all-day
-      expect(event!.start.toString()).toContain('19:55');
-      expect(event!.end.toString()).toContain('20:04');
+      // Should be all-day (actualEnd is ignored when scheduledStart exists without scheduledEnd)
+      expect(event!.start.toString()).toBe('2025-12-06');
+      expect(event!.end.toString()).toBe('2025-12-06');
     });
 
     it('Task 155: no scheduled, only actual_start (in progress) → falls back to legacy due to scheduledOn', () => {
