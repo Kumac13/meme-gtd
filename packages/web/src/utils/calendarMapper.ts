@@ -56,17 +56,24 @@ export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
     const endDate = effectiveEnd ? effectiveEnd.split('T')[0] : startDate;
     start = Temporal.PlainDate.from(startDate);
     end = Temporal.PlainDate.from(endDate);
-  } else if (effectiveEnd) {
-    // Timed event with both start and end
-    const startDateTime = Temporal.PlainDateTime.from(effectiveStart);
+  } else if (task.scheduledStart && task.scheduledEnd) {
+    // Timed event with scheduled start and end (complete schedule)
+    const startDateTime = Temporal.PlainDateTime.from(task.scheduledStart);
     start = startDateTime.toZonedDateTime(timezone);
-    const endDateTime = Temporal.PlainDateTime.from(effectiveEnd);
+    const endDateTime = Temporal.PlainDateTime.from(task.scheduledEnd);
     end = endDateTime.toZonedDateTime(timezone);
   } else if (task.scheduledStart) {
-    // Scheduled start without any end → display as all-day
-    const startDate = effectiveStart.split('T')[0];
+    // Scheduled start without scheduled end → display as all-day
+    // (actualEnd is ignored when scheduledStart exists without scheduledEnd)
+    const startDate = task.scheduledStart.split('T')[0];
     start = Temporal.PlainDate.from(startDate);
     end = Temporal.PlainDate.from(startDate);
+  } else if (task.actualStart && task.actualEnd) {
+    // No schedule, but has complete actual times → display actual times
+    const startDateTime = Temporal.PlainDateTime.from(task.actualStart);
+    start = startDateTime.toZonedDateTime(timezone);
+    const endDateTime = Temporal.PlainDateTime.from(task.actualEnd);
+    end = endDateTime.toZonedDateTime(timezone);
   } else {
     // Only actualStart without end (task in progress) → don't show
     return null;

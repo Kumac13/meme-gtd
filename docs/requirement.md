@@ -119,12 +119,14 @@ stateDiagram-v2
 - **I/O チャネル**: CLI・API・外部クライアントが共通スキーマで操作する。具体的な操作手順は各インターフェイス仕様に委譲する。
 - **カレンダー表示ルール**:
   - **表示優先度**: 予定時間（scheduled）を実行結果時間（actual）より優先して表示する
-    - `scheduled_start` がある場合 → 予定時間で表示
-    - `scheduled_start` がなく `actual_start`/`actual_end` がある場合 → 実績時間で表示
-    - どちらもない場合 → カレンダーに表示しない
-  - **終了時間のフォールバック**: `scheduled_end` がない場合、`actual_end` があれば終了時間として使用
+  - **表示判定フロー**:
+    1. `is_all_day = true` → 終日イベントとして表示
+    2. `scheduled_start` と `scheduled_end` の両方がある → 予定時間で時間付きイベント表示
+    3. `scheduled_start` のみある（`scheduled_end` なし）→ 終日イベントとして表示（`actual_end` があっても無視）
+    4. `scheduled_start` がなく `actual_start` と `actual_end` の両方がある → 実績時間で時間付きイベント表示（日付をまたぐ場合も対応）
+    5. `actual_start` のみある（`actual_end` なし）→ カレンダーに表示しない（進行中タスク）
+    6. 上記いずれにも該当しない → カレンダーに表示しない
   - **終日イベント**: `is_all_day = true` の場合、PlainDate として表示（時刻なし）
-  - **進行中タスク**: `actual_start` のみがあり `actual_end` がないタスクはカレンダーに表示しない
   - **完了タスクの表示**: 完了タスクも予定時間で表示される（実際の終了時間が異なっていても位置は予定時間ベース）
 
 ### 4.3 ラベル（Label）
