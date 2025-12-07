@@ -49,6 +49,13 @@ const taskRowToTask = (row: any): Task => ({
   title: row.title,
   bodyMd: row.body_md,
   status: row.status as TaskStatus,
+  // New fields
+  scheduledStart: row.scheduled_start,
+  scheduledEnd: row.scheduled_end,
+  isAllDay: toBoolean(row.is_all_day ?? 0),
+  actualStart: row.actual_start,
+  actualEnd: row.actual_end,
+  // Deprecated fields (read-only)
   scheduledOn: row.scheduled_on,
   endDate: row.end_date,
   startTime: row.start_time,

@@ -19,7 +19,8 @@ const migrations = [
   { version: '003_add_fts5', file: path.join(schemaDir, '003_add_fts5.sql') },
   { version: '004_add_task_time_fields', file: path.join(schemaDir, '004_add_task_time_fields.sql') },
   { version: '005_add_task_end_date', file: path.join(schemaDir, '005_add_task_end_date.sql') },
-  { version: '006_add_project_status_and_schedule', file: path.join(schemaDir, '006_add_project_status_and_schedule.sql') }
+  { version: '006_add_project_status_and_schedule', file: path.join(schemaDir, '006_add_project_status_and_schedule.sql') },
+  { version: '007_add_calendar_datetime_fields', file: path.join(schemaDir, '007_add_calendar_datetime_fields.sql') }
 ] as const;
 
 const prepareDatabase = (db: Database.Database): void => {
