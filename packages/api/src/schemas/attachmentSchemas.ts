@@ -7,7 +7,7 @@ import { z } from 'zod';
 /**
  * Allowed MIME types for image uploads
  */
-export const ALLOWED_MIME_TYPES = [
+const ALLOWED_MIME_TYPES = [
   'image/png',
   'image/jpeg',
   'image/gif',
@@ -27,7 +27,7 @@ export const MAX_FILE_SIZE = 10 * 1024 * 1024;
 /**
  * MIME type enum schema
  */
-export const MimeTypeSchema = z.enum(ALLOWED_MIME_TYPES);
+const MimeTypeSchema = z.enum(ALLOWED_MIME_TYPES);
 export type MimeType = z.infer<typeof MimeTypeSchema>;
 
 /**
@@ -46,7 +46,7 @@ export type AttachmentResponse = z.infer<typeof AttachmentResponseSchema>;
 /**
  * Error codes for attachment operations
  */
-export const AttachmentErrorCode = z.enum([
+const AttachmentErrorCode = z.enum([
   'INVALID_FILE_TYPE',
   'FILE_TOO_LARGE',
   'FILE_NOT_FOUND',
