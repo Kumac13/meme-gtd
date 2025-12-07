@@ -18,19 +18,6 @@ export function formatDateTime(isoString: string): string {
 }
 
 /**
- * Format ISO date string to date only (YYYY-MM-DD)
- * @param isoString ISO 8601 date string
- * @returns Date string (e.g., "2025-01-15")
- */
-export function formatDate(isoString: string): string {
-  const date = new Date(isoString);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-/**
  * Format ISO date string to relative time (e.g., "2 hours ago", "3 days ago")
  * @param isoString ISO 8601 date string
  * @returns Relative time string
@@ -59,32 +46,4 @@ export function formatRelativeTime(isoString: string): string {
   } else {
     return `${diffYear} year${diffYear > 1 ? 's' : ''} ago`;
   }
-}
-
-/**
- * Parse date input (YYYY-MM-DD) to ISO string
- * @param dateString Date string in YYYY-MM-DD format
- * @returns ISO 8601 date string
- */
-export function parseDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toISOString();
-}
-
-/**
- * Get current date in ISO format
- * @returns Current date as ISO 8601 string
- */
-export function getCurrentDateTime(): string {
-  return new Date().toISOString();
-}
-
-/**
- * Check if a date string is valid
- * @param dateString Date string to validate
- * @returns true if valid, false otherwise
- */
-export function isValidDate(dateString: string): boolean {
-  const date = new Date(dateString);
-  return !isNaN(date.getTime());
 }

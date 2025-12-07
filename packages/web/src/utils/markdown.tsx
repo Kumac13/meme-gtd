@@ -262,51 +262,6 @@ export function MarkdownRenderer({ content, components, className = '' }: Markdo
 }
 
 /**
- * Sanitize markdown content (basic sanitization)
- * Note: react-markdown already provides XSS protection by default
- * @param content Raw markdown content
- * @returns Sanitized markdown content
- */
-export function sanitizeMarkdown(content: string): string {
-  // react-markdown handles XSS protection, but we can do basic cleanup
-  return content.trim();
-}
-
-/**
- * Extract plain text from markdown (strip formatting)
- * @param markdown Markdown content
- * @returns Plain text without markdown formatting
- */
-export function markdownToPlainText(markdown: string): string {
-  return markdown
-    .replace(/#{1,6}\s+/g, '') // Remove headers
-    .replace(/\*\*(.+?)\*\*/g, '$1') // Remove bold
-    .replace(/\*(.+?)\*/g, '$1') // Remove italic
-    .replace(/_(.+?)_/g, '$1') // Remove italic (underscore)
-    .replace(/`(.+?)`/g, '$1') // Remove inline code
-    .replace(/\[(.+?)\]\(.+?\)/g, '$1') // Remove links (keep text)
-    .replace(/!\[.*?\]\(.+?\)/g, '') // Remove images
-    .replace(/>\s+/g, '') // Remove blockquotes
-    .replace(/^\s*[-*+]\s+/gm, '') // Remove list markers
-    .replace(/^\s*\d+\.\s+/gm, '') // Remove ordered list markers
-    .trim();
-}
-
-/**
- * Truncate markdown content to a specified length (for previews)
- * @param markdown Markdown content
- * @param maxLength Maximum length in characters
- * @returns Truncated plain text with ellipsis if needed
- */
-export function truncateMarkdown(markdown: string, maxLength: number = 100): string {
-  const plainText = markdownToPlainText(markdown);
-  if (plainText.length <= maxLength) {
-    return plainText;
-  }
-  return plainText.slice(0, maxLength).trim() + '...';
-}
-
-/**
  * Extract first line from markdown content
  * @param markdown Markdown content
  * @param maxLength Optional maximum length for truncation

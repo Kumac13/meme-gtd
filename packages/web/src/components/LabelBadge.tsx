@@ -14,7 +14,7 @@ interface LabelBadgeProps {
  * Generate a consistent color for a label based on its name
  * Uses HSL color space with fixed saturation and lightness for visual consistency
  */
-export function getLabelColor(name: string): { bg: string; text: string } {
+function getLabelColor(name: string): { bg: string; text: string } {
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
