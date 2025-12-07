@@ -8,11 +8,8 @@
 // Core project types from shared package (Feature 019)
 export type {
   Project,
-  ProjectItem,
   ProjectItemWithIssue,
-  ProjectDetail,
-  ViewMeta,
-  ViewType
+  ProjectDetail
 } from 'meme-gtd-shared';
 
 /**

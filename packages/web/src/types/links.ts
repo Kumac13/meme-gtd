@@ -18,7 +18,7 @@ export type Direction = 'outgoing' | 'incoming';
 /**
  * Target issue information included in link responses
  */
-export interface TargetIssue {
+interface TargetIssue {
   /** Target issue ID */
   id: number;
   /** Target issue type */
