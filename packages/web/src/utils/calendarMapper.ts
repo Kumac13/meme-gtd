@@ -4,13 +4,99 @@ export interface Task {
   id: number;
   title: string | null;
   status: string;
+  // New scheduling fields (ISO 8601 datetime: YYYY-MM-DDTHH:MM:SS)
+  scheduledStart: string | null;
+  scheduledEnd: string | null;
+  isAllDay: boolean;
+  // New execution fields (for fallback display)
+  actualStart: string | null;
+  actualEnd: string | null;
+  // Deprecated fields (kept for backward compatibility)
   scheduledOn: string | null;
   startTime: string | null;
   endTime: string | null;
   endDate: string | null;
 }
 
+/**
+ * Convert a task to a calendar event.
+ * Priority: scheduledStart > actualStart (fallback for tasks without schedule but with execution time)
+ */
 export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
+  // Determine which datetime to use for positioning
+  // Priority: scheduledStart, then fallback to actualStart
+  const effectiveStart = task.scheduledStart ?? task.actualStart;
+  const effectiveEnd = task.scheduledEnd ?? task.actualEnd;
+
+  // Determine if this is a "scheduled" event (lighter color) or "actual" event (status-based color)
+  // Scheduled = isAllDay OR (scheduledStart AND scheduledEnd both exist)
+  const isScheduledEvent = task.isAllDay || (task.scheduledStart !== null && task.scheduledEnd !== null);
+
+  // If no scheduling info and no fallback, skip this task
+  if (!effectiveStart) {
+    // Fallback to deprecated fields for backward compatibility
+    if (!task.scheduledOn) {
+      return null;
+    }
+    return taskToCalendarEventLegacy(task);
+  }
+
+  const isDone = task.status === 'done';
+  const title = task.title || `Task #${task.id}`;
+
+  let start: Temporal.PlainDate | Temporal.ZonedDateTime;
+  let end: Temporal.PlainDate | Temporal.ZonedDateTime;
+
+  const timezone = 'Asia/Tokyo';
+
+  // Logic:
+  // 1. isAllDay=true → all-day event
+  // 2. effectiveEnd exists → timed event (use effectiveStart ~ effectiveEnd)
+  // 3. No effectiveEnd but scheduledStart exists → all-day (user requirement: scheduleのendがない場合)
+  // 4. No effectiveEnd and no scheduledStart (only actualStart) → don't show (in progress)
+
+  if (task.isAllDay) {
+    // All-day event
+    const startDate = effectiveStart.split('T')[0];
+    const endDate = effectiveEnd ? effectiveEnd.split('T')[0] : startDate;
+    start = Temporal.PlainDate.from(startDate);
+    end = Temporal.PlainDate.from(endDate);
+  } else if (effectiveEnd) {
+    // Timed event with both start and end
+    const startDateTime = Temporal.PlainDateTime.from(effectiveStart);
+    start = startDateTime.toZonedDateTime(timezone);
+    const endDateTime = Temporal.PlainDateTime.from(effectiveEnd);
+    end = endDateTime.toZonedDateTime(timezone);
+  } else if (task.scheduledStart) {
+    // Scheduled start without any end → display as all-day
+    const startDate = effectiveStart.split('T')[0];
+    start = Temporal.PlainDate.from(startDate);
+    end = Temporal.PlainDate.from(startDate);
+  } else {
+    // Only actualStart without end (task in progress) → don't show
+    return null;
+  }
+
+  // Build classes: time-scheduled (lighter green) or time-actual (status-based)
+  const timeClass = isScheduledEvent ? 'time-scheduled' : 'time-actual';
+  const statusClass = isDone ? 'task-done' : 'task-pending';
+
+  return {
+    id: task.id,
+    title,
+    start,
+    end,
+    _options: {
+      additionalClasses: [timeClass, statusClass],
+    },
+  };
+}
+
+/**
+ * Legacy conversion for backward compatibility with old fields
+ * Legacy events are treated as scheduled
+ */
+function taskToCalendarEventLegacy(task: Task): CalendarEventExternal | null {
   if (!task.scheduledOn) {
     return null;
   }
@@ -41,13 +127,16 @@ export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
     end = Temporal.PlainDate.from(task.endDate || task.scheduledOn);
   }
 
+  // Legacy events are treated as scheduled
+  const statusClass = isDone ? 'task-done' : 'task-pending';
+
   return {
     id: task.id,
     title,
     start,
     end,
     _options: {
-      additionalClasses: [isDone ? 'task-done' : 'task-pending'],
+      additionalClasses: ['time-scheduled', statusClass],
     },
   };
 }
@@ -80,9 +169,12 @@ export function getDateRange(date: string, view: 'month' | 'week' | 'day'): { fr
       to: formatLocalDate(lastDay),
     };
   } else if (view === 'week') {
+    // Monday-based week (0=Sun, 1=Mon, ..., 6=Sat)
+    // Calculate days since Monday: Sun=6, Mon=0, Tue=1, ...
     const dayOfWeek = currentDate.getDay();
+    const daysSinceMonday = (dayOfWeek + 6) % 7;
     const startOfWeek = new Date(currentDate);
-    startOfWeek.setDate(currentDate.getDate() - dayOfWeek);
+    startOfWeek.setDate(currentDate.getDate() - daysSinceMonday);
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     return {

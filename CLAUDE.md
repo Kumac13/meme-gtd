@@ -214,6 +214,60 @@ const init = runCli(['init', '-d', dbPath, '-f', '-j'], { env });
 
 本番環境は実際のユーザーデータを含むため、一切の変更を加えてはならない。
 
+## <critical-safety>本番DBマイグレーション手順</critical-safety>
+
+**IMPORTANT: 本番DBへのマイグレーションはユーザーの明示的な指示がある場合のみ実行**
+
+### マイグレーションが必要なケース
+
+新しいスキーマバージョン（`schema/XXX_*.sql`）を追加した場合、本番DBにも適用が必要。
+
+### 事前準備（必須）
+
+```bash
+# 1. 本番DBのバックアップを作成
+cp ~/.local/share/mgtd/issues.db ~/.local/share/mgtd/backup/issues_$(date +%Y-%m-%d_%H%M%S).db
+
+# 2. バックアップを確認
+ls -la ~/.local/share/mgtd/backup/
+```
+
+### マイグレーション実行方法
+
+**`mgtd init` は使用禁止**: 既存DBに対して `--force` なしでは実行拒否、`--force` ありではDB削除
+
+**正しい方法**: sqlite3で直接SQLを実行
+
+```bash
+# マイグレーションファイルを直接実行
+sqlite3 ~/.local/share/mgtd/issues.db < schema/XXX_migration_name.sql
+
+# 実行結果を確認
+sqlite3 ~/.local/share/mgtd/issues.db ".schema issues" | head -20
+```
+
+### マイグレーション後の確認
+
+```bash
+# 1. 新しいカラムが追加されていることを確認
+sqlite3 ~/.local/share/mgtd/issues.db "PRAGMA table_info(issues);"
+
+# 2. データ移行の結果を確認（移行SQLがある場合）
+sqlite3 ~/.local/share/mgtd/issues.db "SELECT id, title, new_column FROM issues LIMIT 5;"
+
+# 3. アプリケーションの動作確認
+pnpm server:start  # 本番サーバー起動してエラーがないことを確認
+```
+
+### ロールバック手順
+
+問題が発生した場合：
+
+```bash
+# バックアップから復元
+cp ~/.local/share/mgtd/backup/issues_YYYY-MM-DD_HHMMSS.db ~/.local/share/mgtd/issues.db
+```
+
 ## バージョン管理の自動実行
 
 新機能の実装が完了し、PRを作成する前に、**必ず以下を実行する**：
@@ -296,6 +350,7 @@ git tag vX.Y.Z
 - N/A（既存API使用、バックエンド変更なし） (001-link)
 - TypeScript 5.5.4 / React 19.2.0 / Node.js 22+ + react-markdown 10.1.0, remark-gfm 4.0.1, remark-breaks 4.0.0, rehype-raw (新規追加), rehype-sanitize (新規追加) (001-task-147-status)
 - N/A (フロントエンドのみ、バックエンド変更なし) (001-task-147-status)
+- TypeScript 5.5.4 / Node.js 22+ + Fastify 5.2.0, better-sqlite3, React 19.2.0, @oclif/core 4.0.0, Zod 3.23.8 (001-calendar-datetime-separation)
 
 ## Recent Changes
 - 020-web-label-management: Added TypeScript 5.5.4 / React 19.2.0 / Node.js 22+

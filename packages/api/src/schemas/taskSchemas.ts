@@ -8,16 +8,26 @@ export const TaskStatusSchema = z.enum(['inbox', 'open', 'next', 'waiting', 'sch
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 
 /**
+ * ISO 8601 datetime regex pattern (YYYY-MM-DDTHH:MM:SS)
+ */
+const iso8601DatetimeRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
+
+/**
  * Schema for creating a new task
  */
 export const CreateTaskRequestSchema = z.object({
   title: z.string().min(1, 'Task title is required').describe('Task title'),
   bodyMd: z.string().optional().describe('Task description in Markdown format'),
   status: TaskStatusSchema.optional().describe('Task status (defaults to "inbox")'),
-  scheduledOn: z.string().date().optional().describe('Scheduled date for the task (YYYY-MM-DD)'),
-  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').optional().describe('Start time (HH:MM)'),
-  endDate: z.string().date().optional().describe('End date for the task (YYYY-MM-DD)'),
-  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').optional().describe('End time (HH:MM)'),
+  // New scheduling fields (ISO 8601 datetime)
+  scheduledStart: z.string().regex(iso8601DatetimeRegex, 'Invalid datetime format (YYYY-MM-DDTHH:MM:SS)').optional().describe('Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS)'),
+  scheduledEnd: z.string().regex(iso8601DatetimeRegex, 'Invalid datetime format (YYYY-MM-DDTHH:MM:SS)').optional().describe('Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS)'),
+  isAllDay: z.boolean().optional().describe('Whether this is an all-day event'),
+  // Deprecated fields (kept for backward compatibility)
+  scheduledOn: z.string().date().optional().describe('Scheduled date for the task (YYYY-MM-DD) [DEPRECATED: use scheduledStart]'),
+  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').optional().describe('Start time (HH:MM) [DEPRECATED: use scheduledStart]'),
+  endDate: z.string().date().optional().describe('End date for the task (YYYY-MM-DD) [DEPRECATED: use scheduledEnd]'),
+  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').optional().describe('End time (HH:MM) [DEPRECATED: use scheduledEnd]'),
   duration: z.number().int().positive().optional().describe('Duration in minutes'),
 });
 
@@ -30,10 +40,18 @@ export const UpdateTaskRequestSchema = z.object({
   title: z.string().min(1, 'Task title cannot be empty').optional().describe('Updated task title'),
   bodyMd: z.string().optional().describe('Updated task description in Markdown format'),
   status: TaskStatusSchema.optional().describe('Updated task status'),
-  scheduledOn: z.string().date().nullish().describe('Updated scheduled date (YYYY-MM-DD, null to clear)'),
-  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').nullish().describe('Updated start time (HH:MM, null to clear)'),
-  endDate: z.string().date().nullish().describe('Updated end date (YYYY-MM-DD, null to clear)'),
-  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').nullish().describe('Updated end time (HH:MM, null to clear)'),
+  // New scheduling fields (ISO 8601 datetime)
+  scheduledStart: z.string().regex(iso8601DatetimeRegex, 'Invalid datetime format (YYYY-MM-DDTHH:MM:SS)').nullish().describe('Updated scheduled start datetime (null to clear)'),
+  scheduledEnd: z.string().regex(iso8601DatetimeRegex, 'Invalid datetime format (YYYY-MM-DDTHH:MM:SS)').nullish().describe('Updated scheduled end datetime (null to clear)'),
+  isAllDay: z.boolean().optional().describe('Updated all-day event flag'),
+  // New execution fields (for manual override)
+  actualStart: z.string().regex(iso8601DatetimeRegex, 'Invalid datetime format (YYYY-MM-DDTHH:MM:SS)').nullish().describe('Actual start datetime (null to clear)'),
+  actualEnd: z.string().regex(iso8601DatetimeRegex, 'Invalid datetime format (YYYY-MM-DDTHH:MM:SS)').nullish().describe('Actual end datetime (null to clear)'),
+  // Deprecated fields (kept for backward compatibility)
+  scheduledOn: z.string().date().nullish().describe('Updated scheduled date (YYYY-MM-DD, null to clear) [DEPRECATED]'),
+  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').nullish().describe('Updated start time (HH:MM, null to clear) [DEPRECATED]'),
+  endDate: z.string().date().nullish().describe('Updated end date (YYYY-MM-DD, null to clear) [DEPRECATED]'),
+  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').nullish().describe('Updated end time (HH:MM, null to clear) [DEPRECATED]'),
   duration: z.number().int().positive().nullish().describe('Updated duration in minutes (null to clear)'),
   addLabels: z.array(z.string()).optional(),
   removeLabels: z.array(z.string()).optional(),
@@ -51,10 +69,18 @@ export const TaskSchema = z.object({
   title: z.string().describe('Task title'),
   bodyMd: z.string().describe('Task description in Markdown format'),
   status: TaskStatusSchema.describe('Current task status'),
-  scheduledOn: z.string().date().nullable().describe('Scheduled date for the task (YYYY-MM-DD, null if not scheduled)'),
-  startTime: z.string().nullable().describe('Start time (HH:MM, null if not set)'),
-  endDate: z.string().date().nullable().describe('End date for the task (YYYY-MM-DD, null if not scheduled)'),
-  endTime: z.string().nullable().describe('End time (HH:MM, null if not set)'),
+  // New scheduling fields (ISO 8601 datetime)
+  scheduledStart: z.string().nullable().describe('Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)'),
+  scheduledEnd: z.string().nullable().describe('Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)'),
+  isAllDay: z.boolean().describe('Whether this is an all-day event'),
+  // New execution fields
+  actualStart: z.string().nullable().describe('Actual start datetime (ISO 8601, null if not started)'),
+  actualEnd: z.string().nullable().describe('Actual end datetime (ISO 8601, null if not completed)'),
+  // Deprecated fields (kept for backward compatibility)
+  scheduledOn: z.string().date().nullable().describe('Scheduled date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]'),
+  startTime: z.string().nullable().describe('Start time (HH:MM, null if not set) [DEPRECATED]'),
+  endDate: z.string().date().nullable().describe('End date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]'),
+  endTime: z.string().nullable().describe('End time (HH:MM, null if not set) [DEPRECATED]'),
   duration: z.number().int().nullable().describe('Duration in minutes (null if not set)'),
   meta: z.record(z.any()).describe('Metadata object'),
   isBookmarked: z.boolean().describe('Whether the task is bookmarked'),

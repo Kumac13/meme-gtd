@@ -98,12 +98,18 @@ stateDiagram-v2
 
 - **役割**: Inbox 以降のアクション管理。Captured から昇格したメモ、または直接定義された作業項目を統一的に扱う。
 - **主要データ**: `issues.type = task`、`title` 必須、`status` は `open`, `next`, `waiting`, `scheduled`, `done`, `canceled` から選択。
-  - **スケジュール管理**:
+  - **スケジュール管理** (新形式 - ISO 8601):
+    - `scheduled_start` (YYYY-MM-DDTHH:MM:SS): 予定開始日時
+    - `scheduled_end` (YYYY-MM-DDTHH:MM:SS): 予定終了日時
+    - `is_all_day` (BOOLEAN): 終日イベントかどうか
+    - `actual_start` (YYYY-MM-DDTHH:MM:SS): 実際の開始日時（手動入力または自動記録）
+    - `actual_end` (YYYY-MM-DDTHH:MM:SS): 実際の終了日時（手動入力または自動記録）
+  - **スケジュール管理** (旧形式 - 非推奨、後方互換性のため保持):
     - `scheduled_on` (YYYY-MM-DD): タスクの開始日
-    - `end_date` (YYYY-MM-DD): タスクの終了日（未指定時は `scheduled_on` と同じ）
-    - `start_time` (HH:MM): 開始時刻（オプション）
-    - `end_time` (HH:MM): 終了時刻（オプション、`start_time` + `duration` から自動計算可能）
-    - `duration` (INTEGER): 所要時間（分）（オプション）
+    - `end_date` (YYYY-MM-DD): タスクの終了日
+    - `start_time` (HH:MM): 開始時刻
+    - `end_time` (HH:MM): 終了時刻
+    - `duration` (INTEGER): 所要時間（分）
 - **機能要件**:
   - タスクの生成（メモ昇格または直接作成）。生成時は Inbox（初期 `status=open`）に配置。
   - タスク一覧・フィルタリング（ステータス、ラベル、プロジェクト、検索語など）。
@@ -111,6 +117,15 @@ stateDiagram-v2
   - 状態遷移（close/cancel/reopen 等）と履歴の記録。
 - **制約**: 型検証により `memo` ID への誤操作を防止。論理削除を採用。
 - **I/O チャネル**: CLI・API・外部クライアントが共通スキーマで操作する。具体的な操作手順は各インターフェイス仕様に委譲する。
+- **カレンダー表示ルール**:
+  - **表示優先度**: 予定時間（scheduled）を実行結果時間（actual）より優先して表示する
+    - `scheduled_start` がある場合 → 予定時間で表示
+    - `scheduled_start` がなく `actual_start`/`actual_end` がある場合 → 実績時間で表示
+    - どちらもない場合 → カレンダーに表示しない
+  - **終了時間のフォールバック**: `scheduled_end` がない場合、`actual_end` があれば終了時間として使用
+  - **終日イベント**: `is_all_day = true` の場合、PlainDate として表示（時刻なし）
+  - **進行中タスク**: `actual_start` のみがあり `actual_end` がないタスクはカレンダーに表示しない
+  - **完了タスクの表示**: 完了タスクも予定時間で表示される（実際の終了時間が異なっていても位置は予定時間ベース）
 
 ### 4.3 ラベル（Label）
 
@@ -137,7 +152,9 @@ stateDiagram-v2
 - ローカルモードでは SQLite ファイルの所在やワークスペースごとの設定を保持する。
 - 設定値は `~/.config/mgtd/context.json` などのコンフィグに記録し、インターフェイス層が起動時に読み込む。
 - 操作用のコマンド/API 詳細は各インターフェイス仕様で定義する。
-- 初回セットアップ時は `mgtd init` で DB と設定ファイルを生成し、既存環境に対しては `--force` で再初期化できる（バックアップは利用者責任）。
+- 初回セットアップ時は `mgtd init` で DB と設定ファイルを生成する。
+- 既存 DB に新しいマイグレーションを適用するには `mgtd db migrate` を使用する（自動バックアップ付き）。
+- `mgtd init --force` は DB を削除して再作成するため、既存データを保持したい場合は `mgtd db migrate` を推奨。
 - **context.json スキーマの詳細**:
   - 例:
     ```json
@@ -177,7 +194,10 @@ stateDiagram-v2
 
 - **共通スキーマ**: ローカル DB とリモート API は同じデータ構造を維持する。
 - **テーブル**:
-  - `issues`: `id`, `type`, `title`, `body_md`, `status`, `scheduled_on`, `meta`, `created_at`, `updated_at`, `is_bookmarked`, `is_deleted`
+  - `issues`:
+    - 基本: `id`, `type`, `title`, `body_md`, `status`, `meta`, `created_at`, `updated_at`, `is_bookmarked`, `is_deleted`
+    - スケジュール (新形式): `scheduled_start`, `scheduled_end`, `is_all_day`, `actual_start`, `actual_end`, `notify_before_minutes`
+    - スケジュール (旧形式/非推奨): `scheduled_on`, `start_time`, `end_date`, `end_time`, `duration`
   - `labels`, `issue_labels`, `comments`, `comment_revisions`, `links`, `projects`, `project_items`
 - **ID ルール**:
   - すべてのエンティティで単一連番 ID を採用。CLI は `memo` / `task` で型チェックを実施。

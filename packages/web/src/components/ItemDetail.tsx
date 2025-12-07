@@ -32,8 +32,19 @@ export interface BaseItem {
 
 export interface Task extends BaseItem {
   status: string | null;
+  // New scheduling fields (ISO 8601 datetime)
+  scheduledStart: string | null;
+  scheduledEnd: string | null;
+  isAllDay: boolean;
+  // Execution fields
+  actualStart: string | null;
+  actualEnd: string | null;
+  // Deprecated fields (kept for backward compatibility)
   scheduledOn: string | null;
+  startTime: string | null;
   endDate: string | null;
+  endTime: string | null;
+  duration: number | null;
 }
 
 export type Item = BaseItem | Task;
@@ -170,13 +181,18 @@ export default function ItemDetail({
           <ProjectsSection itemId={item.id} itemType={itemType} />
 
           {/* Schedule Section */}
-          {itemType === 'task' && 'scheduledOn' in item && (
+          {itemType === 'task' && 'scheduledStart' in item && (
             <ScheduleSection
-              scheduledOn={item.scheduledOn}
-              startTime={(item as any).startTime}
-              endDate={item.endDate}
-              endTime={(item as any).endTime}
-              duration={(item as any).duration}
+              scheduledStart={(item as Task).scheduledStart}
+              scheduledEnd={(item as Task).scheduledEnd}
+              isAllDay={(item as Task).isAllDay}
+              actualStart={(item as Task).actualStart}
+              actualEnd={(item as Task).actualEnd}
+              scheduledOn={(item as Task).scheduledOn}
+              startTime={(item as Task).startTime}
+              endDate={(item as Task).endDate}
+              endTime={(item as Task).endTime}
+              duration={(item as Task).duration}
               onScheduleChange={async (updates) => {
                 if (onUpdate) {
                   const updatedItem = await TasksService.updateTask(String(item.id), updates);

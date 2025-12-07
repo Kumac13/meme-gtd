@@ -28,19 +28,31 @@ export class TasksService {
              */
             status?: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
             /**
-             * Scheduled date for the task (YYYY-MM-DD)
+             * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS)
+             */
+            scheduledStart?: string;
+            /**
+             * Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS)
+             */
+            scheduledEnd?: string;
+            /**
+             * Whether this is an all-day event
+             */
+            isAllDay?: boolean;
+            /**
+             * Scheduled date for the task (YYYY-MM-DD) [DEPRECATED: use scheduledStart]
              */
             scheduledOn?: string;
             /**
-             * Start time (HH:MM)
+             * Start time (HH:MM) [DEPRECATED: use scheduledStart]
              */
             startTime?: string;
             /**
-             * End date for the task (YYYY-MM-DD)
+             * End date for the task (YYYY-MM-DD) [DEPRECATED: use scheduledEnd]
              */
             endDate?: string;
             /**
-             * End time (HH:MM)
+             * End time (HH:MM) [DEPRECATED: use scheduledEnd]
              */
             endTime?: string;
             /**
@@ -70,19 +82,39 @@ export class TasksService {
          */
         status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
-         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+         * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledStart: string | null;
+        /**
+         * Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledEnd: string | null;
+        /**
+         * Whether this is an all-day event
+         */
+        isAllDay: boolean;
+        /**
+         * Actual start datetime (ISO 8601, null if not started)
+         */
+        actualStart: string | null;
+        /**
+         * Actual end datetime (ISO 8601, null if not completed)
+         */
+        actualEnd: string | null;
+        /**
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         scheduledOn: string | null;
         /**
-         * Start time (HH:MM, null if not set)
+         * Start time (HH:MM, null if not set) [DEPRECATED]
          */
         startTime: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         * End date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         endDate: string | null;
         /**
-         * End time (HH:MM, null if not set)
+         * End time (HH:MM, null if not set) [DEPRECATED]
          */
         endTime: string | null;
         /**
@@ -165,19 +197,39 @@ export class TasksService {
          */
         status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
-         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+         * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledStart: string | null;
+        /**
+         * Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledEnd: string | null;
+        /**
+         * Whether this is an all-day event
+         */
+        isAllDay: boolean;
+        /**
+         * Actual start datetime (ISO 8601, null if not started)
+         */
+        actualStart: string | null;
+        /**
+         * Actual end datetime (ISO 8601, null if not completed)
+         */
+        actualEnd: string | null;
+        /**
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         scheduledOn: string | null;
         /**
-         * Start time (HH:MM, null if not set)
+         * Start time (HH:MM, null if not set) [DEPRECATED]
          */
         startTime: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         * End date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         endDate: string | null;
         /**
-         * End time (HH:MM, null if not set)
+         * End time (HH:MM, null if not set) [DEPRECATED]
          */
         endTime: string | null;
         /**
@@ -264,19 +316,39 @@ export class TasksService {
          */
         status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
-         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+         * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledStart: string | null;
+        /**
+         * Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledEnd: string | null;
+        /**
+         * Whether this is an all-day event
+         */
+        isAllDay: boolean;
+        /**
+         * Actual start datetime (ISO 8601, null if not started)
+         */
+        actualStart: string | null;
+        /**
+         * Actual end datetime (ISO 8601, null if not completed)
+         */
+        actualEnd: string | null;
+        /**
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         scheduledOn: string | null;
         /**
-         * Start time (HH:MM, null if not set)
+         * Start time (HH:MM, null if not set) [DEPRECATED]
          */
         startTime: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         * End date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         endDate: string | null;
         /**
-         * End time (HH:MM, null if not set)
+         * End time (HH:MM, null if not set) [DEPRECATED]
          */
         endTime: string | null;
         /**
@@ -347,19 +419,39 @@ export class TasksService {
              */
             status?: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
             /**
-             * Updated scheduled date (YYYY-MM-DD, null to clear)
+             * Updated scheduled start datetime (null to clear)
+             */
+            scheduledStart?: string | null;
+            /**
+             * Updated scheduled end datetime (null to clear)
+             */
+            scheduledEnd?: string | null;
+            /**
+             * Updated all-day event flag
+             */
+            isAllDay?: boolean;
+            /**
+             * Actual start datetime (null to clear)
+             */
+            actualStart?: string | null;
+            /**
+             * Actual end datetime (null to clear)
+             */
+            actualEnd?: string | null;
+            /**
+             * Updated scheduled date (YYYY-MM-DD, null to clear) [DEPRECATED]
              */
             scheduledOn?: string | null;
             /**
-             * Updated start time (HH:MM, null to clear)
+             * Updated start time (HH:MM, null to clear) [DEPRECATED]
              */
             startTime?: string | null;
             /**
-             * Updated end date (YYYY-MM-DD, null to clear)
+             * Updated end date (YYYY-MM-DD, null to clear) [DEPRECATED]
              */
             endDate?: string | null;
             /**
-             * Updated end time (HH:MM, null to clear)
+             * Updated end time (HH:MM, null to clear) [DEPRECATED]
              */
             endTime?: string | null;
             /**
@@ -392,19 +484,39 @@ export class TasksService {
          */
         status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
-         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+         * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledStart: string | null;
+        /**
+         * Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledEnd: string | null;
+        /**
+         * Whether this is an all-day event
+         */
+        isAllDay: boolean;
+        /**
+         * Actual start datetime (ISO 8601, null if not started)
+         */
+        actualStart: string | null;
+        /**
+         * Actual end datetime (ISO 8601, null if not completed)
+         */
+        actualEnd: string | null;
+        /**
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         scheduledOn: string | null;
         /**
-         * Start time (HH:MM, null if not set)
+         * Start time (HH:MM, null if not set) [DEPRECATED]
          */
         startTime: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         * End date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         endDate: string | null;
         /**
-         * End time (HH:MM, null if not set)
+         * End time (HH:MM, null if not set) [DEPRECATED]
          */
         endTime: string | null;
         /**
@@ -502,19 +614,39 @@ export class TasksService {
          */
         status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
-         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+         * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledStart: string | null;
+        /**
+         * Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledEnd: string | null;
+        /**
+         * Whether this is an all-day event
+         */
+        isAllDay: boolean;
+        /**
+         * Actual start datetime (ISO 8601, null if not started)
+         */
+        actualStart: string | null;
+        /**
+         * Actual end datetime (ISO 8601, null if not completed)
+         */
+        actualEnd: string | null;
+        /**
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         scheduledOn: string | null;
         /**
-         * Start time (HH:MM, null if not set)
+         * Start time (HH:MM, null if not set) [DEPRECATED]
          */
         startTime: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         * End date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         endDate: string | null;
         /**
-         * End time (HH:MM, null if not set)
+         * End time (HH:MM, null if not set) [DEPRECATED]
          */
         endTime: string | null;
         /**
@@ -588,19 +720,39 @@ export class TasksService {
          */
         status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
-         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+         * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledStart: string | null;
+        /**
+         * Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledEnd: string | null;
+        /**
+         * Whether this is an all-day event
+         */
+        isAllDay: boolean;
+        /**
+         * Actual start datetime (ISO 8601, null if not started)
+         */
+        actualStart: string | null;
+        /**
+         * Actual end datetime (ISO 8601, null if not completed)
+         */
+        actualEnd: string | null;
+        /**
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         scheduledOn: string | null;
         /**
-         * Start time (HH:MM, null if not set)
+         * Start time (HH:MM, null if not set) [DEPRECATED]
          */
         startTime: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         * End date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         endDate: string | null;
         /**
-         * End time (HH:MM, null if not set)
+         * End time (HH:MM, null if not set) [DEPRECATED]
          */
         endTime: string | null;
         /**
@@ -674,19 +826,39 @@ export class TasksService {
          */
         status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
-         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+         * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledStart: string | null;
+        /**
+         * Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledEnd: string | null;
+        /**
+         * Whether this is an all-day event
+         */
+        isAllDay: boolean;
+        /**
+         * Actual start datetime (ISO 8601, null if not started)
+         */
+        actualStart: string | null;
+        /**
+         * Actual end datetime (ISO 8601, null if not completed)
+         */
+        actualEnd: string | null;
+        /**
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         scheduledOn: string | null;
         /**
-         * Start time (HH:MM, null if not set)
+         * Start time (HH:MM, null if not set) [DEPRECATED]
          */
         startTime: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         * End date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         endDate: string | null;
         /**
-         * End time (HH:MM, null if not set)
+         * End time (HH:MM, null if not set) [DEPRECATED]
          */
         endTime: string | null;
         /**
@@ -760,19 +932,39 @@ export class TasksService {
          */
         status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
-         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+         * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledStart: string | null;
+        /**
+         * Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledEnd: string | null;
+        /**
+         * Whether this is an all-day event
+         */
+        isAllDay: boolean;
+        /**
+         * Actual start datetime (ISO 8601, null if not started)
+         */
+        actualStart: string | null;
+        /**
+         * Actual end datetime (ISO 8601, null if not completed)
+         */
+        actualEnd: string | null;
+        /**
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         scheduledOn: string | null;
         /**
-         * Start time (HH:MM, null if not set)
+         * Start time (HH:MM, null if not set) [DEPRECATED]
          */
         startTime: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         * End date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         endDate: string | null;
         /**
-         * End time (HH:MM, null if not set)
+         * End time (HH:MM, null if not set) [DEPRECATED]
          */
         endTime: string | null;
         /**
@@ -846,19 +1038,39 @@ export class TasksService {
          */
         status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
-         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+         * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledStart: string | null;
+        /**
+         * Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+         */
+        scheduledEnd: string | null;
+        /**
+         * Whether this is an all-day event
+         */
+        isAllDay: boolean;
+        /**
+         * Actual start datetime (ISO 8601, null if not started)
+         */
+        actualStart: string | null;
+        /**
+         * Actual end datetime (ISO 8601, null if not completed)
+         */
+        actualEnd: string | null;
+        /**
+         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         scheduledOn: string | null;
         /**
-         * Start time (HH:MM, null if not set)
+         * Start time (HH:MM, null if not set) [DEPRECATED]
          */
         startTime: string | null;
         /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled)
+         * End date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
          */
         endDate: string | null;
         /**
-         * End time (HH:MM, null if not set)
+         * End time (HH:MM, null if not set) [DEPRECATED]
          */
         endTime: string | null;
         /**
@@ -947,19 +1159,39 @@ export class TasksService {
              */
             status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
             /**
-             * Scheduled date for the task (YYYY-MM-DD, null if not scheduled)
+             * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+             */
+            scheduledStart: string | null;
+            /**
+             * Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+             */
+            scheduledEnd: string | null;
+            /**
+             * Whether this is an all-day event
+             */
+            isAllDay: boolean;
+            /**
+             * Actual start datetime (ISO 8601, null if not started)
+             */
+            actualStart: string | null;
+            /**
+             * Actual end datetime (ISO 8601, null if not completed)
+             */
+            actualEnd: string | null;
+            /**
+             * Scheduled date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
              */
             scheduledOn: string | null;
             /**
-             * Start time (HH:MM, null if not set)
+             * Start time (HH:MM, null if not set) [DEPRECATED]
              */
             startTime: string | null;
             /**
-             * End date for the task (YYYY-MM-DD, null if not scheduled)
+             * End date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
              */
             endDate: string | null;
             /**
-             * End time (HH:MM, null if not set)
+             * End time (HH:MM, null if not set) [DEPRECATED]
              */
             endTime: string | null;
             /**

@@ -14,7 +14,21 @@ export async function createTaskHandler(
   request: FastifyRequest<{ Body: CreateTaskRequest }>,
   reply: FastifyReply
 ) {
-  const { title, bodyMd, status, scheduledOn } = request.body;
+  const {
+    title,
+    bodyMd,
+    status,
+    // New scheduling fields
+    scheduledStart,
+    scheduledEnd,
+    isAllDay,
+    // Deprecated fields
+    scheduledOn,
+    startTime,
+    endDate,
+    endTime,
+    duration
+  } = request.body;
   const taskService = new TaskService({ db: request.server.db });
 
   try {
@@ -22,7 +36,16 @@ export async function createTaskHandler(
       title,
       bodyMd: bodyMd ?? '', // Default to empty string if undefined
       status,
-      scheduledOn
+      // New scheduling fields
+      scheduledStart,
+      scheduledEnd,
+      isAllDay,
+      // Deprecated fields
+      scheduledOn,
+      startTime,
+      endDate,
+      endTime,
+      duration
     });
     const labels = taskService.listLabels(task.id);
     return reply.status(201).send({ ...task, labels });

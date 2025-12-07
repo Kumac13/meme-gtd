@@ -1,12 +1,26 @@
 import { useState, useEffect, useRef } from 'react';
 
 interface ScheduleSectionProps {
+    // New scheduling fields (ISO 8601 datetime: YYYY-MM-DDTHH:MM:SS)
+    scheduledStart: string | null;
+    scheduledEnd: string | null;
+    isAllDay: boolean;
+    // Execution fields
+    actualStart: string | null;
+    actualEnd: string | null;
+    // Deprecated fields (kept for backward compatibility display)
     scheduledOn: string | null;
     startTime: string | null;
     endDate: string | null;
     endTime: string | null;
     duration: number | null;
     onScheduleChange: (updates: {
+        scheduledStart?: string | null;
+        scheduledEnd?: string | null;
+        isAllDay?: boolean;
+        actualStart?: string | null;
+        actualEnd?: string | null;
+        // Deprecated fields
         scheduledOn?: string | null;
         startTime?: string | null;
         endDate?: string | null;
@@ -15,27 +29,69 @@ interface ScheduleSectionProps {
     }) => Promise<void>;
 }
 
-export function ScheduleSection({ scheduledOn, startTime, endDate, endTime, duration, onScheduleChange }: ScheduleSectionProps) {
+// Helper: Convert ISO datetime to datetime-local input value
+function toDatetimeLocal(isoDatetime: string | null): string {
+    if (!isoDatetime) return '';
+    // ISO datetime is YYYY-MM-DDTHH:MM:SS, datetime-local wants YYYY-MM-DDTHH:MM
+    return isoDatetime.slice(0, 16);
+}
+
+// Helper: Convert datetime-local input to ISO datetime
+function fromDatetimeLocal(datetimeLocal: string): string {
+    if (!datetimeLocal) return '';
+    // datetime-local is YYYY-MM-DDTHH:MM, we need YYYY-MM-DDTHH:MM:SS
+    return datetimeLocal + ':00';
+}
+
+// Helper: Convert date input to ISO datetime (all-day start)
+function fromDateToStartDatetime(date: string): string {
+    if (!date) return '';
+    return date + 'T00:00:00';
+}
+
+// Helper: Convert date input to ISO datetime (all-day end)
+function fromDateToEndDatetime(date: string): string {
+    if (!date) return '';
+    return date + 'T23:59:59';
+}
+
+export function ScheduleSection({
+    scheduledStart,
+    scheduledEnd,
+    isAllDay,
+    actualStart,
+    actualEnd,
+    // Deprecated fields - kept in interface for API compatibility but not displayed
+    scheduledOn: _scheduledOn,
+    startTime: _startTime,
+    endDate: _endDate,
+    endTime: _endTime,
+    duration: _duration,
+    onScheduleChange
+}: ScheduleSectionProps) {
+    // Suppress unused variable warnings for deprecated fields
+    void _scheduledOn; void _startTime; void _endDate; void _endTime; void _duration;
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Local state for form inputs
-    const [formDate, setFormDate] = useState(scheduledOn || '');
-    const [formEndDate, setFormEndDate] = useState(endDate || '');
-    const [formStart, setFormStart] = useState(startTime || '');
-    const [formEnd, setFormEnd] = useState(endTime || '');
-    const [formDuration, setFormDuration] = useState(duration?.toString() || '');
+    const [formAllDay, setFormAllDay] = useState(isAllDay);
+    const [formStartDatetime, setFormStartDatetime] = useState(toDatetimeLocal(scheduledStart));
+    const [formEndDatetime, setFormEndDatetime] = useState(toDatetimeLocal(scheduledEnd));
+    // Actual times (for manual override)
+    const [formActualStart, setFormActualStart] = useState(toDatetimeLocal(actualStart));
+    const [formActualEnd, setFormActualEnd] = useState(toDatetimeLocal(actualEnd));
 
     // Sync local state when props change
     useEffect(() => {
-        setFormDate(scheduledOn || '');
-        setFormEndDate(endDate || '');
-        setFormStart(startTime || '');
-        setFormEnd(endTime || '');
-        setFormDuration(duration?.toString() || '');
-    }, [scheduledOn, startTime, endDate, endTime, duration]);
+        setFormAllDay(isAllDay);
+        setFormStartDatetime(toDatetimeLocal(scheduledStart));
+        setFormEndDatetime(toDatetimeLocal(scheduledEnd));
+        setFormActualStart(toDatetimeLocal(actualStart));
+        setFormActualEnd(toDatetimeLocal(actualEnd));
+    }, [scheduledStart, scheduledEnd, isAllDay, actualStart, actualEnd]);
 
     // Close when clicking outside
     useEffect(() => {
@@ -58,13 +114,50 @@ export function ScheduleSection({ scheduledOn, startTime, endDate, endTime, dura
         try {
             setLoading(true);
             setError(null);
-            await onScheduleChange({
-                scheduledOn: formDate || null,
-                startTime: formStart || null,
-                endDate: formEndDate || null,
-                endTime: formEnd || null,
-                duration: formDuration ? parseInt(formDuration, 10) : null
-            });
+
+            let newScheduledStart: string | null = null;
+            let newScheduledEnd: string | null = null;
+
+            if (formStartDatetime) {
+                if (formAllDay) {
+                    // All-day: normalize to day boundaries
+                    const startDate = formStartDatetime.split('T')[0];
+                    newScheduledStart = fromDateToStartDatetime(startDate);
+                } else {
+                    newScheduledStart = fromDatetimeLocal(formStartDatetime);
+                }
+            }
+            if (formEndDatetime) {
+                if (formAllDay) {
+                    // All-day: normalize to day boundaries
+                    const endDate = formEndDatetime.split('T')[0];
+                    newScheduledEnd = fromDateToEndDatetime(endDate);
+                } else {
+                    newScheduledEnd = fromDatetimeLocal(formEndDatetime);
+                }
+            } else if (formAllDay && formStartDatetime) {
+                // All-day with no end: use start date
+                const startDate = formStartDatetime.split('T')[0];
+                newScheduledEnd = fromDateToEndDatetime(startDate);
+            }
+
+            const updates: Parameters<typeof onScheduleChange>[0] = {
+                scheduledStart: newScheduledStart,
+                scheduledEnd: newScheduledEnd,
+                isAllDay: formAllDay,
+                // Clear deprecated fields when using new fields
+                scheduledOn: null,
+                startTime: null,
+                endDate: null,
+                endTime: null,
+                duration: null,
+            };
+
+            // Always include actual times
+            updates.actualStart = formActualStart ? fromDatetimeLocal(formActualStart) : null;
+            updates.actualEnd = formActualEnd ? fromDatetimeLocal(formActualEnd) : null;
+
+            await onScheduleChange(updates);
             setIsEditing(false);
         } catch (err) {
             console.error('Failed to update schedule:', err);
@@ -79,6 +172,12 @@ export function ScheduleSection({ scheduledOn, startTime, endDate, endTime, dura
             setLoading(true);
             setError(null);
             await onScheduleChange({
+                scheduledStart: null,
+                scheduledEnd: null,
+                isAllDay: false,
+                actualStart: null,
+                actualEnd: null,
+                // Also clear deprecated fields
                 scheduledOn: null,
                 startTime: null,
                 endDate: null,
@@ -95,19 +194,45 @@ export function ScheduleSection({ scheduledOn, startTime, endDate, endTime, dura
     };
 
     const formatDisplay = () => {
-        if (!scheduledOn) return 'No schedule';
-        let display = scheduledOn;
-        if (endDate && endDate !== scheduledOn) {
-            display += ` - ${endDate}`;
+        // Only use new scheduling fields (scheduledStart/scheduledEnd)
+        // Deprecated fields (scheduledOn, startTime, etc.) are NOT displayed
+        if (scheduledStart) {
+            const startDate = scheduledStart.split('T')[0];
+            const startTimeStr = scheduledStart.split('T')[1]?.slice(0, 5);
+            const endDateStr = scheduledEnd?.split('T')[0];
+            const endTimeStr = scheduledEnd?.split('T')[1]?.slice(0, 5);
+
+            if (isAllDay) {
+                if (endDateStr && endDateStr !== startDate) {
+                    return `${startDate} - ${endDateStr} (All day)`;
+                }
+                return `${startDate} (All day)`;
+            } else {
+                let display = `${startDate} ${startTimeStr}`;
+                if (endDateStr && endTimeStr) {
+                    if (endDateStr === startDate) {
+                        display += ` - ${endTimeStr}`;
+                    } else {
+                        display += ` - ${endDateStr} ${endTimeStr}`;
+                    }
+                }
+                return display;
+            }
         }
-        if (startTime) {
-            display += ` ${startTime}`;
-            if (endTime) display += ` - ${endTime}`;
+
+        return 'No schedule';
+    };
+
+    const formatActualDisplay = () => {
+        if (!actualStart && !actualEnd) return null;
+        const startStr = actualStart ? `${actualStart.split('T')[0]} ${actualStart.split('T')[1]?.slice(0, 5)}` : '';
+        const endStr = actualEnd ? `${actualEnd.split('T')[0]} ${actualEnd.split('T')[1]?.slice(0, 5)}` : '';
+        if (startStr && endStr) {
+            return `Actual: ${startStr} - ${endStr}`;
         }
-        if (duration) {
-            display += ` (${duration} min)`;
-        }
-        return display;
+        if (startStr) return `Started: ${startStr}`;
+        if (endStr) return `Ended: ${endStr}`;
+        return null;
     };
 
     return (
@@ -123,63 +248,80 @@ export function ScheduleSection({ scheduledOn, startTime, endDate, endTime, dura
 
             {isEditing ? (
                 <div className="flex flex-col space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
-                        <div className="min-w-0">
-                            <label className="block text-xs text-gray-500 mb-1">Start Date</label>
-                            <input
-                                type="date"
-                                value={formDate}
-                                onChange={(e) => setFormDate(e.target.value)}
-                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
-                                style={{ WebkitAppearance: 'none', appearance: 'none' }}
-                                autoFocus
-                            />
-                        </div>
-                        <div className="min-w-0">
-                            <label className="block text-xs text-gray-500 mb-1">End Date</label>
-                            <input
-                                type="date"
-                                value={formEndDate}
-                                onChange={(e) => setFormEndDate(e.target.value)}
-                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
-                                style={{ WebkitAppearance: 'none', appearance: 'none' }}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                        <div className="min-w-0">
-                            <label className="block text-xs text-gray-500 mb-1">Start Time</label>
-                            <input
-                                type="time"
-                                value={formStart}
-                                onChange={(e) => setFormStart(e.target.value)}
-                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
-                                style={{ WebkitAppearance: 'none', appearance: 'none' }}
-                            />
-                        </div>
-                        <div className="min-w-0">
-                            <label className="block text-xs text-gray-500 mb-1">End Time</label>
-                            <input
-                                type="time"
-                                value={formEnd}
-                                onChange={(e) => setFormEnd(e.target.value)}
-                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
-                                style={{ WebkitAppearance: 'none', appearance: 'none' }}
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs text-gray-500 mb-1">Duration (min)</label>
+                    {/* All Day Toggle */}
+                    <div className="flex items-center">
                         <input
-                            type="number"
-                            value={formDuration}
-                            onChange={(e) => setFormDuration(e.target.value)}
-                            placeholder="e.g. 60"
-                            className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
-                            style={{ WebkitAppearance: 'none', appearance: 'none' }}
+                            type="checkbox"
+                            id="all-day-toggle"
+                            checked={formAllDay}
+                            onChange={(e) => setFormAllDay(e.target.checked)}
+                            className="h-4 w-4 text-github-green-600 focus:ring-github-green-500 border-gray-300 rounded"
                         />
+                        <label htmlFor="all-day-toggle" className="ml-2 text-sm text-gray-700">
+                            All day
+                        </label>
+                    </div>
+
+                    {/* Scheduled times - always datetime-local */}
+                    <div className="grid grid-cols-1 gap-2">
+                        <div className="min-w-0">
+                            <label className="block text-xs text-gray-500 mb-1">Start</label>
+                            <input
+                                type="datetime-local"
+                                name="schedule-section-start-dt"
+                                value={formStartDatetime}
+                                onChange={(e) => setFormStartDatetime(e.target.value)}
+                                autoComplete="off"
+                                data-form-type="other"
+                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
+                                style={{ WebkitAppearance: 'none', appearance: 'none' }}
+                            />
+                        </div>
+                        <div className="min-w-0">
+                            <label className="block text-xs text-gray-500 mb-1">End</label>
+                            <input
+                                type="datetime-local"
+                                name="schedule-section-end-dt"
+                                value={formEndDatetime}
+                                onChange={(e) => setFormEndDatetime(e.target.value)}
+                                autoComplete="off"
+                                data-form-type="other"
+                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
+                                style={{ WebkitAppearance: 'none', appearance: 'none' }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Actual Times Section - always visible */}
+                    <div className="border-t border-gray-200 pt-3">
+                        <div className="grid grid-cols-1 gap-2">
+                            <div className="min-w-0">
+                                <label className="block text-xs text-gray-500 mb-1">Actual Start</label>
+                                <input
+                                    type="datetime-local"
+                                    name="schedule-section-actual-start-dt"
+                                    value={formActualStart}
+                                    onChange={(e) => setFormActualStart(e.target.value)}
+                                    autoComplete="off"
+                                    data-form-type="other"
+                                    className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
+                                    style={{ WebkitAppearance: 'none', appearance: 'none' }}
+                                />
+                            </div>
+                            <div className="min-w-0">
+                                <label className="block text-xs text-gray-500 mb-1">Actual End</label>
+                                <input
+                                    type="datetime-local"
+                                    name="schedule-section-actual-end-dt"
+                                    value={formActualEnd}
+                                    onChange={(e) => setFormActualEnd(e.target.value)}
+                                    autoComplete="off"
+                                    data-form-type="other"
+                                    className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
+                                    style={{ WebkitAppearance: 'none', appearance: 'none' }}
+                                />
+                            </div>
+                        </div>
                     </div>
 
                     <div className="flex justify-end space-x-2 mt-2">
@@ -209,12 +351,19 @@ export function ScheduleSection({ scheduledOn, startTime, endDate, endTime, dura
             ) : (
                 <div
                     onClick={() => setIsEditing(true)}
-                    className="text-sm text-gray-700 hover:bg-gray-100 p-2 -mx-2 rounded cursor-pointer flex items-center"
+                    className="text-sm text-gray-700 hover:bg-gray-100 p-2 -mx-2 rounded cursor-pointer"
                 >
-                    <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className="ml-2">{formatDisplay()}</span>
+                    <div className="flex items-center">
+                        <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span className="ml-2">{formatDisplay()}</span>
+                    </div>
+                    {formatActualDisplay() && (
+                        <div className="mt-1 ml-6 text-xs text-gray-500">
+                            {formatActualDisplay()}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

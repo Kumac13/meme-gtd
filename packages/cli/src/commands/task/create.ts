@@ -12,12 +12,12 @@ export default class TaskCreate extends Command {
   static description =
     'Create a task record with title and body. Tasks support status tracking (inbox/open/next/waiting/scheduled/someday/done/canceled).';
   static usage = [
-    '<%= command.id %> --title <text> [--body <text> | --body-file <path>] [--status <state>] [--scheduled-on <date>] [--end-date <date>] [--start <time>] [--end <time>] [--duration <minutes>] [--label <name> ...] [--project <id> ...] [--json]'
+    '<%= command.id %> --title <text> [--body <text> | --body-file <path>] [--status <state>] [--scheduled-start <datetime>] [--scheduled-end <datetime>] [--all-day] [--label <name> ...] [--project <id> ...] [--json]'
   ];
   static examples = [
     '$ mgtd task create --title "Buy groceries" --body "Milk, eggs, bread"',
-    '$ mgtd task create --title "Team meeting" --status scheduled --scheduled-on 2025-10-20 --start 14:00 --duration 60',
-    '$ mgtd task create --title "Conference trip" --scheduled-on 2025-11-20 --end-date 2025-11-23',
+    '$ mgtd task create --title "Team meeting" --status scheduled --scheduled-start 2025-10-20T14:00:00 --scheduled-end 2025-10-20T15:00:00',
+    '$ mgtd task create --title "Conference trip" --scheduled-start 2025-11-20T00:00:00 --scheduled-end 2025-11-23T23:59:59 --all-day',
     '$ mgtd task create --title "Fix bug" --body-file issue.md --label urgent --label backend',
     '$ mgtd task create --title "Review PR" --label review --json'
   ];
@@ -48,21 +48,36 @@ export default class TaskCreate extends Command {
       options: ['inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled'],
       default: 'inbox'
     }),
+    // New scheduling fields (ISO 8601 datetime)
+    'scheduled-start': Flags.string({
+      summary: 'Scheduled start datetime (ISO 8601)',
+      description: 'Set scheduled start datetime in YYYY-MM-DDTHH:MM:SS format.'
+    }),
+    'scheduled-end': Flags.string({
+      summary: 'Scheduled end datetime (ISO 8601)',
+      description: 'Set scheduled end datetime in YYYY-MM-DDTHH:MM:SS format.'
+    }),
+    'all-day': Flags.boolean({
+      summary: 'All-day event',
+      description: 'Mark as an all-day event (only date portion of datetime is used).',
+      default: false
+    }),
+    // Deprecated fields (kept for backward compatibility)
     'scheduled-on': Flags.string({
-      summary: 'Scheduled date (ISO 8601)',
-      description: 'Set scheduled date in YYYY-MM-DD format (typically used with --status scheduled).'
+      summary: 'Scheduled date (DEPRECATED)',
+      description: '[DEPRECATED: use --scheduled-start] Set scheduled date in YYYY-MM-DD format.'
     }),
     start: Flags.string({
-      summary: 'Start time (HH:MM)',
-      description: 'Set start time in HH:MM format.'
+      summary: 'Start time (DEPRECATED)',
+      description: '[DEPRECATED: use --scheduled-start] Set start time in HH:MM format.'
     }),
     'end-date': Flags.string({
-      summary: 'End date (YYYY-MM-DD)',
-      description: 'Set end date in YYYY-MM-DD format.'
+      summary: 'End date (DEPRECATED)',
+      description: '[DEPRECATED: use --scheduled-end] Set end date in YYYY-MM-DD format.'
     }),
     end: Flags.string({
-      summary: 'End time (HH:MM)',
-      description: 'Set end time in HH:MM format.'
+      summary: 'End time (DEPRECATED)',
+      description: '[DEPRECATED: use --scheduled-end] Set end time in HH:MM format.'
     }),
     duration: Flags.integer({
       summary: 'Duration (minutes)',
@@ -136,6 +151,11 @@ export default class TaskCreate extends Command {
       title: flags.title,
       bodyMd: body,
       status: flags.status as TaskStatus,
+      // New scheduling fields
+      scheduledStart: flags['scheduled-start'],
+      scheduledEnd: flags['scheduled-end'],
+      isAllDay: flags['all-day'],
+      // Deprecated fields (kept for backward compatibility)
       scheduledOn: flags['scheduled-on'] ?? undefined,
       startTime: flags.start,
       endDate: flags['end-date'],

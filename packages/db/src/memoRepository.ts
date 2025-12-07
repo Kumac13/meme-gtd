@@ -31,6 +31,13 @@ const memoRowToMemo = (row: any): Memo => ({
   title: null,
   bodyMd: row.body_md,
   status: null,
+  // New fields (always null for memos)
+  scheduledStart: null,
+  scheduledEnd: null,
+  isAllDay: false,
+  actualStart: null,
+  actualEnd: null,
+  // Deprecated fields (always null for memos)
   scheduledOn: null,
   startTime: null,
   endDate: null,

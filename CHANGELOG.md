@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.17.0 - 2025-12-07
+
+### New Features
+
+- **Calendar Datetime Separation**: Separate scheduled (planned) times from actual (executed) times.
+  - **Database Migration**: New fields in `issues` table:
+    - `scheduled_start`, `scheduled_end` (ISO 8601 datetime): Planned schedule
+    - `is_all_day` (boolean): All-day event flag
+    - `actual_start`, `actual_end` (ISO 8601 datetime): Actual execution times
+    - `notify_before_minutes` (integer): Future notification support
+  - **Auto-migration**: Existing `scheduled_on`/`start_time` data automatically migrated
+  - **Legacy Support**: Old fields kept for backward compatibility but deprecated
+  - **CLI**: New scheduling options for `task create` and `task edit`
+    - `--scheduled-start`, `--scheduled-end`: Set planned times (ISO 8601)
+    - `--actual-start`, `--actual-end`: Record execution times
+    - `--all-day`, `--no-all-day`: Toggle all-day event
+  - **Web UI**:
+    - TaskForm and ScheduleSection updated for new datetime fields
+    - Calendar displays scheduled time with fallback to actual time
+    - Completed tasks shown at their scheduled position
+  - **Calendar Display Rules**:
+    - Priority: scheduled_start > actual_start
+    - Fallback: If no scheduled_end, use actual_end
+    - All-day events displayed as date range without time
+
+- **Safe Database Migration Command**: `mgtd db migrate` for applying migrations without data loss.
+  - Automatic timestamped backup before migration
+  - Dry-run mode with `--dry-run`
+  - JSON output for scripting with `--json`
+  - Skip backup with `--no-backup`
+  - Idempotent: already applied migrations are skipped
+
+### Bug Fixes
+
+- **iOS Safari datetime input**: Fixed current time auto-fill issue with `autoComplete="off"` and unique input names
+
 ## 0.16.0 - 2025-12-06
 
 ### New Features

@@ -21,11 +21,28 @@ export interface IssueBase extends Timestamped {
   title: string | null;
   bodyMd: string;
   status: TaskStatus | null;
+
+  // New scheduling fields (ISO 8601 datetime: YYYY-MM-DDTHH:MM:SS)
+  scheduledStart: string | null;
+  scheduledEnd: string | null;
+  isAllDay: boolean;
+
+  // New execution fields (auto-set on status change)
+  actualStart: string | null;
+  actualEnd: string | null;
+
+  // Deprecated fields (read-only, for backward compatibility)
+  /** @deprecated Use scheduledStart date portion */
   scheduledOn: string | null;
+  /** @deprecated Use scheduledStart time portion */
   startTime: string | null; // HH:MM
+  /** @deprecated Use scheduledEnd or actualEnd date portion */
   endDate: string | null; // YYYY-MM-DD
+  /** @deprecated Use scheduledEnd or actualEnd time portion */
   endTime: string | null; // HH:MM
+  /** @deprecated Calculate from scheduled times */
   duration: number | null; // minutes
+
   meta: unknown;
   isBookmarked: boolean;
   isDeleted: boolean;
@@ -35,6 +52,13 @@ export interface Memo extends IssueBase {
   type: 'memo';
   title: null;
   status: null;
+  // New fields (always null for memos)
+  scheduledStart: null;
+  scheduledEnd: null;
+  isAllDay: false;
+  actualStart: null;
+  actualEnd: null;
+  // Deprecated fields (always null for memos)
   scheduledOn: null;
   startTime: null;
   endDate: null;

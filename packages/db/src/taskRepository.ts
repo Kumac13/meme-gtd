@@ -5,6 +5,11 @@ export interface CreateTaskInput {
   title: string;
   bodyMd: string;
   status?: TaskStatus;
+  // New scheduling fields (ISO 8601 datetime)
+  scheduledStart?: string;
+  scheduledEnd?: string;
+  isAllDay?: boolean;
+  // Deprecated fields (kept for backward compatibility)
   scheduledOn?: string;
   startTime?: string;
   endDate?: string;
@@ -19,6 +24,14 @@ export interface UpdateTaskInput {
   title?: string;
   bodyMd?: string;
   status?: TaskStatus;
+  // New scheduling fields (ISO 8601 datetime)
+  scheduledStart?: string | null;
+  scheduledEnd?: string | null;
+  isAllDay?: boolean;
+  // New execution fields (ISO 8601 datetime)
+  actualStart?: string | null;
+  actualEnd?: string | null;
+  // Deprecated fields (kept for backward compatibility)
   scheduledOn?: string | null;
   startTime?: string | null;
   endDate?: string | null;
@@ -49,6 +62,13 @@ const taskRowToTask = (row: any): Task => ({
   title: row.title,
   bodyMd: row.body_md,
   status: row.status as TaskStatus,
+  // New fields
+  scheduledStart: row.scheduled_start,
+  scheduledEnd: row.scheduled_end,
+  isAllDay: toBoolean(row.is_all_day ?? 0),
+  actualStart: row.actual_start,
+  actualEnd: row.actual_end,
+  // Deprecated fields (read-only)
   scheduledOn: row.scheduled_on,
   endDate: row.end_date,
   startTime: row.start_time,
@@ -83,13 +103,18 @@ export const createTask = (db: Database.Database, input: CreateTaskInput): Task 
   );
 
   const stmt = db.prepare(
-    `INSERT INTO issues (type, title, body_md, status, scheduled_on, end_date, start_time, end_time, duration, meta, created_at, updated_at, is_bookmarked, is_deleted)
-     VALUES ('task', @title, @body, @status, @scheduledOn, @endDate, @startTime, @endTime, @duration, json('{}'), @createdAt, @createdAt, 0, 0)`
+    `INSERT INTO issues (type, title, body_md, status, scheduled_start, scheduled_end, is_all_day, scheduled_on, end_date, start_time, end_time, duration, meta, created_at, updated_at, is_bookmarked, is_deleted)
+     VALUES ('task', @title, @body, @status, @scheduledStart, @scheduledEnd, @isAllDay, @scheduledOn, @endDate, @startTime, @endTime, @duration, json('{}'), @createdAt, @createdAt, 0, 0)`
   );
   const result = stmt.run({
     title: input.title,
     body: input.bodyMd,
     status,
+    // New fields
+    scheduledStart: input.scheduledStart ?? null,
+    scheduledEnd: input.scheduledEnd ?? null,
+    isAllDay: input.isAllDay ? 1 : 0,
+    // Deprecated fields (kept for backward compatibility)
     scheduledOn: input.scheduledOn ?? null,
     endDate: input.endDate ?? input.scheduledOn ?? null,
     startTime: startTime ?? null,
@@ -289,8 +314,15 @@ export const updateTask = (db: Database.Database, input: UpdateTaskInput): Task 
     input.title === undefined &&
     input.bodyMd === undefined &&
     input.status === undefined &&
+    // New fields
+    input.scheduledStart === undefined &&
+    input.scheduledEnd === undefined &&
+    input.isAllDay === undefined &&
+    input.actualStart === undefined &&
+    input.actualEnd === undefined &&
+    // Deprecated fields
     input.scheduledOn === undefined &&
-    input.endDate === undefined && // Added
+    input.endDate === undefined &&
     input.startTime === undefined &&
     input.endTime === undefined &&
     input.duration === undefined &&
@@ -314,6 +346,33 @@ export const updateTask = (db: Database.Database, input: UpdateTaskInput): Task 
     params.bodyMd = input.bodyMd;
   }
 
+  // New scheduling fields
+  if (input.scheduledStart !== undefined) {
+    updates.push('scheduled_start = @scheduledStart');
+    params.scheduledStart = input.scheduledStart;
+  }
+
+  if (input.scheduledEnd !== undefined) {
+    updates.push('scheduled_end = @scheduledEnd');
+    params.scheduledEnd = input.scheduledEnd;
+  }
+
+  if (input.isAllDay !== undefined) {
+    updates.push('is_all_day = @isAllDay');
+    params.isAllDay = input.isAllDay ? 1 : 0;
+  }
+
+  // New execution fields (manual override)
+  if (input.actualStart !== undefined) {
+    updates.push('actual_start = @actualStart');
+    params.actualStart = input.actualStart;
+  }
+
+  if (input.actualEnd !== undefined) {
+    updates.push('actual_end = @actualEnd');
+    params.actualEnd = input.actualEnd;
+  }
+
   // Detect status change for auto-setting date/time fields
   const isStatusChange = input.status !== undefined && input.status !== task.status;
   const { date: currentDate, time: currentTime } = getLocalDateTime();
@@ -322,37 +381,25 @@ export const updateTask = (db: Database.Database, input: UpdateTaskInput): Task 
     updates.push('status = @status');
     params.status = input.status;
 
-    // Auto-set date/time fields on status change (only if not explicitly provided)
+    // Auto-set actual_start/actual_end on status change (only if not explicitly provided)
     if (isStatusChange) {
+      const currentDatetime = `${currentDate}T${currentTime}:00`; // ISO 8601 format
+
       if (input.status === 'done') {
-        // Auto-set end_date if not explicitly provided
-        if (input.endDate === undefined) {
-          updates.push('end_date = @autoEndDate');
-          params.autoEndDate = currentDate;
-        }
-        // Check for same-day completion to set end_time
-        const effectiveScheduledOn = input.scheduledOn !== undefined ? input.scheduledOn : task.scheduledOn;
-        if (effectiveScheduledOn === currentDate && input.endTime === undefined) {
-          updates.push('end_time = @autoEndTime');
-          params.autoEndTime = currentTime;
+        // Auto-set actual_end if not explicitly provided
+        if (input.actualEnd === undefined) {
+          updates.push('actual_end = @autoActualEnd');
+          params.autoActualEnd = currentDatetime;
         }
       } else if (input.status === 'next') {
-        // Auto-set scheduled_on if not explicitly provided
-        if (input.scheduledOn === undefined) {
-          updates.push('scheduled_on = @autoScheduledOn');
-          params.autoScheduledOn = currentDate;
+        // Auto-set actual_start if not explicitly provided
+        if (input.actualStart === undefined) {
+          updates.push('actual_start = @autoActualStart');
+          params.autoActualStart = currentDatetime;
         }
-        // Auto-set start_time if not explicitly provided
-        if (input.startTime === undefined) {
-          updates.push('start_time = @autoStartTime');
-          params.autoStartTime = currentTime;
-        }
-        // Clear end fields unless explicitly set
-        if (input.endDate === undefined) {
-          updates.push('end_date = NULL');
-        }
-        if (input.endTime === undefined) {
-          updates.push('end_time = NULL');
+        // Clear actual_end unless explicitly set
+        if (input.actualEnd === undefined) {
+          updates.push('actual_end = NULL');
         }
       }
     }
@@ -363,7 +410,7 @@ export const updateTask = (db: Database.Database, input: UpdateTaskInput): Task 
     params.scheduledOn = input.scheduledOn;
   }
 
-  if (input.endDate !== undefined) { // Added
+  if (input.endDate !== undefined) {
     updates.push('end_date = @endDate');
     params.endDate = input.endDate;
   }
@@ -433,30 +480,26 @@ export const setTaskStatus = (
   id: number,
   status: TaskStatus
 ): Task => {
-  const task = getTask(db, id); // Validates type
+  getTask(db, id); // Validates type and existence
   const { date: currentDate, time: currentTime } = getLocalDateTime();
+  const currentDatetime = `${currentDate}T${currentTime}:00`; // ISO 8601 format
 
   const updates: string[] = ['status = @status', 'updated_at = @updatedAt'];
   const params: Record<string, unknown> = { id, status, updatedAt: nowIso() };
 
   if (status === 'done') {
-    // Set end_date to current date
-    updates.push('end_date = @endDate');
-    params.endDate = currentDate;
-
-    // If scheduled_on equals end_date (same day completion), also set end_time
-    if (task.scheduledOn === currentDate) {
-      updates.push('end_time = @endTime');
-      params.endTime = currentTime;
-    }
+    // Set actual_end to current datetime
+    updates.push('actual_end = @actualEnd');
+    params.actualEnd = currentDatetime;
+    // Note: deprecated fields (end_date, end_time) are NOT written anymore
   } else if (status === 'next') {
-    // Set scheduled_on and start_time to current date/time
-    updates.push('scheduled_on = @scheduledOn', 'start_time = @startTime');
-    params.scheduledOn = currentDate;
-    params.startTime = currentTime;
+    // Set actual_start to current datetime
+    updates.push('actual_start = @actualStart');
+    params.actualStart = currentDatetime;
 
-    // Clear end_date and end_time
-    updates.push('end_date = NULL', 'end_time = NULL');
+    // Clear actual_end (task is restarted)
+    updates.push('actual_end = NULL');
+    // Note: deprecated fields (scheduled_on, start_time) are NOT written anymore
   }
 
   db.prepare(`UPDATE issues SET ${updates.join(', ')} WHERE id = @id`).run(params);
