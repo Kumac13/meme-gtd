@@ -12,16 +12,17 @@ export default class TaskEdit extends Command {
     'Revise a task using inline text, file input, or the editor. You can update title, body, status, scheduled date, and labels.';
   static usage = [
     '<%= command.id %> <taskId> [--title <text>] [--body <text> | --body-file <path>]',
-    '<%= command.id %> <taskId> [--status <state>] [--scheduled-on <date>] [--end-date <date>]',
-    '<%= command.id %> <taskId> [--start <time>] [--end <time>] [--duration <minutes>]',
+    '<%= command.id %> <taskId> [--status <state>] [--scheduled-start <datetime>] [--scheduled-end <datetime>]',
+    '<%= command.id %> <taskId> [--all-day | --no-all-day] [--actual-start <datetime>] [--actual-end <datetime>]',
     '<%= command.id %> <taskId> [--add-label <name> ...] [--remove-label <name> ...]',
     '<%= command.id %> <taskId> [--project <id> ...] [--json]'
   ];
   static examples = [
     '$ mgtd task edit 12 --title "Updated title"',
     '$ mgtd task edit 7 --status next',
-    '$ mgtd task edit 4 --scheduled-on 2025-10-20 --end-date 2025-10-22',
-    '$ mgtd task edit 8 --start 09:00 --duration 120',
+    '$ mgtd task edit 4 --scheduled-start 2025-10-20T14:00:00 --scheduled-end 2025-10-20T15:00:00',
+    '$ mgtd task edit 8 --scheduled-start 2025-10-21T00:00:00 --all-day',
+    '$ mgtd task edit 5 --actual-start 2025-10-20T14:30:00 --actual-end 2025-10-20T15:45:00',
     '$ mgtd task edit 12 --body-file updated.md',
     '$ mgtd task edit 7 --add-label urgent --remove-label backlog',
     '$ mgtd task edit 4 --project 3 --project 8 --json'
@@ -53,21 +54,45 @@ export default class TaskEdit extends Command {
       description: 'Set task status (inbox, open, next, waiting, scheduled, someday, done, canceled).',
       options: ['inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled']
     }),
+    // New scheduling fields (ISO 8601 datetime)
+    'scheduled-start': Flags.string({
+      summary: 'Update scheduled start datetime (ISO 8601)',
+      description: 'Set scheduled start datetime in YYYY-MM-DDTHH:MM:SS format. Use empty string to clear.'
+    }),
+    'scheduled-end': Flags.string({
+      summary: 'Update scheduled end datetime (ISO 8601)',
+      description: 'Set scheduled end datetime in YYYY-MM-DDTHH:MM:SS format. Use empty string to clear.'
+    }),
+    'all-day': Flags.boolean({
+      summary: 'Mark as all-day event',
+      description: 'Mark as an all-day event.',
+      allowNo: true
+    }),
+    // Execution fields (for manual override)
+    'actual-start': Flags.string({
+      summary: 'Update actual start datetime (ISO 8601)',
+      description: 'Set actual start datetime in YYYY-MM-DDTHH:MM:SS format. Use empty string to clear.'
+    }),
+    'actual-end': Flags.string({
+      summary: 'Update actual end datetime (ISO 8601)',
+      description: 'Set actual end datetime in YYYY-MM-DDTHH:MM:SS format. Use empty string to clear.'
+    }),
+    // Deprecated fields (kept for backward compatibility)
     'scheduled-on': Flags.string({
-      summary: 'Update scheduled date (ISO 8601)',
-      description: 'Set scheduled date in YYYY-MM-DD format. Use empty string to clear.'
+      summary: 'Update scheduled date (DEPRECATED)',
+      description: '[DEPRECATED: use --scheduled-start] Set scheduled date in YYYY-MM-DD format. Use empty string to clear.'
     }),
     start: Flags.string({
-      summary: 'Update start time (HH:MM)',
-      description: 'Set start time in HH:MM format. Use empty string to clear.'
+      summary: 'Update start time (DEPRECATED)',
+      description: '[DEPRECATED: use --scheduled-start] Set start time in HH:MM format. Use empty string to clear.'
     }),
     'end-date': Flags.string({
-      summary: 'Update end date (YYYY-MM-DD)',
-      description: 'Set end date in YYYY-MM-DD format. Use empty string to clear.'
+      summary: 'Update end date (DEPRECATED)',
+      description: '[DEPRECATED: use --scheduled-end] Set end date in YYYY-MM-DD format. Use empty string to clear.'
     }),
     end: Flags.string({
-      summary: 'Update end time (HH:MM)',
-      description: 'Set end time in HH:MM format. Use empty string to clear.'
+      summary: 'Update end time (DEPRECATED)',
+      description: '[DEPRECATED: use --scheduled-end] Set end time in HH:MM format. Use empty string to clear.'
     }),
     duration: Flags.integer({
       summary: 'Update duration (minutes)',
@@ -139,6 +164,11 @@ export default class TaskEdit extends Command {
       flags.body === undefined &&
       flags['body-file'] === undefined &&
       flags.status === undefined &&
+      flags['scheduled-start'] === undefined &&
+      flags['scheduled-end'] === undefined &&
+      flags['all-day'] === undefined &&
+      flags['actual-start'] === undefined &&
+      flags['actual-end'] === undefined &&
       flags['scheduled-on'] === undefined &&
       !flags['add-label'] &&
       !flags['remove-label'] &&
@@ -175,6 +205,14 @@ export default class TaskEdit extends Command {
       title: flags.title,
       bodyMd: body,
       status: flags.status as TaskStatus | undefined,
+      // New scheduling fields
+      scheduledStart: flags['scheduled-start'] === '' ? null : flags['scheduled-start'],
+      scheduledEnd: flags['scheduled-end'] === '' ? null : flags['scheduled-end'],
+      isAllDay: flags['all-day'],
+      // Execution fields (for manual override)
+      actualStart: flags['actual-start'] === '' ? null : flags['actual-start'],
+      actualEnd: flags['actual-end'] === '' ? null : flags['actual-end'],
+      // Deprecated fields (kept for backward compatibility)
       scheduledOn: flags['scheduled-on'] === '' ? null : flags['scheduled-on'],
       startTime: flags.start === '' ? null : flags.start,
       endDate: flags['end-date'] === '' ? null : flags['end-date'],
