@@ -494,27 +494,37 @@ export const setTaskStatus = (
 ): Task => {
   const task = getTask(db, id); // Validates type
   const { date: currentDate, time: currentTime } = getLocalDateTime();
+  const currentDatetime = `${currentDate}T${currentTime}:00`; // ISO 8601 format
 
   const updates: string[] = ['status = @status', 'updated_at = @updatedAt'];
   const params: Record<string, unknown> = { id, status, updatedAt: nowIso() };
 
   if (status === 'done') {
-    // Set end_date to current date
+    // Set actual_end to current datetime (new field)
+    updates.push('actual_end = @actualEnd');
+    params.actualEnd = currentDatetime;
+
+    // Also set deprecated fields for backward compatibility
     updates.push('end_date = @endDate');
     params.endDate = currentDate;
-
-    // If scheduled_on equals end_date (same day completion), also set end_time
     if (task.scheduledOn === currentDate) {
       updates.push('end_time = @endTime');
       params.endTime = currentTime;
     }
   } else if (status === 'next') {
-    // Set scheduled_on and start_time to current date/time
+    // Set actual_start to current datetime (new field)
+    updates.push('actual_start = @actualStart');
+    params.actualStart = currentDatetime;
+
+    // Clear actual_end
+    updates.push('actual_end = NULL');
+
+    // Also set deprecated fields for backward compatibility
     updates.push('scheduled_on = @scheduledOn', 'start_time = @startTime');
     params.scheduledOn = currentDate;
     params.startTime = currentTime;
 
-    // Clear end_date and end_time
+    // Clear deprecated end fields
     updates.push('end_date = NULL', 'end_time = NULL');
   }
 
