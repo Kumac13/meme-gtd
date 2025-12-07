@@ -71,7 +71,7 @@ export type MemoDetail = z.infer<typeof MemoDetailSchema>;
 /**
  * Schema for bookmark/unbookmark request
  */
-export const BookmarkRequestSchema = z.object({
+const BookmarkRequestSchema = z.object({
   isBookmarked: z.boolean().describe('Bookmark status to set'),
 });
 
