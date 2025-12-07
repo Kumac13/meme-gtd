@@ -45,19 +45,32 @@ export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
 
   const timezone = 'Asia/Tokyo';
 
-  if (task.isAllDay || !effectiveEnd) {
-    // All-day event or timed event without end - display as all-day
-    // Extract date part from ISO datetime
+  // Logic:
+  // 1. isAllDay=true → all-day event
+  // 2. effectiveEnd exists → timed event (use effectiveStart ~ effectiveEnd)
+  // 3. No effectiveEnd but scheduledStart exists → all-day (user requirement: scheduleのendがない場合)
+  // 4. No effectiveEnd and no scheduledStart (only actualStart) → don't show (in progress)
+
+  if (task.isAllDay) {
+    // All-day event
     const startDate = effectiveStart.split('T')[0];
     const endDate = effectiveEnd ? effectiveEnd.split('T')[0] : startDate;
     start = Temporal.PlainDate.from(startDate);
     end = Temporal.PlainDate.from(endDate);
-  } else {
-    // Timed event with both start and end - use full datetime
+  } else if (effectiveEnd) {
+    // Timed event with both start and end
     const startDateTime = Temporal.PlainDateTime.from(effectiveStart);
     start = startDateTime.toZonedDateTime(timezone);
     const endDateTime = Temporal.PlainDateTime.from(effectiveEnd);
     end = endDateTime.toZonedDateTime(timezone);
+  } else if (task.scheduledStart) {
+    // Scheduled start without any end → display as all-day
+    const startDate = effectiveStart.split('T')[0];
+    start = Temporal.PlainDate.from(startDate);
+    end = Temporal.PlainDate.from(startDate);
+  } else {
+    // Only actualStart without end (task in progress) → don't show
+    return null;
   }
 
   return {
