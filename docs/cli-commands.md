@@ -508,6 +508,54 @@ Returns the original task (unchanged) and the new memo ID:
 }
 ```
 
+## Database Commands
+
+### Database Migrate
+
+Apply pending database migrations safely without deleting existing data.
+
+```bash
+# Preview migrations (dry run)
+mgtd db migrate --dry-run
+
+# Apply migrations with automatic backup
+mgtd db migrate
+
+# Apply migrations without backup
+mgtd db migrate --no-backup
+
+# Specify database path
+mgtd db migrate --db ~/.local/share/mgtd/issues.db
+
+# JSON output for scripting
+mgtd db migrate --json
+```
+
+**Options:**
+- `--db, -d <path>` - SQLite database file path (defaults to configured path)
+- `--backup / --no-backup` - Create timestamped backup before migration (default: true)
+- `--dry-run, -n` - Preview migrations without applying
+- `--json, -j` - Output in JSON format
+
+**Features:**
+- **Automatic Backup**: Creates timestamped backup (e.g., `issues.backup-2025-12-07T05-16-06.db`) before applying migrations
+- **Safe Operation**: Unlike `mgtd init --force`, this command never deletes your database
+- **Idempotent**: Already applied migrations are skipped
+- **Error Recovery**: Shows backup restore command on failure
+
+**Example Output:**
+
+```json
+{
+  "success": true,
+  "dbPath": "/Users/name/.local/share/mgtd/issues.db",
+  "dbSizeKB": 172,
+  "backupPath": "/Users/name/.local/share/mgtd/issues.backup-2025-12-07T05-16-06.db",
+  "appliedMigrations": ["007_add_calendar_datetime_fields"],
+  "skippedMigrations": ["001_init", "002_add_project_view_meta", ...]
+}
+```
+
 ## Notes
 
 - **Case Sensitivity**: Label matching is case-insensitive
