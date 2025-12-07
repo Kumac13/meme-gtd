@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * Schema for link type values
  */
-export const LinkTypeSchema = z.enum(['parent', 'child', 'relates', 'derived_from']);
+const LinkTypeSchema = z.enum(['parent', 'child', 'relates', 'derived_from']);
 
 export type LinkType = z.infer<typeof LinkTypeSchema>;
 

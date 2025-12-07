@@ -18,7 +18,7 @@ export type Direction = 'outgoing' | 'incoming';
 /**
  * Target issue information included in link responses
  */
-export interface TargetIssue {
+interface TargetIssue {
   /** Target issue ID */
   id: number;
   /** Target issue type */
@@ -69,18 +69,6 @@ export interface LinkCreationState {
   error: string | null;
   /** Whether the create API call is in progress */
   isSubmitting: boolean;
-}
-
-/**
- * Delete confirmation state - tracks which link is being deleted
- *
- * Managed in the LinkItem component to handle inline deletion confirmation.
- */
-export interface DeleteConfirmationState {
-  /** Link ID being deleted (null when no deletion in progress) */
-  linkId: number | null;
-  /** Whether delete confirmation prompt is showing */
-  isConfirming: boolean;
 }
 
 /**

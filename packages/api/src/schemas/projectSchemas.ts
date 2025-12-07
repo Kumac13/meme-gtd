@@ -4,14 +4,14 @@ import { TaskStatusSchema } from './taskSchemas.js';
 /**
  * Schema for view type
  */
-export const ViewTypeSchema = z.enum(['board', 'table']);
+const ViewTypeSchema = z.enum(['board', 'table']);
 
 export type ViewType = z.infer<typeof ViewTypeSchema>;
 
 /**
  * Schema for view metadata
  */
-export const ViewMetaSchema = z.object({
+const ViewMetaSchema = z.object({
   viewType: ViewTypeSchema.describe('View type: board or table'),
   columns: z.array(z.string()).optional().describe('Column names for board view'),
 });
@@ -21,7 +21,7 @@ export type ViewMeta = z.infer<typeof ViewMetaSchema>;
 /**
  * Schema for project status
  */
-export const ProjectStatusSchema = z.enum(['planned', 'active', 'paused', 'done', 'canceled']);
+const ProjectStatusSchema = z.enum(['planned', 'active', 'paused', 'done', 'canceled']);
 
 export type ProjectStatus = z.infer<typeof ProjectStatusSchema>;
 
@@ -86,7 +86,7 @@ export type ProjectItem = z.infer<typeof ProjectItemSchema>;
 /**
  * Schema for project item with issue information
  */
-export const ProjectItemWithIssueSchema = ProjectItemSchema.extend({
+const ProjectItemWithIssueSchema = ProjectItemSchema.extend({
   issue: z.object({
     id: z.number().int().positive().describe('Issue ID'),
     type: z.enum(['task', 'memo']).describe('Issue type'),

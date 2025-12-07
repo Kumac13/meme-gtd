@@ -15,7 +15,7 @@ import fs from 'node:fs/promises';
  * Get the base attachments directory path
  * @returns Absolute path to ~/.mgtd/attachments
  */
-export function getAttachmentsDir(): string {
+function getAttachmentsDir(): string {
   return path.join(homedir(), '.mgtd', 'attachments');
 }
 

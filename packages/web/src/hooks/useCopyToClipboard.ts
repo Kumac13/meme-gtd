@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 
-export interface UseCopyToClipboardReturn {
+interface UseCopyToClipboardReturn {
   copied: boolean;
   copy: (text: string) => Promise<boolean>;
   reset: () => void;

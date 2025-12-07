@@ -6,7 +6,8 @@
     },
     "packages/api": {
       "entry": ["src/index.ts", "src/server.ts"],
-      "project": ["src/**/*.ts"]
+      "project": ["src/**/*.ts"],
+      "ignore": ["src/schemas/**"]
     },
     "packages/cli": {
       "entry": ["src/index.ts", "src/commands/**/*.ts"],
@@ -26,7 +27,8 @@
     },
     "packages/logger": {
       "entry": ["src/index.ts"],
-      "project": ["src/**/*.ts"]
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": ["pino-pretty"]
     },
     "packages/shared": {
       "entry": ["src/index.ts"],
@@ -34,7 +36,9 @@
     },
     "packages/web": {
       "entry": ["src/main.tsx"],
-      "project": ["src/**/*.{ts,tsx}"]
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["openapi-typescript-codegen"],
+      "ignore": ["src/api/**"]
     }
   },
   "ignore": ["specs/**", "test-data/**"]

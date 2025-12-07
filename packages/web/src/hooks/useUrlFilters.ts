@@ -9,14 +9,14 @@ import {
   type BookmarkFilter,
 } from '../utils/urlFilterHelpers';
 
-export interface UrlFilters {
+interface UrlFilters {
   searchQuery: string;
   parsedQuery: ParsedSearchQuery;
   status: StatusFilter;
   bookmarked: BookmarkFilter;
 }
 
-export interface UrlFiltersActions {
+interface UrlFiltersActions {
   setSearchQuery: (query: string) => void;
   setStatus: (status: StatusFilter) => void;
   setBookmarked: (bookmarked: BookmarkFilter) => void;

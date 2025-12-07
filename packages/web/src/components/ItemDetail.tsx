@@ -20,7 +20,7 @@ const TASK_STATUS_OPTIONS = [
 ];
 
 
-export interface BaseItem {
+interface BaseItem {
   id: number;
   title: string | null;
   bodyMd: string;
@@ -30,7 +30,7 @@ export interface BaseItem {
   updatedAt: string;
 }
 
-export interface Task extends BaseItem {
+interface Task extends BaseItem {
   status: string | null;
   // New scheduling fields (ISO 8601 datetime)
   scheduledStart: string | null;

@@ -18,7 +18,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 /**
  * Response from the attachment upload API
  */
-export interface AttachmentResponse {
+interface AttachmentResponse {
   id: string;
   filename: string;
   absolutePath: string;
@@ -30,7 +30,7 @@ export interface AttachmentResponse {
 /**
  * Error response from the attachment upload API
  */
-export interface AttachmentError {
+interface AttachmentError {
   error: string;
   code: string;
   message: string;
@@ -39,7 +39,7 @@ export interface AttachmentError {
 /**
  * Upload state
  */
-export interface UseImageUploadState {
+interface UseImageUploadState {
   isUploading: boolean;
   error: string | null;
 }
@@ -47,7 +47,7 @@ export interface UseImageUploadState {
 /**
  * Upload result
  */
-export interface UploadResult {
+interface UploadResult {
   success: boolean;
   markdownRef?: string;
   error?: string;

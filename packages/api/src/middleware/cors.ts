@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import fastifyCors from '@fastify/cors';
 
-export interface CorsOptions {
+interface CorsOptions {
   allowedOrigins: string[];
 }
 

@@ -34,7 +34,7 @@ export interface ProjectServiceOptions {
   db?: Database.Database;
 }
 
-export interface CreateProjectServiceInput {
+interface CreateProjectServiceInput {
   name: string;
   description?: string | null;
   view?: ViewType;
@@ -43,13 +43,13 @@ export interface CreateProjectServiceInput {
   endDate?: string | null;
 }
 
-export interface AddProjectItemServiceInput {
+interface AddProjectItemServiceInput {
   issueId: number;
   position?: number;
   column?: string | null;
 }
 
-export interface UpdateProjectItemServiceInput {
+interface UpdateProjectItemServiceInput {
   position?: number;
   column?: string | null;
 }
