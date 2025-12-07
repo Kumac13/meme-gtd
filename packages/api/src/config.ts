@@ -1,7 +1,7 @@
 import { loadConfig as loadMgtdConfig, type MgtdConfig } from 'meme-gtd-config';
 import { parseArgs } from 'node:util';
 
-export interface ServerConfig {
+interface ServerConfig {
   port: number;
   host: string;
   corsAllowedOrigins: string[];

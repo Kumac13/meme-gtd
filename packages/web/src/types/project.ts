@@ -15,7 +15,7 @@ export type {
 /**
  * Project status values (Feature 017)
  */
-export type ProjectStatus =
+type ProjectStatus =
   | 'No status'
   | 'In Progress'
   | 'Done'
