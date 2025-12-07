@@ -98,12 +98,18 @@ stateDiagram-v2
 
 - **役割**: Inbox 以降のアクション管理。Captured から昇格したメモ、または直接定義された作業項目を統一的に扱う。
 - **主要データ**: `issues.type = task`、`title` 必須、`status` は `open`, `next`, `waiting`, `scheduled`, `done`, `canceled` から選択。
-  - **スケジュール管理**:
+  - **スケジュール管理** (新形式 - ISO 8601):
+    - `scheduled_start` (YYYY-MM-DDTHH:MM:SS): 予定開始日時
+    - `scheduled_end` (YYYY-MM-DDTHH:MM:SS): 予定終了日時
+    - `is_all_day` (BOOLEAN): 終日イベントかどうか
+    - `actual_start` (YYYY-MM-DDTHH:MM:SS): 実際の開始日時（手動入力または自動記録）
+    - `actual_end` (YYYY-MM-DDTHH:MM:SS): 実際の終了日時（手動入力または自動記録）
+  - **スケジュール管理** (旧形式 - 非推奨、後方互換性のため保持):
     - `scheduled_on` (YYYY-MM-DD): タスクの開始日
-    - `end_date` (YYYY-MM-DD): タスクの終了日（未指定時は `scheduled_on` と同じ）
-    - `start_time` (HH:MM): 開始時刻（オプション）
-    - `end_time` (HH:MM): 終了時刻（オプション、`start_time` + `duration` から自動計算可能）
-    - `duration` (INTEGER): 所要時間（分）（オプション）
+    - `end_date` (YYYY-MM-DD): タスクの終了日
+    - `start_time` (HH:MM): 開始時刻
+    - `end_time` (HH:MM): 終了時刻
+    - `duration` (INTEGER): 所要時間（分）
 - **機能要件**:
   - タスクの生成（メモ昇格または直接作成）。生成時は Inbox（初期 `status=open`）に配置。
   - タスク一覧・フィルタリング（ステータス、ラベル、プロジェクト、検索語など）。

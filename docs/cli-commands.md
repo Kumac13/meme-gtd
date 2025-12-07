@@ -269,6 +269,80 @@ mgtd task list --label urgent --json | jq '.[].title'
 mgtd task list --label bug --json | jq '.[] | {id, title, status}'
 ```
 
+## Task Scheduling Commands
+
+### Scheduling a Task
+
+Schedule tasks using ISO 8601 datetime format (YYYY-MM-DDTHH:MM:SS).
+
+#### Create a Scheduled Task
+
+```bash
+# Create a task with scheduled start and end times
+mgtd task create --title "Team meeting" --scheduled-start 2025-12-10T14:00:00 --scheduled-end 2025-12-10T15:00:00 --no-editor
+
+# Create an all-day event
+mgtd task create --title "Conference" --scheduled-start 2025-12-11T00:00:00 --scheduled-end 2025-12-13T23:59:59 --all-day --no-editor
+
+# Create with body content
+mgtd task create --title "Project review" --body "Review Q4 progress" --scheduled-start 2025-12-15T10:00:00 --scheduled-end 2025-12-15T11:00:00 --no-editor
+```
+
+**Options:**
+- `--scheduled-start <datetime>` - Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS)
+- `--scheduled-end <datetime>` - Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS)
+- `--all-day` - Mark as an all-day event (only date portion is used)
+
+#### Edit Task Schedule
+
+```bash
+# Update scheduled times
+mgtd task edit 12 --scheduled-start 2025-12-10T15:00:00 --scheduled-end 2025-12-10T16:00:00 --no-editor
+
+# Convert to all-day event
+mgtd task edit 12 --all-day --no-editor
+
+# Convert from all-day to timed event
+mgtd task edit 12 --no-all-day --no-editor
+
+# Clear schedule (empty string)
+mgtd task edit 12 --scheduled-start "" --scheduled-end "" --no-editor
+```
+
+#### Record Actual Execution Times
+
+For tracking when tasks were actually performed (different from scheduled times):
+
+```bash
+# Record actual start time
+mgtd task edit 12 --actual-start 2025-12-10T14:30:00 --no-editor
+
+# Record actual start and end times
+mgtd task edit 12 --actual-start 2025-12-10T14:30:00 --actual-end 2025-12-10T16:00:00 --no-editor
+
+# Clear actual times
+mgtd task edit 12 --actual-start "" --actual-end "" --no-editor
+```
+
+**Edit Options:**
+- `--scheduled-start <datetime>` - Update scheduled start datetime (empty string to clear)
+- `--scheduled-end <datetime>` - Update scheduled end datetime (empty string to clear)
+- `--all-day` / `--no-all-day` - Toggle all-day event flag
+- `--actual-start <datetime>` - Set actual start datetime (empty string to clear)
+- `--actual-end <datetime>` - Set actual end datetime (empty string to clear)
+
+### Legacy Scheduling Options (Deprecated)
+
+The following options are deprecated but still work for backward compatibility:
+
+```bash
+# Deprecated: --scheduled-on, --start, --end-date, --end
+mgtd task create --title "Meeting" --scheduled-on 2025-12-10 --start 14:00 --end 15:00
+
+# Preferred: Use --scheduled-start and --scheduled-end
+mgtd task create --title "Meeting" --scheduled-start 2025-12-10T14:00:00 --scheduled-end 2025-12-10T15:00:00
+```
+
 ## Project Commands
 
 ### Project Create
