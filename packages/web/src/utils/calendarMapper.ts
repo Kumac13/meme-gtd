@@ -169,9 +169,12 @@ export function getDateRange(date: string, view: 'month' | 'week' | 'day'): { fr
       to: formatLocalDate(lastDay),
     };
   } else if (view === 'week') {
+    // Monday-based week (0=Sun, 1=Mon, ..., 6=Sat)
+    // Calculate days since Monday: Sun=6, Mon=0, Tue=1, ...
     const dayOfWeek = currentDate.getDay();
+    const daysSinceMonday = (dayOfWeek + 6) % 7;
     const startOfWeek = new Date(currentDate);
-    startOfWeek.setDate(currentDate.getDate() - dayOfWeek);
+    startOfWeek.setDate(currentDate.getDate() - daysSinceMonday);
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     return {
