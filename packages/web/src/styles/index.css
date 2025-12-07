@@ -28,13 +28,40 @@
 }
 
 /* Task status colors for calendar events */
-.task-done {
+
+/* Actual time events: status-based colors */
+.sx__time-grid-event.time-actual.task-done,
+.sx__date-grid-event.time-actual.task-done {
   background-color: #238636 !important;
   color: white !important;
   border-color: #1a7f37 !important;
 }
 
-.task-pending {
+.sx__time-grid-event.time-actual.task-pending,
+.sx__date-grid-event.time-actual.task-pending {
+  background-color: white !important;
+  color: #1f2937 !important;
+  border: 1px solid #d1d5db !important;
+}
+
+/* Scheduled time events: lighter green (#a3d9ad) */
+.sx__time-grid-event.time-scheduled,
+.sx__date-grid-event.time-scheduled {
+  background-color: #a3d9ad !important;
+  color: white !important;
+  border-color: #8bc996 !important;
+}
+
+/* Legacy fallback */
+.sx__time-grid-event.task-done:not(.time-scheduled):not(.time-actual),
+.sx__date-grid-event.task-done:not(.time-scheduled):not(.time-actual) {
+  background-color: #238636 !important;
+  color: white !important;
+  border-color: #1a7f37 !important;
+}
+
+.sx__time-grid-event.task-pending:not(.time-scheduled):not(.time-actual),
+.sx__date-grid-event.task-pending:not(.time-scheduled):not(.time-actual) {
   background-color: white !important;
   color: #1f2937 !important;
   border: 1px solid #d1d5db !important;
