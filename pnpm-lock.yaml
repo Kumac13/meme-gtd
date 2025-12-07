@@ -286,18 +286,12 @@ importers:
       meme-gtd-config:
         specifier: workspace:*
         version: link:../config
-      meme-gtd-shared:
-        specifier: workspace:*
-        version: link:../shared
       pino:
         specifier: ^9.2.0
         version: 9.13.1
       pino-pretty:
         specifier: ^11.2.0
         version: 11.3.0
-      zod:
-        specifier: ^3.23.8
-        version: 3.25.76
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
