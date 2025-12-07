@@ -249,9 +249,6 @@ importers:
       meme-gtd-shared:
         specifier: workspace:*
         version: link:../shared
-      zod:
-        specifier: ^3.23.8
-        version: 3.25.76
     devDependencies:
       '@types/better-sqlite3':
         specifier: ^7.6.8
