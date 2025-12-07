@@ -36,7 +36,8 @@
     "packages/web": {
       "entry": ["src/main.tsx"],
       "project": ["src/**/*.{ts,tsx}"],
-      "ignoreDependencies": ["openapi-typescript-codegen"]
+      "ignoreDependencies": ["openapi-typescript-codegen"],
+      "ignore": ["src/api/**"]
     }
   },
   "ignore": ["specs/**", "test-data/**"]
