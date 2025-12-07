@@ -11,7 +11,6 @@
     "build": "pnpm run clean && tsc -p tsconfig.json && node ./scripts/copy-assets.mjs",
     "clean": "rimraf dist",
     "dev": "tsx src/index.ts",
-    "lint": "eslint \"src/**/*.ts\"",
     "test": "pnpm run -s build && node --test test/*.test.js test/commands/task/*.test.js test/commands/memo/*.test.js test/commands/project/*.test.js"
   },
   "dependencies": {
@@ -26,7 +25,6 @@
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.0.0",
-    "eslint": "^9.9.0",
     "rimraf": "^5.0.7",
     "tsx": "^4.15.0",
     "typescript": "^5.5.4"
