@@ -1,9 +1,7 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
 import { Buffer } from 'node:buffer';
-import { existsSync, unlinkSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { existsSync, unlinkSync } from 'node:fs';
 import type { FastifyInstance } from 'fastify';
 import { createTestServer } from '../helpers/testServer.js';
 
@@ -57,23 +55,33 @@ function createMultipartBody(
 }
 
 /**
- * Clean up all attachment files created during tests
+ * Track files created during each test for cleanup
+ * IMPORTANT: Only delete files that were created during the test, never touch existing files
+ */
+const testCreatedFiles: string[] = [];
+
+/**
+ * Clean up only the files that were created during the current test
+ * This prevents accidentally deleting production attachment files
  */
 function cleanupAttachments(): void {
-  const attachmentsDir = join(homedir(), '.mgtd', 'attachments');
-  if (existsSync(attachmentsDir)) {
+  for (const filePath of testCreatedFiles) {
     try {
-      const files = readdirSync(attachmentsDir);
-      for (const file of files) {
-        // Only delete UUID-pattern files (our test files)
-        if (/^[a-f0-9-]+\.(png|jpg|jpeg|gif|webp)$/i.test(file)) {
-          unlinkSync(join(attachmentsDir, file));
-        }
+      if (existsSync(filePath)) {
+        unlinkSync(filePath);
       }
     } catch {
       // Ignore cleanup errors
     }
   }
+  testCreatedFiles.length = 0;
+}
+
+/**
+ * Track a file for cleanup after the test
+ */
+function trackFileForCleanup(filePath: string): void {
+  testCreatedFiles.push(filePath);
 }
 
 describe('Attachment Upload Operations', () => {
@@ -114,6 +122,9 @@ describe('Attachment Upload Operations', () => {
     assert.ok(result.markdownRef.startsWith('![image]('), 'markdownRef should be markdown format');
     assert.strictEqual(result.mimeType, 'image/png');
     assert.ok(result.size > 0, 'Size should be positive');
+
+    // Track file for cleanup
+    trackFileForCleanup(result.absolutePath);
 
     // Verify file was actually created
     assert.ok(existsSync(result.absolutePath), 'File should exist on disk');
@@ -176,10 +187,8 @@ describe('Attachment Upload Operations', () => {
     assert.strictEqual(result.mimeType, 'image/jpeg');
     assert.ok(result.filename.endsWith('.jpg'));
 
-    // Cleanup
-    if (existsSync(result.absolutePath)) {
-      unlinkSync(result.absolutePath);
-    }
+    // Track file for cleanup
+    trackFileForCleanup(result.absolutePath);
   });
 
   it('should handle GIF images', async () => {
@@ -207,10 +216,8 @@ describe('Attachment Upload Operations', () => {
     const result = JSON.parse(response.body);
     assert.strictEqual(result.mimeType, 'image/gif');
 
-    // Cleanup
-    if (existsSync(result.absolutePath)) {
-      unlinkSync(result.absolutePath);
-    }
+    // Track file for cleanup
+    trackFileForCleanup(result.absolutePath);
   });
 
   it('should handle WebP images', async () => {
@@ -241,10 +248,8 @@ describe('Attachment Upload Operations', () => {
     const result = JSON.parse(response.body);
     assert.strictEqual(result.mimeType, 'image/webp');
 
-    // Cleanup
-    if (existsSync(result.absolutePath)) {
-      unlinkSync(result.absolutePath);
-    }
+    // Track file for cleanup
+    trackFileForCleanup(result.absolutePath);
   });
 });
 
@@ -272,6 +277,9 @@ describe('Attachment Download Operations', () => {
     });
     const uploadResult = JSON.parse(uploadResponse.body);
     uploadedFilename = uploadResult.filename;
+
+    // Track file for cleanup
+    trackFileForCleanup(uploadResult.absolutePath);
   });
 
   afterEach(async () => {
