@@ -187,13 +187,27 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
   }
 
   // Date range filters for calendar view
-  if (filters.scheduledFrom) {
-    conditions.push('scheduled_on >= @scheduledFrom');
+  // Priority: scheduled_start, fallback to actual_start for tasks without schedule
+  if (filters.scheduledFrom && filters.scheduledTo) {
+    // Use COALESCE to check scheduled_start first, then actual_start
+    // Extract date part from datetime (YYYY-MM-DDTHH:MM:SS -> YYYY-MM-DD)
+    conditions.push(`(
+      (scheduled_start IS NOT NULL AND DATE(scheduled_start) >= @scheduledFrom AND DATE(scheduled_start) <= @scheduledTo)
+      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start) >= @scheduledFrom AND DATE(actual_start) <= @scheduledTo)
+    )`);
     params.scheduledFrom = filters.scheduledFrom;
-  }
-
-  if (filters.scheduledTo) {
-    conditions.push('scheduled_on <= @scheduledTo');
+    params.scheduledTo = filters.scheduledTo;
+  } else if (filters.scheduledFrom) {
+    conditions.push(`(
+      (scheduled_start IS NOT NULL AND DATE(scheduled_start) >= @scheduledFrom)
+      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start) >= @scheduledFrom)
+    )`);
+    params.scheduledFrom = filters.scheduledFrom;
+  } else if (filters.scheduledTo) {
+    conditions.push(`(
+      (scheduled_start IS NOT NULL AND DATE(scheduled_start) <= @scheduledTo)
+      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start) <= @scheduledTo)
+    )`);
     params.scheduledTo = filters.scheduledTo;
   }
 
@@ -267,11 +281,22 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
       searchConditions.push('i.is_bookmarked = @isBookmarked');
     }
     // Date range filters for calendar view (also apply to search)
-    if (filters.scheduledFrom) {
-      searchConditions.push('i.scheduled_on >= @scheduledFrom');
-    }
-    if (filters.scheduledTo) {
-      searchConditions.push('i.scheduled_on <= @scheduledTo');
+    // Priority: scheduled_start, fallback to actual_start for tasks without schedule
+    if (filters.scheduledFrom && filters.scheduledTo) {
+      searchConditions.push(`(
+        (i.scheduled_start IS NOT NULL AND DATE(i.scheduled_start) >= @scheduledFrom AND DATE(i.scheduled_start) <= @scheduledTo)
+        OR (i.scheduled_start IS NULL AND i.actual_start IS NOT NULL AND DATE(i.actual_start) >= @scheduledFrom AND DATE(i.actual_start) <= @scheduledTo)
+      )`);
+    } else if (filters.scheduledFrom) {
+      searchConditions.push(`(
+        (i.scheduled_start IS NOT NULL AND DATE(i.scheduled_start) >= @scheduledFrom)
+        OR (i.scheduled_start IS NULL AND i.actual_start IS NOT NULL AND DATE(i.actual_start) >= @scheduledFrom)
+      )`);
+    } else if (filters.scheduledTo) {
+      searchConditions.push(`(
+        (i.scheduled_start IS NOT NULL AND DATE(i.scheduled_start) <= @scheduledTo)
+        OR (i.scheduled_start IS NULL AND i.actual_start IS NOT NULL AND DATE(i.actual_start) <= @scheduledTo)
+      )`);
     }
 
     if (useFts) {

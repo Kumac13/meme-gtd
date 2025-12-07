@@ -27,121 +27,16 @@
   min-height: 29px !important;
 }
 
-/* Task status colors for calendar events */
-
-/* Week/Day view: Actual time events - status-based colors */
-.sx__time-grid-event.time-actual.task-done {
-  background-color: #238636 !important;
+/* Calendar event color - single color (#2da44e) */
+.sx__time-grid-event,
+.sx__date-grid-event,
+.sx__month-grid-event,
+.sx__month-agenda-event {
+  background-color: #2da44e !important;
   color: white !important;
-  border-color: #1a7f37 !important;
-}
-
-.sx__date-grid-event.time-actual.task-done {
-  background-color: #238636 !important;
-  color: white !important;
-  border-color: #1a7f37 !important;
-}
-
-.sx__time-grid-event.time-actual.task-pending {
-  background-color: white !important;
-  color: #1f2937 !important;
-  border: 1px solid #d1d5db !important;
-}
-
-.sx__date-grid-event.time-actual.task-pending {
-  background-color: white !important;
-  color: #1f2937 !important;
-  border: 1px solid #d1d5db !important;
-}
-
-/* Week/Day view: Scheduled time events - lighter green (#a3d9ad) */
-.sx__time-grid-event.time-scheduled {
-  background-color: #a3d9ad !important;
-  color: white !important;
-  border-color: #8bc996 !important;
-}
-
-.sx__date-grid-event.time-scheduled {
-  background-color: #a3d9ad !important;
-  color: white !important;
-  border-color: #8bc996 !important;
-}
-
-/* Month view: Actual time events - status-based colors */
-.sx__month-grid-event.time-actual.task-done {
-  background-color: #238636 !important;
-  color: white !important;
-  border-color: #1a7f37 !important;
-}
-
-.sx__month-grid-event.time-actual.task-pending {
-  background-color: white !important;
-  color: #1f2937 !important;
-  border: 1px solid #d1d5db !important;
-}
-
-/* Month view: Scheduled time events - lighter green (#a3d9ad) */
-.sx__month-grid-event.time-scheduled {
-  background-color: #a3d9ad !important;
-  color: white !important;
-  border-color: #8bc996 !important;
-}
-
-/* Month agenda view */
-.sx__month-agenda-event.time-actual.task-done {
-  background-color: #238636 !important;
-  color: white !important;
-  border-color: #1a7f37 !important;
-}
-
-.sx__month-agenda-event.time-actual.task-pending {
-  background-color: white !important;
-  color: #1f2937 !important;
-  border: 1px solid #d1d5db !important;
-}
-
-.sx__month-agenda-event.time-scheduled {
-  background-color: #a3d9ad !important;
-  color: white !important;
-  border-color: #8bc996 !important;
-}
-
-/* Legacy fallback - Week/Day view */
-.sx__time-grid-event.task-done:not(.time-scheduled):not(.time-actual) {
-  background-color: #238636 !important;
-  color: white !important;
-  border-color: #1a7f37 !important;
-}
-
-.sx__date-grid-event.task-done:not(.time-scheduled):not(.time-actual) {
-  background-color: #238636 !important;
-  color: white !important;
-  border-color: #1a7f37 !important;
-}
-
-.sx__time-grid-event.task-pending:not(.time-scheduled):not(.time-actual) {
-  background-color: white !important;
-  color: #1f2937 !important;
-  border: 1px solid #d1d5db !important;
-}
-
-.sx__date-grid-event.task-pending:not(.time-scheduled):not(.time-actual) {
-  background-color: white !important;
-  color: #1f2937 !important;
-  border: 1px solid #d1d5db !important;
-}
-
-/* Legacy fallback - Month view */
-.sx__month-grid-event.task-done:not(.time-scheduled):not(.time-actual) {
-  background-color: #238636 !important;
-  color: white !important;
-  border-color: #1a7f37 !important;
-}
-
-.sx__month-grid-event.task-pending:not(.time-scheduled):not(.time-actual) {
-  background-color: white !important;
-  color: #1f2937 !important;
-  border: 1px solid #d1d5db !important;
+  border: none !important;
+  border-left: none !important;
+  border-inline-start: none !important;
 }
 
 /* Prevent iOS auto-zoom on input focus */
