@@ -81,14 +81,3 @@ export const applyMigrations = (dbPath: string): MigrationResult => {
   db.close();
   return result;
 };
-
-export const validateMigrationFileList = async (): Promise<void> => {
-  await Promise.all(
-    migrations.map(async (migration) => {
-      const exists = await fs.pathExists(migration.file);
-      if (!exists) {
-        throw new Error(`Missing migration file: ${migration.file}`);
-      }
-    })
-  );
-};
