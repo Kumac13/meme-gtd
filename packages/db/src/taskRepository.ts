@@ -5,6 +5,11 @@ export interface CreateTaskInput {
   title: string;
   bodyMd: string;
   status?: TaskStatus;
+  // New scheduling fields (ISO 8601 datetime)
+  scheduledStart?: string;
+  scheduledEnd?: string;
+  isAllDay?: boolean;
+  // Deprecated fields (kept for backward compatibility)
   scheduledOn?: string;
   startTime?: string;
   endDate?: string;
@@ -19,6 +24,14 @@ export interface UpdateTaskInput {
   title?: string;
   bodyMd?: string;
   status?: TaskStatus;
+  // New scheduling fields (ISO 8601 datetime)
+  scheduledStart?: string | null;
+  scheduledEnd?: string | null;
+  isAllDay?: boolean;
+  // New execution fields (ISO 8601 datetime)
+  actualStart?: string | null;
+  actualEnd?: string | null;
+  // Deprecated fields (kept for backward compatibility)
   scheduledOn?: string | null;
   startTime?: string | null;
   endDate?: string | null;
@@ -90,13 +103,18 @@ export const createTask = (db: Database.Database, input: CreateTaskInput): Task 
   );
 
   const stmt = db.prepare(
-    `INSERT INTO issues (type, title, body_md, status, scheduled_on, end_date, start_time, end_time, duration, meta, created_at, updated_at, is_bookmarked, is_deleted)
-     VALUES ('task', @title, @body, @status, @scheduledOn, @endDate, @startTime, @endTime, @duration, json('{}'), @createdAt, @createdAt, 0, 0)`
+    `INSERT INTO issues (type, title, body_md, status, scheduled_start, scheduled_end, is_all_day, scheduled_on, end_date, start_time, end_time, duration, meta, created_at, updated_at, is_bookmarked, is_deleted)
+     VALUES ('task', @title, @body, @status, @scheduledStart, @scheduledEnd, @isAllDay, @scheduledOn, @endDate, @startTime, @endTime, @duration, json('{}'), @createdAt, @createdAt, 0, 0)`
   );
   const result = stmt.run({
     title: input.title,
     body: input.bodyMd,
     status,
+    // New fields
+    scheduledStart: input.scheduledStart ?? null,
+    scheduledEnd: input.scheduledEnd ?? null,
+    isAllDay: input.isAllDay ? 1 : 0,
+    // Deprecated fields (kept for backward compatibility)
     scheduledOn: input.scheduledOn ?? null,
     endDate: input.endDate ?? input.scheduledOn ?? null,
     startTime: startTime ?? null,
@@ -296,8 +314,15 @@ export const updateTask = (db: Database.Database, input: UpdateTaskInput): Task 
     input.title === undefined &&
     input.bodyMd === undefined &&
     input.status === undefined &&
+    // New fields
+    input.scheduledStart === undefined &&
+    input.scheduledEnd === undefined &&
+    input.isAllDay === undefined &&
+    input.actualStart === undefined &&
+    input.actualEnd === undefined &&
+    // Deprecated fields
     input.scheduledOn === undefined &&
-    input.endDate === undefined && // Added
+    input.endDate === undefined &&
     input.startTime === undefined &&
     input.endTime === undefined &&
     input.duration === undefined &&
@@ -319,6 +344,33 @@ export const updateTask = (db: Database.Database, input: UpdateTaskInput): Task 
   if (input.bodyMd !== undefined) {
     updates.push('body_md = @bodyMd');
     params.bodyMd = input.bodyMd;
+  }
+
+  // New scheduling fields
+  if (input.scheduledStart !== undefined) {
+    updates.push('scheduled_start = @scheduledStart');
+    params.scheduledStart = input.scheduledStart;
+  }
+
+  if (input.scheduledEnd !== undefined) {
+    updates.push('scheduled_end = @scheduledEnd');
+    params.scheduledEnd = input.scheduledEnd;
+  }
+
+  if (input.isAllDay !== undefined) {
+    updates.push('is_all_day = @isAllDay');
+    params.isAllDay = input.isAllDay ? 1 : 0;
+  }
+
+  // New execution fields (manual override)
+  if (input.actualStart !== undefined) {
+    updates.push('actual_start = @actualStart');
+    params.actualStart = input.actualStart;
+  }
+
+  if (input.actualEnd !== undefined) {
+    updates.push('actual_end = @actualEnd');
+    params.actualEnd = input.actualEnd;
   }
 
   // Detect status change for auto-setting date/time fields
@@ -370,7 +422,7 @@ export const updateTask = (db: Database.Database, input: UpdateTaskInput): Task 
     params.scheduledOn = input.scheduledOn;
   }
 
-  if (input.endDate !== undefined) { // Added
+  if (input.endDate !== undefined) {
     updates.push('end_date = @endDate');
     params.endDate = input.endDate;
   }

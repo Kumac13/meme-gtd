@@ -700,3 +700,181 @@ test('updateTask() does not auto-set when status is not changing', () => {
   db.close();
   fs.removeSync(dir);
 });
+
+// ============================================================
+// Phase 2: Calendar Datetime Separation Tests (T004-T006)
+// New fields: scheduledStart, scheduledEnd, isAllDay, actualStart, actualEnd
+// ============================================================
+
+// T004: Test createTask with scheduledStart/scheduledEnd/isAllDay
+test('createTask() with scheduledStart and scheduledEnd', () => {
+  const { dir, db } = createTempDb();
+  const task = createTask(db, {
+    title: 'Scheduled Task',
+    bodyMd: 'Body',
+    scheduledStart: '2025-12-07T10:00:00',
+    scheduledEnd: '2025-12-07T11:00:00'
+  });
+
+  assert.equal(task.scheduledStart, '2025-12-07T10:00:00');
+  assert.equal(task.scheduledEnd, '2025-12-07T11:00:00');
+  assert.equal(task.isAllDay, false);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('createTask() with isAllDay=true', () => {
+  const { dir, db } = createTempDb();
+  const task = createTask(db, {
+    title: 'All Day Event',
+    bodyMd: 'Body',
+    scheduledStart: '2025-12-07T00:00:00',
+    scheduledEnd: '2025-12-09T23:59:59',
+    isAllDay: true
+  });
+
+  assert.equal(task.scheduledStart, '2025-12-07T00:00:00');
+  assert.equal(task.scheduledEnd, '2025-12-09T23:59:59');
+  assert.equal(task.isAllDay, true);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('createTask() without scheduling fields has null values', () => {
+  const { dir, db } = createTempDb();
+  const task = createTask(db, {
+    title: 'No Schedule',
+    bodyMd: 'Body'
+  });
+
+  assert.equal(task.scheduledStart, null);
+  assert.equal(task.scheduledEnd, null);
+  assert.equal(task.isAllDay, false);
+  assert.equal(task.actualStart, null);
+  assert.equal(task.actualEnd, null);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+// T005: Test taskRowToTask mapper reads new columns
+test('getTask() returns new datetime fields correctly', () => {
+  const { dir, db } = createTempDb();
+
+  // Insert directly with new columns to test mapper
+  db.prepare(`
+    INSERT INTO issues (type, title, body_md, status, scheduled_start, scheduled_end, is_all_day, actual_start, actual_end, meta, created_at, updated_at, is_bookmarked, is_deleted)
+    VALUES ('task', 'Test Task', 'Body', 'done', '2025-12-07T10:00:00', '2025-12-07T11:00:00', 0, '2025-12-07T10:05:00', '2025-12-07T11:30:00', '{}', '2025-12-07T00:00:00', '2025-12-07T00:00:00', 0, 0)
+  `).run();
+
+  const row = db.prepare('SELECT id FROM issues WHERE title = ?').get('Test Task') as any;
+  const task = getTask(db, row.id);
+
+  assert.equal(task.scheduledStart, '2025-12-07T10:00:00');
+  assert.equal(task.scheduledEnd, '2025-12-07T11:00:00');
+  assert.equal(task.isAllDay, false);
+  assert.equal(task.actualStart, '2025-12-07T10:05:00');
+  assert.equal(task.actualEnd, '2025-12-07T11:30:00');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('listTasks() returns new datetime fields for all tasks', () => {
+  const { dir, db } = createTempDb();
+
+  createTask(db, {
+    title: 'Task with schedule',
+    bodyMd: 'Body',
+    scheduledStart: '2025-12-07T14:00:00',
+    scheduledEnd: '2025-12-07T15:00:00'
+  });
+
+  const tasks = listTasks(db);
+  assert.equal(tasks.length, 1);
+  assert.equal(tasks[0].scheduledStart, '2025-12-07T14:00:00');
+  assert.equal(tasks[0].scheduledEnd, '2025-12-07T15:00:00');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+// T006: Test updateTask with new datetime fields
+test('updateTask() with scheduledStart and scheduledEnd', () => {
+  const { dir, db } = createTempDb();
+  const task = createTask(db, { title: 'Task', bodyMd: 'Body' });
+
+  const updated = updateTask(db, {
+    id: task.id,
+    scheduledStart: '2025-12-08T09:00:00',
+    scheduledEnd: '2025-12-08T10:30:00'
+  });
+
+  assert.equal(updated.scheduledStart, '2025-12-08T09:00:00');
+  assert.equal(updated.scheduledEnd, '2025-12-08T10:30:00');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('updateTask() with isAllDay toggle', () => {
+  const { dir, db } = createTempDb();
+  const task = createTask(db, {
+    title: 'Task',
+    bodyMd: 'Body',
+    isAllDay: false
+  });
+
+  const updated = updateTask(db, {
+    id: task.id,
+    isAllDay: true,
+    scheduledStart: '2025-12-08T00:00:00',
+    scheduledEnd: '2025-12-10T23:59:59'
+  });
+
+  assert.equal(updated.isAllDay, true);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('updateTask() with actualStart and actualEnd (manual override)', () => {
+  const { dir, db } = createTempDb();
+  const task = createTask(db, { title: 'Task', bodyMd: 'Body' });
+
+  const updated = updateTask(db, {
+    id: task.id,
+    actualStart: '2025-12-07T16:00:00',
+    actualEnd: '2025-12-07T17:30:00'
+  });
+
+  assert.equal(updated.actualStart, '2025-12-07T16:00:00');
+  assert.equal(updated.actualEnd, '2025-12-07T17:30:00');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('updateTask() clears scheduledStart with null', () => {
+  const { dir, db } = createTempDb();
+  const task = createTask(db, {
+    title: 'Task',
+    bodyMd: 'Body',
+    scheduledStart: '2025-12-07T10:00:00',
+    scheduledEnd: '2025-12-07T11:00:00'
+  });
+
+  const updated = updateTask(db, {
+    id: task.id,
+    scheduledStart: null,
+    scheduledEnd: null
+  });
+
+  assert.equal(updated.scheduledStart, null);
+  assert.equal(updated.scheduledEnd, null);
+
+  db.close();
+  fs.removeSync(dir);
+});
