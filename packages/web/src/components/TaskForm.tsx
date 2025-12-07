@@ -8,7 +8,7 @@ import { LinksService } from '../api/services/LinksService';
 import { validateTaskForm } from '../utils/validation';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
-import { ScheduleInput } from './ScheduleInput';
+import { ScheduleInput, type ScheduleInputValue } from './ScheduleInput';
 import { useRecentProjects } from '../hooks/useRecentProjects';
 import { useRecentLabels } from '../hooks/useRecentLabels';
 import { LabelBadge } from './LabelBadge';
@@ -80,13 +80,11 @@ export default function TaskForm({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { isUploading, uploadImage } = useImageUpload();
 
-  // Schedule state
-  const [scheduleData, setScheduleData] = useState({
-    scheduledOn: '',
-    startTime: '',
-    endDate: '',
-    endTime: '',
-    duration: '',
+  // Schedule state (new fields)
+  const [scheduleData, setScheduleData] = useState<ScheduleInputValue>({
+    scheduledStart: null,
+    scheduledEnd: null,
+    isAllDay: false,
   });
 
   // Project/Label state
@@ -163,11 +161,9 @@ export default function TaskForm({
           title,
           bodyMd: bodyMd || undefined,
           status,
-          scheduledOn: scheduleData.scheduledOn || undefined,
-          startTime: scheduleData.startTime || undefined,
-          endDate: scheduleData.endDate || undefined,
-          endTime: scheduleData.endTime || undefined,
-          duration: scheduleData.duration ? parseInt(scheduleData.duration, 10) : undefined,
+          scheduledStart: scheduleData.scheduledStart || undefined,
+          scheduledEnd: scheduleData.scheduledEnd || undefined,
+          isAllDay: scheduleData.isAllDay,
         });
 
         // Assign labels
@@ -504,9 +500,11 @@ export default function TaskForm({
             </div>
           )}
 
-          {!isScheduleOpen && scheduleData.scheduledOn && (
+          {!isScheduleOpen && scheduleData.scheduledStart && (
             <div className="text-sm text-gray-600 mt-1">
-              Scheduled: {scheduleData.scheduledOn} {scheduleData.startTime && `@ ${scheduleData.startTime}`}
+              Scheduled: {scheduleData.scheduledStart.split('T')[0]}
+              {!scheduleData.isAllDay && scheduleData.scheduledStart.split('T')[1] && ` @ ${scheduleData.scheduledStart.split('T')[1].slice(0, 5)}`}
+              {scheduleData.isAllDay && ' (All day)'}
             </div>
           )}
         </div>

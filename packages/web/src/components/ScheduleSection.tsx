@@ -36,12 +36,6 @@ function toDatetimeLocal(isoDatetime: string | null): string {
     return isoDatetime.slice(0, 16);
 }
 
-// Helper: Convert ISO datetime to date input value
-function toDateOnly(isoDatetime: string | null): string {
-    if (!isoDatetime) return '';
-    return isoDatetime.split('T')[0];
-}
-
 // Helper: Convert datetime-local input to ISO datetime
 function fromDatetimeLocal(datetimeLocal: string): string {
     if (!datetimeLocal) return '';
@@ -84,20 +78,15 @@ export function ScheduleSection({
 
     // Local state for form inputs
     const [formAllDay, setFormAllDay] = useState(isAllDay);
-    const [formStartDate, setFormStartDate] = useState(toDateOnly(scheduledStart));
-    const [formEndDate, setFormEndDate] = useState(toDateOnly(scheduledEnd));
     const [formStartDatetime, setFormStartDatetime] = useState(toDatetimeLocal(scheduledStart));
     const [formEndDatetime, setFormEndDatetime] = useState(toDatetimeLocal(scheduledEnd));
     // Actual times (for manual override)
     const [formActualStart, setFormActualStart] = useState(toDatetimeLocal(actualStart));
     const [formActualEnd, setFormActualEnd] = useState(toDatetimeLocal(actualEnd));
-    const [showActualEdit, setShowActualEdit] = useState(false);
 
     // Sync local state when props change
     useEffect(() => {
         setFormAllDay(isAllDay);
-        setFormStartDate(toDateOnly(scheduledStart));
-        setFormEndDate(toDateOnly(scheduledEnd));
         setFormStartDatetime(toDatetimeLocal(scheduledStart));
         setFormEndDatetime(toDatetimeLocal(scheduledEnd));
         setFormActualStart(toDatetimeLocal(actualStart));
@@ -129,22 +118,27 @@ export function ScheduleSection({
             let newScheduledStart: string | null = null;
             let newScheduledEnd: string | null = null;
 
-            if (formAllDay) {
-                // All-day event: use date inputs
-                if (formStartDate) {
-                    newScheduledStart = fromDateToStartDatetime(formStartDate);
-                    newScheduledEnd = formEndDate
-                        ? fromDateToEndDatetime(formEndDate)
-                        : fromDateToEndDatetime(formStartDate);
-                }
-            } else {
-                // Timed event: use datetime inputs
-                if (formStartDatetime) {
+            if (formStartDatetime) {
+                if (formAllDay) {
+                    // All-day: normalize to day boundaries
+                    const startDate = formStartDatetime.split('T')[0];
+                    newScheduledStart = fromDateToStartDatetime(startDate);
+                } else {
                     newScheduledStart = fromDatetimeLocal(formStartDatetime);
                 }
-                if (formEndDatetime) {
+            }
+            if (formEndDatetime) {
+                if (formAllDay) {
+                    // All-day: normalize to day boundaries
+                    const endDate = formEndDatetime.split('T')[0];
+                    newScheduledEnd = fromDateToEndDatetime(endDate);
+                } else {
                     newScheduledEnd = fromDatetimeLocal(formEndDatetime);
                 }
+            } else if (formAllDay && formStartDatetime) {
+                // All-day with no end: use start date
+                const startDate = formStartDatetime.split('T')[0];
+                newScheduledEnd = fromDateToEndDatetime(startDate);
             }
 
             const updates: Parameters<typeof onScheduleChange>[0] = {
@@ -159,11 +153,9 @@ export function ScheduleSection({
                 duration: null,
             };
 
-            // Include actual times if editing them
-            if (showActualEdit) {
-                updates.actualStart = formActualStart ? fromDatetimeLocal(formActualStart) : null;
-                updates.actualEnd = formActualEnd ? fromDatetimeLocal(formActualEnd) : null;
-            }
+            // Always include actual times
+            updates.actualStart = formActualStart ? fromDatetimeLocal(formActualStart) : null;
+            updates.actualEnd = formActualEnd ? fromDatetimeLocal(formActualEnd) : null;
 
             await onScheduleChange(updates);
             setIsEditing(false);
@@ -270,99 +262,66 @@ export function ScheduleSection({
                         </label>
                     </div>
 
-                    {formAllDay ? (
-                        /* All-day event: date inputs only */
-                        <div className="grid grid-cols-2 gap-2">
-                            <div className="min-w-0">
-                                <label className="block text-xs text-gray-500 mb-1">Start Date</label>
-                                <input
-                                    type="date"
-                                    value={formStartDate}
-                                    onChange={(e) => setFormStartDate(e.target.value)}
-                                    className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
-                                    style={{ WebkitAppearance: 'none', appearance: 'none' }}
-                                    autoFocus
-                                />
-                            </div>
-                            <div className="min-w-0">
-                                <label className="block text-xs text-gray-500 mb-1">End Date</label>
-                                <input
-                                    type="date"
-                                    value={formEndDate}
-                                    onChange={(e) => setFormEndDate(e.target.value)}
-                                    className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
-                                    style={{ WebkitAppearance: 'none', appearance: 'none' }}
-                                />
-                            </div>
+                    {/* Scheduled times - always datetime-local */}
+                    <div className="grid grid-cols-1 gap-2">
+                        <div className="min-w-0">
+                            <label className="block text-xs text-gray-500 mb-1">Start</label>
+                            <input
+                                type="datetime-local"
+                                name="schedule-section-start-dt"
+                                value={formStartDatetime}
+                                onChange={(e) => setFormStartDatetime(e.target.value)}
+                                autoComplete="off"
+                                data-form-type="other"
+                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
+                                style={{ WebkitAppearance: 'none', appearance: 'none' }}
+                            />
                         </div>
-                    ) : (
-                        /* Timed event: datetime inputs */
+                        <div className="min-w-0">
+                            <label className="block text-xs text-gray-500 mb-1">End</label>
+                            <input
+                                type="datetime-local"
+                                name="schedule-section-end-dt"
+                                value={formEndDatetime}
+                                onChange={(e) => setFormEndDatetime(e.target.value)}
+                                autoComplete="off"
+                                data-form-type="other"
+                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
+                                style={{ WebkitAppearance: 'none', appearance: 'none' }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Actual Times Section - always visible */}
+                    <div className="border-t border-gray-200 pt-3">
                         <div className="grid grid-cols-1 gap-2">
                             <div className="min-w-0">
-                                <label className="block text-xs text-gray-500 mb-1">Start</label>
+                                <label className="block text-xs text-gray-500 mb-1">Actual Start</label>
                                 <input
                                     type="datetime-local"
-                                    value={formStartDatetime}
-                                    onChange={(e) => setFormStartDatetime(e.target.value)}
+                                    name="schedule-section-actual-start-dt"
+                                    value={formActualStart}
+                                    onChange={(e) => setFormActualStart(e.target.value)}
+                                    autoComplete="off"
+                                    data-form-type="other"
                                     className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
                                     style={{ WebkitAppearance: 'none', appearance: 'none' }}
-                                    autoFocus
                                 />
                             </div>
                             <div className="min-w-0">
-                                <label className="block text-xs text-gray-500 mb-1">End</label>
+                                <label className="block text-xs text-gray-500 mb-1">Actual End</label>
                                 <input
                                     type="datetime-local"
-                                    value={formEndDatetime}
-                                    onChange={(e) => setFormEndDatetime(e.target.value)}
+                                    name="schedule-section-actual-end-dt"
+                                    value={formActualEnd}
+                                    onChange={(e) => setFormActualEnd(e.target.value)}
+                                    autoComplete="off"
+                                    data-form-type="other"
                                     className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
                                     style={{ WebkitAppearance: 'none', appearance: 'none' }}
                                 />
                             </div>
                         </div>
-                    )}
-
-                    {/* Actual Times Section (collapsible) */}
-                    <div className="border-t border-gray-200 pt-3">
-                        <button
-                            type="button"
-                            onClick={() => setShowActualEdit(!showActualEdit)}
-                            className="flex items-center text-xs text-gray-500 hover:text-gray-700"
-                        >
-                            <svg
-                                className={`w-3 h-3 mr-1 transition-transform ${showActualEdit ? 'rotate-90' : ''}`}
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                            Actual execution times
-                        </button>
-                        {showActualEdit && (
-                            <div className="grid grid-cols-1 gap-2 mt-2">
-                                <div className="min-w-0">
-                                    <label className="block text-xs text-gray-500 mb-1">Actual Start</label>
-                                    <input
-                                        type="datetime-local"
-                                        value={formActualStart}
-                                        onChange={(e) => setFormActualStart(e.target.value)}
-                                        className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
-                                        style={{ WebkitAppearance: 'none', appearance: 'none' }}
-                                    />
-                                </div>
-                                <div className="min-w-0">
-                                    <label className="block text-xs text-gray-500 mb-1">Actual End</label>
-                                    <input
-                                        type="datetime-local"
-                                        value={formActualEnd}
-                                        onChange={(e) => setFormActualEnd(e.target.value)}
-                                        className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
-                                        style={{ WebkitAppearance: 'none', appearance: 'none' }}
-                                    />
-                                </div>
-                            </div>
-                        )}
                     </div>
 
                     <div className="flex justify-end space-x-2 mt-2">
