@@ -40,6 +40,10 @@ import {
   attachLabelToIssue,
   detachLabelFromIssue,
   deleteLabel,
+  // Project functions
+  getProjectsForIssue,
+  // Link functions
+  listLinks,
   // Types
   type CreateMemoInput,
   type CreateTaskInput,
@@ -154,10 +158,16 @@ export class TaskService {
 
   public list(filters: ListTaskFilters = {}) {
     const tasks = listTasks(this.db, filters);
-    return tasks.map(task => ({
-      ...task,
-      labels: listTaskLabels(this.db, task.id)
-    }));
+    return tasks.map(task => {
+      const projects = getProjectsForIssue(this.db, task.id);
+      const links = listLinks(this.db, task.id);
+      return {
+        ...task,
+        labels: listTaskLabels(this.db, task.id),
+        projectIds: projects.map(p => p.id),
+        linkIds: links.map(l => l.id)
+      };
+    });
   }
 
   public show(id: number) {

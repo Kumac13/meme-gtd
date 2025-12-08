@@ -245,3 +245,25 @@ test('TaskService bookmark methods', async () => {
   delete process.env.MGTD_CONFIG_PATH;
   fs.removeSync(dir);
 });
+
+test('TaskService list returns projectIds and linkIds', async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'mgtd-core-task-'));
+  const { configPath } = await setupConfig(dir);
+  process.env.MGTD_CONFIG_PATH = configPath;
+  const { config } = await loadConfig({ configPath });
+  const service = new TaskService({ config });
+
+  // Create a task
+  const task = service.create({ title: 'Task with associations', bodyMd: 'Body' });
+
+  // List tasks and verify projectIds and linkIds are present (empty arrays for now)
+  const list = service.list();
+  assert.equal(list.length, 1);
+  assert.ok(Array.isArray(list[0].projectIds), 'projectIds should be an array');
+  assert.ok(Array.isArray(list[0].linkIds), 'linkIds should be an array');
+  assert.deepEqual(list[0].projectIds, []);
+  assert.deepEqual(list[0].linkIds, []);
+
+  delete process.env.MGTD_CONFIG_PATH;
+  fs.removeSync(dir);
+});

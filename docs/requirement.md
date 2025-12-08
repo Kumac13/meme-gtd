@@ -113,6 +113,7 @@ stateDiagram-v2
 - **機能要件**:
   - タスクの生成（メモ昇格または直接作成）。生成時は Inbox（初期 `status=open`）に配置。
   - タスク一覧・フィルタリング（ステータス、ラベル、プロジェクト、検索語など）。
+  - タスク一覧レスポンスには `projectIds`（関連プロジェクトIDの配列）と `linkIds`（関連リンクIDの配列）を含む。
   - 詳細閲覧・更新（タイトル、本文、ステータス、予定日、ラベル、プロジェクト、コメント）。
   - 状態遷移（close/cancel/reopen 等）と履歴の記録。
 - **制約**: 型検証により `memo` ID への誤操作を防止。論理削除を採用。
@@ -208,6 +209,7 @@ stateDiagram-v2
   - 基本エンドポイント `/issues`（`type` クエリでフィルタ）。
   - コメント、ラベル、リンク、プロジェクトなどは `/issues/{id}/comments`, `/issues/{id}/labels` 等で提供。
   - `POST /issues/{id}/promote` により memo → task 昇格をハンドリング。
+  - `GET /api/tasks` のレスポンスには各タスクの `projectIds` と `linkIds` を含み、AIエージェントが関連情報を参照可能。
 
 ---
 
