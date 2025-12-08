@@ -11,6 +11,18 @@ import { Link } from 'react-router-dom';
 import type { LinkDisplayItem } from '../types/links';
 import { getLinkIcon, getLinkLabel, getDirectionArrow } from '../utils/linkIcons';
 
+// Status badge colors (same as ItemList)
+const statusBadgeClasses: Record<string, string> = {
+  inbox: 'bg-gray-100 text-gray-700',
+  open: 'bg-blue-100 text-blue-700',
+  next: 'bg-green-100 text-green-700',
+  waiting: 'bg-yellow-100 text-yellow-700',
+  scheduled: 'bg-purple-100 text-purple-700',
+  someday: 'bg-orange-100 text-orange-700',
+  done: 'bg-gray-200 text-gray-500',
+  canceled: 'bg-red-100 text-red-500',
+};
+
 interface LinkItemProps {
   /** Link data to display */
   link: LinkDisplayItem;
@@ -87,9 +99,9 @@ export default function LinkItem({ link, onDelete, isDeleting = false, onItemCli
             </Link>
           )}
 
-          {/* Status (task only) */}
+          {/* Status badge (task only) */}
           {link.targetIssue.status && (
-            <span className="text-xs text-gray-500 capitalize flex-shrink-0">
+            <span className={`text-xs px-1.5 py-0.5 rounded capitalize flex-shrink-0 ${statusBadgeClasses[link.targetIssue.status] || 'bg-gray-100 text-gray-700'}`}>
               {link.targetIssue.status}
             </span>
           )}

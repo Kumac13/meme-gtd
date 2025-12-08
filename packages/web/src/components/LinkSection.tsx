@@ -11,6 +11,27 @@ import AddLinkInline from './AddLinkInline';
 import type { LinkDisplayItem, LinkCreationState, LinkType } from '../types/links';
 import { LinksService } from '../api/services/LinksService';
 
+// Status priority for sorting (lower = higher priority, displayed first)
+const statusPriority: Record<string, number> = {
+  next: 1,
+  waiting: 2,
+  scheduled: 3,
+  open: 4,
+  inbox: 5,
+  someday: 6,
+  done: 7,
+  canceled: 8,
+};
+
+// Sort links by target issue status (active tasks first, completed last, memos at end)
+const sortLinksByStatus = (links: LinkDisplayItem[]): LinkDisplayItem[] => {
+  return [...links].sort((a, b) => {
+    const priorityA = a.targetIssue.status ? (statusPriority[a.targetIssue.status] ?? 9) : 9;
+    const priorityB = b.targetIssue.status ? (statusPriority[b.targetIssue.status] ?? 9) : 9;
+    return priorityA - priorityB;
+  });
+};
+
 interface LinkSectionProps {
   /** ID of the issue (task or memo) */
   itemId: number;
@@ -60,7 +81,8 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
           title: `Issue #${link.targetIssueId}`,
         },
       }));
-      setLinks(linksWithTarget);
+      // Sort links by status (active tasks first, completed last)
+      setLinks(sortLinksByStatus(linksWithTarget));
     } catch (err) {
       console.error('Failed to fetch links:', err);
       setError('Failed to load links');
