@@ -270,6 +270,85 @@ describe('Task CRUD Operations', () => {
     assert.ok(Array.isArray(result.labels));
     assert.strictEqual(result.labels.length, 0);
   });
+
+  it('should return tasks with projectIds and linkIds arrays (GET /api/tasks)', async () => {
+    // Create a task
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task with project and link' }),
+    });
+    const task = JSON.parse(createResponse.body);
+
+    // Create a project and add the task to it
+    const projectResponse = await app.inject({
+      method: 'POST',
+      url: '/api/projects',
+      payload: { name: 'Test Project', viewMeta: { viewType: 'board', columns: ['To Do', 'Done'] } },
+    });
+    const project = JSON.parse(projectResponse.body);
+
+    await app.inject({
+      method: 'POST',
+      url: `/api/projects/${project.id}/items`,
+      payload: { issueId: task.id },
+    });
+
+    // Create another task and link it
+    const createResponse2 = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Related Task' }),
+    });
+    const relatedTask = JSON.parse(createResponse2.body);
+
+    const linkResponse = await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: { sourceIssueId: task.id, targetIssueId: relatedTask.id, linkType: 'relates' },
+    });
+    const link = JSON.parse(linkResponse.body);
+
+    // List tasks and verify projectIds and linkIds
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/tasks',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const tasks = JSON.parse(response.body);
+    const foundTask = tasks.find((t: any) => t.id === task.id);
+    assert.ok(foundTask);
+    assert.ok(Array.isArray(foundTask.projectIds), 'projectIds should be an array');
+    assert.ok(Array.isArray(foundTask.linkIds), 'linkIds should be an array');
+    assert.ok(foundTask.projectIds.includes(project.id), 'projectIds should include the project ID');
+    assert.ok(foundTask.linkIds.includes(link.id), 'linkIds should include the link ID');
+  });
+
+  it('should return empty projectIds and linkIds arrays when task has no associations', async () => {
+    // Create a task without any project or link associations
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Isolated Task' }),
+    });
+    const task = JSON.parse(createResponse.body);
+
+    // List tasks and verify empty arrays
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/tasks',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const tasks = JSON.parse(response.body);
+    const foundTask = tasks.find((t: any) => t.id === task.id);
+    assert.ok(foundTask);
+    assert.ok(Array.isArray(foundTask.projectIds), 'projectIds should be an array');
+    assert.ok(Array.isArray(foundTask.linkIds), 'linkIds should be an array');
+    assert.strictEqual(foundTask.projectIds.length, 0, 'projectIds should be empty');
+    assert.strictEqual(foundTask.linkIds.length, 0, 'linkIds should be empty');
+  });
 });
 
 describe('Task Status Transition Operations', () => {

@@ -72,6 +72,16 @@ mgtd task list --search "login" --json
 # Returns: "preview": "Implement <mark>login</mark> feature"
 ```
 
+**Project and Link IDs:**
+Task list responses include arrays of associated project IDs and link IDs (when using `--json`).
+
+```bash
+mgtd task list --json
+# Returns: "projectIds": [1, 2], "linkIds": [5, 8]
+```
+
+This enables AI agents to reference related projects and links for context.
+
 **Prefix Wildcard Search:**
 Use `*` suffix for prefix matching. This is especially useful for Japanese text search.
 
@@ -184,7 +194,7 @@ mgtd task list [--status <state>] [--label <name>] [--search <query>] [--search-
 - `--bookmarked` - Show only bookmarked tasks
 - `--order <asc|desc>` - Sort order (default: desc)
 - `--limit <n>` - Maximum number of results
-- `--json` - Output in JSON format (includes preview snippets when searching)
+- `--json` - Output in JSON format (includes preview snippets when searching, projectIds, and linkIds)
 
 ### Memo List
 

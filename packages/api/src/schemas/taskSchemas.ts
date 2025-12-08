@@ -93,11 +93,13 @@ export const TaskSchema = z.object({
 export type Task = z.infer<typeof TaskSchema>;
 
 /**
- * Schema for task list item response (includes commentCount)
+ * Schema for task list item response (includes commentCount, projectIds, linkIds)
  */
 export const TaskListItemSchema = TaskSchema.extend({
   commentCount: z.number().int().nonnegative().describe('Number of non-deleted comments on this task'),
   preview: z.string().optional().describe('Context preview with highlighted search terms (only present when search parameter is active)'),
+  projectIds: z.array(z.number().int().positive()).describe('Array of project IDs that contain this task'),
+  linkIds: z.array(z.number().int().positive()).describe('Array of link IDs associated with this task'),
 });
 
 export type TaskListItem = z.infer<typeof TaskListItemSchema>;

@@ -1569,6 +1569,20 @@ paths:
                     preview:
                       type: string
                       description: Context preview with highlighted search terms (only present when search parameter is active)
+                    projectIds:
+                      type: array
+                      items:
+                        type: integer
+                        exclusiveMinimum: true
+                        minimum: 0
+                      description: Array of project IDs that contain this task
+                    linkIds:
+                      type: array
+                      items:
+                        type: integer
+                        exclusiveMinimum: true
+                        minimum: 0
+                      description: Array of link IDs associated with this task
                   required:
                     - id
                     - type
@@ -1592,6 +1606,8 @@ paths:
                     - updatedAt
                     - labels
                     - commentCount
+                    - projectIds
+                    - linkIds
                   additionalProperties: false
         "400":
           description: Default Response
