@@ -17,10 +17,11 @@
 
 ## 参照資料
 
-1. **`docs/gtd.md`** - GTDワークフローの概念図
-2. **`docs/requirements.md`** - 実装要件とデータモデル（最重要）
-3. **`docs/cli-commands.md`** - CLIコマンド仕様
-4. **GitHub CLI (`gh`)** - UX設計の参照元（`gh issue`, `gh project`コマンド）
+1. **`README.ai.md`** - 他AIへ渡す用のプロジェクト概要（コンセプト、データモデル、インターフェース）
+2. **`docs/gtd.md`** - GTDワークフローの概念図
+3. **`docs/requirement.md`** - 実装要件とデータモデル（最重要）
+4. **`docs/cli-commands.md`** - CLIコマンド仕様
+5. **GitHub CLI (`gh`)** - UX設計の参照元（`gh issue`, `gh project`コマンド）
 
 ## 開発時の原則
 
@@ -327,6 +328,7 @@ git tag vX.Y.Z
 - 指示から外れる判断が必要な場合は事前に確認を取る
 - 実装中は論理的な区切りごとにコミットを作成し、変更は順次記録する
 - 機能追加や変更時は関連ドキュメント（README.mdやdocs/）を必ず更新する
+- **スキーマ変更・新機能追加時は `README.ai.md` も更新する**（他AIへ渡す用のコンテキストドキュメント）
 
 ## Active Technologies
 - TypeScript 5.5.4 / React 19.2.0 / Node.js 22+ (020-web-label-management)
