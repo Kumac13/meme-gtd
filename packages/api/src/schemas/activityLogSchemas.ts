@@ -128,6 +128,8 @@ export const IssueActivityLogQuerySchema = z.object({
   order: z.enum(['asc', 'desc']).default('asc').describe('Sort order by occurred_at'),
 });
 
+export type IssueActivityLogQuerystring = z.infer<typeof IssueActivityLogQuerySchema>;
+
 /**
  * Schema for project activity log query parameters
  */
@@ -135,6 +137,10 @@ export const ProjectActivityLogQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(1000).default(100).describe('Maximum number of entries to return'),
   order: z.enum(['asc', 'desc']).default('desc').describe('Sort order by occurred_at'),
 });
+
+export type ProjectActivityLogQuerystring = z.infer<typeof ProjectActivityLogQuerySchema>;
+
+export type ActivityLogQuerystring = z.infer<typeof ActivityLogQuerySchema>;
 
 /**
  * Schema for completed tasks query parameters
@@ -145,4 +151,4 @@ export const CompletedTasksQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(1000).default(100).describe('Maximum number of entries to return'),
 });
 
-export type CompletedTasksQuery = z.infer<typeof CompletedTasksQuerySchema>;
+export type CompletedTasksQuerystring = z.infer<typeof CompletedTasksQuerySchema>;
