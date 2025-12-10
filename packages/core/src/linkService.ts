@@ -1,6 +1,7 @@
 import type { MgtdConfig } from 'meme-gtd-config';
-import type { Link } from 'meme-gtd-shared';
+import type { Link, SourceType } from 'meme-gtd-shared';
 import type Database from 'better-sqlite3';
+import { ActivityLogger } from './activity-log/activity-logger.js';
 import {
   ensureDatabase,
   createLink as dbCreateLink,
@@ -17,10 +18,12 @@ import {
 export interface LinkServiceOptions {
   config?: MgtdConfig;
   db?: Database.Database;
+  sourceType?: SourceType;
 }
 
 export class LinkService {
   private readonly db: Database.Database;
+  private readonly logger: ActivityLogger;
 
   constructor(private readonly options: LinkServiceOptions) {
     if (options.db) {
@@ -30,6 +33,7 @@ export class LinkService {
     } else {
       throw new Error('LinkService requires either db or config option');
     }
+    this.logger = new ActivityLogger(this.db, options.sourceType ?? 'api');
   }
 
   /**
@@ -122,7 +126,9 @@ export class LinkService {
       linkType: type
     };
 
-    return dbCreateLink(this.db, input);
+    const link = dbCreateLink(this.db, input);
+    this.logger.logLinkCreated(link.id, type, sourceId, targetId);
+    return link;
   }
 
   /**
@@ -151,6 +157,9 @@ export class LinkService {
    * @throws Error if link not found
    */
   remove(linkId: number): void {
+    // Get link details before delete for logging
+    const link = dbGetLinkById(this.db, linkId);
+    this.logger.logLinkDeleted(linkId, link.linkType, link.sourceIssueId, link.targetIssueId);
     dbDeleteLink(this.db, linkId);
   }
 }
