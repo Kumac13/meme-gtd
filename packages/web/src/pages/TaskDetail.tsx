@@ -103,6 +103,10 @@ export default function TaskDetail() {
     setSelectedItem(null);
   }, []);
 
+  const handleCommentsLoaded = useCallback((loadedComments: Comment[]) => {
+    setComments(loadedComments);
+  }, []);
+
   if (loading) {
     return <LoadingState message="Loading task..." />;
   }
@@ -135,10 +139,6 @@ export default function TaskDetail() {
     // Navigate to the newly created task
     navigate(`/tasks/${newTaskId}`);
   };
-
-  const handleCommentsLoaded = useCallback((loadedComments: Comment[]) => {
-    setComments(loadedComments);
-  }, []);
 
   const handleCopyAllContents = async () => {
     const title = task?.title || 'Untitled';
