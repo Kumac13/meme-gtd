@@ -59,10 +59,12 @@ import {
 export interface MemoServiceOptions {
   config?: MgtdConfig;
   db?: Database.Database;
+  sourceType?: SourceType;
 }
 
 export class MemoService {
   private readonly db: Database.Database;
+  private readonly logger: ActivityLogger;
 
   constructor(private readonly options: MemoServiceOptions) {
     if (options.db) {
@@ -72,10 +74,13 @@ export class MemoService {
     } else {
       throw new Error('MemoService requires either db or config option');
     }
+    this.logger = new ActivityLogger(this.db, options.sourceType ?? 'api');
   }
 
   public create(input: CreateMemoInput) {
-    return createMemo(this.db, input);
+    const memo = createMemo(this.db, input);
+    this.logger.logMemoCreated(memo.id, input.bodyMd ?? '');
+    return memo;
   }
 
   public list(filters: ListMemoFilters = {}) {
@@ -95,15 +100,28 @@ export class MemoService {
   }
 
   public edit(input: UpdateMemoInput) {
-    return updateMemo(this.db, input);
+    const result = updateMemo(this.db, input);
+    this.logger.logMemoUpdated(input.id, input.bodyMd ?? '');
+    return result;
   }
 
   public remove(id: number) {
+    this.logger.logMemoDeleted(id);
     return deleteMemo(this.db, id);
   }
 
   public promote(input: PromoteMemoInput) {
-    return promoteMemo(this.db, input);
+    const memo = getMemo(this.db, input.memoId);
+    const result = promoteMemo(this.db, input);
+    const task = getTask(this.db, result.taskId);
+    this.logger.logMemoPromoted(
+      input.memoId,
+      memo?.bodyMd ?? '',
+      result.taskId,
+      task?.title ?? input.title,
+      task?.status ?? 'open'
+    );
+    return result;
   }
 
   public addComment(memoId: number, bodyMd: string) {
@@ -131,7 +149,9 @@ export class MemoService {
   }
 
   public setBookmark(id: number, isBookmarked: boolean) {
-    return setBookmark(this.db, id, isBookmarked);
+    const result = setBookmark(this.db, id, isBookmarked);
+    this.logger.logMemoBookmarked(id, isBookmarked);
+    return result;
   }
 }
 

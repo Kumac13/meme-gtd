@@ -16,7 +16,8 @@ export type IssueEventType =
   | 'memo.created'
   | 'memo.updated'
   | 'memo.promoted'
-  | 'memo.deleted';
+  | 'memo.deleted'
+  | 'memo.bookmarked';
 
 export type LabelEventType =
   | 'label.created'

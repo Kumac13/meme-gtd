@@ -178,6 +178,18 @@ export class ActivityLogger {
     });
   }
 
+  logMemoBookmarked(memoId: number, isBookmarked: boolean): void {
+    createActivityLog(this.db, {
+      eventType: 'memo.bookmarked',
+      sourceType: this.sourceType,
+      payload: {
+        issue_id: memoId,
+        issue_type: 'memo',
+        is_bookmarked: isBookmarked,
+      },
+    });
+  }
+
   // ============================================================
   // Label Events
   // ============================================================
