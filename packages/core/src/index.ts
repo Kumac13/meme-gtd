@@ -283,3 +283,22 @@ export { LinkService, type LinkServiceOptions } from './linkService.js';
 
 // Project Service
 export { ProjectService, type ProjectServiceOptions } from './projectService.js';
+
+// Activity Log
+export { ActivityLogger } from './activity-log/activity-logger.js';
+export {
+  createBodyPreview,
+  getProjectSnapshots,
+  getLabelSnapshots,
+  getIssueTitle,
+  getIssueType,
+  getProjectName,
+  getLabelName,
+  buildTaskCreatedPayload,
+  buildTaskStatusChangedPayload,
+  buildLabelAssignedPayload,
+  buildProjectItemAddedPayload,
+  buildCommentCreatedPayload,
+  buildLinkCreatedPayload,
+  buildMemoPromotedPayload,
+} from './activity-log/payload-builder.js';
