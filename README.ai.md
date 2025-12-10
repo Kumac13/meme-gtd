@@ -126,6 +126,33 @@ Memo (Captured) → promote → Task (Inbox)
 | body_md | TEXT | 編集前の本文 |
 | created_at | TEXT | 作成日時 |
 
+### activity_log（イベントソーシング）
+
+| カラム | 型 | 説明 |
+|--------|-----|------|
+| id | INTEGER PK | 自動採番 |
+| event_type | TEXT | イベントタイプ（`task.created`, `memo.updated` 等） |
+| occurred_at | TEXT | 発生日時 (ISO 8601) |
+| source_type | TEXT | 操作元: `cli`/`api`/`system` |
+| payload | TEXT | JSON形式のイベント固有データ |
+| issue_id | INTEGER VIRTUAL | payloadから抽出（Generated Column） |
+| project_id | INTEGER VIRTUAL | payloadから抽出（Generated Column） |
+| label_id | INTEGER VIRTUAL | payloadから抽出（Generated Column） |
+
+**特徴:**
+- Append-only（追記のみ、UPDATE/DELETE禁止）
+- SQLiteトリガーで不変性保証
+- Diff Logging: 更新系イベントで`{ old, new }`形式の変更前後記録
+- Snapshotting: イベント発生時点の関連エンティティ名を焼き付け
+
+**イベントタイプ:**
+- Task: `task.created`, `task.updated`, `task.status_changed`, `task.deleted`, `task.bookmarked`
+- Memo: `memo.created`, `memo.updated`, `memo.promoted`, `memo.deleted`, `memo.bookmarked`
+- Project: `project.created`, `project.updated`, `project.deleted`, `project.item_added`, `project.item_removed`
+- Label: `label.created`, `label.deleted`, `label.assigned`, `label.removed`
+- Link: `link.created`, `link.deleted`
+- Comment: `comment.created`, `comment.updated`, `comment.deleted`
+
 ### issues_fts（全文検索用 FTS5 仮想テーブル）
 
 | カラム | 型 | 説明 |
@@ -168,6 +195,7 @@ mgtd project create/list/view
 | `GET/POST /api/projects` | プロジェクト一覧・作成 |
 | `GET/POST /api/links` | リンク一覧・作成 |
 | `GET/POST /api/issues/{id}/comments` | コメント一覧・作成 |
+| `GET /api/activity-log` | アクティビティログ一覧（フィルタ対応） |
 
 ### Web UI
 

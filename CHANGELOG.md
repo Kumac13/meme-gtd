@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.18.0 - 2025-12-11
+
+### New Features
+
+- **Activity Log (Event Sourcing)**: Track all user actions as immutable event log.
+  - **Database**: New `activity_log` table with append-only design
+    - Generated columns for efficient filtering (`issue_id`, `project_id`, `label_id`)
+    - SQLite triggers enforce immutability (UPDATE/DELETE blocked)
+  - **Event Types**: 20+ event types covering all entities
+    - Task: `task.created`, `task.updated`, `task.status_changed`, `task.deleted`, `task.bookmarked`
+    - Memo: `memo.created`, `memo.updated`, `memo.promoted`, `memo.deleted`, `memo.bookmarked`
+    - Project: `project.created`, `project.updated`, `project.deleted`, `project.item_added`, `project.item_removed`
+    - Label: `label.created`, `label.deleted`, `label.assigned`, `label.removed`
+    - Link: `link.created`, `link.deleted`
+    - Comment: `comment.created`, `comment.updated`, `comment.deleted`
+  - **Diff Logging**: Update events capture `{ old, new }` values for change tracking
+  - **Full Text Storage**: Complete body text stored (no truncation)
+  - **Snapshotting**: Related entity names captured at event time
+  - **API**: New `GET /api/activity-log` endpoint with filtering
+    - Filter by: `issueId`, `projectId`, `labelId`, `eventType`, `sourceType`
+    - Date range: `from`, `to`
+    - Pagination: `limit`, `offset`, `order`
+  - **Core Integration**: ActivityLogger integrated into all services
+    - MemoService, TaskService, ProjectService, LabelService, LinkService
+    - Transaction boundaries ensure consistency
+
 ## 0.17.0 - 2025-12-07
 
 ### New Features
