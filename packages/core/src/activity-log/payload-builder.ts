@@ -119,7 +119,7 @@ export const getLabelName = (
 /**
  * Build payload for task.created event
  */
-export interface TaskCreatedPayload {
+interface TaskCreatedPayload {
   issue_id: number;
   issue_type: 'task';
   title: string;
@@ -153,7 +153,7 @@ export const buildTaskCreatedPayload = (
 /**
  * Build payload for task.status_changed event
  */
-export interface TaskStatusChangedPayload {
+interface TaskStatusChangedPayload {
   issue_id: number;
   issue_type: 'task';
   title: string | null;
@@ -183,7 +183,7 @@ export const buildTaskStatusChangedPayload = (
 /**
  * Build payload for label.assigned event
  */
-export interface LabelAssignedPayload {
+interface LabelAssignedPayload {
   issue_id: number;
   issue_type: IssueType;
   issue_title: string | null;
@@ -208,7 +208,7 @@ export const buildLabelAssignedPayload = (
 /**
  * Build payload for project.item_added event
  */
-export interface ProjectItemAddedPayload {
+interface ProjectItemAddedPayload {
   project_id: number;
   project_name: string | null;
   issue_id: number;
@@ -236,7 +236,7 @@ export const buildProjectItemAddedPayload = (
 /**
  * Build payload for comment.created event
  */
-export interface CommentCreatedPayload {
+interface CommentCreatedPayload {
   comment_id: number;
   issue_id: number;
   issue_type: IssueType;
@@ -262,7 +262,7 @@ export const buildCommentCreatedPayload = (
 /**
  * Build payload for link.created event
  */
-export interface LinkCreatedPayload {
+interface LinkCreatedPayload {
   link_id: number;
   link_type: string;
   source_issue_id: number;
@@ -295,7 +295,7 @@ export const buildLinkCreatedPayload = (
 /**
  * Build payload for memo.promoted event
  */
-export interface MemoPromotedPayload {
+interface MemoPromotedPayload {
   issue_id: number;
   source_memo_id: number;
   source_memo_body_preview: string | null;
