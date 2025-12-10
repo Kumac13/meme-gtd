@@ -9,9 +9,11 @@ import type {
   ProjectDetail,
   ProjectItem,
   ViewType,
-  ViewMeta
+  ViewMeta,
+  SourceType
 } from 'meme-gtd-shared';
 import type Database from 'better-sqlite3';
+import { ActivityLogger } from './activity-log/activity-logger.js';
 import {
   ensureDatabase,
   createProject as dbCreateProject,
@@ -32,6 +34,7 @@ import {
 export interface ProjectServiceOptions {
   config?: MgtdConfig;
   db?: Database.Database;
+  sourceType?: SourceType;
 }
 
 interface CreateProjectServiceInput {
@@ -56,6 +59,7 @@ interface UpdateProjectItemServiceInput {
 
 export class ProjectService {
   private readonly db: Database.Database;
+  private readonly logger: ActivityLogger;
 
   constructor(private readonly options: ProjectServiceOptions) {
     if (options.db) {
@@ -65,6 +69,7 @@ export class ProjectService {
     } else {
       throw new Error('ProjectService requires either db or config option');
     }
+    this.logger = new ActivityLogger(this.db, options.sourceType ?? 'api');
   }
 
   /**
@@ -102,7 +107,9 @@ export class ProjectService {
       endDate: input.endDate
     };
 
-    return dbCreateProject(this.db, dbInput);
+    const project = dbCreateProject(this.db, dbInput);
+    this.logger.logProjectCreated(project.id, project.name);
+    return project;
   }
 
   /**
@@ -192,6 +199,7 @@ export class ProjectService {
       throw new Error(`Failed to retrieve updated project #${id}`);
     }
 
+    this.logger.logProjectUpdated(id, updated.name);
     return updated;
   }
 
@@ -202,6 +210,8 @@ export class ProjectService {
    * @throws Error if project not found
    */
   delete(id: number): void {
+    // Log before delete to capture project name
+    this.logger.logProjectDeleted(id);
     const deletedCount = dbDeleteProject(this.db, id);
     if (deletedCount === 0) {
       throw new Error(`Project #${id} not found`);
@@ -236,7 +246,9 @@ export class ProjectService {
       column: input.column
     };
 
-    return dbCreateProjectItem(this.db, dbInput);
+    const item = dbCreateProjectItem(this.db, dbInput);
+    this.logger.logProjectItemAdded(projectId, input.issueId, input.position);
+    return item;
   }
 
   /**
@@ -247,6 +259,7 @@ export class ProjectService {
    * @throws Error if project item not found
    */
   removeItem(projectId: number, issueId: number): void {
+    this.logger.logProjectItemRemoved(projectId, issueId);
     const deletedCount = dbDeleteProjectItem(this.db, projectId, issueId);
     if (deletedCount === 0) {
       throw new Error(`Issue #${issueId} not found in project #${projectId}`);
