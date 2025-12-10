@@ -125,14 +125,27 @@ export class MemoService {
   }
 
   public addComment(memoId: number, bodyMd: string) {
-    return addComment(this.db, memoId, bodyMd);
+    const comment = addComment(this.db, memoId, bodyMd);
+    this.logger.logCommentCreated(comment.id, memoId, bodyMd);
+    return comment;
   }
 
   public updateComment(commentId: number, bodyMd: string) {
-    return updateComment(this.db, commentId, bodyMd);
+    // Get issue_id before update
+    const row = this.db.prepare('SELECT issue_id FROM comments WHERE id = ?').get(commentId) as { issue_id: number } | undefined;
+    const result = updateComment(this.db, commentId, bodyMd);
+    if (row) {
+      this.logger.logCommentUpdated(commentId, row.issue_id, bodyMd);
+    }
+    return result;
   }
 
   public deleteComment(commentId: number) {
+    // Get issue_id before delete
+    const row = this.db.prepare('SELECT issue_id FROM comments WHERE id = ?').get(commentId) as { issue_id: number } | undefined;
+    if (row) {
+      this.logger.logCommentDeleted(commentId, row.issue_id);
+    }
     return deleteComment(this.db, commentId);
   }
 
@@ -255,14 +268,27 @@ export class TaskService {
   }
 
   public addComment(taskId: number, bodyMd: string) {
-    return addTaskComment(this.db, taskId, bodyMd);
+    const comment = addTaskComment(this.db, taskId, bodyMd);
+    this.logger.logCommentCreated(comment.id, taskId, bodyMd);
+    return comment;
   }
 
   public updateComment(commentId: number, bodyMd: string) {
-    return updateTaskComment(this.db, commentId, bodyMd);
+    // Get issue_id before update
+    const row = this.db.prepare('SELECT issue_id FROM comments WHERE id = ?').get(commentId) as { issue_id: number } | undefined;
+    const result = updateTaskComment(this.db, commentId, bodyMd);
+    if (row) {
+      this.logger.logCommentUpdated(commentId, row.issue_id, bodyMd);
+    }
+    return result;
   }
 
   public deleteComment(commentId: number) {
+    // Get issue_id before delete
+    const row = this.db.prepare('SELECT issue_id FROM comments WHERE id = ?').get(commentId) as { issue_id: number } | undefined;
+    if (row) {
+      this.logger.logCommentDeleted(commentId, row.issue_id);
+    }
     return deleteTaskComment(this.db, commentId);
   }
 
