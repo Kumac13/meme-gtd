@@ -318,10 +318,12 @@ export class TaskService {
 export interface LabelServiceOptions {
   config?: MgtdConfig;
   db?: Database.Database;
+  sourceType?: SourceType;
 }
 
 export class LabelService {
   private readonly db: Database.Database;
+  private readonly logger: ActivityLogger;
 
   constructor(private readonly options: LabelServiceOptions) {
     if (options.db) {
@@ -331,6 +333,7 @@ export class LabelService {
     } else {
       throw new Error('LabelService requires either db or config option');
     }
+    this.logger = new ActivityLogger(this.db, options.sourceType ?? 'api');
   }
 
   public list() {
@@ -338,18 +341,27 @@ export class LabelService {
   }
 
   public create(name: string, description?: string) {
-    return createLabel(this.db, name, description);
+    const label = createLabel(this.db, name, description);
+    this.logger.logLabelCreated(label.id, name, description);
+    return label;
   }
 
   public assignToIssue(issueId: number, labelId: number) {
-    return attachLabelToIssue(this.db, issueId, labelId);
+    const result = attachLabelToIssue(this.db, issueId, labelId);
+    this.logger.logLabelAssigned(issueId, labelId);
+    return result;
   }
 
   public removeFromIssue(issueId: number, labelId: number) {
+    this.logger.logLabelRemoved(issueId, labelId);
     return detachLabelFromIssue(this.db, issueId, labelId);
   }
 
   public delete(name: string) {
+    const label = getLabelByName(this.db, name);
+    if (label) {
+      this.logger.logLabelDeleted(label.id, name);
+    }
     return deleteLabel(this.db, name);
   }
 }
