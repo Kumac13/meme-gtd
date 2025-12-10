@@ -78,9 +78,11 @@ export class MemoService {
   }
 
   public create(input: CreateMemoInput) {
-    const memo = createMemo(this.db, input);
-    this.logger.logMemoCreated(memo.id, input.bodyMd ?? '');
-    return memo;
+    return this.db.transaction(() => {
+      const memo = createMemo(this.db, input);
+      this.logger.logMemoCreated(memo.id, input.bodyMd ?? '');
+      return memo;
+    })();
   }
 
   public list(filters: ListMemoFilters = {}) {
@@ -100,53 +102,73 @@ export class MemoService {
   }
 
   public edit(input: UpdateMemoInput) {
-    const result = updateMemo(this.db, input);
-    this.logger.logMemoUpdated(input.id, input.bodyMd ?? '');
-    return result;
+    return this.db.transaction(() => {
+      // Get old value before update
+      const oldMemo = getMemo(this.db, input.id);
+      const result = updateMemo(this.db, input);
+      // Log with diff
+      this.logger.logMemoUpdated(input.id, {
+        old: oldMemo?.bodyMd ?? null,
+        new: input.bodyMd ?? null,
+      });
+      return result;
+    })();
   }
 
   public remove(id: number) {
-    this.logger.logMemoDeleted(id);
-    return deleteMemo(this.db, id);
+    return this.db.transaction(() => {
+      this.logger.logMemoDeleted(id);
+      return deleteMemo(this.db, id);
+    })();
   }
 
   public promote(input: PromoteMemoInput) {
-    const memo = getMemo(this.db, input.memoId);
-    const result = promoteMemo(this.db, input);
-    const task = getTask(this.db, result.taskId);
-    this.logger.logMemoPromoted(
-      input.memoId,
-      memo?.bodyMd ?? '',
-      result.taskId,
-      task?.title ?? input.title,
-      task?.status ?? 'open'
-    );
-    return result;
+    return this.db.transaction(() => {
+      const memo = getMemo(this.db, input.memoId);
+      const result = promoteMemo(this.db, input);
+      const task = getTask(this.db, result.taskId);
+      this.logger.logMemoPromoted(
+        input.memoId,
+        memo?.bodyMd ?? '',
+        result.taskId,
+        task?.title ?? input.title,
+        task?.status ?? 'open'
+      );
+      return result;
+    })();
   }
 
   public addComment(memoId: number, bodyMd: string) {
-    const comment = addComment(this.db, memoId, bodyMd);
-    this.logger.logCommentCreated(comment.id, memoId, bodyMd);
-    return comment;
+    return this.db.transaction(() => {
+      const comment = addComment(this.db, memoId, bodyMd);
+      this.logger.logCommentCreated(comment.id, memoId, bodyMd);
+      return comment;
+    })();
   }
 
   public updateComment(commentId: number, bodyMd: string) {
-    // Get issue_id before update
-    const row = this.db.prepare('SELECT issue_id FROM comments WHERE id = ?').get(commentId) as { issue_id: number } | undefined;
-    const result = updateComment(this.db, commentId, bodyMd);
-    if (row) {
-      this.logger.logCommentUpdated(commentId, row.issue_id, bodyMd);
-    }
-    return result;
+    return this.db.transaction(() => {
+      // Get old value before update
+      const row = this.db.prepare('SELECT issue_id, body_md FROM comments WHERE id = ?').get(commentId) as { issue_id: number; body_md: string | null } | undefined;
+      const result = updateComment(this.db, commentId, bodyMd);
+      if (row) {
+        this.logger.logCommentUpdated(commentId, row.issue_id, {
+          old: row.body_md,
+          new: bodyMd,
+        });
+      }
+      return result;
+    })();
   }
 
   public deleteComment(commentId: number) {
-    // Get issue_id before delete
-    const row = this.db.prepare('SELECT issue_id FROM comments WHERE id = ?').get(commentId) as { issue_id: number } | undefined;
-    if (row) {
-      this.logger.logCommentDeleted(commentId, row.issue_id);
-    }
-    return deleteComment(this.db, commentId);
+    return this.db.transaction(() => {
+      const row = this.db.prepare('SELECT issue_id FROM comments WHERE id = ?').get(commentId) as { issue_id: number } | undefined;
+      if (row) {
+        this.logger.logCommentDeleted(commentId, row.issue_id);
+      }
+      return deleteComment(this.db, commentId);
+    })();
   }
 
   public listComments(memoId: number) {
@@ -190,15 +212,17 @@ export class TaskService {
   }
 
   public create(input: CreateTaskInput) {
-    const task = createTask(this.db, input);
-    this.logger.logTaskCreated(
-      task.id,
-      input.title,
-      task.status,
-      input.scheduledStart,
-      input.isAllDay
-    );
-    return task;
+    return this.db.transaction(() => {
+      const task = createTask(this.db, input);
+      this.logger.logTaskCreated(
+        task.id,
+        input.title,
+        task.status,
+        input.scheduledStart,
+        input.isAllDay
+      );
+      return task;
+    })();
   }
 
   public list(filters: ListTaskFilters = {}) {
@@ -224,72 +248,102 @@ export class TaskService {
   }
 
   public edit(input: UpdateTaskInput) {
-    const beforeTask = getTask(this.db, input.id);
-    const task = updateTask(this.db, input);
-    // Log status change if status was updated
-    if (input.status && input.status !== beforeTask.status) {
-      this.logger.logTaskStatusChanged(input.id, beforeTask.status, input.status);
-    } else {
-      this.logger.logTaskUpdated(input.id, input.title);
-    }
-    return task;
+    return this.db.transaction(() => {
+      const beforeTask = getTask(this.db, input.id);
+      const task = updateTask(this.db, input);
+      // Log status change if status was updated
+      if (input.status && input.status !== beforeTask.status) {
+        this.logger.logTaskStatusChanged(input.id, beforeTask.status, input.status);
+      } else {
+        // Log with diff for title and/or body changes
+        const diff: {
+          title?: { old: string | null; new: string | null };
+          body?: { old: string | null; new: string | null };
+        } = {};
+        if (input.title !== undefined) {
+          diff.title = { old: beforeTask.title, new: input.title };
+        }
+        if (input.bodyMd !== undefined) {
+          diff.body = { old: beforeTask.bodyMd, new: input.bodyMd };
+        }
+        this.logger.logTaskUpdated(input.id, diff);
+      }
+      return task;
+    })();
   }
 
   public remove(id: number) {
-    this.logger.logTaskDeleted(id);
-    return deleteTask(this.db, id);
+    return this.db.transaction(() => {
+      this.logger.logTaskDeleted(id);
+      return deleteTask(this.db, id);
+    })();
   }
 
   public close(id: number, comment?: string) {
-    const beforeTask = getTask(this.db, id);
-    const task = setTaskStatus(this.db, id, 'done');
-    this.logger.logTaskStatusChanged(id, beforeTask.status, 'done');
-    if (comment) {
-      addTaskComment(this.db, id, comment);
-    }
-    return task;
+    return this.db.transaction(() => {
+      const beforeTask = getTask(this.db, id);
+      const task = setTaskStatus(this.db, id, 'done');
+      this.logger.logTaskStatusChanged(id, beforeTask.status, 'done');
+      if (comment) {
+        addTaskComment(this.db, id, comment);
+      }
+      return task;
+    })();
   }
 
   public cancel(id: number, comment?: string) {
-    const beforeTask = getTask(this.db, id);
-    const task = setTaskStatus(this.db, id, 'canceled');
-    this.logger.logTaskStatusChanged(id, beforeTask.status, 'canceled');
-    if (comment) {
-      addTaskComment(this.db, id, comment);
-    }
-    return task;
+    return this.db.transaction(() => {
+      const beforeTask = getTask(this.db, id);
+      const task = setTaskStatus(this.db, id, 'canceled');
+      this.logger.logTaskStatusChanged(id, beforeTask.status, 'canceled');
+      if (comment) {
+        addTaskComment(this.db, id, comment);
+      }
+      return task;
+    })();
   }
 
   public reopen(id: number) {
-    const beforeTask = getTask(this.db, id);
-    const task = setTaskStatus(this.db, id, 'open');
-    this.logger.logTaskStatusChanged(id, beforeTask.status, 'open');
-    return task;
+    return this.db.transaction(() => {
+      const beforeTask = getTask(this.db, id);
+      const task = setTaskStatus(this.db, id, 'open');
+      this.logger.logTaskStatusChanged(id, beforeTask.status, 'open');
+      return task;
+    })();
   }
 
   public addComment(taskId: number, bodyMd: string) {
-    const comment = addTaskComment(this.db, taskId, bodyMd);
-    this.logger.logCommentCreated(comment.id, taskId, bodyMd);
-    return comment;
+    return this.db.transaction(() => {
+      const comment = addTaskComment(this.db, taskId, bodyMd);
+      this.logger.logCommentCreated(comment.id, taskId, bodyMd);
+      return comment;
+    })();
   }
 
   public updateComment(commentId: number, bodyMd: string) {
-    // Get issue_id before update
-    const row = this.db.prepare('SELECT issue_id FROM comments WHERE id = ?').get(commentId) as { issue_id: number } | undefined;
-    const result = updateTaskComment(this.db, commentId, bodyMd);
-    if (row) {
-      this.logger.logCommentUpdated(commentId, row.issue_id, bodyMd);
-    }
-    return result;
+    return this.db.transaction(() => {
+      // Get old value before update
+      const row = this.db.prepare('SELECT issue_id, body_md FROM comments WHERE id = ?').get(commentId) as { issue_id: number; body_md: string | null } | undefined;
+      const result = updateTaskComment(this.db, commentId, bodyMd);
+      if (row) {
+        this.logger.logCommentUpdated(commentId, row.issue_id, {
+          old: row.body_md,
+          new: bodyMd,
+        });
+      }
+      return result;
+    })();
   }
 
   public deleteComment(commentId: number) {
-    // Get issue_id before delete
-    const row = this.db.prepare('SELECT issue_id FROM comments WHERE id = ?').get(commentId) as { issue_id: number } | undefined;
-    if (row) {
-      this.logger.logCommentDeleted(commentId, row.issue_id);
-    }
-    return deleteTaskComment(this.db, commentId);
+    return this.db.transaction(() => {
+      // Get issue_id before delete
+      const row = this.db.prepare('SELECT issue_id FROM comments WHERE id = ?').get(commentId) as { issue_id: number } | undefined;
+      if (row) {
+        this.logger.logCommentDeleted(commentId, row.issue_id);
+      }
+      return deleteTaskComment(this.db, commentId);
+    })();
   }
 
   public listComments(taskId: number) {
@@ -305,13 +359,17 @@ export class TaskService {
   }
 
   public setBookmark(id: number, isBookmarked: boolean) {
-    const result = setTaskBookmark(this.db, id, isBookmarked);
-    this.logger.logTaskBookmarked(id, isBookmarked);
-    return result;
+    return this.db.transaction(() => {
+      const result = setTaskBookmark(this.db, id, isBookmarked);
+      this.logger.logTaskBookmarked(id, isBookmarked);
+      return result;
+    })();
   }
 
   public demote(input: DemoteTaskInput) {
-    return demoteTask(this.db, input);
+    return this.db.transaction(() => {
+      return demoteTask(this.db, input);
+    })();
   }
 }
 
@@ -341,28 +399,36 @@ export class LabelService {
   }
 
   public create(name: string, description?: string) {
-    const label = createLabel(this.db, name, description);
-    this.logger.logLabelCreated(label.id, name, description);
-    return label;
+    return this.db.transaction(() => {
+      const label = createLabel(this.db, name, description);
+      this.logger.logLabelCreated(label.id, name, description);
+      return label;
+    })();
   }
 
   public assignToIssue(issueId: number, labelId: number) {
-    const result = attachLabelToIssue(this.db, issueId, labelId);
-    this.logger.logLabelAssigned(issueId, labelId);
-    return result;
+    return this.db.transaction(() => {
+      const result = attachLabelToIssue(this.db, issueId, labelId);
+      this.logger.logLabelAssigned(issueId, labelId);
+      return result;
+    })();
   }
 
   public removeFromIssue(issueId: number, labelId: number) {
-    this.logger.logLabelRemoved(issueId, labelId);
-    return detachLabelFromIssue(this.db, issueId, labelId);
+    return this.db.transaction(() => {
+      this.logger.logLabelRemoved(issueId, labelId);
+      return detachLabelFromIssue(this.db, issueId, labelId);
+    })();
   }
 
   public delete(name: string) {
-    const label = getLabelByName(this.db, name);
-    if (label) {
-      this.logger.logLabelDeleted(label.id, name);
-    }
-    return deleteLabel(this.db, name);
+    return this.db.transaction(() => {
+      const label = getLabelByName(this.db, name);
+      if (label) {
+        this.logger.logLabelDeleted(label.id, name);
+      }
+      return deleteLabel(this.db, name);
+    })();
   }
 }
 

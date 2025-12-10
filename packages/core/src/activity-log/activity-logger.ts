@@ -14,7 +14,6 @@ import {
   buildCommentCreatedPayload,
   buildLinkCreatedPayload,
   buildMemoPromotedPayload,
-  createBodyPreview,
   getIssueTitle,
   getIssueType,
   getLabelName,
@@ -59,14 +58,21 @@ export class ActivityLogger {
     });
   }
 
-  logTaskUpdated(taskId: number, title?: string): void {
+  logTaskUpdated(
+    taskId: number,
+    diff: {
+      title?: { old: string | null; new: string | null };
+      body?: { old: string | null; new: string | null };
+    }
+  ): void {
     createActivityLog(this.db, {
       eventType: 'task.updated',
       sourceType: this.sourceType,
       payload: {
         issue_id: taskId,
         issue_type: 'task',
-        title: title ?? getIssueTitle(this.db, taskId),
+        title: diff.title,
+        body: diff.body,
       },
     });
   }
@@ -125,21 +131,24 @@ export class ActivityLogger {
       payload: {
         issue_id: memoId,
         issue_type: 'memo',
-        body_preview: createBodyPreview(bodyMd),
+        body: bodyMd,
         labels: getLabelSnapshots(this.db, memoId),
         projects: getProjectSnapshots(this.db, memoId),
       },
     });
   }
 
-  logMemoUpdated(memoId: number, bodyMd?: string): void {
+  logMemoUpdated(memoId: number, diff: { old: string | null; new: string | null }): void {
     createActivityLog(this.db, {
       eventType: 'memo.updated',
       sourceType: this.sourceType,
       payload: {
         issue_id: memoId,
         issue_type: 'memo',
-        body_preview: bodyMd ? createBodyPreview(bodyMd) : null,
+        body: {
+          old: diff.old,
+          new: diff.new,
+        },
       },
     });
   }
@@ -255,13 +264,20 @@ export class ActivityLogger {
     });
   }
 
-  logProjectUpdated(projectId: number, name?: string): void {
+  logProjectUpdated(
+    projectId: number,
+    diff: {
+      name?: { old: string | null; new: string | null };
+      description?: { old: string | null; new: string | null };
+    }
+  ): void {
     createActivityLog(this.db, {
       eventType: 'project.updated',
       sourceType: this.sourceType,
       payload: {
         project_id: projectId,
-        project_name: name ?? getProjectName(this.db, projectId),
+        name: diff.name,
+        description: diff.description,
       },
     });
   }
@@ -367,7 +383,11 @@ export class ActivityLogger {
     });
   }
 
-  logCommentUpdated(commentId: number, issueId: number, bodyMd: string): void {
+  logCommentUpdated(
+    commentId: number,
+    issueId: number,
+    diff: { old: string | null; new: string }
+  ): void {
     createActivityLog(this.db, {
       eventType: 'comment.updated',
       sourceType: this.sourceType,
@@ -376,7 +396,10 @@ export class ActivityLogger {
         issue_id: issueId,
         issue_type: getIssueType(this.db, issueId) ?? 'task',
         issue_title: getIssueTitle(this.db, issueId),
-        body_preview: createBodyPreview(bodyMd),
+        body: {
+          old: diff.old,
+          new: diff.new,
+        },
       },
     });
   }

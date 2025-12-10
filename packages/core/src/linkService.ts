@@ -49,86 +49,88 @@ export class LinkService {
     targetId: number,
     type: 'parent' | 'child' | 'relates' | 'derived_from'
   ): Link {
-    // Validation 1: Self-reference check
-    if (sourceId === targetId) {
-      throw new Error(`Cannot link issue to itself (ID: ${sourceId})`);
-    }
-
-    // Validation 2: Check if source issue exists
-    const sourceStmt = this.db.prepare('SELECT id FROM issues WHERE id = ? AND is_deleted = 0');
-    const sourceExists = sourceStmt.get(sourceId);
-    if (!sourceExists) {
-      throw new Error(`Issue #${sourceId} not found`);
-    }
-
-    // Validation 3: Check if target issue exists
-    const targetStmt = this.db.prepare('SELECT id FROM issues WHERE id = ? AND is_deleted = 0');
-    const targetExists = targetStmt.get(targetId);
-    if (!targetExists) {
-      throw new Error(`Issue #${targetId} not found`);
-    }
-
-    // Validation 4: Check for duplicate link
-    const existing = findLink(this.db, {
-      sourceIssueId: sourceId,
-      targetIssueId: targetId,
-      linkType: type
-    });
-
-    if (existing) {
-      throw new Error(
-        `Link already exists (source: ${sourceId}, target: ${targetId}, type: ${type})`
-      );
-    }
-
-    // Validation 5: Check for inverse parent-child link (FR-014)
-    // Only applies to parent/child link types
-    // MUST run before circular check to provide more specific error for 2-node inverse cases
-    const inverseLink = findInverseParentChildLink(this.db, sourceId, targetId, type);
-    if (inverseLink) {
-      throw new Error(
-        `Cannot create inverse parent-child link: Issue #${inverseLink.targetIssueId} is already a ${inverseLink.linkType} of Issue #${inverseLink.sourceIssueId}`
-      );
-    }
-
-    // Validation 6: Check for circular parent-child hierarchy (FR-013)
-    // Only applies to parent/child link types
-    // Runs after inverse check - catches 3+ node cycles that inverse check doesn't cover
-    if (type === 'parent' || type === 'child') {
-      // Determine which issue would become the ancestor and which the descendant
-      let newAncestorId: number;
-      let newDescendantId: number;
-
-      if (type === 'parent') {
-        // source --parent--> target means source is parent of target
-        newAncestorId = sourceId;
-        newDescendantId = targetId;
-      } else {
-        // type === 'child': source --child--> target means source is child of target
-        newAncestorId = targetId;
-        newDescendantId = sourceId;
+    return this.db.transaction(() => {
+      // Validation 1: Self-reference check
+      if (sourceId === targetId) {
+        throw new Error(`Cannot link issue to itself (ID: ${sourceId})`);
       }
 
-      // Check if newAncestor is already a descendant of newDescendant (would create cycle)
-      // hasAncestor(descendantId, ancestorId) checks if ancestorId is an ancestor of descendantId
-      // We want to check if newAncestorId has newDescendantId as an ancestor
-      if (hasAncestor(this.db, newAncestorId, newDescendantId)) {
+      // Validation 2: Check if source issue exists
+      const sourceStmt = this.db.prepare('SELECT id FROM issues WHERE id = ? AND is_deleted = 0');
+      const sourceExists = sourceStmt.get(sourceId);
+      if (!sourceExists) {
+        throw new Error(`Issue #${sourceId} not found`);
+      }
+
+      // Validation 3: Check if target issue exists
+      const targetStmt = this.db.prepare('SELECT id FROM issues WHERE id = ? AND is_deleted = 0');
+      const targetExists = targetStmt.get(targetId);
+      if (!targetExists) {
+        throw new Error(`Issue #${targetId} not found`);
+      }
+
+      // Validation 4: Check for duplicate link
+      const existing = findLink(this.db, {
+        sourceIssueId: sourceId,
+        targetIssueId: targetId,
+        linkType: type
+      });
+
+      if (existing) {
         throw new Error(
-          `Circular relationship detected: Creating this link would form a cycle in the parent-child hierarchy (Issue #${newDescendantId} is already an ancestor of Issue #${newAncestorId})`
+          `Link already exists (source: ${sourceId}, target: ${targetId}, type: ${type})`
         );
       }
-    }
 
-    // Create the link
-    const input: CreateLinkInput = {
-      sourceIssueId: sourceId,
-      targetIssueId: targetId,
-      linkType: type
-    };
+      // Validation 5: Check for inverse parent-child link (FR-014)
+      // Only applies to parent/child link types
+      // MUST run before circular check to provide more specific error for 2-node inverse cases
+      const inverseLink = findInverseParentChildLink(this.db, sourceId, targetId, type);
+      if (inverseLink) {
+        throw new Error(
+          `Cannot create inverse parent-child link: Issue #${inverseLink.targetIssueId} is already a ${inverseLink.linkType} of Issue #${inverseLink.sourceIssueId}`
+        );
+      }
 
-    const link = dbCreateLink(this.db, input);
-    this.logger.logLinkCreated(link.id, type, sourceId, targetId);
-    return link;
+      // Validation 6: Check for circular parent-child hierarchy (FR-013)
+      // Only applies to parent/child link types
+      // Runs after inverse check - catches 3+ node cycles that inverse check doesn't cover
+      if (type === 'parent' || type === 'child') {
+        // Determine which issue would become the ancestor and which the descendant
+        let newAncestorId: number;
+        let newDescendantId: number;
+
+        if (type === 'parent') {
+          // source --parent--> target means source is parent of target
+          newAncestorId = sourceId;
+          newDescendantId = targetId;
+        } else {
+          // type === 'child': source --child--> target means source is child of target
+          newAncestorId = targetId;
+          newDescendantId = sourceId;
+        }
+
+        // Check if newAncestor is already a descendant of newDescendant (would create cycle)
+        // hasAncestor(descendantId, ancestorId) checks if ancestorId is an ancestor of descendantId
+        // We want to check if newAncestorId has newDescendantId as an ancestor
+        if (hasAncestor(this.db, newAncestorId, newDescendantId)) {
+          throw new Error(
+            `Circular relationship detected: Creating this link would form a cycle in the parent-child hierarchy (Issue #${newDescendantId} is already an ancestor of Issue #${newAncestorId})`
+          );
+        }
+      }
+
+      // Create the link
+      const input: CreateLinkInput = {
+        sourceIssueId: sourceId,
+        targetIssueId: targetId,
+        linkType: type
+      };
+
+      const link = dbCreateLink(this.db, input);
+      this.logger.logLinkCreated(link.id, type, sourceId, targetId);
+      return link;
+    })();
   }
 
   /**
@@ -157,9 +159,11 @@ export class LinkService {
    * @throws Error if link not found
    */
   remove(linkId: number): void {
-    // Get link details before delete for logging
-    const link = dbGetLinkById(this.db, linkId);
-    this.logger.logLinkDeleted(linkId, link.linkType, link.sourceIssueId, link.targetIssueId);
-    dbDeleteLink(this.db, linkId);
+    this.db.transaction(() => {
+      // Get link details before delete for logging
+      const link = dbGetLinkById(this.db, linkId);
+      this.logger.logLinkDeleted(linkId, link.linkType, link.sourceIssueId, link.targetIssueId);
+      dbDeleteLink(this.db, linkId);
+    })();
   }
 }

@@ -87,9 +87,12 @@ export async function listActivityLogHandler(
   }>,
   reply: FastifyReply
 ) {
-  const { eventType, sourceType, from, to, limit, offset, order } = request.query;
+  const { issueId, projectId, labelId, eventType, sourceType, from, to, limit, offset, order } = request.query;
 
   const logs = listActivityLog(request.server.db, {
+    issueId,
+    projectId,
+    labelId,
     eventType,
     sourceType,
     from,

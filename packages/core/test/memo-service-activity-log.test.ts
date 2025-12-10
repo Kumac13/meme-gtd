@@ -35,7 +35,7 @@ test('MemoService.create() logs memo.created event', () => {
   const payload = logs[0].payload;
   assert.equal(payload.issue_id, memo.id);
   assert.equal(payload.issue_type, 'memo');
-  assert.ok(payload.body_preview);
+  assert.equal(payload.body, 'Test memo content');
 
   db.close();
   fs.removeSync(dir);

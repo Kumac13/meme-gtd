@@ -241,7 +241,7 @@ interface CommentCreatedPayload {
   issue_id: number;
   issue_type: IssueType;
   issue_title: string | null;
-  body_preview: string | null;
+  body: string;
 }
 
 export const buildCommentCreatedPayload = (
@@ -255,7 +255,7 @@ export const buildCommentCreatedPayload = (
     issue_id: issueId,
     issue_type: getIssueType(db, issueId) ?? 'task',
     issue_title: getIssueTitle(db, issueId),
-    body_preview: createBodyPreview(bodyMd),
+    body: bodyMd,
   };
 };
 
@@ -298,7 +298,7 @@ export const buildLinkCreatedPayload = (
 interface MemoPromotedPayload {
   issue_id: number;
   source_memo_id: number;
-  source_memo_body_preview: string | null;
+  source_memo_body: string | null;
   promoted_task: {
     id: number;
     title: string;
@@ -318,7 +318,7 @@ export const buildMemoPromotedPayload = (
   return {
     issue_id: promotedTaskId,
     source_memo_id: memoId,
-    source_memo_body_preview: createBodyPreview(memoBody),
+    source_memo_body: memoBody || null,
     promoted_task: {
       id: promotedTaskId,
       title: promotedTaskTitle,
