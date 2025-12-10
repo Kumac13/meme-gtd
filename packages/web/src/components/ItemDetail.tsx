@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MemosService } from '../api/services/MemosService';
 import { TasksService } from '../api/services/TasksService';
 import { CommentsService } from '../api/services/CommentsService';
@@ -95,25 +95,30 @@ export default function ItemDetail({
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(true);
 
-  const fetchComments = useCallback(async () => {
-    try {
-      setCommentsLoading(true);
-      const response =
-        itemType === 'memo'
-          ? await CommentsService.listMemoComments(String(item.id))
-          : await CommentsService.listTaskComments(String(item.id));
-      setComments(response);
-      onCommentsLoaded?.(response);
-    } catch (error) {
-      console.error('Error fetching comments:', error);
-    } finally {
-      setCommentsLoading(false);
-    }
-  }, [item.id, itemType, onCommentsLoaded]);
+  // Store callback in ref to avoid dependency issues
+  const onCommentsLoadedRef = useRef(onCommentsLoaded);
+  onCommentsLoadedRef.current = onCommentsLoaded;
 
   useEffect(() => {
+    const fetchComments = async () => {
+      try {
+        setCommentsLoading(true);
+        const response =
+          itemType === 'memo'
+            ? await CommentsService.listMemoComments(String(item.id))
+            : await CommentsService.listTaskComments(String(item.id));
+        setComments(response);
+        // Use ref to call callback without causing re-renders
+        onCommentsLoadedRef.current?.(response);
+      } catch (error) {
+        console.error('Error fetching comments:', error);
+      } finally {
+        setCommentsLoading(false);
+      }
+    };
+
     fetchComments();
-  }, [fetchComments]);
+  }, [item.id, itemType]);
 
   const handleAddComment = async (bodyMd: string) => {
     const newComment =
@@ -122,7 +127,7 @@ export default function ItemDetail({
         : await CommentsService.createTaskComment(String(item.id), { bodyMd });
     const updatedComments = [...comments, newComment];
     setComments(updatedComments);
-    onCommentsLoaded?.(updatedComments);
+    onCommentsLoadedRef.current?.(updatedComments);
   };
 
   const handleUpdateComment = async (commentId: number, bodyMd: string) => {
@@ -132,7 +137,7 @@ export default function ItemDetail({
         : await CommentsService.updateTaskComment(String(item.id), String(commentId), { bodyMd });
     const updatedComments = comments.map((c) => (c.id === commentId ? updatedComment : c));
     setComments(updatedComments);
-    onCommentsLoaded?.(updatedComments);
+    onCommentsLoadedRef.current?.(updatedComments);
   };
 
   const handleDeleteComment = async (commentId: number) => {
@@ -143,7 +148,7 @@ export default function ItemDetail({
     }
     const updatedComments = comments.filter((c) => c.id !== commentId);
     setComments(updatedComments);
-    onCommentsLoaded?.(updatedComments);
+    onCommentsLoadedRef.current?.(updatedComments);
   };
 
   const handleUpdateBody = async (newBody: string, newTitle?: string) => {
