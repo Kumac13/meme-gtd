@@ -17,16 +17,9 @@ describe('Activity Log API', () => {
     await cleanup();
   });
 
-  // Helper to create activity log entry directly via DB
-  // In real usage, logs are created by other operations
-  const createActivityLogEntry = async (
-    eventType: string,
-    sourceType: string,
-    payload: Record<string, unknown>
-  ) => {
-    // We'll test the API endpoints, not direct DB insertion
-    // For now, we need to create tasks/memos first and then check their history
-  };
+  // Note: In real usage, logs are created by other operations
+  // We test the API endpoints directly, using actual task creation
+  // to populate the activity log where needed.
 
   describe('GET /api/activity-log/issues/:issueId', () => {
     it('should return empty array for issue with no activity', async () => {
