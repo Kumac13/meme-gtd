@@ -1,7 +1,9 @@
+import { useState, useEffect, useCallback } from 'react';
 import { MemosService } from '../api/services/MemosService';
 import { TasksService } from '../api/services/TasksService';
+import { CommentsService } from '../api/services/CommentsService';
 import EditableContent from './EditableContent';
-import CommentSection from './CommentSection';
+import CommentSection, { type Comment } from './CommentSection';
 import LinkSection from './LinkSection';
 import { ProjectsSection } from './ProjectsSection';
 import { LabelsSection } from './LabelsSection';
@@ -67,7 +69,12 @@ interface ItemDetailProps {
   onItemClick?: (id: number, type: 'memo' | 'task') => void;
   /** Optional callback before navigation (used in panel mode to close modal first) */
   onBeforeNavigate?: () => void;
+  /** Callback to expose comments to parent component */
+  onCommentsLoaded?: (comments: Comment[]) => void;
 }
+
+// Re-export Comment type for parent components
+export type { Comment } from './CommentSection';
 
 export default function ItemDetail({
   item,
@@ -82,7 +89,62 @@ export default function ItemDetail({
   mode = 'page',
   onItemClick,
   onBeforeNavigate,
+  onCommentsLoaded,
 }: ItemDetailProps) {
+  // Comments state management
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(true);
+
+  const fetchComments = useCallback(async () => {
+    try {
+      setCommentsLoading(true);
+      const response =
+        itemType === 'memo'
+          ? await CommentsService.listMemoComments(String(item.id))
+          : await CommentsService.listTaskComments(String(item.id));
+      setComments(response);
+      onCommentsLoaded?.(response);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    } finally {
+      setCommentsLoading(false);
+    }
+  }, [item.id, itemType, onCommentsLoaded]);
+
+  useEffect(() => {
+    fetchComments();
+  }, [fetchComments]);
+
+  const handleAddComment = async (bodyMd: string) => {
+    const newComment =
+      itemType === 'memo'
+        ? await CommentsService.createMemoComment(String(item.id), { bodyMd })
+        : await CommentsService.createTaskComment(String(item.id), { bodyMd });
+    const updatedComments = [...comments, newComment];
+    setComments(updatedComments);
+    onCommentsLoaded?.(updatedComments);
+  };
+
+  const handleUpdateComment = async (commentId: number, bodyMd: string) => {
+    const updatedComment =
+      itemType === 'memo'
+        ? await CommentsService.updateMemoComment(String(item.id), String(commentId), { bodyMd })
+        : await CommentsService.updateTaskComment(String(item.id), String(commentId), { bodyMd });
+    const updatedComments = comments.map((c) => (c.id === commentId ? updatedComment : c));
+    setComments(updatedComments);
+    onCommentsLoaded?.(updatedComments);
+  };
+
+  const handleDeleteComment = async (commentId: number) => {
+    if (itemType === 'memo') {
+      await CommentsService.deleteMemoComment(String(item.id), String(commentId));
+    } else {
+      await CommentsService.deleteTaskComment(String(item.id), String(commentId));
+    }
+    const updatedComments = comments.filter((c) => c.id !== commentId);
+    setComments(updatedComments);
+    onCommentsLoaded?.(updatedComments);
+  };
 
   const handleUpdateBody = async (newBody: string, newTitle?: string) => {
     const updatedItem =
@@ -172,7 +234,13 @@ export default function ItemDetail({
           <LinkSection itemId={item.id} itemType={itemType} onItemClick={onItemClick} onBeforeNavigate={onBeforeNavigate} />
 
           {/* Comments section */}
-          <CommentSection itemId={item.id} itemType={itemType} />
+          <CommentSection
+            comments={comments}
+            loading={commentsLoading}
+            onAddComment={handleAddComment}
+            onUpdateComment={handleUpdateComment}
+            onDeleteComment={handleDeleteComment}
+          />
         </div>
 
         {/* Sidebar (right column on page, bottom on panel) */}

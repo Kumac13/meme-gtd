@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef, DragEvent, ClipboardEvent } from 'react';
-import { CommentsService } from '../api/services/CommentsService';
+import { useState, useRef, DragEvent, ClipboardEvent } from 'react';
 import EditableContent from './EditableContent';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
 import { useImageUpload } from '../hooks/useImageUpload';
 
-interface Comment {
+export interface Comment {
   id: number;
   issueId: number;
   bodyMd: string;
@@ -14,37 +13,25 @@ interface Comment {
 }
 
 interface CommentSectionProps {
-  itemId: number;
-  itemType: 'memo' | 'task';
+  comments: Comment[];
+  loading: boolean;
+  onAddComment: (bodyMd: string) => Promise<void>;
+  onUpdateComment: (commentId: number, bodyMd: string) => Promise<void>;
+  onDeleteComment: (commentId: number) => Promise<void>;
 }
 
-export default function CommentSection({ itemId, itemType }: CommentSectionProps) {
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function CommentSection({
+  comments,
+  loading,
+  onAddComment,
+  onUpdateComment,
+  onDeleteComment,
+}: CommentSectionProps) {
   const [newCommentBody, setNewCommentBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { isUploading, uploadImage } = useImageUpload();
-
-  const fetchComments = async () => {
-    try {
-      setLoading(true);
-      const response =
-        itemType === 'memo'
-          ? await CommentsService.listMemoComments(String(itemId))
-          : await CommentsService.listTaskComments(String(itemId));
-      setComments(response);
-    } catch (error) {
-      console.error('Error fetching comments:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchComments();
-  }, [itemId, itemType]);
 
   const handleSubmitNewComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,38 +39,13 @@ export default function CommentSection({ itemId, itemType }: CommentSectionProps
 
     try {
       setSubmitting(true);
-      const newComment =
-        itemType === 'memo'
-          ? await CommentsService.createMemoComment(String(itemId), { bodyMd: newCommentBody })
-          : await CommentsService.createTaskComment(String(itemId), { bodyMd: newCommentBody });
-      setComments([...comments, newComment]);
+      await onAddComment(newCommentBody);
       setNewCommentBody('');
     } catch (error) {
       console.error('Error creating comment:', error);
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleUpdateComment = async (commentId: number, newBody: string) => {
-    const updatedComment =
-      itemType === 'memo'
-        ? await CommentsService.updateMemoComment(String(itemId), String(commentId), {
-            bodyMd: newBody,
-          })
-        : await CommentsService.updateTaskComment(String(itemId), String(commentId), {
-            bodyMd: newBody,
-          });
-    setComments(comments.map((c) => (c.id === commentId ? updatedComment : c)));
-  };
-
-  const handleDeleteComment = async (commentId: number) => {
-    if (itemType === 'memo') {
-      await CommentsService.deleteMemoComment(String(itemId), String(commentId));
-    } else {
-      await CommentsService.deleteTaskComment(String(itemId), String(commentId));
-    }
-    setComments(comments.filter((c) => c.id !== commentId));
   };
 
   const handleKeyDown = useKeyboardShortcut(() => {
@@ -179,8 +141,8 @@ export default function CommentSection({ itemId, itemType }: CommentSectionProps
               content={comment.bodyMd}
               createdAt={comment.createdAt}
               updatedAt={comment.updatedAt}
-              onSave={(newBody) => handleUpdateComment(comment.id, newBody)}
-              onDelete={() => handleDeleteComment(comment.id)}
+              onSave={(newBody) => onUpdateComment(comment.id, newBody)}
+              onDelete={() => onDeleteComment(comment.id)}
             />
           ))}
         </div>
