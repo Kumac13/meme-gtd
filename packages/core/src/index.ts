@@ -1,7 +1,8 @@
 import Database from 'better-sqlite3';
 import { ensureDatabase } from 'meme-gtd-db';
 import type { MgtdConfig } from 'meme-gtd-config';
-import type { TaskStatus } from 'meme-gtd-shared';
+import type { TaskStatus, SourceType } from 'meme-gtd-shared';
+import { ActivityLogger } from './activity-log/activity-logger.js';
 import {
   // Memo functions
   addComment,
@@ -137,10 +138,12 @@ export class MemoService {
 export interface TaskServiceOptions {
   config?: MgtdConfig;
   db?: Database.Database;
+  sourceType?: SourceType;
 }
 
 export class TaskService {
   private readonly db: Database.Database;
+  private readonly logger: ActivityLogger;
 
   constructor(private readonly options: TaskServiceOptions) {
     if (options.db) {
@@ -150,10 +153,19 @@ export class TaskService {
     } else {
       throw new Error('TaskService requires either db or config option');
     }
+    this.logger = new ActivityLogger(this.db, options.sourceType ?? 'api');
   }
 
   public create(input: CreateTaskInput) {
-    return createTask(this.db, input);
+    const task = createTask(this.db, input);
+    this.logger.logTaskCreated(
+      task.id,
+      input.title,
+      task.status,
+      input.scheduledStart,
+      input.isAllDay
+    );
+    return task;
   }
 
   public list(filters: ListTaskFilters = {}) {
@@ -179,15 +191,26 @@ export class TaskService {
   }
 
   public edit(input: UpdateTaskInput) {
-    return updateTask(this.db, input);
+    const beforeTask = getTask(this.db, input.id);
+    const task = updateTask(this.db, input);
+    // Log status change if status was updated
+    if (input.status && input.status !== beforeTask.status) {
+      this.logger.logTaskStatusChanged(input.id, beforeTask.status, input.status);
+    } else {
+      this.logger.logTaskUpdated(input.id, input.title);
+    }
+    return task;
   }
 
   public remove(id: number) {
+    this.logger.logTaskDeleted(id);
     return deleteTask(this.db, id);
   }
 
   public close(id: number, comment?: string) {
+    const beforeTask = getTask(this.db, id);
     const task = setTaskStatus(this.db, id, 'done');
+    this.logger.logTaskStatusChanged(id, beforeTask.status, 'done');
     if (comment) {
       addTaskComment(this.db, id, comment);
     }
@@ -195,7 +218,9 @@ export class TaskService {
   }
 
   public cancel(id: number, comment?: string) {
+    const beforeTask = getTask(this.db, id);
     const task = setTaskStatus(this.db, id, 'canceled');
+    this.logger.logTaskStatusChanged(id, beforeTask.status, 'canceled');
     if (comment) {
       addTaskComment(this.db, id, comment);
     }
@@ -203,7 +228,10 @@ export class TaskService {
   }
 
   public reopen(id: number) {
-    return setTaskStatus(this.db, id, 'open');
+    const beforeTask = getTask(this.db, id);
+    const task = setTaskStatus(this.db, id, 'open');
+    this.logger.logTaskStatusChanged(id, beforeTask.status, 'open');
+    return task;
   }
 
   public addComment(taskId: number, bodyMd: string) {
@@ -231,7 +259,9 @@ export class TaskService {
   }
 
   public setBookmark(id: number, isBookmarked: boolean) {
-    return setTaskBookmark(this.db, id, isBookmarked);
+    const result = setTaskBookmark(this.db, id, isBookmarked);
+    this.logger.logTaskBookmarked(id, isBookmarked);
+    return result;
   }
 
   public demote(input: DemoteTaskInput) {
