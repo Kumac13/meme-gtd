@@ -195,6 +195,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
         { name: 'Projects', description: 'Project management endpoints' },
         { name: 'Comments', description: 'Comment management endpoints' },
         { name: 'Attachments', description: 'Image attachment endpoints' },
+        { name: 'ActivityLog', description: 'Activity log endpoints' },
       ],
     },
     transform: openApiTransform,
@@ -233,6 +234,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   const { attachmentRoutes } = await import('./routes/attachments.js');
   await app.register(attachmentRoutes);
+
+  const { activityLogRoutes } = await import('./routes/activity-log.js');
+  await app.register(activityLogRoutes);
 
   // Register static file serving for Web UI (after API routes)
   await app.register(import('@fastify/static'), {

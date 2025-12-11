@@ -9,9 +9,11 @@ import type {
   ProjectDetail,
   ProjectItem,
   ViewType,
-  ViewMeta
+  ViewMeta,
+  SourceType
 } from 'meme-gtd-shared';
 import type Database from 'better-sqlite3';
+import { ActivityLogger } from './activity-log/activity-logger.js';
 import {
   ensureDatabase,
   createProject as dbCreateProject,
@@ -32,6 +34,7 @@ import {
 export interface ProjectServiceOptions {
   config?: MgtdConfig;
   db?: Database.Database;
+  sourceType?: SourceType;
 }
 
 interface CreateProjectServiceInput {
@@ -56,6 +59,7 @@ interface UpdateProjectItemServiceInput {
 
 export class ProjectService {
   private readonly db: Database.Database;
+  private readonly logger: ActivityLogger;
 
   constructor(private readonly options: ProjectServiceOptions) {
     if (options.db) {
@@ -65,6 +69,7 @@ export class ProjectService {
     } else {
       throw new Error('ProjectService requires either db or config option');
     }
+    this.logger = new ActivityLogger(this.db, options.sourceType ?? 'api');
   }
 
   /**
@@ -91,18 +96,22 @@ export class ProjectService {
    * @throws Error if project name already exists
    */
   create(input: CreateProjectServiceInput): Project {
-    const viewMeta = this.buildViewMeta(input.view);
+    return this.db.transaction(() => {
+      const viewMeta = this.buildViewMeta(input.view);
 
-    const dbInput: CreateProjectInput = {
-      name: input.name,
-      description: input.description,
-      viewMeta,
-      status: input.status,
-      startDate: input.startDate,
-      endDate: input.endDate
-    };
+      const dbInput: CreateProjectInput = {
+        name: input.name,
+        description: input.description,
+        viewMeta,
+        status: input.status,
+        startDate: input.startDate,
+        endDate: input.endDate
+      };
 
-    return dbCreateProject(this.db, dbInput);
+      const project = dbCreateProject(this.db, dbInput);
+      this.logger.logProjectCreated(project.id, project.name);
+      return project;
+    })();
   }
 
   /**
@@ -159,40 +168,54 @@ export class ProjectService {
       endDate?: string | null;
     }
   ): Project {
-    // Get current project
-    const project = dbGetProjectById(this.db, id);
-    if (!project) {
-      throw new Error(`Project #${id} not found`);
-    }
+    return this.db.transaction(() => {
+      // Get current project
+      const project = dbGetProjectById(this.db, id);
+      if (!project) {
+        throw new Error(`Project #${id} not found`);
+      }
 
-    // Update project in database
-    const stmt = this.db.prepare(`
-      UPDATE projects
-      SET
-        name = COALESCE(?, name),
-        description = ?,
-        status = COALESCE(?, status),
-        start_date = ?,
-        end_date = ?
-      WHERE id = ?
-    `);
+      // Update project in database
+      const stmt = this.db.prepare(`
+        UPDATE projects
+        SET
+          name = COALESCE(?, name),
+          description = ?,
+          status = COALESCE(?, status),
+          start_date = ?,
+          end_date = ?
+        WHERE id = ?
+      `);
 
-    stmt.run(
-      updates.name ?? null,
-      updates.description !== undefined ? updates.description : project.description,
-      updates.status ?? null,
-      updates.startDate !== undefined ? updates.startDate : project.startDate,
-      updates.endDate !== undefined ? updates.endDate : project.endDate,
-      id
-    );
+      stmt.run(
+        updates.name ?? null,
+        updates.description !== undefined ? updates.description : project.description,
+        updates.status ?? null,
+        updates.startDate !== undefined ? updates.startDate : project.startDate,
+        updates.endDate !== undefined ? updates.endDate : project.endDate,
+        id
+      );
 
-    // Return updated project
-    const updated = dbGetProjectById(this.db, id);
-    if (!updated) {
-      throw new Error(`Failed to retrieve updated project #${id}`);
-    }
+      // Return updated project
+      const updated = dbGetProjectById(this.db, id);
+      if (!updated) {
+        throw new Error(`Failed to retrieve updated project #${id}`);
+      }
 
-    return updated;
+      // Log with diff for name and/or description changes
+      const diff: {
+        name?: { old: string | null; new: string | null };
+        description?: { old: string | null; new: string | null };
+      } = {};
+      if (updates.name !== undefined) {
+        diff.name = { old: project.name, new: updates.name };
+      }
+      if (updates.description !== undefined) {
+        diff.description = { old: project.description, new: updates.description };
+      }
+      this.logger.logProjectUpdated(id, diff);
+      return updated;
+    })();
   }
 
   /**
@@ -202,10 +225,14 @@ export class ProjectService {
    * @throws Error if project not found
    */
   delete(id: number): void {
-    const deletedCount = dbDeleteProject(this.db, id);
-    if (deletedCount === 0) {
-      throw new Error(`Project #${id} not found`);
-    }
+    this.db.transaction(() => {
+      // Log before delete to capture project name
+      this.logger.logProjectDeleted(id);
+      const deletedCount = dbDeleteProject(this.db, id);
+      if (deletedCount === 0) {
+        throw new Error(`Project #${id} not found`);
+      }
+    })();
   }
 
   /**
@@ -216,27 +243,31 @@ export class ProjectService {
    * @throws Error if project not found, issue not found, or duplicate item
    */
   addItem(projectId: number, input: AddProjectItemServiceInput): ProjectItem {
-    // Validate project exists
-    const project = dbGetProjectById(this.db, projectId);
-    if (!project) {
-      throw new Error(`Project #${projectId} not found`);
-    }
+    return this.db.transaction(() => {
+      // Validate project exists
+      const project = dbGetProjectById(this.db, projectId);
+      if (!project) {
+        throw new Error(`Project #${projectId} not found`);
+      }
 
-    // Validate issue exists
-    const issueStmt = this.db.prepare('SELECT id FROM issues WHERE id = ? AND is_deleted = 0');
-    const issueExists = issueStmt.get(input.issueId);
-    if (!issueExists) {
-      throw new Error(`Issue #${input.issueId} not found`);
-    }
+      // Validate issue exists
+      const issueStmt = this.db.prepare('SELECT id FROM issues WHERE id = ? AND is_deleted = 0');
+      const issueExists = issueStmt.get(input.issueId);
+      if (!issueExists) {
+        throw new Error(`Issue #${input.issueId} not found`);
+      }
 
-    const dbInput: CreateProjectItemInput = {
-      projectId,
-      issueId: input.issueId,
-      position: input.position,
-      column: input.column
-    };
+      const dbInput: CreateProjectItemInput = {
+        projectId,
+        issueId: input.issueId,
+        position: input.position,
+        column: input.column
+      };
 
-    return dbCreateProjectItem(this.db, dbInput);
+      const item = dbCreateProjectItem(this.db, dbInput);
+      this.logger.logProjectItemAdded(projectId, input.issueId, input.position);
+      return item;
+    })();
   }
 
   /**
@@ -247,10 +278,13 @@ export class ProjectService {
    * @throws Error if project item not found
    */
   removeItem(projectId: number, issueId: number): void {
-    const deletedCount = dbDeleteProjectItem(this.db, projectId, issueId);
-    if (deletedCount === 0) {
-      throw new Error(`Issue #${issueId} not found in project #${projectId}`);
-    }
+    this.db.transaction(() => {
+      this.logger.logProjectItemRemoved(projectId, issueId);
+      const deletedCount = dbDeleteProjectItem(this.db, projectId, issueId);
+      if (deletedCount === 0) {
+        throw new Error(`Issue #${issueId} not found in project #${projectId}`);
+      }
+    })();
   }
 
   /**

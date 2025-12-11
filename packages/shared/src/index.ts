@@ -110,6 +110,24 @@ export type {
   ProjectItemWithIssue
 } from './types/project.js';
 
+// Activity Log types
+export type {
+  SourceType,
+  IssueEventType,
+  LabelEventType,
+  ProjectEventType,
+  LinkEventType,
+  CommentEventType,
+  EventType,
+  ProjectSnapshot,
+  LabelSnapshot,
+  BasePayload,
+  ActivityLogEntry,
+  CreateActivityLogInput,
+  CompletedTaskEntry,
+  ActivityLogFilters,
+} from './types/activity-log.js';
+
 export const toBoolean = (value: number | boolean): boolean =>
   typeof value === 'boolean' ? value : value !== 0;
 

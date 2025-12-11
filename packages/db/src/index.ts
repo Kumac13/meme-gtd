@@ -124,3 +124,12 @@ export {
   type CreateProjectItemInput,
   type UpdateProjectItemInput
 } from './projectItemRepository.js';
+
+// Activity log repository exports
+export {
+  createActivityLog,
+  listActivityLog,
+  getByIssueId as getActivityLogByIssueId,
+  getByProjectId as getActivityLogByProjectId,
+  getCompletedTasks,
+} from './activityLogRepository.js';
