@@ -238,6 +238,10 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   const { activityLogRoutes } = await import('./routes/activity-log.js');
   await app.register(activityLogRoutes);
 
+  // Register Article routes
+  const { default: articlesRoutes } = await import('./routes/articles.js');
+  await app.register(articlesRoutes, { prefix: '/api/articles' });
+
   // Register static file serving for Web UI (after API routes)
   await app.register(import('@fastify/static'), {
     root: new URL('../../web/dist', import.meta.url).pathname,
