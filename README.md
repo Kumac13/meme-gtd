@@ -38,6 +38,11 @@ corepack prepare pnpm@9.0.0 --activate
      mgtd memo comment --help
      ```
 
+## ブラウザ拡張機能（Webクリッパー）
+
+Web閲覧中の記事を保存するためのChrome拡張機能が利用可能です。
+インストール方法の詳細は [docs/extension-setup.md](./docs/extension-setup.md) を参照してください。
+
 ## Web UI
 
 ### 起動方法
