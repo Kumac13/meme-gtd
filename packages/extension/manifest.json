@@ -5,8 +5,10 @@
   "description": "Save articles to Meme GTD",
   "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "storage"
   ],
+  "options_page": "options.html",
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

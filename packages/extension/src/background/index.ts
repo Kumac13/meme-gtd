@@ -2,7 +2,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "SAVE_TO_API") {
     (async () => {
       try {
-        const response = await fetch("http://localhost:3000/api/articles", {
+        const result = await chrome.storage.sync.get("apiUrl");
+        const apiUrl = result.apiUrl || "http://localhost:3000"; // Default to 3000 if not set
+
+        const response = await fetch(`${apiUrl}/api/articles`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
