@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { ArticlesService } from "../../api/services/ArticlesService";
+// Use generated type or shared type
 import type { Article } from "meme-gtd-shared";
 
 export const ArticleList: React.FC = () => {
@@ -10,10 +12,9 @@ export const ArticleList: React.FC = () => {
   useEffect(() => {
     const fetchArticles = async () => {
       try {
-        const res = await fetch("/api/articles");
-        if (!res.ok) throw new Error("Failed to fetch articles");
-        const data = await res.json();
-        setArticles(data);
+        const data = await ArticlesService.getApiArticles();
+        // Cast to shared Article type (assuming compatibility)
+        setArticles(data as unknown as Article[]);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -47,15 +48,19 @@ export const ArticleList: React.FC = () => {
           >
             <h2 className="text-xl font-semibold mb-2 line-clamp-2">{article.title}</h2>
             <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 gap-4">
-              {article.meta.siteName && (
+              {article.meta && (article.meta as any).siteName && (
                 <span className="font-medium text-blue-600 dark:text-blue-400">
-                  {article.meta.siteName}
+                  {(article.meta as any).siteName}
                 </span>
               )}
-              <time dateTime={article.meta.archivedAt}>
-                {new Date(article.meta.archivedAt).toLocaleDateString()}
-              </time>
-              <span className="truncate max-w-xs">{article.meta.originalUrl}</span>
+              {article.meta && (article.meta as any).archivedAt && (
+                <time dateTime={(article.meta as any).archivedAt}>
+                  {new Date((article.meta as any).archivedAt).toLocaleDateString()}
+                </time>
+              )}
+              {article.meta && (article.meta as any).originalUrl && (
+                <span className="truncate max-w-xs">{(article.meta as any).originalUrl}</span>
+              )}
             </div>
           </Link>
         ))}

@@ -11,7 +11,7 @@ import { useRecentProjects } from '../hooks/useRecentProjects';
 
 interface ProjectsSectionProps {
   itemId: number;
-  itemType: 'memo' | 'task';
+  itemType: 'memo' | 'task' | 'article';
 }
 
 export function ProjectsSection({ itemId, itemType: _ }: ProjectsSectionProps) {

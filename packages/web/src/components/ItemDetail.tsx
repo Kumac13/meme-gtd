@@ -53,7 +53,7 @@ export type Item = BaseItem | Task;
 
 interface ItemDetailProps {
   item: Item;
-  itemType: 'memo' | 'task';
+  itemType: 'memo' | 'task' | 'article';
   onDelete: () => Promise<void>;
   onBookmarkToggle: () => Promise<void>;
   onUpdate: (updatedItem: Item) => void;
@@ -66,7 +66,7 @@ interface ItemDetailProps {
   /** 'page' shows full layout with sidebar, 'panel' hides sidebar for compact view */
   mode?: 'page' | 'panel';
   /** Optional callback when a linked item is clicked (used in page mode for modal) */
-  onItemClick?: (id: number, type: 'memo' | 'task') => void;
+  onItemClick?: (id: number, type: 'memo' | 'task' | 'article') => void;
   /** Optional callback before navigation (used in panel mode to close modal first) */
   onBeforeNavigate?: () => void;
   /** Callback to expose comments to parent component */

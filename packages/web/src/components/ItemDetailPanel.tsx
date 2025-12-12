@@ -22,7 +22,7 @@ interface Task extends BaseItem {
   endDate: string | null;
 }
 
-type ItemType = 'memo' | 'task';
+type ItemType = 'memo' | 'task' | 'article';
 
 interface ItemDetailPanelProps {
   itemId: number | null;
