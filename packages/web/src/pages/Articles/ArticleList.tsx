@@ -4,7 +4,6 @@ import { ArticlesService } from "../../api/services/ArticlesService";
 import type { Article } from "meme-gtd-shared";
 
 export const ArticleList: React.FC = () => {
-  // Use explicit type or inferred type from API
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -13,9 +12,6 @@ export const ArticleList: React.FC = () => {
     const fetchArticles = async () => {
       try {
         const data = await ArticlesService.getApiArticles();
-        // The generated API client returns objects that match the Article interface structure.
-        // We cast here only because the shared library type and generated type are separate definitions,
-        // but we verified they are compatible.
         setArticles(data as unknown as Article[]);
       } catch (err: unknown) {
         if (err instanceof Error) {
@@ -30,51 +26,73 @@ export const ArticleList: React.FC = () => {
     fetchArticles();
   }, []);
 
-  if (loading) return <div className="p-8 text-center">Loading articles...</div>;
-  if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
+  if (loading) return <div className="p-8 text-center text-gray-500">Loading articles...</div>;
+  if (error) return <div className="p-8 text-center text-red-600">Error: {error}</div>;
 
   if (articles.length === 0) {
     return (
       <div className="p-8 text-center text-gray-500">
-        <h2 className="text-xl font-bold mb-2">No Articles Saved</h2>
+        <h2 className="text-xl font-bold mb-2 text-gray-900">No Articles Saved</h2>
         <p>Use the browser extension to save web pages.</p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-6">Articles</h1>
-      <div className="space-y-4">
-        {articles.map((article) => {
-          // Type guard or safe access for meta
-          const meta = article.meta as { siteName?: string; archivedAt?: string; originalUrl?: string } | undefined;
-          
-          return (
-            <Link
-              key={article.id}
-              to={`/articles/${article.id}`}
-              className="block p-6 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700"
-            >
-              <h2 className="text-xl font-semibold mb-2 line-clamp-2">{article.title}</h2>
-              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 gap-4">
-                {meta?.siteName && (
-                  <span className="font-medium text-blue-600 dark:text-blue-400">
-                    {meta.siteName}
-                  </span>
-                )}
-                {meta?.archivedAt && (
-                  <time dateTime={meta.archivedAt}>
-                    {new Date(meta.archivedAt).toLocaleDateString()}
-                  </time>
-                )}
-                {meta?.originalUrl && (
-                  <span className="truncate max-w-xs">{meta.originalUrl}</span>
-                )}
-              </div>
-            </Link>
-          );
-        })}
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">Articles</h1>
+      <div className="bg-white shadow overflow-hidden sm:rounded-md border border-gray-200">
+        <ul className="divide-y divide-gray-200">
+          {articles.map((article) => {
+            const meta = article.meta as { siteName?: string; archivedAt?: string; originalUrl?: string } | undefined;
+            
+            return (
+              <li key={article.id}>
+                <Link
+                  to={`/articles/${article.id}`}
+                  className="block hover:bg-gray-50 transition duration-150 ease-in-out"
+                >
+                  <div className="px-4 py-4 sm:px-6">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-blue-600 truncate mb-1">
+                        {meta?.siteName || "Unknown Site"}
+                      </p>
+                      <div className="ml-2 flex-shrink-0 flex">
+                        <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                          Article
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-1">
+                      <h2 className="text-lg font-semibold text-gray-900 line-clamp-2">
+                        {article.title}
+                      </h2>
+                    </div>
+                    <div className="mt-2 sm:flex sm:justify-between">
+                      <div className="sm:flex">
+                        <p className="flex items-center text-sm text-gray-500">
+                          {meta?.originalUrl && (
+                            <span className="truncate max-w-md mr-4">
+                              {meta.originalUrl}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
+                        <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p>
+                          Saved on <time dateTime={meta?.archivedAt}>{meta?.archivedAt ? new Date(meta.archivedAt).toLocaleDateString() : "Unknown date"}</time>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </div>
   );
