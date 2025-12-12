@@ -4,8 +4,6 @@ import { ArticlesService } from "../../api/services/ArticlesService";
 import { MarkdownRenderer } from "../../components/Article/MarkdownRenderer";
 import { LabelsSection } from "../../components/LabelsSection";
 import LinkSection from "../../components/LinkSection";
-// import CommentSection from "../../components/CommentSection";
-// import { CommentsService } from "../../api/services/CommentsService";
 import type { Article } from "meme-gtd-shared";
 
 export const ArticleReader: React.FC = () => {
@@ -23,8 +21,12 @@ export const ArticleReader: React.FC = () => {
         setLoading(true);
         const data = await ArticlesService.getApiArticles1(Number(id));
         setArticle(data as unknown as Article); 
-      } catch (err: any) {
-        setError(err.message || "Failed to load article");
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("Failed to load article");
+        }
       } finally {
         setLoading(false);
       }
@@ -48,13 +50,17 @@ export const ArticleReader: React.FC = () => {
     try {
       await ArticlesService.deleteApiArticles(Number(id));
       navigate("/articles");
-    } catch (err: any) {
-      alert("Failed to delete: " + (err.message || "Unknown error"));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      alert("Failed to delete: " + message);
     }
   };
 
   if (loading) return <div className="p-8 text-center">Loading article...</div>;
   if (error || !article) return <div className="p-8 text-center text-red-500">Error: {error || "Article not found"}</div>;
+
+  // Safe access to meta properties
+  const meta = article.meta as { siteName?: string; archivedAt?: string; originalUrl?: string } | undefined;
 
   return (
     <div className="container mx-auto p-4 flex gap-6 max-w-7xl flex-col lg:flex-row">
@@ -62,17 +68,17 @@ export const ArticleReader: React.FC = () => {
         <header className="mb-6 border-b pb-4">
           <h1 className="text-3xl font-serif font-bold mb-2 text-gray-900 dark:text-gray-100">{article.title}</h1>
           <div className="flex flex-wrap gap-4 text-sm text-gray-500 items-center">
-            {article.meta && (article.meta as any).siteName && (
-              <span className="font-medium text-gray-700 dark:text-gray-300">{(article.meta as any).siteName}</span>
+            {meta?.siteName && (
+              <span className="font-medium text-gray-700 dark:text-gray-300">{meta.siteName}</span>
             )}
-            {article.meta && (article.meta as any).archivedAt && (
-              <time dateTime={(article.meta as any).archivedAt}>
-                Saved: {new Date((article.meta as any).archivedAt).toLocaleDateString()}
+            {meta?.archivedAt && (
+              <time dateTime={meta.archivedAt}>
+                Saved: {new Date(meta.archivedAt).toLocaleDateString()}
               </time>
             )}
-            {article.meta && (article.meta as any).originalUrl && (
+            {meta?.originalUrl && (
               <a 
-                href={(article.meta as any).originalUrl} 
+                href={meta.originalUrl} 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="text-blue-600 hover:underline truncate max-w-xs"

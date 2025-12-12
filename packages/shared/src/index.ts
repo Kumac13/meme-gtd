@@ -72,6 +72,7 @@ export interface Article extends IssueBase {
   duration: null;
   commentCount?: number;
   preview?: string;
+  labels?: string[];
 }
 
 export interface Memo extends IssueBase {

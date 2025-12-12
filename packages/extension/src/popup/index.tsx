@@ -19,8 +19,9 @@ const Popup = () => {
                     setStatus("Error: " + (response?.error || "Unknown error"));
                 }
             });
-        } catch (e: any) {
-            setStatus("Error: " + e.message);
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : String(e);
+            setStatus("Error: " + message);
         }
     } else {
         setStatus("No active tab");

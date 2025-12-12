@@ -18,10 +18,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                sendResponse({ success: false, error: response?.error });
            }
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Extraction error:", error);
         showNotification("Extraction failed");
-        sendResponse({ success: false, error: error.message });
+        const message = error instanceof Error ? error.message : String(error);
+        sendResponse({ success: false, error: message });
       }
     })();
     return true; // Keep channel open

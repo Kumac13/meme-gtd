@@ -25,9 +25,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         const data = await response.json();
         sendResponse({ success: true, data });
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("API error:", error);
-        sendResponse({ success: false, error: error.message });
+        const message = error instanceof Error ? error.message : String(error);
+        sendResponse({ success: false, error: message });
       }
     })();
     return true;

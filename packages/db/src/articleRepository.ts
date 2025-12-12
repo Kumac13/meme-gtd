@@ -15,30 +15,36 @@ export interface ListArticleFilters {
   search?: string;
 }
 
-const articleRowToArticle = (row: any): Article => ({
-  id: row.id,
-  type: "article",
-  title: row.title,
-  bodyMd: row.body_md,
-  status: null,
-  meta: JSON.parse(row.meta) as ArticleMeta,
-  scheduledStart: null,
-  scheduledEnd: null,
-  isAllDay: false,
-  actualStart: null,
-  actualEnd: null,
-  scheduledOn: null,
-  startTime: null,
-  endDate: null,
-  endTime: null,
-  duration: null,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
-  isBookmarked: toBoolean(row.is_bookmarked),
-  isDeleted: toBoolean(row.is_deleted),
-  commentCount: row.comment_count ?? 0,
-  preview: row.preview,
-});
+// Helper to safely access row properties
+const articleRowToArticle = (row: unknown): Article => {
+  const r = row as Record<string, unknown>;
+  if (!r || typeof r !== "object") throw new Error("Invalid row data");
+
+  return {
+    id: Number(r.id),
+    type: "article",
+    title: String(r.title),
+    bodyMd: String(r.body_md),
+    status: null,
+    meta: JSON.parse(String(r.meta)) as ArticleMeta,
+    scheduledStart: null,
+    scheduledEnd: null,
+    isAllDay: false,
+    actualStart: null,
+    actualEnd: null,
+    scheduledOn: null,
+    startTime: null,
+    endDate: null,
+    endTime: null,
+    duration: null,
+    createdAt: String(r.created_at),
+    updatedAt: String(r.updated_at),
+    isBookmarked: toBoolean(r.is_bookmarked as number | boolean),
+    isDeleted: toBoolean(r.is_deleted as number | boolean),
+    commentCount: Number(r.comment_count ?? 0),
+    preview: r.preview ? String(r.preview) : undefined,
+  };
+};
 
 export const createArticle = (db: Database.Database, input: CreateArticleInput): Article => {
   const now = nowIso();
@@ -78,16 +84,17 @@ export const getArticle = (db: Database.Database, id: number): Article => {
     throw new Error(`Article not found: ${id}`);
   }
 
-  if ((row as any).type !== 'article') {
-    throw new Error(`ID refers to different type(${(row as any).type})`);
+  const r = row as Record<string, unknown>;
+  if (r.type !== 'article') {
+    throw new Error(`ID refers to different type(${r.type})`);
   }
 
   return articleRowToArticle(row);
 };
 
 export const listArticles = (db: Database.Database, filters: ListArticleFilters = {}): Article[] => {
-  const conditions = ["type = 'article'", 'is_deleted = 0'];
-  const params: Record<string, any> = {};
+  const conditions = ["type = 'article'", "is_deleted = 0"];
+  const params: Record<string, string | number> = {};
 
   if (filters.search) {
     conditions.push("(title LIKE @search OR body_md LIKE @search)");
