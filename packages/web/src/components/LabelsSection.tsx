@@ -45,7 +45,7 @@ interface Label {
  */
 interface LabelsSectionProps {
   itemId: number;
-  itemType: 'memo' | 'task';
+  itemType: 'memo' | 'task' | 'article';
   assignedLabels: string[];
   onLabelsChanged: () => void;
 }

@@ -20,6 +20,7 @@
     "@schedule-x/calendar-controls": "^3.4.2",
     "@schedule-x/react": "^3.4.0",
     "@schedule-x/theme-default": "^3.4.2",
+    "@tailwindcss/typography": "^0.5.19",
     "meme-gtd-shared": "workspace:^",
     "nuqs": "^2.8.1",
     "react": "^19.2.0",

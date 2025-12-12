@@ -31,7 +31,7 @@ interface LinkItemProps {
   /** Whether a delete operation is in progress for this link */
   isDeleting?: boolean;
   /** Optional callback when target link is clicked (used in page mode for modal) */
-  onItemClick?: (id: number, type: 'memo' | 'task') => void;
+  onItemClick?: (id: number, type: 'memo' | 'task' | 'article') => void;
   /** Optional callback before navigation (used in panel mode to close modal first) */
   onBeforeNavigate?: () => void;
 }

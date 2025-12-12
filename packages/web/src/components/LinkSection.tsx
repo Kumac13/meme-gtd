@@ -33,12 +33,12 @@ const sortLinksByStatus = (links: LinkDisplayItem[]): LinkDisplayItem[] => {
 };
 
 interface LinkSectionProps {
-  /** ID of the issue (task or memo) */
+  /** ID of the issue (task, memo, or article) */
   itemId: number;
   /** Type of the issue */
-  itemType: 'memo' | 'task';
+  itemType: 'memo' | 'task' | 'article';
   /** Optional callback when a linked item is clicked (used in page mode for modal) */
-  onItemClick?: (id: number, type: 'memo' | 'task') => void;
+  onItemClick?: (id: number, type: 'memo' | 'task' | 'article') => void;
   /** Optional callback before navigation (used in panel mode to close modal first) */
   onBeforeNavigate?: () => void;
 }
