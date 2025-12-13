@@ -3,11 +3,12 @@ import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/
 import { ProjectDetail, ProjectItemWithIssue } from '../types/project';
 import KanbanColumn from './KanbanColumn';
 import KanbanCard from './KanbanCard';
+import type { IssueType } from 'meme-gtd-shared';
 
 interface KanbanBoardProps {
   project: ProjectDetail;
   onProjectUpdate: (project: ProjectDetail) => void;
-  onItemClick?: (issueId: number, issueType: 'memo' | 'task') => void;
+  onItemClick?: (issueId: number, issueType: IssueType) => void;
 }
 
 export default function KanbanBoard({ project, onProjectUpdate, onItemClick }: KanbanBoardProps) {

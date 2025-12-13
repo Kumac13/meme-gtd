@@ -1,11 +1,12 @@
 import { useDroppable } from '@dnd-kit/core';
 import { ProjectItemWithIssue } from '../types/project';
 import KanbanCard from './KanbanCard';
+import type { IssueType } from 'meme-gtd-shared';
 
 interface KanbanColumnProps {
   column: string;
   items: ProjectItemWithIssue[];
-  onItemClick?: (issueId: number, issueType: 'memo' | 'task') => void;
+  onItemClick?: (issueId: number, issueType: IssueType) => void;
 }
 
 export default function KanbanColumn({ column, items, onItemClick }: KanbanColumnProps) {

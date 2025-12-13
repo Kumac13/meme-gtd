@@ -5,6 +5,7 @@ import { MemosService } from '../api/services/MemosService';
 import ItemDetail, { type Item } from './ItemDetail';
 import LoadingState from './LoadingState';
 import ErrorState from './ErrorState';
+import type { IssueType } from 'meme-gtd-shared';
 
 interface BaseItem {
   id: number;
@@ -22,11 +23,11 @@ interface Task extends BaseItem {
   endDate: string | null;
 }
 
-type ItemType = 'memo' | 'task' | 'article';
+// Using shared IssueType
 
 interface ItemDetailPanelProps {
   itemId: number | null;
-  itemType: ItemType | null;
+  itemType: IssueType | null;
   onClose: () => void;
   onItemUpdated?: () => void;
 }

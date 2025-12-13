@@ -4,7 +4,7 @@ import { formatDateTime, formatRelativeTime } from "../utils/dates";
 import { InlineMarkdownRenderer, extractFirstLine } from "../utils/markdown";
 import { LabelBadge } from "./LabelBadge";
 import { createItemDetailUrl } from "../utils/navigationHelpers";
-import type { Article } from "meme-gtd-shared"; // Add Article import
+import type { Article, IssueType } from "meme-gtd-shared";
 
 // Status badge labels and colors
 const statusLabels: Record<string, string> = {
@@ -59,11 +59,11 @@ type Item = BaseItem | Task | Project | Article; // Include Article
 
 interface ItemListProps {
   items: Item[];
-  itemType: "memo" | "task" | "project" | "article"; // Allow "article"
+itemType: IssueType | "project";
   basePath: string;
   currentFilters?: URLSearchParams;
   onDelete?: (id: number) => Promise<void>;
-  onItemClick?: (id: number, type: "memo" | "task" | "article") => void; // Allow "article"
+  onItemClick?: (id: number, type: IssueType) => void; // Allow "article"
   /** Show status badges on tasks and "Documents" badge on memos (only for project ListView) */
   showStatusBadges?: boolean;
 }
@@ -142,7 +142,7 @@ export default function ItemList({
         const handleClick = (e: React.MouseEvent) => {
           if (onItemClick) {
             e.preventDefault();
-            onItemClick(item.id, itemType as "memo" | "task" | "article");
+            onItemClick(item.id, itemType as IssueType);
           }
         };
 

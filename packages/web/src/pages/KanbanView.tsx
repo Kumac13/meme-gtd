@@ -12,9 +12,9 @@ interface OutletContext {
 
 export default function KanbanView() {
   const { project, setProject } = useOutletContext<OutletContext>();
-  const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'memo' | 'task' } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'memo' | 'task' | 'article' } | null>(null);
 
-  const handleItemClick = useCallback((issueId: number, issueType: 'memo' | 'task') => {
+  const handleItemClick = useCallback((issueId: number, issueType: 'memo' | 'task' | 'article') => {
     setSelectedItem({ id: issueId, type: issueType });
   }, []);
 

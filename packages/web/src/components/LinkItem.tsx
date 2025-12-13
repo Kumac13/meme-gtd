@@ -9,6 +9,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { LinkDisplayItem } from '../types/links';
+import type { IssueType } from 'meme-gtd-shared';
 import { getLinkIcon, getLinkLabel, getDirectionArrow } from '../utils/linkIcons';
 
 // Status badge colors (same as ItemList)
@@ -31,7 +32,7 @@ interface LinkItemProps {
   /** Whether a delete operation is in progress for this link */
   isDeleting?: boolean;
   /** Optional callback when target link is clicked (used in page mode for modal) */
-  onItemClick?: (id: number, type: 'memo' | 'task' | 'article') => void;
+  onItemClick?: (id: number, type: IssueType) => void;
   /** Optional callback before navigation (used in panel mode to close modal first) */
   onBeforeNavigate?: () => void;
 }

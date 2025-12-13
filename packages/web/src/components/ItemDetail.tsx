@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import type { IssueType } from 'meme-gtd-shared';
 import { MemosService } from '../api/services/MemosService';
 import { TasksService } from '../api/services/TasksService';
 import { CommentsService } from '../api/services/CommentsService';
@@ -53,7 +54,7 @@ export type Item = BaseItem | Task;
 
 interface ItemDetailProps {
   item: Item;
-  itemType: 'memo' | 'task' | 'article';
+  itemType: IssueType;
   onDelete: () => Promise<void>;
   onBookmarkToggle: () => Promise<void>;
   onUpdate: (updatedItem: Item) => void;
@@ -66,7 +67,7 @@ interface ItemDetailProps {
   /** 'page' shows full layout with sidebar, 'panel' hides sidebar for compact view */
   mode?: 'page' | 'panel';
   /** Optional callback when a linked item is clicked (used in page mode for modal) */
-  onItemClick?: (id: number, type: 'memo' | 'task' | 'article') => void;
+  onItemClick?: (id: number, type: IssueType) => void;
   /** Optional callback before navigation (used in panel mode to close modal first) */
   onBeforeNavigate?: () => void;
   /** Callback to expose comments to parent component */

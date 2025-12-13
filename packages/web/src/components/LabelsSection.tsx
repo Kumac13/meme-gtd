@@ -22,6 +22,7 @@
  */
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import type { IssueType } from 'meme-gtd-shared';
 import { LabelsService } from '../api/services/LabelsService';
 import { LabelBadge } from './LabelBadge';
 import { useRecentLabels } from '../hooks/useRecentLabels';
@@ -45,7 +46,7 @@ interface Label {
  */
 interface LabelsSectionProps {
   itemId: number;
-  itemType: 'memo' | 'task' | 'article';
+  itemType: IssueType;
   assignedLabels: string[];
   onLabelsChanged: () => void;
 }

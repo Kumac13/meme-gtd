@@ -1,10 +1,11 @@
 import { useDraggable } from '@dnd-kit/core';
 import { ProjectItemWithIssue } from '../types/project';
 import { InlineMarkdownRenderer, extractFirstLine } from '../utils/markdown';
+import type { IssueType } from 'meme-gtd-shared';
 
 interface KanbanCardProps {
   item: ProjectItemWithIssue;
-  onItemClick?: (issueId: number, issueType: 'memo' | 'task') => void;
+  onItemClick?: (issueId: number, issueType: IssueType) => void;
 }
 
 export default function KanbanCard({ item, onItemClick }: KanbanCardProps) {
