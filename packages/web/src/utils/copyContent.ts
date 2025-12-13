@@ -10,7 +10,7 @@ interface CopyContentOptions {
  * Builds formatted content for copying to clipboard
  * Format: # Title\n\n---\n\nBody\n\n## Comments\n\nComment1\n\n---\n\nComment2
  */
-export function buildCopyContent({ title, body, comments = [] }: CopyContentOptions): string {
+function buildCopyContent({ title, body, comments = [] }: CopyContentOptions): string {
   const displayTitle = title || 'Untitled';
   let content = `# ${displayTitle}\n\n---\n\n${body}`;
 

@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
 import { MemosService } from '../api/services/MemosService';
 import { ArticlesService } from '../api/services/ArticlesService';
-import ItemDetail, { type Item } from './ItemDetail';
+import ItemDetail, { type Item, type Comment } from './ItemDetail';
 import LoadingState from './LoadingState';
 import ErrorState from './ErrorState';
 import type { IssueType } from 'meme-gtd-shared';
+import { copyItemContent } from '../utils/copyContent';
 
 interface BaseItem {
   id: number;
@@ -39,6 +40,8 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
     if (!itemId || !itemType) {
@@ -126,6 +129,20 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
     onItemUpdated?.();
   };
 
+  const handleCommentsLoaded = (loadedComments: Comment[]) => {
+    setComments(loadedComments);
+  };
+
+  const handleCopyAllContents = async () => {
+    await copyItemContent({
+      title: item?.title || null,
+      body: item?.bodyMd || '',
+      comments,
+    });
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
   const handleStatusChange = async (status: string) => {
     if (!itemId || itemType !== 'task') return;
 
@@ -143,6 +160,42 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
 
   const basePath = itemType === 'task' ? '/tasks' : itemType === 'article' ? '/articles' : '/memos';
   const displayTitle = item?.title || (itemType === 'task' ? 'Task' : itemType === 'article' ? 'Article' : 'Memo');
+
+  // Generate sidebarActions based on itemType
+  const sidebarActions = itemType === 'task' ? (
+    <>
+      <button
+        onClick={handleCopyAllContents}
+        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-2"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+        </svg>
+        {isCopied ? 'Copied!' : 'Copy All Contents'}
+      </button>
+      <Link
+        to={`/memos/new?fromTask=${itemId}`}
+        onClick={onClose}
+        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+        </svg>
+        Archive to Memo
+      </Link>
+    </>
+  ) : itemType === 'memo' ? (
+    <Link
+      to={`/tasks/new?fromMemo=${itemId}`}
+      onClick={onClose}
+      className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+      </svg>
+      Promote to Task
+    </Link>
+  ) : null;
 
   return (
     <>
@@ -208,6 +261,8 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
               bookmarking={itemType !== 'article' ? bookmarking : undefined}
               mode="panel"
               onBeforeNavigate={onClose}
+              sidebarActions={sidebarActions}
+              onCommentsLoaded={handleCommentsLoaded}
             />
           )}
         </div>
