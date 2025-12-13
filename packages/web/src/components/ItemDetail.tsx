@@ -303,8 +303,8 @@ export default function ItemDetail({
           {/* Sidebar Actions (e.g., Archive to Memo, Promote to Task) */}
           {sidebarActions && (
             <div
-              className="border-t border-gray-200 pt-4 mt-4"
-              style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+              className={`border-t border-gray-200 pt-4 mt-4 ${mode === 'panel' ? 'pb-6' : ''}`}
+              style={{ paddingBottom: mode === 'page' ? 'env(safe-area-inset-bottom, 0px)' : undefined }}
             >
               {sidebarActions}
             </div>

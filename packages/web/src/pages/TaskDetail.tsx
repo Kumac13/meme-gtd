@@ -7,6 +7,7 @@ import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import CreateTaskModal from '../components/CreateTaskModal';
 import { useDocumentTitle, truncateForTitle } from '../hooks/useDocumentTitle';
+import { copyItemContent } from '../utils/copyContent';
 
 interface Task {
   id: number;
@@ -141,19 +142,11 @@ export default function TaskDetail() {
   };
 
   const handleCopyAllContents = async () => {
-    const title = task?.title || 'Untitled';
-    const body = task?.bodyMd || '';
-
-    let content = `# ${title}\n\n---\n\n${body}`;
-
-    if (comments.length > 0) {
-      const commentsText = comments
-        .map((c) => c.bodyMd)
-        .join('\n\n---\n\n');
-      content += `\n\n## Comments\n\n${commentsText}`;
-    }
-
-    await navigator.clipboard.writeText(content);
+    await copyItemContent({
+      title: task?.title || null,
+      body: task?.bodyMd || '',
+      comments,
+    });
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
