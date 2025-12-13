@@ -146,6 +146,7 @@ export type {
   ProjectEventType,
   LinkEventType,
   CommentEventType,
+  ArticleEventType,
   EventType,
   ProjectSnapshot,
   LabelSnapshot,

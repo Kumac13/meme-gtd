@@ -39,13 +39,18 @@ export type CommentEventType =
   | 'comment.updated'
   | 'comment.deleted';
 
+export type ArticleEventType =
+  | 'article.created'
+  | 'article.deleted';
+
 // All event types
 export type EventType =
   | IssueEventType
   | LabelEventType
   | ProjectEventType
   | LinkEventType
-  | CommentEventType;
+  | CommentEventType
+  | ArticleEventType;
 
 // Snapshot types for preserving historical context
 export interface ProjectSnapshot {
@@ -61,7 +66,7 @@ export interface LabelSnapshot {
 // Base payload interface
 export interface BasePayload {
   issue_id?: number;
-  issue_type?: 'task' | 'memo';
+  issue_type?: 'task' | 'memo' | 'article';
   issue_title?: string | null;
   project_id?: number;
   project_name?: string;
