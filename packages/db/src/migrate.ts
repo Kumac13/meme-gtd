@@ -22,7 +22,8 @@ const migrations = [
   { version: '006_add_project_status_and_schedule', file: path.join(schemaDir, '006_add_project_status_and_schedule.sql') },
   { version: '007_add_calendar_datetime_fields', file: path.join(schemaDir, '007_add_calendar_datetime_fields.sql') },
   { version: '008_add_activity_log', file: path.join(schemaDir, '008_add_activity_log.sql') },
-  { version: '009_activity_log_immutability', file: path.join(schemaDir, '009_activity_log_immutability.sql') }
+  { version: '009_activity_log_immutability', file: path.join(schemaDir, '009_activity_log_immutability.sql') },
+  { version: '010_update_issues_type_check', file: path.join(schemaDir, '010_update_issues_type_check.sql') }
 ] as const;
 
 const prepareDatabase = (db: Database.Database): void => {

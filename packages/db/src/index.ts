@@ -133,3 +133,13 @@ export {
   getByProjectId as getActivityLogByProjectId,
   getCompletedTasks,
 } from './activityLogRepository.js';
+
+// Article repository exports
+export {
+  createArticle,
+  getArticle,
+  listArticles,
+  deleteArticle,
+  type CreateArticleInput,
+  type ListArticleFilters
+} from './articleRepository.js';

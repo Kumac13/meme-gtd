@@ -1,4 +1,5 @@
-export type IssueType = 'memo' | 'task';
+export const ISSUE_TYPES = ['memo', 'task', 'article'] as const;
+export type IssueType = (typeof ISSUE_TYPES)[number];
 
 export type TaskStatus =
   | 'inbox'
@@ -48,6 +49,33 @@ export interface IssueBase extends Timestamped {
   isDeleted: boolean;
 }
 
+export interface ArticleMeta {
+  originalUrl: string;
+  siteName?: string;
+  archivedAt: string;
+}
+
+export interface Article extends IssueBase {
+  type: 'article';
+  title: string;
+  meta: ArticleMeta;
+  // Article doesn't use status/scheduling usually, but they are nullable in IssueBase
+  status: null;
+  scheduledStart: null;
+  scheduledEnd: null;
+  isAllDay: false;
+  actualStart: null;
+  actualEnd: null;
+  scheduledOn: null;
+  startTime: null;
+  endDate: null;
+  endTime: null;
+  duration: null;
+  commentCount?: number;
+  preview?: string;
+  labels?: string[];
+}
+
 export interface Memo extends IssueBase {
   type: 'memo';
   title: null;
@@ -76,7 +104,7 @@ export interface Task extends IssueBase {
   preview?: string;
 }
 
-export type Issue = Memo | Task;
+export type Issue = Memo | Task | Article;
 
 export interface Comment extends Timestamped {
   id: number;

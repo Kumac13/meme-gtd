@@ -40,3 +40,4 @@ build/
 Thumbs.db
 test-data/
 /test-data/
+.gemini-clipboard/

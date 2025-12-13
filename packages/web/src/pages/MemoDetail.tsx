@@ -26,7 +26,7 @@ export default function MemoDetail() {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'memo' | 'task' } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'memo' | 'task' | 'article' } | null>(null);
 
   // Set document title based on memo body preview (memos don't have titles)
   const titleText = memo?.bodyMd ? truncateForTitle(memo.bodyMd) : null;
@@ -89,7 +89,7 @@ export default function MemoDetail() {
     }
   };
 
-  const handleItemClick = useCallback((itemId: number, itemType: 'memo' | 'task') => {
+  const handleItemClick = useCallback((itemId: number, itemType: 'memo' | 'task' | 'article') => {
     setSelectedItem({ id: itemId, type: itemType });
   }, []);
 

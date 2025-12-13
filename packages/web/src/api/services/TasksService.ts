@@ -268,6 +268,14 @@ export class TasksService {
          * Context preview with highlighted search terms (only present when search parameter is active)
          */
         preview?: string;
+        /**
+         * Array of project IDs that contain this task
+         */
+        projectIds: Array<number>;
+        /**
+         * Array of link IDs associated with this task
+         */
+        linkIds: Array<number>;
     }>> {
         return __request(OpenAPI, {
             method: 'GET',

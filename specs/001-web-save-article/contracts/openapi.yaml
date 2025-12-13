@@ -1,0 +1,114 @@
+openapi: 3.0.0
+info:
+  title: Web Article API
+  version: 1.0.0
+paths:
+  /api/articles:
+    get:
+      summary: List articles
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of articles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ArticleSummary'
+    post:
+      summary: Create article (Save from Extension)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateArticleRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+
+  /api/articles/{id}:
+    get:
+      summary: Get article details (Reader View)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Article details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+    delete:
+      summary: Delete article
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+
+components:
+  schemas:
+    ArticleSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        siteName:
+          type: string
+        originalUrl:
+          type: string
+        createdAt:
+          type: integer
+        archivedAt:
+          type: string
+    Article:
+      allOf:
+        - $ref: '#/components/schemas/ArticleSummary'
+        - type: object
+          properties:
+            body:
+              type: string
+              description: Markdown content
+    CreateArticleRequest:
+      type: object
+      required:
+        - title
+        - body
+        - originalUrl
+      properties:
+        title:
+          type: string
+        body:
+          type: string
+        originalUrl:
+          type: string
+        siteName:
+          type: string
+        archivedAt:
+          type: string

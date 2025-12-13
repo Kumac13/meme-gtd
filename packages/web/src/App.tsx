@@ -1,22 +1,24 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { NuqsAdapter } from 'nuqs/adapters/react-router/v7';
-import Layout from './components/Layout';
-import ErrorBoundary from './components/ErrorBoundary';
-import MemosList from './pages/MemosList';
-import MemoDetail from './pages/MemoDetail';
-import MemoNew from './pages/MemoNew';
-import MemoEdit from './pages/MemoEdit';
-import TasksList from './pages/TasksList';
-import TaskDetail from './pages/TaskDetail';
-import TaskNew from './pages/TaskNew';
-import TaskEdit from './pages/TaskEdit';
-import ProjectsList from './pages/ProjectsList';
-import ProjectNew from './pages/ProjectNew';
-import ProjectDetail from './pages/ProjectDetail';
-import KanbanView from './pages/KanbanView';
-import ListView from './pages/ListView';
-import Calendar from './pages/Calendar';
-import ProjectDefaultRedirect from './components/ProjectDefaultRedirect';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
+import Layout from "./components/Layout";
+import ErrorBoundary from "./components/ErrorBoundary";
+import MemosList from "./pages/MemosList";
+import MemoDetail from "./pages/MemoDetail";
+import MemoNew from "./pages/MemoNew";
+import MemoEdit from "./pages/MemoEdit";
+import TasksList from "./pages/TasksList";
+import TaskDetail from "./pages/TaskDetail";
+import TaskNew from "./pages/TaskNew";
+import TaskEdit from "./pages/TaskEdit";
+import ProjectsList from "./pages/ProjectsList";
+import ProjectNew from "./pages/ProjectNew";
+import ProjectDetail from "./pages/ProjectDetail";
+import KanbanView from "./pages/KanbanView";
+import ListView from "./pages/ListView";
+import Calendar from "./pages/Calendar";
+import ProjectDefaultRedirect from "./components/ProjectDefaultRedirect";
+import { ArticleList } from "./pages/Articles/ArticleList";
+import { ArticleReader } from "./pages/Articles/ArticleReader";
 
 function App() {
   return (
@@ -42,6 +44,8 @@ function App() {
                 <Route path="list" element={<ListView />} />
               </Route>
               <Route path="calendar" element={<Calendar />} />
+              <Route path="articles" element={<ArticleList />} />
+              <Route path="articles/:id" element={<ArticleReader />} />
             </Route>
           </Routes>
         </NuqsAdapter>

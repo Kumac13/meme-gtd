@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import type { IssueType } from 'meme-gtd-shared';
 import { MemosService } from '../api/services/MemosService';
 import { TasksService } from '../api/services/TasksService';
+import { ArticlesService } from '../api/services/ArticlesService';
 import { CommentsService } from '../api/services/CommentsService';
 import EditableContent from './EditableContent';
 import CommentSection, { type Comment } from './CommentSection';
@@ -53,20 +55,20 @@ export type Item = BaseItem | Task;
 
 interface ItemDetailProps {
   item: Item;
-  itemType: 'memo' | 'task';
+  itemType: IssueType;
   onDelete: () => Promise<void>;
-  onBookmarkToggle: () => Promise<void>;
+  onBookmarkToggle?: () => Promise<void>;
   onUpdate: (updatedItem: Item) => void;
   onStatusChange?: (status: string) => Promise<void>;
   deleting: boolean;
-  bookmarking: boolean;
+  bookmarking?: boolean;
   customActions?: React.ReactNode;
   /** Actions to display at the bottom of the sidebar (e.g., Archive to Memo, Promote to Task) */
   sidebarActions?: React.ReactNode;
   /** 'page' shows full layout with sidebar, 'panel' hides sidebar for compact view */
   mode?: 'page' | 'panel';
   /** Optional callback when a linked item is clicked (used in page mode for modal) */
-  onItemClick?: (id: number, type: 'memo' | 'task') => void;
+  onItemClick?: (id: number, type: IssueType) => void;
   /** Optional callback before navigation (used in panel mode to close modal first) */
   onBeforeNavigate?: () => void;
   /** Callback to expose comments to parent component */
@@ -100,6 +102,12 @@ export default function ItemDetail({
   onCommentsLoadedRef.current = onCommentsLoaded;
 
   useEffect(() => {
+    // Skip fetching comments for articles (API not implemented)
+    if (itemType === 'article') {
+      setCommentsLoading(false);
+      return;
+    }
+
     const fetchComments = async () => {
       try {
         setCommentsLoading(true);
@@ -171,10 +179,14 @@ export default function ItemDetail({
   const handleLabelsChanged = () => {
     // Refresh item data to show updated labels
     const fetchUpdatedItem = async () => {
-      const updatedItem =
-        itemType === 'memo'
-          ? await MemosService.getMemo(String(item.id))
-          : await TasksService.getTask(String(item.id));
+      let updatedItem;
+      if (itemType === 'memo') {
+        updatedItem = await MemosService.getMemo(String(item.id));
+      } else if (itemType === 'article') {
+        updatedItem = await ArticlesService.getApiArticles1(item.id);
+      } else {
+        updatedItem = await TasksService.getTask(String(item.id));
+      }
       onUpdate(updatedItem as Item);
     };
     fetchUpdatedItem();
@@ -188,7 +200,7 @@ export default function ItemDetail({
         <div className={`flex flex-col gap-3 mb-3 ${mode === 'page' ? 'sm:flex-row sm:items-start sm:justify-between' : ''}`}>
           {mode === 'page' && (
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-              {item.title || `${itemType === 'memo' ? 'Memo' : 'Task'} #${item.id}`}
+              {item.title || `${itemType === 'memo' ? 'Memo' : itemType === 'article' ? 'Article' : 'Task'} #${item.id}`}
             </h1>
           )}
           <div className={`flex items-center gap-2 flex-wrap justify-end ${mode === 'panel' ? 'w-full' : 'sm:flex-nowrap'}`}>
@@ -199,22 +211,25 @@ export default function ItemDetail({
                 options={TASK_STATUS_OPTIONS}
               />
             )}
-            <button
-              onClick={onBookmarkToggle}
-              disabled={bookmarking}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              title={item.isBookmarked ? 'Unbookmark' : 'Bookmark'}
-            >
-              {item.isBookmarked ? (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 16 16">
-                  <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Z"></path>
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 16 16">
-                  <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.91l3.023-2.489a.75.75 0 0 1 .954 0l3.023 2.49V2.75a.25.25 0 0 0-.25-.25Z"></path>
-                </svg>
-              )}
-            </button>
+            {/* Only show bookmark button if onBookmarkToggle is provided */}
+            {onBookmarkToggle && (
+              <button
+                onClick={onBookmarkToggle}
+                disabled={bookmarking}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={item.isBookmarked ? 'Unbookmark' : 'Bookmark'}
+              >
+                {item.isBookmarked ? (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Z"></path>
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.91l3.023-2.489a.75.75 0 0 1 .954 0l3.023 2.49V2.75a.25.25 0 0 0-.25-.25Z"></path>
+                  </svg>
+                )}
+              </button>
+            )}
             {customActions}
           </div>
         </div>
@@ -238,14 +253,16 @@ export default function ItemDetail({
           {/* Links section */}
           <LinkSection itemId={item.id} itemType={itemType} onItemClick={onItemClick} onBeforeNavigate={onBeforeNavigate} />
 
-          {/* Comments section */}
-          <CommentSection
-            comments={comments}
-            loading={commentsLoading}
-            onAddComment={handleAddComment}
-            onUpdateComment={handleUpdateComment}
-            onDeleteComment={handleDeleteComment}
-          />
+          {/* Comments section (memo/task only) */}
+          {itemType !== 'article' && (
+            <CommentSection
+              comments={comments}
+              loading={commentsLoading}
+              onAddComment={handleAddComment}
+              onUpdateComment={handleUpdateComment}
+              onDeleteComment={handleDeleteComment}
+            />
+          )}
         </div>
 
         {/* Sidebar (right column on page, bottom on panel) */}

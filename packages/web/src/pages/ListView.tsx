@@ -67,7 +67,7 @@ export default function ListView() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [memos, setMemos] = useState<Memo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'memo' | 'task' } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'memo' | 'task' | 'article' } | null>(null);
 
   // Filter state management with URL params
   const [searchParams, setSearchParams] = useSearchParams();
@@ -94,7 +94,7 @@ export default function ListView() {
     setSearchParams(params);
   }, [searchParams, setSearchParams]);
 
-  const handleItemClick = useCallback((id: number, type: 'memo' | 'task') => {
+  const handleItemClick = useCallback((id: number, type: 'memo' | 'task' | 'article') => {
     setSelectedItem({ id, type });
   }, []);
 

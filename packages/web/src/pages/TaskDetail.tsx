@@ -30,7 +30,7 @@ export default function TaskDetail() {
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'memo' | 'task' } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'memo' | 'task' | 'article' } | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isCopied, setIsCopied] = useState(false);
 
@@ -95,7 +95,7 @@ export default function TaskDetail() {
     }
   };
 
-  const handleItemClick = useCallback((itemId: number, itemType: 'memo' | 'task') => {
+  const handleItemClick = useCallback((itemId: number, itemType: 'memo' | 'task' | 'article') => {
     setSelectedItem({ id: itemId, type: itemType });
   }, []);
 

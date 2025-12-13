@@ -8,10 +8,11 @@ import { useState, useEffect, useRef } from 'react';
 import { ProjectsService } from '../api/services/ProjectsService';
 import type { Project, ProjectWithMeta } from '../types/project';
 import { useRecentProjects } from '../hooks/useRecentProjects';
+import type { IssueType } from 'meme-gtd-shared';
 
 interface ProjectsSectionProps {
   itemId: number;
-  itemType: 'memo' | 'task';
+  itemType: IssueType;
 }
 
 export function ProjectsSection({ itemId, itemType: _ }: ProjectsSectionProps) {

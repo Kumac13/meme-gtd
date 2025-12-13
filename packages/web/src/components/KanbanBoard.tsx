@@ -3,11 +3,12 @@ import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/
 import { ProjectDetail, ProjectItemWithIssue } from '../types/project';
 import KanbanColumn from './KanbanColumn';
 import KanbanCard from './KanbanCard';
+import type { IssueType } from 'meme-gtd-shared';
 
 interface KanbanBoardProps {
   project: ProjectDetail;
   onProjectUpdate: (project: ProjectDetail) => void;
-  onItemClick?: (issueId: number, issueType: 'memo' | 'task') => void;
+  onItemClick?: (issueId: number, issueType: IssueType) => void;
 }
 
 export default function KanbanBoard({ project, onProjectUpdate, onItemClick }: KanbanBoardProps) {
@@ -31,8 +32,8 @@ export default function KanbanBoard({ project, onProjectUpdate, onItemClick }: K
 
     // Group items
     project.items.forEach(item => {
-      if (item.issue.type === 'memo') {
-        // All memos go to Documents column
+      if (item.issue.type === 'memo' || item.issue.type === 'article') {
+        // All memos and articles go to Documents column
         grouped['Documents'].push(item);
       } else if (item.issue.type === 'task' && item.issue.status) {
         // Tasks go to their status column (only if status is not null)
@@ -75,9 +76,9 @@ export default function KanbanBoard({ project, onProjectUpdate, onItemClick }: K
     const item = project.items.find(i => i.issueId === issueId);
     if (!item) return;
 
-    // Memos can't be dragged out of Documents column
-    if (item.issue.type === 'memo' && newColumnName !== 'Documents') return;
-    if (item.issue.type === 'memo') return; // Memos stay in Documents
+    // Memos and articles can't be dragged out of Documents column
+    if ((item.issue.type === 'memo' || item.issue.type === 'article') && newColumnName !== 'Documents') return;
+    if (item.issue.type === 'memo' || item.issue.type === 'article') return; // Memos and articles stay in Documents
 
     // For tasks, check if status changed
     const oldStatus = item.issue.status;

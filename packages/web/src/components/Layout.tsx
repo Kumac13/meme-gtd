@@ -1,11 +1,12 @@
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation } from "react-router-dom";
 
 export default function Layout() {
   const location = useLocation();
-  const isMemosActive = location.pathname.startsWith('/memos');
-  const isTasksActive = location.pathname.startsWith('/tasks');
-  const isProjectsActive = location.pathname.startsWith('/projects');
-  const isCalendarActive = location.pathname.startsWith('/calendar');
+  const isMemosActive = location.pathname.startsWith("/memos");
+  const isTasksActive = location.pathname.startsWith("/tasks");
+  const isProjectsActive = location.pathname.startsWith("/projects");
+  const isCalendarActive = location.pathname.startsWith("/calendar");
+  const isArticlesActive = location.pathname.startsWith("/articles"); // Add for Articles
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -21,8 +22,8 @@ export default function Layout() {
                   to="/memos"
                   className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                     isMemosActive
-                      ? 'border-github-green-500 text-gray-900'
-                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                      ? "border-github-green-500 text-gray-900"
+                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
                   }`}
                 >
                   Memos
@@ -31,8 +32,8 @@ export default function Layout() {
                   to="/tasks"
                   className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                     isTasksActive
-                      ? 'border-github-green-500 text-gray-900'
-                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                      ? "border-github-green-500 text-gray-900"
+                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
                   }`}
                 >
                   Tasks
@@ -41,18 +42,28 @@ export default function Layout() {
                   to="/projects"
                   className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                     isProjectsActive
-                      ? 'border-github-green-500 text-gray-900'
-                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                      ? "border-github-green-500 text-gray-900"
+                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
                   }`}
                 >
                   Projects
                 </Link>
                 <Link
+                  to="/articles"
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                    isArticlesActive // Use new active state
+                      ? "border-github-green-500 text-gray-900"
+                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                  }`}
+                >
+                  Articles
+                </Link>
+                <Link
                   to="/calendar"
                   className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                     isCalendarActive
-                      ? 'border-github-green-500 text-gray-900'
-                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                      ? "border-github-green-500 text-gray-900"
+                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
                   }`}
                 >
                   Calendar
