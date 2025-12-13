@@ -200,7 +200,7 @@ export default function ItemDetail({
         <div className={`flex flex-col gap-3 mb-3 ${mode === 'page' ? 'sm:flex-row sm:items-start sm:justify-between' : ''}`}>
           {mode === 'page' && (
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-              {item.title || `${itemType === 'memo' ? 'Memo' : 'Task'} #${item.id}`}
+              {item.title || `${itemType === 'memo' ? 'Memo' : itemType === 'article' ? 'Article' : 'Task'} #${item.id}`}
             </h1>
           )}
           <div className={`flex items-center gap-2 flex-wrap justify-end ${mode === 'panel' ? 'w-full' : 'sm:flex-nowrap'}`}>
