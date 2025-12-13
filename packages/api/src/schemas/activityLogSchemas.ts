@@ -21,6 +21,10 @@ export const EventTypeSchema = z.enum([
   'memo.updated',
   'memo.promoted',
   'memo.deleted',
+  'memo.bookmarked',
+  // Article events
+  'article.created',
+  'article.deleted',
   // Label events
   'label.created',
   'label.deleted',

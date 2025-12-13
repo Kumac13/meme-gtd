@@ -327,3 +327,34 @@ export const buildMemoPromotedPayload = (
     link_id: linkId,
   };
 };
+
+/**
+ * Build payload for article.created event
+ */
+interface ArticleCreatedPayload {
+  issue_id: number;
+  issue_type: 'article';
+  title: string;
+  body: string;
+  original_url: string;
+  labels: LabelSnapshot[];
+  projects: ProjectSnapshot[];
+}
+
+export const buildArticleCreatedPayload = (
+  db: Database.Database,
+  articleId: number,
+  title: string,
+  bodyMd: string,
+  originalUrl: string
+): ArticleCreatedPayload => {
+  return {
+    issue_id: articleId,
+    issue_type: 'article',
+    title,
+    body: bodyMd,
+    original_url: originalUrl,
+    labels: getLabelSnapshots(db, articleId),
+    projects: getProjectSnapshots(db, articleId),
+  };
+};

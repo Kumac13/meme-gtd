@@ -33,6 +33,11 @@ import {
   setTaskStatus,
   updateTaskComment,
   updateTask,
+  // Article functions
+  createArticle,
+  getArticle,
+  listArticles,
+  deleteArticle,
   // Label functions
   listAllLabels,
   getLabel,
@@ -46,9 +51,11 @@ import {
   // Link functions
   listLinks,
   // Types
+  type CreateArticleInput,
   type CreateMemoInput,
   type CreateTaskInput,
   type DemoteTaskInput,
+  type ListArticleFilters,
   type ListMemoFilters,
   type ListTaskFilters,
   type PromoteMemoInput,
@@ -432,6 +439,56 @@ export class LabelService {
   }
 }
 
+export interface ArticleServiceOptions {
+  config?: MgtdConfig;
+  db?: Database.Database;
+  sourceType?: SourceType;
+}
+
+export class ArticleService {
+  private readonly db: Database.Database;
+  private readonly logger: ActivityLogger;
+
+  constructor(private readonly options: ArticleServiceOptions) {
+    if (options.db) {
+      this.db = options.db;
+    } else if (options.config) {
+      this.db = ensureDatabase(options.config);
+    } else {
+      throw new Error('ArticleService requires either db or config option');
+    }
+    this.logger = new ActivityLogger(this.db, options.sourceType ?? 'api');
+  }
+
+  public create(input: CreateArticleInput) {
+    return this.db.transaction(() => {
+      const article = createArticle(this.db, input);
+      this.logger.logArticleCreated(
+        article.id,
+        input.title,
+        input.bodyMd,
+        input.originalUrl
+      );
+      return article;
+    })();
+  }
+
+  public get(id: number) {
+    return getArticle(this.db, id);
+  }
+
+  public list(filters: ListArticleFilters = {}) {
+    return listArticles(this.db, filters);
+  }
+
+  public remove(id: number) {
+    return this.db.transaction(() => {
+      this.logger.logArticleDeleted(id);
+      return deleteArticle(this.db, id);
+    })();
+  }
+}
+
 // Link Service
 export { LinkService, type LinkServiceOptions } from './linkService.js';
 
@@ -455,4 +512,5 @@ export {
   buildCommentCreatedPayload,
   buildLinkCreatedPayload,
   buildMemoPromotedPayload,
+  buildArticleCreatedPayload,
 } from './activity-log/payload-builder.js';
