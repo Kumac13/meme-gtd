@@ -16,7 +16,7 @@ export class ArticlesService {
             title: string;
             bodyMd: string;
             originalUrl: string;
-            siteName?: string;
+            siteName?: string | null;
             labels?: Array<string>;
         },
     ): CancelablePromise<{
@@ -26,7 +26,7 @@ export class ArticlesService {
         bodyMd: string;
         meta: {
             originalUrl: string;
-            siteName?: string;
+            siteName?: string | null;
             archivedAt: string;
         };
         createdAt: string;
@@ -61,7 +61,7 @@ export class ArticlesService {
         bodyMd: string;
         meta: {
             originalUrl: string;
-            siteName?: string;
+            siteName?: string | null;
             archivedAt: string;
         };
         createdAt: string;
@@ -95,7 +95,7 @@ export class ArticlesService {
         bodyMd: string;
         meta: {
             originalUrl: string;
-            siteName?: string;
+            siteName?: string | null;
             archivedAt: string;
         };
         createdAt: string;

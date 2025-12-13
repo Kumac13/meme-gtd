@@ -5748,6 +5748,969 @@ paths:
             image/jpeg: *a3
             image/gif: *a3
             image/webp: *a3
+  /api/activity-log:
+    get:
+      operationId: listActivityLog
+      summary: List activity log entries
+      tags:
+        - ActivityLog
+      description: List activity log entries with optional filters
+      parameters:
+        - schema:
+            type: integer
+            exclusiveMinimum: true
+            minimum: 0
+          in: query
+          name: issueId
+          required: false
+          description: Filter by issue ID
+        - schema:
+            type: integer
+            exclusiveMinimum: true
+            minimum: 0
+          in: query
+          name: projectId
+          required: false
+          description: Filter by project ID
+        - schema:
+            type: integer
+            exclusiveMinimum: true
+            minimum: 0
+          in: query
+          name: labelId
+          required: false
+          description: Filter by label ID
+        - schema:
+            type: string
+            enum:
+              - task.created
+              - task.updated
+              - task.status_changed
+              - task.deleted
+              - task.bookmarked
+              - memo.created
+              - memo.updated
+              - memo.promoted
+              - memo.deleted
+              - label.created
+              - label.deleted
+              - label.assigned
+              - label.removed
+              - project.created
+              - project.updated
+              - project.deleted
+              - project.item_added
+              - project.item_removed
+              - link.created
+              - link.deleted
+              - comment.created
+              - comment.updated
+              - comment.deleted
+          in: query
+          name: eventType
+          required: false
+          description: Filter by event type
+        - schema:
+            type: string
+            enum:
+              - cli
+              - api
+              - system
+          in: query
+          name: sourceType
+          required: false
+          description: Filter by source type
+        - schema:
+            type: string
+            format: date-time
+          in: query
+          name: from
+          required: false
+          description: Filter logs from this datetime (ISO 8601)
+        - schema:
+            type: string
+            format: date-time
+          in: query
+          name: to
+          required: false
+          description: Filter logs until this datetime (ISO 8601)
+        - schema:
+            type: integer
+            exclusiveMinimum: true
+            minimum: 0
+            maximum: 1000
+            default: 100
+          in: query
+          name: limit
+          required: false
+          description: Maximum number of entries to return
+        - schema:
+            type: integer
+            minimum: 0
+            default: 0
+          in: query
+          name: offset
+          required: false
+          description: Number of entries to skip
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+          in: query
+          name: order
+          required: false
+          description: Sort order by occurred_at
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Unique identifier
+                    eventType:
+                      type: string
+                      enum:
+                        - task.created
+                        - task.updated
+                        - task.status_changed
+                        - task.deleted
+                        - task.bookmarked
+                        - memo.created
+                        - memo.updated
+                        - memo.promoted
+                        - memo.deleted
+                        - label.created
+                        - label.deleted
+                        - label.assigned
+                        - label.removed
+                        - project.created
+                        - project.updated
+                        - project.deleted
+                        - project.item_added
+                        - project.item_removed
+                        - link.created
+                        - link.deleted
+                        - comment.created
+                        - comment.updated
+                        - comment.deleted
+                      description: Event type (e.g., task.created, task.status_changed)
+                    occurredAt:
+                      type: string
+                      description: Event timestamp (ISO 8601)
+                    sourceType:
+                      type: string
+                      enum:
+                        - cli
+                        - api
+                        - system
+                      description: Source of the operation
+                    payload:
+                      type: object
+                      additionalProperties: {}
+                      description: Event-specific data
+                    issueId:
+                      type: integer
+                      nullable: true
+                      description: Related issue ID (extracted from payload)
+                    projectId:
+                      type: integer
+                      nullable: true
+                      description: Related project ID (extracted from payload)
+                    labelId:
+                      type: integer
+                      nullable: true
+                      description: Related label ID (extracted from payload)
+                  required:
+                    - id
+                    - eventType
+                    - occurredAt
+                    - sourceType
+                    - payload
+                    - issueId
+                    - projectId
+                    - labelId
+                  additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/activity-log/issues/{issueId}:
+    get:
+      operationId: getIssueActivityLog
+      summary: Get issue activity log
+      tags:
+        - ActivityLog
+      description: Get activity log entries for a specific issue (task or memo)
+      parameters:
+        - schema:
+            type: integer
+            exclusiveMinimum: true
+            minimum: 0
+            maximum: 1000
+            default: 100
+          in: query
+          name: limit
+          required: false
+          description: Maximum number of entries to return
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: asc
+          in: query
+          name: order
+          required: false
+          description: Sort order by occurred_at
+        - schema:
+            type: integer
+            exclusiveMinimum: true
+            minimum: 0
+          in: path
+          name: issueId
+          required: true
+          description: Issue ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Unique identifier
+                    eventType:
+                      type: string
+                      enum:
+                        - task.created
+                        - task.updated
+                        - task.status_changed
+                        - task.deleted
+                        - task.bookmarked
+                        - memo.created
+                        - memo.updated
+                        - memo.promoted
+                        - memo.deleted
+                        - label.created
+                        - label.deleted
+                        - label.assigned
+                        - label.removed
+                        - project.created
+                        - project.updated
+                        - project.deleted
+                        - project.item_added
+                        - project.item_removed
+                        - link.created
+                        - link.deleted
+                        - comment.created
+                        - comment.updated
+                        - comment.deleted
+                      description: Event type (e.g., task.created, task.status_changed)
+                    occurredAt:
+                      type: string
+                      description: Event timestamp (ISO 8601)
+                    sourceType:
+                      type: string
+                      enum:
+                        - cli
+                        - api
+                        - system
+                      description: Source of the operation
+                    payload:
+                      type: object
+                      additionalProperties: {}
+                      description: Event-specific data
+                    issueId:
+                      type: integer
+                      nullable: true
+                      description: Related issue ID (extracted from payload)
+                    projectId:
+                      type: integer
+                      nullable: true
+                      description: Related project ID (extracted from payload)
+                    labelId:
+                      type: integer
+                      nullable: true
+                      description: Related label ID (extracted from payload)
+                  required:
+                    - id
+                    - eventType
+                    - occurredAt
+                    - sourceType
+                    - payload
+                    - issueId
+                    - projectId
+                    - labelId
+                  additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/activity-log/projects/{projectId}:
+    get:
+      operationId: getProjectActivityLog
+      summary: Get project activity log
+      tags:
+        - ActivityLog
+      description: Get activity log entries for a specific project
+      parameters:
+        - schema:
+            type: integer
+            exclusiveMinimum: true
+            minimum: 0
+            maximum: 1000
+            default: 100
+          in: query
+          name: limit
+          required: false
+          description: Maximum number of entries to return
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+          in: query
+          name: order
+          required: false
+          description: Sort order by occurred_at
+        - schema:
+            type: integer
+            exclusiveMinimum: true
+            minimum: 0
+          in: path
+          name: projectId
+          required: true
+          description: Project ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Unique identifier
+                    eventType:
+                      type: string
+                      enum:
+                        - task.created
+                        - task.updated
+                        - task.status_changed
+                        - task.deleted
+                        - task.bookmarked
+                        - memo.created
+                        - memo.updated
+                        - memo.promoted
+                        - memo.deleted
+                        - label.created
+                        - label.deleted
+                        - label.assigned
+                        - label.removed
+                        - project.created
+                        - project.updated
+                        - project.deleted
+                        - project.item_added
+                        - project.item_removed
+                        - link.created
+                        - link.deleted
+                        - comment.created
+                        - comment.updated
+                        - comment.deleted
+                      description: Event type (e.g., task.created, task.status_changed)
+                    occurredAt:
+                      type: string
+                      description: Event timestamp (ISO 8601)
+                    sourceType:
+                      type: string
+                      enum:
+                        - cli
+                        - api
+                        - system
+                      description: Source of the operation
+                    payload:
+                      type: object
+                      additionalProperties: {}
+                      description: Event-specific data
+                    issueId:
+                      type: integer
+                      nullable: true
+                      description: Related issue ID (extracted from payload)
+                    projectId:
+                      type: integer
+                      nullable: true
+                      description: Related project ID (extracted from payload)
+                    labelId:
+                      type: integer
+                      nullable: true
+                      description: Related label ID (extracted from payload)
+                  required:
+                    - id
+                    - eventType
+                    - occurredAt
+                    - sourceType
+                    - payload
+                    - issueId
+                    - projectId
+                    - labelId
+                  additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/activity-log/completed-tasks:
+    get:
+      operationId: getCompletedTasks
+      summary: Get completed tasks
+      tags:
+        - ActivityLog
+      description: Get tasks that were completed within a date range
+      parameters:
+        - schema:
+            type: string
+            format: date
+          in: query
+          name: from
+          required: false
+          description: Start date (YYYY-MM-DD), defaults to today
+        - schema:
+            type: string
+            format: date
+          in: query
+          name: to
+          required: false
+          description: End date (YYYY-MM-DD), defaults to today
+        - schema:
+            type: integer
+            exclusiveMinimum: true
+            minimum: 0
+            maximum: 1000
+            default: 100
+          in: query
+          name: limit
+          required: false
+          description: Maximum number of entries to return
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    taskId:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Task ID
+                    title:
+                      type: string
+                      description: Task title at completion time
+                    completedAt:
+                      type: string
+                      description: Completion timestamp
+                    projectSnapshot:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          name:
+                            type: string
+                        required:
+                          - id
+                          - name
+                        additionalProperties: false
+                      description: Projects at completion time
+                    labelSnapshot:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          name:
+                            type: string
+                        required:
+                          - id
+                          - name
+                        additionalProperties: false
+                      description: Labels at completion time
+                  required:
+                    - taskId
+                    - title
+                    - completedAt
+                  additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/articles/:
+    post:
+      tags:
+        - Articles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                bodyMd:
+                  type: string
+                originalUrl:
+                  type: string
+                siteName:
+                  type: string
+                  nullable: true
+                labels:
+                  type: array
+                  items:
+                    type: string
+              required:
+                - title
+                - bodyMd
+                - originalUrl
+              additionalProperties: false
+        required: true
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: number
+                  type:
+                    type: string
+                    enum:
+                      - article
+                  title:
+                    type: string
+                  bodyMd:
+                    type: string
+                  meta:
+                    type: object
+                    properties:
+                      originalUrl:
+                        type: string
+                      siteName:
+                        type: string
+                        nullable: true
+                      archivedAt:
+                        type: string
+                    required:
+                      - originalUrl
+                      - archivedAt
+                    additionalProperties: false
+                  createdAt:
+                    type: string
+                  updatedAt:
+                    type: string
+                  isBookmarked:
+                    type: boolean
+                  isDeleted:
+                    type: boolean
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                  commentCount:
+                    type: number
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - meta
+                  - createdAt
+                  - updatedAt
+                  - isBookmarked
+                  - isDeleted
+                additionalProperties: false
+    get:
+      tags:
+        - Articles
+      parameters:
+        - schema:
+            type: number
+          in: query
+          name: limit
+          required: false
+        - schema:
+            type: number
+          in: query
+          name: offset
+          required: false
+        - schema:
+            type: string
+          in: query
+          name: search
+          required: false
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: number
+                    type:
+                      type: string
+                      enum:
+                        - article
+                    title:
+                      type: string
+                    bodyMd:
+                      type: string
+                    meta:
+                      type: object
+                      properties:
+                        originalUrl:
+                          type: string
+                        siteName:
+                          type: string
+                          nullable: true
+                        archivedAt:
+                          type: string
+                      required:
+                        - originalUrl
+                        - archivedAt
+                      additionalProperties: false
+                    createdAt:
+                      type: string
+                    updatedAt:
+                      type: string
+                    isBookmarked:
+                      type: boolean
+                    isDeleted:
+                      type: boolean
+                    labels:
+                      type: array
+                      items:
+                        type: string
+                    commentCount:
+                      type: number
+                  required:
+                    - id
+                    - type
+                    - title
+                    - bodyMd
+                    - meta
+                    - createdAt
+                    - updatedAt
+                    - isBookmarked
+                    - isDeleted
+                  additionalProperties: false
+  /api/articles/{id}:
+    get:
+      tags:
+        - Articles
+      parameters:
+        - schema:
+            type: number
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: number
+                  type:
+                    type: string
+                    enum:
+                      - article
+                  title:
+                    type: string
+                  bodyMd:
+                    type: string
+                  meta:
+                    type: object
+                    properties:
+                      originalUrl:
+                        type: string
+                      siteName:
+                        type: string
+                        nullable: true
+                      archivedAt:
+                        type: string
+                    required:
+                      - originalUrl
+                      - archivedAt
+                    additionalProperties: false
+                  createdAt:
+                    type: string
+                  updatedAt:
+                    type: string
+                  isBookmarked:
+                    type: boolean
+                  isDeleted:
+                    type: boolean
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                  commentCount:
+                    type: number
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - meta
+                  - createdAt
+                  - updatedAt
+                  - isBookmarked
+                  - isDeleted
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                  - error
+                additionalProperties: false
+    delete:
+      tags:
+        - Articles
+      parameters:
+        - schema:
+            type: number
+          in: path
+          name: id
+          required: true
+      responses:
+        "204":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                enum:
+                  - "null"
+                nullable: true
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                  - error
+                additionalProperties: false
 servers:
   - url: http://localhost:3000
     description: Development server
@@ -5766,3 +6729,5 @@ tags:
     description: Comment management endpoints
   - name: Attachments
     description: Image attachment endpoints
+  - name: ActivityLog
+    description: Activity log endpoints

@@ -10,7 +10,7 @@ const ArticleSchema = z.object({
   bodyMd: z.string(),
   meta: z.object({
     originalUrl: z.string(),
-    siteName: z.string().optional(),
+    siteName: z.string().nullable().optional(),
     archivedAt: z.string(),
   }),
   createdAt: z.string(),
@@ -25,7 +25,7 @@ const CreateArticleSchema = z.object({
   title: z.string(),
   bodyMd: z.string(),
   originalUrl: z.string(),
-  siteName: z.string().optional(),
+  siteName: z.string().nullable().optional(),
   labels: z.array(z.string()).optional(),
 });
 
@@ -69,6 +69,7 @@ const articlesRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const query = request.query as ListArticleFilters;
       const articles = listArticles(fastify.db, query);
+      console.log('DEBUG ARTICLES:', JSON.stringify(articles, null, 2));
       return reply.send(articles);
     }
   );
