@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
 import { MemosService } from '../api/services/MemosService';
+import { ArticlesService } from '../api/services/ArticlesService';
 import ItemDetail, { type Item } from './ItemDetail';
 import LoadingState from './LoadingState';
 import ErrorState from './ErrorState';
@@ -49,9 +50,14 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
       try {
         setLoading(true);
         setError(null);
-        const response = itemType === 'task'
-          ? await TasksService.getTask(String(itemId))
-          : await MemosService.getMemo(String(itemId));
+        let response;
+        if (itemType === 'task') {
+          response = await TasksService.getTask(String(itemId));
+        } else if (itemType === 'article') {
+          response = await ArticlesService.getApiArticles1(itemId);
+        } else {
+          response = await MemosService.getMemo(String(itemId));
+        }
         setItem(response as BaseItem | Task);
       } catch (err) {
         setError(err instanceof Error ? err.message : `Failed to load ${itemType}`);
@@ -73,6 +79,8 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
       setDeleting(true);
       if (itemType === 'task') {
         await TasksService.deleteTask(String(itemId));
+      } else if (itemType === 'article') {
+        await ArticlesService.deleteApiArticles(itemId);
       } else {
         await MemosService.deleteMemo(String(itemId));
       }
@@ -133,8 +141,8 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
     }
   };
 
-  const basePath = itemType === 'task' ? '/tasks' : '/memos';
-  const displayTitle = item?.title || (itemType === 'task' ? 'Task' : 'Memo');
+  const basePath = itemType === 'task' ? '/tasks' : itemType === 'article' ? '/articles' : '/memos';
+  const displayTitle = item?.title || (itemType === 'task' ? 'Task' : itemType === 'article' ? 'Article' : 'Memo');
 
   return (
     <>
@@ -193,11 +201,11 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
               item={item as Item}
               itemType={itemType}
               onDelete={handleDelete}
-              onBookmarkToggle={handleBookmarkToggle}
+              onBookmarkToggle={itemType !== 'article' ? handleBookmarkToggle : undefined}
               onUpdate={handleUpdate}
               onStatusChange={itemType === 'task' ? handleStatusChange : undefined}
               deleting={deleting}
-              bookmarking={bookmarking}
+              bookmarking={itemType !== 'article' ? bookmarking : undefined}
               mode="panel"
               onBeforeNavigate={onClose}
             />

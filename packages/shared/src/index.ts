@@ -1,4 +1,5 @@
-export type IssueType = 'memo' | 'task' | 'article';
+export const ISSUE_TYPES = ['memo', 'task', 'article'] as const;
+export type IssueType = (typeof ISSUE_TYPES)[number];
 
 export type TaskStatus =
   | 'inbox'

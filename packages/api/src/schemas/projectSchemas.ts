@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ISSUE_TYPES } from 'meme-gtd-shared';
 import { TaskStatusSchema } from './taskSchemas.js';
 
 /**
@@ -89,7 +90,7 @@ export type ProjectItem = z.infer<typeof ProjectItemSchema>;
 const ProjectItemWithIssueSchema = ProjectItemSchema.extend({
   issue: z.object({
     id: z.number().int().positive().describe('Issue ID'),
-    type: z.enum(['task', 'memo']).describe('Issue type'),
+    type: z.enum(ISSUE_TYPES).describe('Issue type'),
     title: z.string().describe('Issue title'),
     status: TaskStatusSchema.nullable().describe('Task status (null for memos)'),
   }).describe('Issue information'),

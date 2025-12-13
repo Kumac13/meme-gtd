@@ -44,6 +44,9 @@ importers:
       meme-gtd-db:
         specifier: workspace:*
         version: link:../db
+      meme-gtd-shared:
+        specifier: workspace:*
+        version: link:../shared
       yaml:
         specifier: ^2.8.1
         version: 2.8.1
