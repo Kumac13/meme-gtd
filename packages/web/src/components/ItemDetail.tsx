@@ -248,14 +248,16 @@ export default function ItemDetail({
           {/* Links section */}
           <LinkSection itemId={item.id} itemType={itemType} onItemClick={onItemClick} onBeforeNavigate={onBeforeNavigate} />
 
-          {/* Comments section */}
-          <CommentSection
-            comments={comments}
-            loading={commentsLoading}
-            onAddComment={handleAddComment}
-            onUpdateComment={handleUpdateComment}
-            onDeleteComment={handleDeleteComment}
-          />
+          {/* Comments section (memo/task only) */}
+          {itemType !== 'article' && (
+            <CommentSection
+              comments={comments}
+              loading={commentsLoading}
+              onAddComment={handleAddComment}
+              onUpdateComment={handleUpdateComment}
+              onDeleteComment={handleDeleteComment}
+            />
+          )}
         </div>
 
         {/* Sidebar (right column on page, bottom on panel) */}
