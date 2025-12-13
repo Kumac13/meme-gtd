@@ -59,7 +59,7 @@ export interface ProjectDetail extends Project {
 export interface ProjectItemWithIssue extends ProjectItem {
   issue: {
     id: number;
-    type: 'task' | 'memo';
+    type: 'task' | 'memo' | 'article';
     title: string;
     bodyMd: string;
     status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled' | null;

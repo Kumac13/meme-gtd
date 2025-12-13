@@ -78,6 +78,7 @@
 - [x] T037 [FIX] Hide CommentSection from ArticleReader (API not implemented for articles) packages/web/src/components/ItemDetail.tsx
 - [x] T038 [FIX] Support article type in handleLabelsChanged for label refresh packages/web/src/components/ItemDetail.tsx
 - [x] T039 [FIX] Add labels field to article API response packages/db/src/articleRepository.ts
+- [x] T040 [FIX] Display articles in Project Kanban view (Documents column) packages/shared/src/types/project.ts packages/db/src/projectItemRepository.ts packages/web/src/components/KanbanBoard.tsx packages/web/src/components/KanbanCard.tsx
 
 ## Dependencies
 

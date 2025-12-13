@@ -45,7 +45,7 @@ export default function KanbanCard({ item, onItemClick }: KanbanCardProps) {
         <span className="text-xs text-gray-500">#{item.issueId}</span>
         <span className={`
           text-xs px-2 py-0.5 rounded
-          ${item.issue.type === 'task' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}
+          ${item.issue.type === 'task' ? 'bg-blue-100 text-blue-700' : item.issue.type === 'article' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'}
         `}>
           {item.issue.type}
         </span>
@@ -57,7 +57,7 @@ export default function KanbanCard({ item, onItemClick }: KanbanCardProps) {
         {item.issue.title ? (
           <InlineMarkdownRenderer content={extractFirstLine(item.issue.title, 80)} />
         ) : (
-          <span className="text-gray-500">{item.issue.type === 'memo' ? 'Memo' : 'Task'} #{item.issueId}</span>
+          <span className="text-gray-500">{item.issue.type === 'memo' ? 'Memo' : item.issue.type === 'article' ? 'Article' : 'Task'} #{item.issueId}</span>
         )}
       </div>
     </div>

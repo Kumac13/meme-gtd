@@ -158,7 +158,7 @@ export const listProjectItems = (
       updatedAt: row.pi_updated_at as string,
       issue: {
         id: row.i_id as number,
-        type: row.i_type as 'task' | 'memo',
+        type: row.i_type as 'task' | 'memo' | 'article',
         title: (row.i_title || (row.i_body_md as string)?.substring(0, 100) || '') as string,
         bodyMd: row.i_body_md as string,
         status: row.i_status as 'inbox' | 'someday' | 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled' | null
