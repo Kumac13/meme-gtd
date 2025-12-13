@@ -89,7 +89,9 @@ export const getArticle = (db: Database.Database, id: number): Article => {
     throw new Error(`ID refers to different type(${r.type})`);
   }
 
-  return articleRowToArticle(row);
+  const article = articleRowToArticle(row);
+  article.labels = getArticleLabels(db, id);
+  return article;
 };
 
 export const listArticles = (db: Database.Database, filters: ListArticleFilters = {}): Article[] => {
@@ -120,7 +122,12 @@ export const listArticles = (db: Database.Database, filters: ListArticleFilters 
   }
 
   const rows = db.prepare(sql).all(params);
-  return rows.map(articleRowToArticle);
+  return rows.map((row) => {
+    const article = articleRowToArticle(row);
+    const r = row as Record<string, unknown>;
+    article.labels = getArticleLabels(db, Number(r.id));
+    return article;
+  });
 };
 
 export const deleteArticle = (db: Database.Database, id: number): void => {
@@ -131,6 +138,13 @@ export const deleteArticle = (db: Database.Database, id: number): void => {
   if (result.changes === 0) {
     throw new Error(`Article not found: ${id}`);
   }
+};
+
+const getArticleLabels = (db: Database.Database, articleId: number): string[] => {
+  const rows = db
+    .prepare(`SELECT l.name FROM labels l JOIN issue_labels il ON il.label_id = l.id WHERE il.issue_id = @articleId ORDER BY l.name`)
+    .all({ articleId }) as Array<{ name: string }>;
+  return rows.map((row) => row.name);
 };
 
 const attachLabels = (db: Database.Database, issueId: number, labels: string[]): void => {
