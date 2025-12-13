@@ -46,7 +46,7 @@ test('ArticleService.create() logs article.created event', () => {
   fs.removeSync(dir);
 });
 
-test('ArticleService.create() includes body preview in payload', () => {
+test('ArticleService.create() includes full body in payload', () => {
   const { dir, db } = createTempDb();
   const articleService = new ArticleService({ db });
 
@@ -60,9 +60,8 @@ test('ArticleService.create() includes body preview in payload', () => {
 
   const logs = listActivityLog(db, {});
   const payload = logs[0].payload as Record<string, unknown>;
-  // Body preview should be truncated to 100 chars + '...'
-  assert.ok((payload.body_preview as string).length <= 103);
-  assert.ok((payload.body_preview as string).endsWith('...'));
+  // Body should contain the full content
+  assert.equal(payload.body, longBody);
 
   db.close();
   fs.removeSync(dir);

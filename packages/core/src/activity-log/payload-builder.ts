@@ -335,7 +335,7 @@ interface ArticleCreatedPayload {
   issue_id: number;
   issue_type: 'article';
   title: string;
-  body_preview: string | null;
+  body: string;
   original_url: string;
   labels: LabelSnapshot[];
   projects: ProjectSnapshot[];
@@ -352,7 +352,7 @@ export const buildArticleCreatedPayload = (
     issue_id: articleId,
     issue_type: 'article',
     title,
-    body_preview: createBodyPreview(bodyMd),
+    body: bodyMd,
     original_url: originalUrl,
     labels: getLabelSnapshots(db, articleId),
     projects: getProjectSnapshots(db, articleId),
