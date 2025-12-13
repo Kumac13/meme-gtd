@@ -14,6 +14,7 @@ import {
   buildCommentCreatedPayload,
   buildLinkCreatedPayload,
   buildMemoPromotedPayload,
+  buildArticleCreatedPayload,
   getIssueTitle,
   getIssueType,
   getLabelName,
@@ -413,6 +414,42 @@ export class ActivityLogger {
         issue_id: issueId,
         issue_type: getIssueType(this.db, issueId) ?? 'task',
         issue_title: getIssueTitle(this.db, issueId),
+      },
+    });
+  }
+
+  // ============================================================
+  // Article Events
+  // ============================================================
+
+  logArticleCreated(
+    articleId: number,
+    title: string,
+    bodyMd: string,
+    originalUrl: string
+  ): void {
+    const payload = buildArticleCreatedPayload(
+      this.db,
+      articleId,
+      title,
+      bodyMd,
+      originalUrl
+    );
+    createActivityLog(this.db, {
+      eventType: 'article.created',
+      sourceType: this.sourceType,
+      payload: { ...payload },
+    });
+  }
+
+  logArticleDeleted(articleId: number): void {
+    createActivityLog(this.db, {
+      eventType: 'article.deleted',
+      sourceType: this.sourceType,
+      payload: {
+        issue_id: articleId,
+        issue_type: 'article',
+        title: getIssueTitle(this.db, articleId),
       },
     });
   }
