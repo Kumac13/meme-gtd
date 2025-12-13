@@ -21,7 +21,7 @@ export async function createArticleHandler(
       title,
       bodyMd,
       originalUrl,
-      siteName,
+      siteName: siteName ?? undefined,
       labels,
     });
     return reply.status(201).send(article);
