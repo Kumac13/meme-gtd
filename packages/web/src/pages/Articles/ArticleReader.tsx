@@ -14,7 +14,6 @@ export const ArticleReader: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [bookmarking, setBookmarking] = useState(false);
   // Support clicking on linked items within the reader
   const [selectedItem, setSelectedItem] = useState<{ id: number; type: "memo" | "task" | "article" } | null>(null);
 
@@ -53,18 +52,13 @@ export const ArticleReader: React.FC = () => {
     }
   };
 
-  const handleBookmarkToggle = async () => {
-    // Bookmark logic
-    try {
-        setBookmarking(true);
-        alert("Bookmark feature for articles is pending backend implementation.");
-    } finally {
-        setBookmarking(false);
-    }
-  };
-
   const handleUpdate = (updatedItem: Item) => {
-    setArticle(updatedItem as Article);
+    // Before setting, cleanse bodyMd from block IDs
+    const cleansedItem = {
+      ...updatedItem,
+      bodyMd: updatedItem.bodyMd.replace(/\{#block-\d+\}/g, "") // Remove block IDs
+    };
+    setArticle(cleansedItem as Article);
   };
 
   const handleItemClick = (itemId: number, itemType: "memo" | "task" | "article") => {
@@ -78,16 +72,20 @@ export const ArticleReader: React.FC = () => {
   if (loading) return <LoadingState message="Loading article..." />;
   if (error || !article) return <ErrorState error={error || "Article not found"} title="Error" />;
 
+  // Clone article and cleanse bodyMd before passing to ItemDetail
+  const cleansedArticle: Article = {
+    ...article,
+    bodyMd: article.bodyMd.replace(/\{#block-\d+\}/g, "") // Remove block IDs for display
+  };
+
   return (
     <>
       <ItemDetail
-        item={article}
+        item={cleansedArticle}
         itemType="article"
         onDelete={handleDelete}
-        onBookmarkToggle={handleBookmarkToggle}
         onUpdate={handleUpdate}
         deleting={deleting}
-        bookmarking={bookmarking}
         onItemClick={handleItemClick}
       />
       <ItemDetailPanel

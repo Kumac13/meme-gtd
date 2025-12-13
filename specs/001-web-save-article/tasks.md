@@ -71,6 +71,11 @@
 - [x] T033 Verify Extension build and load process packages/extension/package.json
 - [x] T034 Manual verification of Reader View styling (typography, spacing) packages/web/src/pages/Articles/ArticleReader.tsx
 
+## Phase 8: Bug Fixes
+
+- [x] T035 [FIX] Remove {#block-N} from rendered markdown display packages/web/src/pages/Articles/ArticleReader.tsx
+- [x] T036 [FIX] Hide bookmark button from ArticleReader (backend not implemented) packages/web/src/pages/Articles/ArticleReader.tsx packages/web/src/components/ItemDetail.tsx
+
 ## Dependencies
 
 1. **Phase 1 (Setup)**: Must be done first.
