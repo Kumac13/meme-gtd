@@ -1,7 +1,7 @@
 import { Readability } from "@mozilla/readability";
 import TurndownService from "turndown";
 
-export interface ExtractedArticle {
+interface ExtractedArticle {
   title: string;
   content: string; // Markdown
   siteName?: string;

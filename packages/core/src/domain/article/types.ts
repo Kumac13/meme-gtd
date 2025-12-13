@@ -1,4 +1,4 @@
-export interface ArticleMeta {
+interface ArticleMeta {
   originalUrl: string;
   siteName?: string;
   archivedAt: string; // ISO 8601
@@ -24,7 +24,7 @@ export interface CreateArticleInput {
   siteName?: string;
 }
 
-export interface UpdateArticleInput {
+interface UpdateArticleInput {
   title?: string;
   bodyMd?: string;
   isBookmarked?: boolean;

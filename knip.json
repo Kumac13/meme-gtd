@@ -19,11 +19,13 @@
     },
     "packages/core": {
       "entry": ["src/index.ts"],
-      "project": ["src/**/*.ts"]
+      "project": ["src/**/*.ts"],
+      "ignore": ["test/**"]
     },
     "packages/db": {
       "entry": ["src/index.ts"],
-      "project": ["src/**/*.ts"]
+      "project": ["src/**/*.ts"],
+      "ignore": ["test/**"]
     },
     "packages/logger": {
       "entry": ["src/index.ts"],
@@ -39,6 +41,11 @@
       "project": ["src/**/*.{ts,tsx}"],
       "ignoreDependencies": ["openapi-typescript-codegen"],
       "ignore": ["src/api/**"]
+    },
+    "packages/extension": {
+      "entry": ["src/background/index.ts", "src/content/index.ts", "src/popup/index.tsx", "src/options/index.tsx"],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["@types/chrome"]
     }
   },
   "ignore": ["specs/**", "test-data/**"]

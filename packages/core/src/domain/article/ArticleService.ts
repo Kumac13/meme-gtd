@@ -1,6 +1,6 @@
 import { Article, CreateArticleInput } from "./types";
 
-export interface ArticleRepository {
+interface ArticleRepository {
   create(input: CreateArticleInput): Promise<Article>;
   // findById, findAll, etc. (defined later when needed or generalized)
 }
