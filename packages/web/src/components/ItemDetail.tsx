@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { IssueType } from 'meme-gtd-shared';
 import { MemosService } from '../api/services/MemosService';
 import { TasksService } from '../api/services/TasksService';
+import { ArticlesService } from '../api/services/ArticlesService';
 import { CommentsService } from '../api/services/CommentsService';
 import EditableContent from './EditableContent';
 import CommentSection, { type Comment } from './CommentSection';
@@ -178,10 +179,14 @@ export default function ItemDetail({
   const handleLabelsChanged = () => {
     // Refresh item data to show updated labels
     const fetchUpdatedItem = async () => {
-      const updatedItem =
-        itemType === 'memo'
-          ? await MemosService.getMemo(String(item.id))
-          : await TasksService.getTask(String(item.id));
+      let updatedItem;
+      if (itemType === 'memo') {
+        updatedItem = await MemosService.getMemo(String(item.id));
+      } else if (itemType === 'article') {
+        updatedItem = await ArticlesService.getApiArticles1(item.id);
+      } else {
+        updatedItem = await TasksService.getTask(String(item.id));
+      }
       onUpdate(updatedItem as Item);
     };
     fetchUpdatedItem();

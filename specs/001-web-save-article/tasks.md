@@ -76,6 +76,7 @@
 - [x] T035 [FIX] Remove {#block-N} from rendered markdown display packages/web/src/pages/Articles/ArticleReader.tsx
 - [x] T036 [FIX] Hide bookmark button from ArticleReader (backend not implemented) packages/web/src/pages/Articles/ArticleReader.tsx packages/web/src/components/ItemDetail.tsx
 - [x] T037 [FIX] Hide CommentSection from ArticleReader (API not implemented for articles) packages/web/src/components/ItemDetail.tsx
+- [x] T038 [FIX] Support article type in handleLabelsChanged for label refresh packages/web/src/components/ItemDetail.tsx
 
 ## Dependencies
 
