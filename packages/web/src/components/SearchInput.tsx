@@ -6,7 +6,7 @@ interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  itemType?: 'task' | 'memo';
+  itemType?: 'task' | 'memo' | 'article';
 }
 
 /**

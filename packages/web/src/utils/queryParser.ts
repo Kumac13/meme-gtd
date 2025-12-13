@@ -101,7 +101,7 @@ export interface QueryValidationError {
 }
 
 interface ValidateOptions {
-  itemType?: 'task' | 'memo';
+  itemType?: 'task' | 'memo' | 'article';
 }
 
 /**
@@ -125,11 +125,11 @@ export function validateSearchQuery(query: string, options: ValidateOptions = {}
 
   const parsed = parseSearchQuery(query);
 
-  // Warning for status filter on memos
-  if (options.itemType === 'memo' && parsed.status) {
+  // Warning for status filter on memos/articles
+  if ((options.itemType === 'memo' || options.itemType === 'article') && parsed.status) {
     return {
       type: 'warning',
-      message: 'Note: Status filters do not apply to memos',
+      message: `Note: Status filters do not apply to ${options.itemType}s`,
     };
   }
 

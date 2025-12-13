@@ -1,17 +1,27 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { ArticlesService } from "../../api/services/ArticlesService";
+import SearchInput from "../../components/SearchInput";
+import ItemList from "../../components/ItemList";
+import LoadingState from "../../components/LoadingState";
+import ErrorState from "../../components/ErrorState";
+import EmptyState from "../../components/EmptyState";
 import type { Article } from "meme-gtd-shared";
 
 export const ArticleList: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Search state
+  const searchQuery = searchParams.get('q') || '';
+
   useEffect(() => {
     const fetchArticles = async () => {
       try {
-        const data = await ArticlesService.getApiArticles();
+        setLoading(true);
+        const data = await ArticlesService.getApiArticles(undefined, undefined, searchQuery || undefined);
         setArticles(data as unknown as Article[]);
       } catch (err: unknown) {
         if (err instanceof Error) {
@@ -24,66 +34,56 @@ export const ArticleList: React.FC = () => {
       }
     };
     fetchArticles();
-  }, []);
+  }, [searchQuery]);
 
-  if (loading) return <div className="max-w-4xl mx-auto px-4 py-2 text-gray-500">Loading articles...</div>;
-  if (error) return <div className="max-w-4xl mx-auto px-4 py-2 text-red-600">Error: {error}</div>;
+  const handleSearchChange = (value: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (value) {
+      params.set('q', value);
+    } else {
+      params.delete('q');
+    }
+    setSearchParams(params);
+  };
 
-  if (articles.length === 0) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-8 text-center">
-        <h2 className="text-base font-semibold text-gray-900 mb-1">No Articles Saved</h2>
-        <p className="text-sm text-gray-500">Use the browser extension to save web pages.</p>
-      </div>
-    );
+  const handleDelete = async (id: number) => {
+    await ArticlesService.deleteApiArticles(id);
+    setArticles(articles.filter((article) => article.id !== id));
+  };
+
+  if (loading) {
+    return <LoadingState message="Loading articles..." />;
+  }
+
+  if (error) {
+    return <ErrorState error={error} title="Error loading articles" />;
   }
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-2">
-      <h1 className="text-2xl font-bold text-gray-900 mb-4">Articles</h1>
-      
-      {/* List container matching ItemList structure */}
-      <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
-        {articles.map((article) => {
-          const meta = article.meta as { siteName?: string; archivedAt?: string; originalUrl?: string } | undefined;
-          
-          return (
-            <div key={article.id} className="relative">
-              <Link
-                to={`/articles/${article.id}`}
-                className="block p-4 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <h2 className="text-base font-medium text-gray-900 truncate">
-                        {article.title}
-                      </h2>
-                      {meta?.siteName && (
-                        <span className="px-2 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-700">
-                          {meta.siteName}
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center text-xs text-gray-500 space-x-3">
-                      <span>#{article.id}</span>
-                      {meta?.archivedAt && (
-                        <span title={new Date(meta.archivedAt).toLocaleString()}>
-                          Saved {new Date(meta.archivedAt).toLocaleDateString()}
-                        </span>
-                      )}
-                      {meta?.originalUrl && (
-                        <span className="truncate max-w-xs">{meta.originalUrl}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            </div>
-          );
-        })}
+      <div className="mb-4">
+        <SearchInput
+          value={searchQuery}
+          onChange={handleSearchChange}
+          placeholder="Search articles"
+          itemType="article"
+        />
       </div>
+
+      {articles.length === 0 ? (
+        <EmptyState
+          message="No articles saved"
+          submessage="Use the browser extension to save web pages"
+        />
+      ) : (
+        <ItemList
+          items={articles}
+          itemType="article"
+          basePath="/articles"
+          currentFilters={searchParams}
+          onDelete={handleDelete}
+        />
+      )}
     </div>
   );
 };
