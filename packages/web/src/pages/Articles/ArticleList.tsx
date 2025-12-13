@@ -26,73 +26,63 @@ export const ArticleList: React.FC = () => {
     fetchArticles();
   }, []);
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading articles...</div>;
-  if (error) return <div className="p-8 text-center text-red-600">Error: {error}</div>;
+  if (loading) return <div className="max-w-4xl mx-auto px-4 py-2 text-gray-500">Loading articles...</div>;
+  if (error) return <div className="max-w-4xl mx-auto px-4 py-2 text-red-600">Error: {error}</div>;
 
   if (articles.length === 0) {
     return (
-      <div className="p-8 text-center text-gray-500">
-        <h2 className="text-xl font-bold mb-2 text-gray-900">No Articles Saved</h2>
-        <p>Use the browser extension to save web pages.</p>
+      <div className="max-w-4xl mx-auto px-4 py-8 text-center">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">No Articles Saved</h2>
+        <p className="text-sm text-gray-500">Use the browser extension to save web pages.</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Articles</h1>
-      <div className="bg-white shadow overflow-hidden sm:rounded-md border border-gray-200">
-        <ul className="divide-y divide-gray-200">
-          {articles.map((article) => {
-            const meta = article.meta as { siteName?: string; archivedAt?: string; originalUrl?: string } | undefined;
-            
-            return (
-              <li key={article.id}>
-                <Link
-                  to={`/articles/${article.id}`}
-                  className="block hover:bg-gray-50 transition duration-150 ease-in-out"
-                >
-                  <div className="px-4 py-4 sm:px-6">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-blue-600 truncate mb-1">
-                        {meta?.siteName || "Unknown Site"}
-                      </p>
-                      <div className="ml-2 flex-shrink-0 flex">
-                        <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                          Article
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-1">
-                      <h2 className="text-lg font-semibold text-gray-900 line-clamp-2">
+    <div className="max-w-4xl mx-auto px-4 py-2">
+      <h1 className="text-2xl font-bold text-gray-900 mb-4">Articles</h1>
+      
+      {/* List container matching ItemList structure */}
+      <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
+        {articles.map((article) => {
+          const meta = article.meta as { siteName?: string; archivedAt?: string; originalUrl?: string } | undefined;
+          
+          return (
+            <div key={article.id} className="relative">
+              <Link
+                to={`/articles/${article.id}`}
+                className="block p-4 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h2 className="text-base font-medium text-gray-900 truncate">
                         {article.title}
                       </h2>
+                      {meta?.siteName && (
+                        <span className="px-2 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-700">
+                          {meta.siteName}
+                        </span>
+                      )}
                     </div>
-                    <div className="mt-2 sm:flex sm:justify-between">
-                      <div className="sm:flex">
-                        <p className="flex items-center text-sm text-gray-500">
-                          {meta?.originalUrl && (
-                            <span className="truncate max-w-md mr-4">
-                              {meta.originalUrl}
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                        <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <p>
-                          Saved on <time dateTime={meta?.archivedAt}>{meta?.archivedAt ? new Date(meta.archivedAt).toLocaleDateString() : "Unknown date"}</time>
-                        </p>
-                      </div>
+                    
+                    <div className="flex items-center text-xs text-gray-500 space-x-3">
+                      <span>#{article.id}</span>
+                      {meta?.archivedAt && (
+                        <span title={new Date(meta.archivedAt).toLocaleString()}>
+                          Saved {new Date(meta.archivedAt).toLocaleDateString()}
+                        </span>
+                      )}
+                      {meta?.originalUrl && (
+                        <span className="truncate max-w-xs">{meta.originalUrl}</span>
+                      )}
                     </div>
                   </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+                </div>
+              </Link>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

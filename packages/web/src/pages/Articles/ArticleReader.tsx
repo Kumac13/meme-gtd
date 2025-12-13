@@ -54,14 +54,13 @@ export const ArticleReader: React.FC = () => {
   };
 
   const handleBookmarkToggle = async () => {
-    // Article bookmarking API not implemented yet?
-    // Checking ArticlesService... no bookmark method generated.
-    // If not supported, we should disable or hide the button, or implement it.
-    // For now, simple toggle locally to avoid crash, but it won persist if API is missing.
-    // Actually, backend has is_bookmarked field. We need PATCH endpoint to update it.
-    // Currently ArticlesService only has delete and get.
-    // Let just warn or do nothing for now to match strict "no broken features" rule.
-    alert("Bookmark feature for articles is pending backend implementation.");
+    // Bookmark logic
+    try {
+        setBookmarking(true);
+        alert("Bookmark feature for articles is pending backend implementation.");
+    } finally {
+        setBookmarking(false);
+    }
   };
 
   const handleUpdate = (updatedItem: Item) => {
@@ -78,15 +77,6 @@ export const ArticleReader: React.FC = () => {
 
   if (loading) return <LoadingState message="Loading article..." />;
   if (error || !article) return <ErrorState error={error || "Article not found"} title="Error" />;
-
-  // Custom actions or specific rendering can be passed if ItemDetail supports it
-  // But ItemDetail renders bodyMd using EditableContent.
-  // Article body is Markdown, so it should render fine.
-  // We want to force "read-only" mode for the body maybe?
-  // EditableContent supports editing. Articles might be editable or read-only.
-  // User wants "Reader View". EditableContent might be too "editor-like".
-  // However, uniformity is key. MemoDetail uses ItemDetail.
-  // So using ItemDetail is the correct "uniform" choice.
 
   return (
     <>

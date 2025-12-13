@@ -131,6 +131,14 @@ export default function ItemList({
           itemPath = createItemDetailUrl({ basePath: "/memos", itemId: item.id, currentFilters });
         }
 
+        if (basePath !== "") {
+          itemPath = createItemDetailUrl({
+            basePath,
+            itemId: item.id,
+            currentFilters,
+          });
+        }
+
         const handleClick = (e: React.MouseEvent) => {
           if (onItemClick) {
             e.preventDefault();
@@ -157,10 +165,10 @@ export default function ItemList({
                         {(item.startDate || item.endDate) && (
                           <span>
                             {item.startDate && item.endDate
-                              ? `\${item.startDate} → \${item.endDate}`
+                              ? `${item.startDate} → ${item.endDate}`
                               : item.startDate
-                                ? `From \${item.startDate}`
-                                : `Until \${item.endDate}`}
+                                ? `From ${item.startDate}`
+                                : `Until ${item.endDate}`}
                           </span>
                         )}
                         <span>{formatRelativeTime(item.createdAt)}</span>
@@ -173,7 +181,7 @@ export default function ItemList({
                           {item.title || `Task #\${item.id}`}
                         </h2>
                         {showStatusBadges && item.status && (
-                          <span className={`px-2 py-0.5 text-xs font-medium rounded \${statusBadgeClasses[item.status] || "bg-gray-100 text-gray-700"}`}>
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded ${statusBadgeClasses[item.status] || "bg-gray-100 text-gray-700"}`}>
                             {statusLabels[item.status] || item.status}
                           </span>
                         )}
