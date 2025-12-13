@@ -1,31 +1,32 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { formatDateTime, formatRelativeTime } from '../utils/dates';
-import { InlineMarkdownRenderer, extractFirstLine } from '../utils/markdown';
-import { LabelBadge } from './LabelBadge';
-import { createItemDetailUrl } from '../utils/navigationHelpers';
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { formatDateTime, formatRelativeTime } from "../utils/dates";
+import { InlineMarkdownRenderer, extractFirstLine } from "../utils/markdown";
+import { LabelBadge } from "./LabelBadge";
+import { createItemDetailUrl } from "../utils/navigationHelpers";
+import type { Article } from "meme-gtd-shared"; // Add Article import
 
 // Status badge labels and colors
 const statusLabels: Record<string, string> = {
-  inbox: 'Inbox',
-  open: 'Open',
-  next: 'Next',
-  waiting: 'Waiting',
-  scheduled: 'Scheduled',
-  someday: 'Someday',
-  done: 'Done',
-  canceled: 'Canceled',
+  inbox: "Inbox",
+  open: "Open",
+  next: "Next",
+  waiting: "Waiting",
+  scheduled: "Scheduled",
+  someday: "Someday",
+  done: "Done",
+  canceled: "Canceled",
 };
 
 const statusBadgeClasses: Record<string, string> = {
-  inbox: 'bg-gray-100 text-gray-700',
-  open: 'bg-blue-100 text-blue-700',
-  next: 'bg-green-100 text-green-700',
-  waiting: 'bg-yellow-100 text-yellow-700',
-  scheduled: 'bg-purple-100 text-purple-700',
-  someday: 'bg-orange-100 text-orange-700',
-  done: 'bg-gray-200 text-gray-500',
-  canceled: 'bg-red-100 text-red-500',
+  inbox: "bg-gray-100 text-gray-700",
+  open: "bg-blue-100 text-blue-700",
+  next: "bg-green-100 text-green-700",
+  waiting: "bg-yellow-100 text-yellow-700",
+  scheduled: "bg-purple-100 text-purple-700",
+  someday: "bg-orange-100 text-orange-700",
+  done: "bg-gray-200 text-gray-500",
+  canceled: "bg-red-100 text-red-500",
 };
 
 interface BaseItem {
@@ -54,28 +55,40 @@ interface Project {
   createdAt: string;
 }
 
-type Item = BaseItem | Task | Project;
+type Item = BaseItem | Task | Project | Article; // Include Article
 
 interface ItemListProps {
   items: Item[];
-  itemType: 'memo' | 'task' | 'project';
+  itemType: "memo" | "task" | "project" | "article"; // Allow "article"
   basePath: string;
   currentFilters?: URLSearchParams;
   onDelete?: (id: number) => Promise<void>;
-  onItemClick?: (id: number, type: 'memo' | 'task') => void;
+  onItemClick?: (id: number, type: "memo" | "task" | "article") => void; // Allow "article"
   /** Show status badges on tasks and "Documents" badge on memos (only for project ListView) */
   showStatusBadges?: boolean;
 }
 
 function isTask(item: Item): item is Task {
-  return 'type' in item && (item as any).type === 'task';
+  return "type" in item && (item as any).type === "task";
 }
 
 function isProject(item: Item): item is Project {
-  return 'name' in item && 'description' in item;
+  return "name" in item && "description" in item && !("type" in item); // Check for "type" to distinguish from Task/Memo/Article
 }
 
-export default function ItemList({ items, itemType: _itemType, basePath, currentFilters, onDelete, onItemClick, showStatusBadges = false }: ItemListProps) {
+function isArticle(item: Item): item is Article {
+  return "type" in item && (item as any).type === "article";
+}
+
+export default function ItemList({
+  items,
+  itemType: _itemType,
+  basePath,
+  currentFilters,
+  onDelete,
+  onItemClick,
+  showStatusBadges = false,
+}: ItemListProps) {
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
 
@@ -84,15 +97,15 @@ export default function ItemList({ items, itemType: _itemType, basePath, current
     e.stopPropagation();
 
     if (!onDelete) return;
-    if (!window.confirm('Are you sure you want to delete this item?')) return;
+    if (!window.confirm("Are you sure you want to delete this item?")) return;
 
     try {
       setDeleting(id);
       await onDelete(id);
       setMenuOpenId(null);
     } catch (error) {
-      console.error('Error deleting item:', error);
-      alert('Failed to delete item');
+      console.error("Error deleting item:", error);
+      alert("Failed to delete item");
     } finally {
       setDeleting(null);
     }
@@ -101,43 +114,27 @@ export default function ItemList({ items, itemType: _itemType, basePath, current
   return (
     <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
       {items.map((item) => {
-        // Determine the correct path based on item type
         let itemPath: string;
-        if (basePath === '') {
-          // Mixed mode: determine path based on item type
-          if (isProject(item)) {
-            itemPath = createItemDetailUrl({
-              basePath: '/projects',
-              itemId: item.id,
-              currentFilters,
-            });
-          } else if (isTask(item)) {
-            itemPath = createItemDetailUrl({
-              basePath: '/tasks',
-              itemId: item.id,
-              currentFilters,
-            });
-          } else {
-            itemPath = createItemDetailUrl({
-              basePath: '/memos',
-              itemId: item.id,
-              currentFilters,
-            });
-          }
+        let itemType: "memo" | "task" | "project" | "article";
+
+        if (isProject(item)) {
+          itemType = "project";
+          itemPath = createItemDetailUrl({ basePath: "/projects", itemId: item.id, currentFilters });
+        } else if (isTask(item)) {
+          itemType = "task";
+          itemPath = createItemDetailUrl({ basePath: "/tasks", itemId: item.id, currentFilters });
+        } else if (isArticle(item)) { // Added for Article
+          itemType = "article";
+          itemPath = createItemDetailUrl({ basePath: "/articles", itemId: item.id, currentFilters });
         } else {
-          // Single item type mode: use provided basePath
-          itemPath = createItemDetailUrl({
-            basePath,
-            itemId: item.id,
-            currentFilters,
-          });
+          itemType = "memo";
+          itemPath = createItemDetailUrl({ basePath: "/memos", itemId: item.id, currentFilters });
         }
 
         const handleClick = (e: React.MouseEvent) => {
-          if (onItemClick && !isProject(item)) {
+          if (onItemClick) {
             e.preventDefault();
-            const type = isTask(item) ? 'task' : 'memo';
-            onItemClick(item.id, type);
+            onItemClick(item.id, itemType as "memo" | "task" | "article");
           }
         };
 
@@ -160,11 +157,10 @@ export default function ItemList({ items, itemType: _itemType, basePath, current
                         {(item.startDate || item.endDate) && (
                           <span>
                             {item.startDate && item.endDate
-                              ? `${item.startDate} → ${item.endDate}`
+                              ? `\${item.startDate} → \${item.endDate}`
                               : item.startDate
-                                ? `From ${item.startDate}`
-                                : `Until ${item.endDate}`
-                            }
+                                ? `From \${item.startDate}`
+                                : `Until \${item.endDate}`}
                           </span>
                         )}
                         <span>{formatRelativeTime(item.createdAt)}</span>
@@ -174,10 +170,10 @@ export default function ItemList({ items, itemType: _itemType, basePath, current
                     <>
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h2 className="text-base text-gray-900">
-                          {item.title || `Task #${item.id}`}
+                          {item.title || `Task #\${item.id}`}
                         </h2>
                         {showStatusBadges && item.status && (
-                          <span className={`px-2 py-0.5 text-xs font-medium rounded ${statusBadgeClasses[item.status] || 'bg-gray-100 text-gray-700'}`}>
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded \${statusBadgeClasses[item.status] || "bg-gray-100 text-gray-700"}`}>
                             {statusLabels[item.status] || item.status}
                           </span>
                         )}
@@ -198,7 +194,43 @@ export default function ItemList({ items, itemType: _itemType, basePath, current
                         <span>#{item.id}</span>
                         {isTask(item) && item.scheduledOn && (
                           <span>
-                            Scheduled: {formatDateTime(item.scheduledOn).split(' ')[0]}
+                            Scheduled: {formatDateTime(item.scheduledOn).split(" ")[0]}
+                          </span>
+                        )}
+                        <span title={formatDateTime(item.createdAt)}>
+                          {formatRelativeTime(item.createdAt)}
+                        </span>
+                      </div>
+                    </>
+                  ) : isArticle(item) ? ( // Article-specific rendering
+                    <>
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h2 className="text-base text-gray-900">
+                          {item.title || `Article #\${item.id}`}
+                        </h2>
+                        {showStatusBadges && (
+                           <span className="px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-gray-700">
+                             Article
+                           </span>
+                        )}
+                        {item.labels && item.labels.length > 0 && (
+                          <>
+                            {item.labels.slice(0, 3).map((label, idx) => (
+                              <LabelBadge key={idx} name={label} />
+                            ))}
+                            {item.labels.length > 3 && (
+                              <span className="px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-gray-600">
+                                +{item.labels.length - 3} more
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      <div className="flex items-center text-xs text-gray-500 space-x-3">
+                        <span>#{item.id}</span>
+                        {(item.meta as Article["meta"])?.siteName && (
+                          <span title={(item.meta as Article["meta"]).originalUrl}>
+                            {(item.meta as Article["meta"]).siteName}
                           </span>
                         )}
                         <span title={formatDateTime(item.createdAt)}>
@@ -255,7 +287,7 @@ export default function ItemList({ items, itemType: _itemType, basePath, current
                         </span>
                       )}
                       {item.isBookmarked && (
-                        <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 16 16">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
                           <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Z"></path>
                         </svg>
                       )}
@@ -289,7 +321,7 @@ export default function ItemList({ items, itemType: _itemType, basePath, current
                               disabled={deleting === item.id}
                               className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {deleting === item.id ? 'Deleting...' : 'Delete'}
+                              {deleting === item.id ? "Deleting..." : "Delete"}
                             </button>
                           </div>
                         </>
