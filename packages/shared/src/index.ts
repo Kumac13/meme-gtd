@@ -157,6 +157,18 @@ export type {
   ActivityLogFilters,
 } from './types/activity-log.js';
 
+// Activity Log constants (runtime-accessible values)
+export {
+  SOURCE_TYPES,
+  ISSUE_EVENT_TYPES,
+  LABEL_EVENT_TYPES,
+  PROJECT_EVENT_TYPES,
+  LINK_EVENT_TYPES,
+  COMMENT_EVENT_TYPES,
+  ARTICLE_EVENT_TYPES,
+  ALL_EVENT_TYPES,
+} from './types/activity-log.js';
+
 export const toBoolean = (value: number | boolean): boolean =>
   typeof value === 'boolean' ? value : value !== 0;
 

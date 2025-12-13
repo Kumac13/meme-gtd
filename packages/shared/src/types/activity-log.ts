@@ -4,53 +4,67 @@
  */
 
 // Source types for activity log entries
-export type SourceType = 'cli' | 'api' | 'system';
+export const SOURCE_TYPES = ['cli', 'api', 'system'] as const;
+export type SourceType = (typeof SOURCE_TYPES)[number];
 
-// Event type categories
-export type IssueEventType =
-  | 'task.created'
-  | 'task.updated'
-  | 'task.status_changed'
-  | 'task.deleted'
-  | 'task.bookmarked'
-  | 'memo.created'
-  | 'memo.updated'
-  | 'memo.promoted'
-  | 'memo.deleted'
-  | 'memo.bookmarked';
+// Event type categories - defined as const arrays for runtime access
+export const ISSUE_EVENT_TYPES = [
+  'task.created',
+  'task.updated',
+  'task.status_changed',
+  'task.deleted',
+  'task.bookmarked',
+  'memo.created',
+  'memo.updated',
+  'memo.promoted',
+  'memo.deleted',
+  'memo.bookmarked',
+] as const;
+export type IssueEventType = (typeof ISSUE_EVENT_TYPES)[number];
 
-export type LabelEventType =
-  | 'label.created'
-  | 'label.deleted'
-  | 'label.assigned'
-  | 'label.removed';
+export const LABEL_EVENT_TYPES = [
+  'label.created',
+  'label.deleted',
+  'label.assigned',
+  'label.removed',
+] as const;
+export type LabelEventType = (typeof LABEL_EVENT_TYPES)[number];
 
-export type ProjectEventType =
-  | 'project.created'
-  | 'project.updated'
-  | 'project.deleted'
-  | 'project.item_added'
-  | 'project.item_removed';
+export const PROJECT_EVENT_TYPES = [
+  'project.created',
+  'project.updated',
+  'project.deleted',
+  'project.item_added',
+  'project.item_removed',
+] as const;
+export type ProjectEventType = (typeof PROJECT_EVENT_TYPES)[number];
 
-export type LinkEventType = 'link.created' | 'link.deleted';
+export const LINK_EVENT_TYPES = ['link.created', 'link.deleted'] as const;
+export type LinkEventType = (typeof LINK_EVENT_TYPES)[number];
 
-export type CommentEventType =
-  | 'comment.created'
-  | 'comment.updated'
-  | 'comment.deleted';
+export const COMMENT_EVENT_TYPES = [
+  'comment.created',
+  'comment.updated',
+  'comment.deleted',
+] as const;
+export type CommentEventType = (typeof COMMENT_EVENT_TYPES)[number];
 
-export type ArticleEventType =
-  | 'article.created'
-  | 'article.deleted';
+export const ARTICLE_EVENT_TYPES = [
+  'article.created',
+  'article.deleted',
+] as const;
+export type ArticleEventType = (typeof ARTICLE_EVENT_TYPES)[number];
 
-// All event types
-export type EventType =
-  | IssueEventType
-  | LabelEventType
-  | ProjectEventType
-  | LinkEventType
-  | CommentEventType
-  | ArticleEventType;
+// All event types - single source of truth
+export const ALL_EVENT_TYPES = [
+  ...ISSUE_EVENT_TYPES,
+  ...LABEL_EVENT_TYPES,
+  ...PROJECT_EVENT_TYPES,
+  ...LINK_EVENT_TYPES,
+  ...COMMENT_EVENT_TYPES,
+  ...ARTICLE_EVENT_TYPES,
+] as const;
+export type EventType = (typeof ALL_EVENT_TYPES)[number];
 
 // Snapshot types for preserving historical context
 export interface ProjectSnapshot {
