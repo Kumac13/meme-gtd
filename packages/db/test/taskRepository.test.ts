@@ -848,3 +848,61 @@ test('updateTask() clears scheduledStart with null', () => {
   db.close();
   fs.removeSync(dir);
 });
+
+// Test: createTask() with status='next' should auto-set actual_start
+test('createTask() with status=next auto-sets actual_start to current datetime', () => {
+  const { dir, db } = createTempDb();
+  const today = getLocalDate();
+
+  const task = createTask(db, {
+    title: 'Next Task',
+    bodyMd: 'Body',
+    status: 'next'
+  });
+
+  assert.equal(task.status, 'next');
+  assert.ok(task.actualStart, 'actual_start should be set');
+  assert.ok(
+    task.actualStart.startsWith(today),
+    `actual_start should start with today's date (${today}), got: ${task.actualStart}`
+  );
+  assert.match(
+    task.actualStart,
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/,
+    'actual_start should be in ISO 8601 format'
+  );
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('createTask() with status=inbox does not set actual_start', () => {
+  const { dir, db } = createTempDb();
+
+  const task = createTask(db, {
+    title: 'Inbox Task',
+    bodyMd: 'Body',
+    status: 'inbox'
+  });
+
+  assert.equal(task.status, 'inbox');
+  assert.equal(task.actualStart, null, 'actual_start should NOT be set for inbox status');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('createTask() with default status does not set actual_start', () => {
+  const { dir, db } = createTempDb();
+
+  const task = createTask(db, {
+    title: 'Default Status Task',
+    bodyMd: 'Body'
+  });
+
+  assert.equal(task.status, 'inbox');
+  assert.equal(task.actualStart, null, 'actual_start should NOT be set for default (inbox) status');
+
+  db.close();
+  fs.removeSync(dir);
+});
