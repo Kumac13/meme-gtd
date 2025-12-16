@@ -102,14 +102,22 @@ export const createTask = (db: Database.Database, input: CreateTaskInput): Task 
     input.duration
   );
 
+  // Auto-set actual_start when creating task with status='next'
+  let actualStart: string | null = null;
+  if (status === 'next') {
+    const { date, time } = getLocalDateTime();
+    actualStart = `${date}T${time}:00`;
+  }
+
   const stmt = db.prepare(
-    `INSERT INTO issues (type, title, body_md, status, scheduled_start, scheduled_end, is_all_day, scheduled_on, end_date, start_time, end_time, duration, meta, created_at, updated_at, is_bookmarked, is_deleted)
-     VALUES ('task', @title, @body, @status, @scheduledStart, @scheduledEnd, @isAllDay, @scheduledOn, @endDate, @startTime, @endTime, @duration, json('{}'), @createdAt, @createdAt, 0, 0)`
+    `INSERT INTO issues (type, title, body_md, status, actual_start, scheduled_start, scheduled_end, is_all_day, scheduled_on, end_date, start_time, end_time, duration, meta, created_at, updated_at, is_bookmarked, is_deleted)
+     VALUES ('task', @title, @body, @status, @actualStart, @scheduledStart, @scheduledEnd, @isAllDay, @scheduledOn, @endDate, @startTime, @endTime, @duration, json('{}'), @createdAt, @createdAt, 0, 0)`
   );
   const result = stmt.run({
     title: input.title,
     body: input.bodyMd,
     status,
+    actualStart,
     // New fields
     scheduledStart: input.scheduledStart ?? null,
     scheduledEnd: input.scheduledEnd ?? null,
