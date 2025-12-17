@@ -4540,6 +4540,117 @@ paths:
                   - message
                 additionalProperties: false
   /api/url-links/{id}:
+    patch:
+      operationId: updateUrlLink
+      summary: Update URL link
+      tags:
+        - URL Links
+      description: Update a URL link title
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 200
+                  nullable: true
+                  description: Display title (null to clear)
+              required:
+                - title
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique URL link ID
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Parent issue ID
+                  url:
+                    type: string
+                    format: uri
+                    description: External URL
+                  title:
+                    type: string
+                    nullable: true
+                    description: Display title
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                required:
+                  - id
+                  - issueId
+                  - url
+                  - title
+                  - createdAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
     delete:
       operationId: deleteUrlLink
       summary: Delete URL link

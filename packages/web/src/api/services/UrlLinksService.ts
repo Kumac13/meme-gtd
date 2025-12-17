@@ -107,6 +107,58 @@ export class UrlLinksService {
         });
     }
     /**
+     * Update URL link
+     * Update a URL link title
+     * @param id
+     * @param requestBody
+     * @returns any Default Response
+     * @throws ApiError
+     */
+    public static updateUrlLink(
+        id: string,
+        requestBody: {
+            /**
+             * Display title (null to clear)
+             */
+            title: string | null;
+        },
+    ): CancelablePromise<{
+        /**
+         * Unique URL link ID
+         */
+        id: number;
+        /**
+         * Parent issue ID
+         */
+        issueId: number;
+        /**
+         * External URL
+         */
+        url: string;
+        /**
+         * Display title
+         */
+        title: string | null;
+        /**
+         * Creation timestamp
+         */
+        createdAt: string;
+    }> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/url-links/{id}',
+            path: {
+                'id': id,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                404: `Default Response`,
+                500: `Default Response`,
+            },
+        });
+    }
+    /**
      * Delete URL link
      * Delete a URL link by ID
      * @param id

@@ -205,6 +205,17 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
     }
   };
 
+  const handleUpdateUrlLink = async (urlLinkId: number, title: string | null) => {
+    try {
+      await UrlLinksService.updateUrlLink(String(urlLinkId), { title });
+      // Refresh links after update
+      await fetchAllLinks();
+    } catch (err) {
+      console.error('Failed to update URL link:', err);
+      throw err;
+    }
+  };
+
   const toggleExpanded = () => {
     setIsExpanded(!isExpanded);
   };
@@ -304,6 +315,7 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
                   key={`url-${urlLink.id}`}
                   urlLink={urlLink}
                   onDelete={handleDeleteUrlLink}
+                  onUpdate={handleUpdateUrlLink}
                   isDeleting={deletingUrlLinkId === urlLink.id}
                 />
               ))}
