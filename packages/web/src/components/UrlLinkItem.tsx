@@ -1,9 +1,9 @@
 /**
  * UrlLinkItem Component
  *
- * Displays an individual URL link with icon, title, URL, and action buttons.
+ * Displays an individual URL link with icon, title, URL, and delete button.
  * Opens external URLs in a new tab.
- * Includes inline delete confirmation and title editing.
+ * Includes inline delete confirmation and title editing (click title to edit).
  */
 
 import { useState } from 'react';
@@ -43,9 +43,11 @@ export default function UrlLinkItem({ urlLink, onDelete, onUpdate, isDeleting = 
     setShowConfirm(false);
   };
 
-  const handleEditClick = () => {
-    setEditTitle(urlLink.title || '');
-    setIsEditing(true);
+  const handleLabelClick = () => {
+    if (onUpdate) {
+      setEditTitle(urlLink.title || '');
+      setIsEditing(true);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -124,8 +126,12 @@ export default function UrlLinkItem({ urlLink, onDelete, onUpdate, isDeleting = 
             {getUrlLinkIcon()}
           </span>
 
-          {/* Link label */}
-          <span className="text-xs flex-shrink-0 text-gray-500">
+          {/* Link label - clickable to edit */}
+          <span
+            onClick={handleLabelClick}
+            className={`text-xs flex-shrink-0 text-gray-500 ${onUpdate ? 'cursor-pointer hover:text-gray-700 hover:underline' : ''}`}
+            title={onUpdate ? 'Click to edit title' : undefined}
+          >
             {displayLabel}
           </span>
 
@@ -146,43 +152,26 @@ export default function UrlLinkItem({ urlLink, onDelete, onUpdate, isDeleting = 
           </a>
         </div>
 
-        {/* Action buttons */}
+        {/* Delete button */}
         {!showConfirm && (
-          <div className="flex-shrink-0 ml-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            {/* Edit button */}
-            {onUpdate && (
-              <button
-                onClick={handleEditClick}
-                disabled={isDeleting}
-                className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Edit title"
-                aria-label="Edit title"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                  <path d="M11.013 1.427a1.75 1.75 0 012.474 0l1.086 1.086a1.75 1.75 0 010 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 01-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 00-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 000-.354l-1.086-1.086zM11.189 6.25L9.75 4.81l-6.286 6.287a.253.253 0 00-.064.108l-.558 1.953 1.953-.558a.253.253 0 00.108-.064l6.286-6.286z" />
-                </svg>
-              </button>
+          <button
+            onClick={handleDeleteClick}
+            disabled={isDeleting}
+            className="flex-shrink-0 ml-2 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Delete URL link"
+            aria-label="Delete URL link"
+          >
+            {isDeleting ? (
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z" />
+              </svg>
             )}
-            {/* Delete button */}
-            <button
-              onClick={handleDeleteClick}
-              disabled={isDeleting}
-              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Delete URL link"
-              aria-label="Delete URL link"
-            >
-              {isDeleting ? (
-                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                  <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z" />
-                </svg>
-              )}
-            </button>
-          </div>
+          </button>
         )}
       </div>
 
