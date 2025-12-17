@@ -5,6 +5,8 @@
  * for displaying and managing links between issues.
  */
 
+import type { IssueType } from 'meme-gtd-shared';
+
 /**
  * Link type - defines the relationship between issues
  */
@@ -22,10 +24,10 @@ interface TargetIssue {
   /** Target issue ID */
   id: number;
   /** Target issue type */
-  type: 'task' | 'memo';
+  type: IssueType;
   /** Target issue title (or preview text for memos) */
   title: string;
-  /** Target issue status (null for memos) */
+  /** Target issue status (null for memos/articles) */
   status: string | null;
 }
 
@@ -85,13 +87,13 @@ export interface PendingLink {
   /** Target issue information (for display purposes) */
   targetIssue?: {
     id: number;
-    type: 'task' | 'memo';
+    type: IssueType;
     title: string;
   };
 }
 
 /**
- * IssuePicker item - unified type for Task and Memo in the issue picker
+ * IssuePicker item - unified type for Task, Memo, and Article in the issue picker
  *
  * Used by IssuePicker component to display searchable/selectable issues.
  * For Memo items, title is derived from the first line of bodyMd.
@@ -100,10 +102,10 @@ export interface IssuePickerItem {
   /** Issue ID */
   id: number;
   /** Issue type */
-  type: 'task' | 'memo';
-  /** Display title (Task: title, Memo: first line of bodyMd) */
+  type: IssueType;
+  /** Display title (Task/Article: title, Memo: first line of bodyMd) */
   title: string;
-  /** Status (Task only, null for Memo) */
+  /** Status (Task only, null for Memo/Article) */
   status: string | null;
   /** Last update timestamp for sorting */
   updatedAt: string;

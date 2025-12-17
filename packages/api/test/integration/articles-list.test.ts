@@ -43,4 +43,42 @@ describe("Article List API", () => {
     assert.strictEqual(body.length, 2);
     assert.strictEqual(body[0].title, "Article 2"); // Descending order
   });
+
+  it("GET /api/articles?search= should filter by title", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/articles?search=Article 1"
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.strictEqual(Array.isArray(body), true);
+    assert.strictEqual(body.length, 1);
+    assert.strictEqual(body[0].title, "Article 1");
+  });
+
+  it("GET /api/articles?search= should filter by body", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/articles?search=Body 2"
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.strictEqual(Array.isArray(body), true);
+    assert.strictEqual(body.length, 1);
+    assert.strictEqual(body[0].title, "Article 2");
+  });
+
+  it("GET /api/articles?search= should return empty for no match", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/articles?search=nonexistent"
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.strictEqual(Array.isArray(body), true);
+    assert.strictEqual(body.length, 0);
+  });
 });

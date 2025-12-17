@@ -652,4 +652,57 @@ describe('Link Operations', () => {
     assert.ok(memoLink);
     assert.strictEqual(memoLink.targetIssue.status, null);
   });
+
+  it('should include targetIssue information with correct type for articles', async () => {
+    // Create a task
+    const taskResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'My Task' }),
+    });
+    const task = JSON.parse(taskResponse.body);
+
+    // Create an article
+    const articleResponse = await app.inject({
+      method: 'POST',
+      url: '/api/articles',
+      payload: {
+        title: 'Test Article',
+        bodyMd: 'Article body content',
+        originalUrl: 'https://example.com/article',
+      },
+    });
+    assert.strictEqual(articleResponse.statusCode, 201);
+    const article = JSON.parse(articleResponse.body);
+
+    // Create link from task to article
+    const linkResponse = await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: {
+        sourceIssueId: task.id,
+        targetIssueId: article.id,
+        linkType: 'relates',
+      },
+    });
+    assert.strictEqual(linkResponse.statusCode, 201);
+
+    // Get links for task
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/issues/${task.id}/links`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const links = JSON.parse(response.body);
+    assert.strictEqual(links.length, 1);
+
+    // Verify targetIssue contains article information
+    const link = links[0];
+    assert.ok(link.targetIssue);
+    assert.strictEqual(link.targetIssue.id, article.id);
+    assert.strictEqual(link.targetIssue.type, 'article');
+    assert.strictEqual(link.targetIssue.title, 'Test Article');
+    assert.strictEqual(link.targetIssue.status, null);
+  });
 });

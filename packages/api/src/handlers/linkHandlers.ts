@@ -1,5 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { LinkService } from 'meme-gtd-core';
+import type { IssueType } from 'meme-gtd-shared';
 import { NotFoundError, ValidationError } from '../errors/index.js';
 import type {
   CreateLinkRequest,
@@ -70,7 +71,7 @@ export async function listLinksHandler(
     );
 
     // Fetch all target issues in one query
-    const issueInfoMap = new Map<number, { type: 'task' | 'memo'; title: string; status: string | null }>();
+    const issueInfoMap = new Map<number, { type: IssueType; title: string; status: string | null }>();
 
     if (targetIds.length > 0) {
       const placeholders = targetIds.map(() => '?').join(',');
@@ -87,7 +88,7 @@ export async function listLinksHandler(
       const stmt = db.prepare(query);
       const rows = stmt.all(...targetIds) as Array<{
         id: number;
-        issue_type: 'task' | 'memo';
+        issue_type: IssueType;
         title: string;
         status: string | null;
       }>;

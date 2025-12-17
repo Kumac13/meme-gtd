@@ -4141,8 +4141,9 @@ paths:
                         type:
                           type: string
                           enum:
-                            - task
                             - memo
+                            - task
+                            - article
                           description: Target issue type
                         title:
                           type: string
