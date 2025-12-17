@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import type { IssueType } from 'meme-gtd-shared';
 import { TasksService } from '../api/services/TasksService';
 import ItemDetail, { type Item, type Comment } from '../components/ItemDetail';
 import { ItemDetailPanel } from '../components/ItemDetailPanel';
@@ -31,7 +32,7 @@ export default function TaskDetail() {
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'memo' | 'task' | 'article' } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<{ id: number; type: IssueType } | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isCopied, setIsCopied] = useState(false);
 
@@ -96,7 +97,7 @@ export default function TaskDetail() {
     }
   };
 
-  const handleItemClick = useCallback((itemId: number, itemType: 'memo' | 'task' | 'article') => {
+  const handleItemClick = useCallback((itemId: number, itemType: IssueType) => {
     setSelectedItem({ id: itemId, type: itemType });
   }, []);
 

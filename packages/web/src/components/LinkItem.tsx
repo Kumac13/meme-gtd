@@ -43,6 +43,8 @@ export default function LinkItem({ link, onDelete, isDeleting = false, onItemCli
   const isDeleted = link.targetIssue.title.includes('(deleted)');
   const targetPath = link.targetIssue.type === 'memo'
     ? `/memos/${link.targetIssue.id}`
+    : link.targetIssue.type === 'article'
+    ? `/articles/${link.targetIssue.id}`
     : `/tasks/${link.targetIssue.id}`;
 
   // Truncate title if too long

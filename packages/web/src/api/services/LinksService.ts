@@ -109,7 +109,7 @@ export class LinksService {
             /**
              * Target issue type
              */
-            type: 'task' | 'memo';
+            type: 'memo' | 'task' | 'article';
             /**
              * Target issue title (task title or memo body preview)
              */

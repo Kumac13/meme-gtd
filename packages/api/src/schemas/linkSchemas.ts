@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ISSUE_TYPES } from 'meme-gtd-shared';
 
 /**
  * Schema for link type values
@@ -38,7 +39,7 @@ export const LinkWithDirectionSchema = LinkSchema.extend({
   direction: z.enum(['outgoing', 'incoming']).describe('Link direction relative to the queried issue'),
   targetIssue: z.object({
     id: z.number().int().positive().describe('Target issue ID'),
-    type: z.enum(['task', 'memo']).describe('Target issue type'),
+    type: z.enum(ISSUE_TYPES).describe('Target issue type'),
     title: z.string().describe('Target issue title (task title or memo body preview)'),
     status: z.string().nullable().describe('Target issue status (null for memos)'),
   }).describe('Information about the target issue in this link'),

@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { IoSearch, IoClose } from 'react-icons/io5';
+import type { IssueType } from 'meme-gtd-shared';
 import { validateSearchQuery, type QueryValidationError } from '../utils/queryParser';
 
 interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  itemType?: 'task' | 'memo' | 'article';
+  itemType?: IssueType;
 }
 
 /**

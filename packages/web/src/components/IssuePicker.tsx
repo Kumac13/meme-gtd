@@ -13,6 +13,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { IssuePickerItem } from '../types/links';
 import { TasksService } from '../api/services/TasksService';
 import { MemosService } from '../api/services/MemosService';
+import { ArticlesService } from '../api/services/ArticlesService';
 
 interface IssuePickerProps {
   /** ID to exclude from results (e.g., current issue being edited) */
@@ -63,6 +64,26 @@ function memoToPickerItem(memo: {
   };
 }
 
+/**
+ * Convert an Article API response to IssuePickerItem
+ */
+function articleToPickerItem(article: {
+  id: number;
+  title: string;
+  updatedAt: string;
+}): IssuePickerItem {
+  // Truncate title if too long
+  const title = article.title.length > 50 ? article.title.slice(0, 47) + '...' : article.title;
+
+  return {
+    id: article.id,
+    type: 'article',
+    title,
+    status: null,
+    updatedAt: article.updatedAt,
+  };
+}
+
 export default function IssuePicker({
   excludeId,
   onSelect,
@@ -79,7 +100,7 @@ export default function IssuePicker({
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
-   * Fetch issues (both tasks and memos) and merge results
+   * Fetch issues (tasks, memos, and articles) and merge results
    */
   const fetchIssues = useCallback(async (search: string) => {
     setIsLoading(true);
@@ -87,18 +108,20 @@ export default function IssuePicker({
     setFocusedIndex(-1);
 
     try {
-      // Parallel fetch of tasks and memos
-      const [tasks, memos] = await Promise.all([
+      // Parallel fetch of tasks, memos, and articles
+      const [tasks, memos, articles] = await Promise.all([
         TasksService.listTasks(undefined, undefined, undefined, search || undefined),
         MemosService.listMemos(undefined, undefined, search || undefined),
+        ArticlesService.listArticles(undefined, undefined, search || undefined),
       ]);
 
       // Convert to unified format
       const taskItems = tasks.map(taskToPickerItem);
       const memoItems = memos.map(memoToPickerItem);
+      const articleItems = articles.map(articleToPickerItem);
 
       // Merge and sort by updatedAt (descending)
-      let merged = [...taskItems, ...memoItems];
+      let merged = [...taskItems, ...memoItems, ...articleItems];
       merged.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
       // Exclude self if specified
@@ -283,9 +306,11 @@ export default function IssuePicker({
                   <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
                     item.type === 'task'
                       ? 'bg-blue-100 text-blue-700'
-                      : 'bg-purple-100 text-purple-700'
+                      : item.type === 'memo'
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'bg-orange-100 text-orange-700'
                   }`}>
-                    {item.type === 'task' ? 'Task' : 'Memo'}
+                    {item.type === 'task' ? 'Task' : item.type === 'memo' ? 'Memo' : 'Article'}
                   </span>
 
                   {/* ID */}

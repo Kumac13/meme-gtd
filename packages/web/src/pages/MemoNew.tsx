@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import type { IssueType } from 'meme-gtd-shared';
 import { TasksService } from '../api/services/TasksService';
 import { CommentsService } from '../api/services/CommentsService';
 import { ProjectsService } from '../api/services/ProjectsService';
@@ -35,7 +36,7 @@ interface IssueLink {
   direction: 'outgoing' | 'incoming';
   targetIssue: {
     id: number;
-    type: 'task' | 'memo';
+    type: IssueType;
     title: string;
     status: string | null;
   };

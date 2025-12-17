@@ -1,5 +1,6 @@
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import type { IssueType } from 'meme-gtd-shared';
 import { ProjectDetail } from '../types/project';
 import ItemList from '../components/ItemList';
 import EmptyState from '../components/EmptyState';
@@ -67,7 +68,7 @@ export default function ListView() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [memos, setMemos] = useState<Memo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'memo' | 'task' | 'article' } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<{ id: number; type: IssueType } | null>(null);
 
   // Filter state management with URL params
   const [searchParams, setSearchParams] = useSearchParams();
@@ -94,7 +95,7 @@ export default function ListView() {
     setSearchParams(params);
   }, [searchParams, setSearchParams]);
 
-  const handleItemClick = useCallback((id: number, type: 'memo' | 'task' | 'article') => {
+  const handleItemClick = useCallback((id: number, type: IssueType) => {
     setSelectedItem({ id, type });
   }, []);
 

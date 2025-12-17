@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import type { IssueType } from 'meme-gtd-shared';
 import { MemosService } from '../api/services/MemosService';
 import ItemDetail, { type Item } from '../components/ItemDetail';
 import { ItemDetailPanel } from '../components/ItemDetailPanel';
@@ -26,7 +27,7 @@ export default function MemoDetail() {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'memo' | 'task' | 'article' } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<{ id: number; type: IssueType } | null>(null);
 
   // Set document title based on memo body preview (memos don't have titles)
   const titleText = memo?.bodyMd ? truncateForTitle(memo.bodyMd) : null;
@@ -89,7 +90,7 @@ export default function MemoDetail() {
     }
   };
 
-  const handleItemClick = useCallback((itemId: number, itemType: 'memo' | 'task' | 'article') => {
+  const handleItemClick = useCallback((itemId: number, itemType: IssueType) => {
     setSelectedItem({ id: itemId, type: itemType });
   }, []);
 

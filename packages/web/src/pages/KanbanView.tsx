@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import type { IssueType } from 'meme-gtd-shared';
 import { ProjectDetail } from '../types/project';
 import KanbanBoard from '../components/KanbanBoard';
 import EmptyState from '../components/EmptyState';
@@ -12,9 +13,9 @@ interface OutletContext {
 
 export default function KanbanView() {
   const { project, setProject } = useOutletContext<OutletContext>();
-  const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'memo' | 'task' | 'article' } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<{ id: number; type: IssueType } | null>(null);
 
-  const handleItemClick = useCallback((issueId: number, issueType: 'memo' | 'task' | 'article') => {
+  const handleItemClick = useCallback((issueId: number, issueType: IssueType) => {
     setSelectedItem({ id: issueId, type: issueType });
   }, []);
 

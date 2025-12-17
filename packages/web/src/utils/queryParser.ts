@@ -1,3 +1,5 @@
+import type { IssueType } from 'meme-gtd-shared';
+
 /**
  * Parse GitHub-style search queries into filter objects
  *
@@ -101,7 +103,7 @@ export interface QueryValidationError {
 }
 
 interface ValidateOptions {
-  itemType?: 'task' | 'memo' | 'article';
+  itemType?: IssueType;
 }
 
 /**
