@@ -128,6 +128,14 @@ export interface Link {
   createdAt: string;
 }
 
+export interface UrlLink {
+  id: number;
+  issueId: number;
+  url: string;
+  title: string | null;
+  createdAt: string;
+}
+
 // Project types (Issue #19)
 export type {
   ViewType,
