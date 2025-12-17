@@ -3,7 +3,7 @@
  *
  * Displays an individual URL link with icon, title, URL, and delete button.
  * Opens external URLs in a new tab.
- * Includes inline delete confirmation and title editing (click title to edit).
+ * Includes inline delete confirmation and title editing via three-dot menu.
  */
 
 import { useState } from 'react';
@@ -22,6 +22,7 @@ interface UrlLinkItemProps {
 }
 
 export default function UrlLinkItem({ urlLink, onDelete, onUpdate, isDeleting = false }: UrlLinkItemProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(urlLink.title || '');
@@ -31,6 +32,7 @@ export default function UrlLinkItem({ urlLink, onDelete, onUpdate, isDeleting = 
   const displayUrl = truncateUrl(urlLink.url);
 
   const handleDeleteClick = () => {
+    setIsMenuOpen(false);
     setShowConfirm(true);
   };
 
@@ -43,11 +45,10 @@ export default function UrlLinkItem({ urlLink, onDelete, onUpdate, isDeleting = 
     setShowConfirm(false);
   };
 
-  const handleLabelClick = () => {
-    if (onUpdate) {
-      setEditTitle(urlLink.title || '');
-      setIsEditing(true);
-    }
+  const handleEditClick = () => {
+    setIsMenuOpen(false);
+    setEditTitle(urlLink.title || '');
+    setIsEditing(true);
   };
 
   const handleCancelEdit = () => {
@@ -126,12 +127,8 @@ export default function UrlLinkItem({ urlLink, onDelete, onUpdate, isDeleting = 
             {getUrlLinkIcon()}
           </span>
 
-          {/* Link label - clickable to edit */}
-          <span
-            onClick={handleLabelClick}
-            className={`text-xs flex-shrink-0 text-gray-500 ${onUpdate ? 'cursor-pointer hover:text-gray-700 hover:underline' : ''}`}
-            title={onUpdate ? 'Click to edit title' : undefined}
-          >
+          {/* Link label */}
+          <span className="text-xs flex-shrink-0 text-gray-500">
             {displayLabel}
           </span>
 
@@ -152,26 +149,38 @@ export default function UrlLinkItem({ urlLink, onDelete, onUpdate, isDeleting = 
           </a>
         </div>
 
-        {/* Delete button */}
+        {/* Three-dot menu */}
         {!showConfirm && (
-          <button
-            onClick={handleDeleteClick}
-            disabled={isDeleting}
-            className="flex-shrink-0 ml-2 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Delete URL link"
-            aria-label="Delete URL link"
-          >
-            {isDeleting ? (
-              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-            ) : (
+          <div className="relative">
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="flex-shrink-0 ml-2 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+              aria-label="More options"
+            >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z" />
+                <path d="M8 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"></path>
               </svg>
+            </button>
+            {isMenuOpen && (
+              <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                {onUpdate && (
+                  <button
+                    onClick={handleEditClick}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Edit
+                  </button>
+                )}
+                <button
+                  onClick={handleDeleteClick}
+                  disabled={isDeleting}
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 disabled:opacity-50"
+                >
+                  Delete
+                </button>
+              </div>
             )}
-          </button>
+          </div>
         )}
       </div>
 
