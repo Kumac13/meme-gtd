@@ -106,6 +106,16 @@ Memo (Captured) → promote → Task (Inbox)
 | link_type | TEXT | `parent`/`child`/`relates`/`derived_from` |
 | created_at | TEXT | 作成日時 |
 
+### url_links（外部URLリンク）
+
+| カラム | 型 | 説明 |
+|--------|-----|------|
+| id | INTEGER PK | 自動採番 |
+| issue_id | INTEGER FK | 紐付け先 issues.id |
+| url | TEXT | 外部URL |
+| title | TEXT | 表示タイトル（任意） |
+| created_at | TEXT | 作成日時 |
+
 ### comments
 
 | カラム | 型 | 説明 |
@@ -194,6 +204,8 @@ mgtd project create/list/view
 | `GET/POST /api/labels` | ラベル一覧・作成 |
 | `GET/POST /api/projects` | プロジェクト一覧・作成 |
 | `GET/POST /api/links` | リンク一覧・作成 |
+| `GET/POST /api/issues/{id}/url-links` | 外部URLリンク一覧・作成 |
+| `DELETE /api/url-links/{id}` | URLリンク削除 |
 | `GET/POST /api/issues/{id}/comments` | コメント一覧・作成 |
 | `GET /api/activity-log` | アクティビティログ一覧（フィルタ対応） |
 
