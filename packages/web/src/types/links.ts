@@ -126,22 +126,6 @@ export interface UrlLinkDisplayItem {
 }
 
 /**
- * URL Link creation form state
- */
-export interface UrlLinkCreationState {
-  /** Whether the URL input form is visible */
-  isAdding: boolean;
-  /** User-entered URL */
-  url: string;
-  /** User-entered title (optional) */
-  title: string;
-  /** API validation error message */
-  error: string | null;
-  /** Whether the create API call is in progress */
-  isSubmitting: boolean;
-}
-
-/**
  * Link category for the inline form
  */
 export type LinkCategory = 'issue' | 'url';
