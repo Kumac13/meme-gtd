@@ -65,6 +65,27 @@ export async function urlLinkRoutes(app: FastifyInstance) {
     listUrlLinksHandler
   );
 
+  // PATCH /api/url-links/:id - Update a URL link
+  server.patch(
+    '/api/url-links/:id',
+    {
+      schema: {
+        tags: ['URL Links'],
+        summary: 'Update URL link',
+        description: 'Update a URL link title',
+        operationId: 'updateUrlLink',
+        params: UrlLinkIdParamsSchema,
+        body: UpdateUrlLinkRequestSchema,
+        response: {
+          200: UrlLinkSchema,
+          404: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      },
+    },
+    updateUrlLinkHandler
+  );
+
   // DELETE /api/url-links/:id - Delete a URL link
   server.delete(
     '/api/url-links/:id',
