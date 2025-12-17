@@ -192,6 +192,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
         { name: 'Tasks', description: 'Task management endpoints' },
         { name: 'Labels', description: 'Label management endpoints' },
         { name: 'Links', description: 'Link management endpoints' },
+        { name: 'URL Links', description: 'External URL link management endpoints' },
         { name: 'Projects', description: 'Project management endpoints' },
         { name: 'Comments', description: 'Comment management endpoints' },
         { name: 'Attachments', description: 'Image attachment endpoints' },
@@ -228,6 +229,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   const { linkRoutes } = await import('./routes/links.js');
   await app.register(linkRoutes);
+
+  const { urlLinkRoutes } = await import('./routes/urlLinks.js');
+  await app.register(urlLinkRoutes);
 
   const { projectRoutes } = await import('./routes/projects.js');
   await app.register(projectRoutes);

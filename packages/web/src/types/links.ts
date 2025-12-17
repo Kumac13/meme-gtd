@@ -108,3 +108,20 @@ export interface IssuePickerItem {
   /** Last update timestamp for sorting */
   updatedAt: string;
 }
+
+/**
+ * URL Link display item - represents an external URL link in the UI
+ */
+export interface UrlLinkDisplayItem {
+  /** Unique URL link ID from database */
+  id: number;
+  /** Parent issue ID */
+  issueId: number;
+  /** External URL */
+  url: string;
+  /** Display title (null = derive from URL hostname) */
+  title: string | null;
+  /** Link creation timestamp */
+  createdAt: string;
+}
+

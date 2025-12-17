@@ -248,7 +248,7 @@ export class ProjectsService {
                 /**
                  * Issue type
                  */
-                type: 'task' | 'memo';
+                type: 'memo' | 'task' | 'article';
                 /**
                  * Issue title
                  */

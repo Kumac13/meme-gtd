@@ -3,14 +3,17 @@
  *
  * Main container for link management. Fetches and displays links,
  * orchestrates create/delete operations, and manages UI state.
+ * Supports both issue-to-issue links and external URL links.
  */
 
 import { useState, useEffect } from 'react';
 import LinkItem from './LinkItem';
+import UrlLinkItem from './UrlLinkItem';
 import AddLinkInline from './AddLinkInline';
-import type { LinkDisplayItem, LinkCreationState, LinkType } from '../types/links';
+import type { LinkDisplayItem, LinkCreationState, LinkType, UrlLinkDisplayItem } from '../types/links';
 import type { IssueType } from 'meme-gtd-shared';
 import { LinksService } from '../api/services/LinksService';
+import { UrlLinksService } from '../api/services/UrlLinksService';
 
 // Status priority for sorting (lower = higher priority, displayed first)
 const statusPriority: Record<string, number> = {
@@ -46,10 +49,12 @@ interface LinkSectionProps {
 
 export default function LinkSection({ itemId, itemType: _itemType, onItemClick, onBeforeNavigate }: LinkSectionProps) {
   const [links, setLinks] = useState<LinkDisplayItem[]>([]);
+  const [urlLinks, setUrlLinks] = useState<UrlLinkDisplayItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(true);
   const [deletingLinkId, setDeletingLinkId] = useState<number | null>(null);
+  const [deletingUrlLinkId, setDeletingUrlLinkId] = useState<number | null>(null);
   const [creationState, setCreationState] = useState<LinkCreationState>({
     isAdding: false,
     selectedType: null,
@@ -58,23 +63,31 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
     isSubmitting: false,
   });
 
+  // Total links count for display
+  const totalLinksCount = links.length + urlLinks.length;
+
   // Fetch links on mount and when itemId changes
   useEffect(() => {
-    fetchLinks();
+    fetchAllLinks();
   }, [itemId]);
 
   // Auto-collapse when no links, expand when links exist
   useEffect(() => {
-    setIsExpanded(links.length > 0);
-  }, [links.length]);
+    setIsExpanded(totalLinksCount > 0);
+  }, [totalLinksCount]);
 
-  const fetchLinks = async () => {
+  const fetchAllLinks = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await LinksService.listIssueLinks(String(itemId));
+      // Fetch both issue links and URL links in parallel
+      const [issueLinksResponse, urlLinksResponse] = await Promise.all([
+        LinksService.listIssueLinks(String(itemId)),
+        UrlLinksService.listUrlLinks(String(itemId)),
+      ]);
+
       // Type assertion to add targetIssue field (which is in the actual API response but not in the generated type)
-      const linksWithTarget = response.map((link: any) => ({
+      const linksWithTarget = (issueLinksResponse || []).map((link: any) => ({
         ...link,
         targetIssue: link.targetIssue || {
           id: link.targetIssueId,
@@ -84,6 +97,7 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
       }));
       // Sort links by status (active tasks first, completed last)
       setLinks(sortLinksByStatus(linksWithTarget));
+      setUrlLinks(urlLinksResponse || []);
     } catch (err) {
       console.error('Failed to fetch links:', err);
       setError('Failed to load links');
@@ -97,12 +111,26 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
     try {
       await LinksService.deleteLink(String(linkId));
       // Refresh links after deletion
-      await fetchLinks();
+      await fetchAllLinks();
     } catch (err) {
       console.error('Failed to delete link:', err);
       alert('Failed to delete link. Please try again.');
     } finally {
       setDeletingLinkId(null);
+    }
+  };
+
+  const handleDeleteUrlLink = async (urlLinkId: number) => {
+    setDeletingUrlLinkId(urlLinkId);
+    try {
+      await UrlLinksService.deleteUrlLink(String(urlLinkId));
+      // Refresh links after deletion
+      await fetchAllLinks();
+    } catch (err) {
+      console.error('Failed to delete URL link:', err);
+      alert('Failed to delete URL link. Please try again.');
+    } finally {
+      setDeletingUrlLinkId(null);
     }
   };
 
@@ -136,7 +164,7 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
         linkType,
       });
       // Refresh links after creation
-      await fetchLinks();
+      await fetchAllLinks();
       // Close form and reset state
       setCreationState({
         isAdding: false,
@@ -155,6 +183,36 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
         errorMessage = err.message;
       }
       setCreationState((prev) => ({ ...prev, isSubmitting: false, error: errorMessage }));
+    }
+  };
+
+  const handleAddUrlLink = async (url: string, title?: string) => {
+    try {
+      await UrlLinksService.createUrlLink(String(itemId), { url, title });
+      // Refresh links after creation
+      await fetchAllLinks();
+      // Close form and reset state
+      setCreationState({
+        isAdding: false,
+        selectedType: null,
+        targetId: '',
+        error: null,
+        isSubmitting: false,
+      });
+    } catch (err: any) {
+      console.error('Failed to create URL link:', err);
+      throw new Error(err?.body?.message || err?.message || 'Failed to create URL link');
+    }
+  };
+
+  const handleUpdateUrlLink = async (urlLinkId: number, title: string | null) => {
+    try {
+      await UrlLinksService.updateUrlLink(String(urlLinkId), { title });
+      // Refresh links after update
+      await fetchAllLinks();
+    } catch (err) {
+      console.error('Failed to update URL link:', err);
+      throw err;
     }
   };
 
@@ -182,7 +240,7 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
 
           {/* Section title with count */}
           <h3 className="text-sm font-semibold text-gray-900">
-            Links {loading ? <span className="text-gray-400">(loading...)</span> : `(${links.length})`}
+            Links {loading ? <span className="text-gray-400">(loading...)</span> : `(${totalLinksCount})`}
           </h3>
         </div>
 
@@ -212,7 +270,7 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
             <div className="text-sm text-red-600 py-2 flex items-center gap-2">
               <span>⚠️ {error}</span>
               <button
-                onClick={fetchLinks}
+                onClick={fetchAllLinks}
                 className="text-xs px-2 py-1 bg-red-50 hover:bg-red-100 rounded text-red-700"
               >
                 Retry
@@ -220,7 +278,7 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
             </div>
           )}
 
-          {!loading && !error && links.length === 0 && !creationState.isAdding && (
+          {!loading && !error && totalLinksCount === 0 && !creationState.isAdding && (
             <div className="text-sm text-gray-500 py-2">
               No links yet
             </div>
@@ -231,22 +289,34 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
             <AddLinkInline
               sourceIssueId={itemId}
               onAdd={handleAddLink}
+              onAddUrlLink={handleAddUrlLink}
               onCancel={handleCancelAdd}
               creationState={creationState}
               setCreationState={setCreationState}
             />
           )}
 
-          {!loading && !error && links.length > 0 && (
+          {!loading && !error && totalLinksCount > 0 && (
             <div className="space-y-1">
+              {/* Issue Links */}
               {links.map((link) => (
                 <LinkItem
-                  key={link.id}
+                  key={`issue-${link.id}`}
                   link={link}
                   onDelete={handleDelete}
                   isDeleting={deletingLinkId === link.id}
                   onItemClick={onItemClick}
                   onBeforeNavigate={onBeforeNavigate}
+                />
+              ))}
+              {/* URL Links */}
+              {urlLinks.map((urlLink) => (
+                <UrlLinkItem
+                  key={`url-${urlLink.id}`}
+                  urlLink={urlLink}
+                  onDelete={handleDeleteUrlLink}
+                  onUpdate={handleUpdateUrlLink}
+                  isDeleting={deletingUrlLinkId === urlLink.id}
                 />
               ))}
             </div>

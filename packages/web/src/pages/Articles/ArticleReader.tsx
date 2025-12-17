@@ -23,7 +23,7 @@ export const ArticleReader: React.FC = () => {
     const fetchArticle = async () => {
       try {
         setLoading(true);
-        const data = await ArticlesService.getApiArticles1(Number(id));
+        const data = await ArticlesService.getArticle(String(id));
         setArticle(data as unknown as Article);
       } catch (err: unknown) {
         if (err instanceof Error) {
@@ -43,7 +43,7 @@ export const ArticleReader: React.FC = () => {
     if (!id) return;
     try {
       setDeleting(true);
-      await ArticlesService.deleteApiArticles(Number(id));
+      await ArticlesService.deleteArticle(String(id));
       navigate("/articles");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unknown error";

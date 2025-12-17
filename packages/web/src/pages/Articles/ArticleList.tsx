@@ -21,7 +21,7 @@ export const ArticleList: React.FC = () => {
     const fetchArticles = async () => {
       try {
         setLoading(true);
-        const data = await ArticlesService.getApiArticles(undefined, undefined, searchQuery || undefined);
+        const data = await ArticlesService.listArticles(undefined, undefined, searchQuery || undefined);
         setArticles(data as unknown as Article[]);
       } catch (err: unknown) {
         if (err instanceof Error) {
@@ -47,7 +47,7 @@ export const ArticleList: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    await ArticlesService.deleteApiArticles(id);
+    await ArticlesService.deleteArticle(String(id));
     setArticles(articles.filter((article) => article.id !== id));
   };
 

@@ -57,7 +57,7 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
         if (itemType === 'task') {
           response = await TasksService.getTask(String(itemId));
         } else if (itemType === 'article') {
-          response = await ArticlesService.getApiArticles1(itemId);
+          response = await ArticlesService.getArticle(String(itemId));
         } else {
           response = await MemosService.getMemo(String(itemId));
         }
@@ -83,7 +83,7 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
       if (itemType === 'task') {
         await TasksService.deleteTask(String(itemId));
       } else if (itemType === 'article') {
-        await ArticlesService.deleteApiArticles(itemId);
+        await ArticlesService.deleteArticle(String(itemId));
       } else {
         await MemosService.deleteMemo(String(itemId));
       }

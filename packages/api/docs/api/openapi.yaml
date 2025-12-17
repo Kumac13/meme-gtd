@@ -4303,6 +4303,419 @@ paths:
                   - error
                   - message
                 additionalProperties: false
+  /api/issues/{id}/url-links:
+    post:
+      operationId: createUrlLink
+      summary: Create URL link
+      tags:
+        - URL Links
+      description: Create an external URL link for an issue
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  description: External URL
+                title:
+                  type: string
+                  maxLength: 200
+                  description: Display title
+              required:
+                - url
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique URL link ID
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Parent issue ID
+                  url:
+                    type: string
+                    format: uri
+                    description: External URL
+                  title:
+                    type: string
+                    nullable: true
+                    description: Display title
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                required:
+                  - id
+                  - issueId
+                  - url
+                  - title
+                  - createdAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    get:
+      operationId: listUrlLinks
+      summary: List URL links
+      tags:
+        - URL Links
+      description: List all external URL links for a given issue
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Unique URL link ID
+                    issueId:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Parent issue ID
+                    url:
+                      type: string
+                      format: uri
+                      description: External URL
+                    title:
+                      type: string
+                      nullable: true
+                      description: Display title
+                    createdAt:
+                      type: string
+                      format: date-time
+                      description: Creation timestamp
+                  required:
+                    - id
+                    - issueId
+                    - url
+                    - title
+                    - createdAt
+                  additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/url-links/{id}:
+    patch:
+      operationId: updateUrlLink
+      summary: Update URL link
+      tags:
+        - URL Links
+      description: Update a URL link title
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 200
+                  nullable: true
+                  description: Display title (null to clear)
+              required:
+                - title
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique URL link ID
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Parent issue ID
+                  url:
+                    type: string
+                    format: uri
+                    description: External URL
+                  title:
+                    type: string
+                    nullable: true
+                    description: Display title
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                required:
+                  - id
+                  - issueId
+                  - url
+                  - title
+                  - createdAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    delete:
+      operationId: deleteUrlLink
+      summary: Delete URL link
+      tags:
+        - URL Links
+      description: Delete a URL link by ID
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+      responses:
+        "204":
+          description: Default Response
+          content:
+            application/json:
+              schema: {}
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
   /api/projects:
     post:
       operationId: createProject
@@ -4718,8 +5131,9 @@ paths:
                             type:
                               type: string
                               enum:
-                                - task
                                 - memo
+                                - task
+                                - article
                               description: Issue type
                             title:
                               type: string
@@ -5792,6 +6206,9 @@ paths:
               - memo.updated
               - memo.promoted
               - memo.deleted
+              - memo.bookmarked
+              - article.created
+              - article.deleted
               - label.created
               - label.deleted
               - label.assigned
@@ -5889,6 +6306,9 @@ paths:
                         - memo.updated
                         - memo.promoted
                         - memo.deleted
+                        - memo.bookmarked
+                        - article.created
+                        - article.deleted
                         - label.created
                         - label.deleted
                         - label.assigned
@@ -6049,6 +6469,9 @@ paths:
                         - memo.updated
                         - memo.promoted
                         - memo.deleted
+                        - memo.bookmarked
+                        - article.created
+                        - article.deleted
                         - label.created
                         - label.deleted
                         - label.assigned
@@ -6209,6 +6632,9 @@ paths:
                         - memo.updated
                         - memo.promoted
                         - memo.deleted
+                        - memo.bookmarked
+                        - article.created
+                        - article.deleted
                         - label.created
                         - label.deleted
                         - label.assigned
@@ -6440,8 +6866,11 @@ paths:
                 additionalProperties: false
   /api/articles/:
     post:
+      operationId: createArticle
+      summary: Create article
       tags:
         - Articles
+      description: Create a new article
       requestBody:
         content:
           application/json:
@@ -6450,17 +6879,24 @@ paths:
               properties:
                 title:
                   type: string
+                  minLength: 1
+                  description: Article title
                 bodyMd:
                   type: string
+                  description: Article content in Markdown format
                 originalUrl:
                   type: string
+                  format: uri
+                  description: Original URL of the article
                 siteName:
                   type: string
                   nullable: true
+                  description: Name of the source site
                 labels:
                   type: array
                   items:
                     type: string
+                  description: Array of label names to assign
               required:
                 - title
                 - bodyMd
@@ -6476,43 +6912,62 @@ paths:
                 type: object
                 properties:
                   id:
-                    type: number
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique article ID
                   type:
                     type: string
                     enum:
                       - article
+                    description: Issue type (always "article")
                   title:
                     type: string
+                    description: Article title
                   bodyMd:
                     type: string
+                    description: Article content in Markdown format
                   meta:
                     type: object
                     properties:
                       originalUrl:
                         type: string
+                        description: Original URL of the article
                       siteName:
                         type: string
                         nullable: true
+                        description: Name of the source site
                       archivedAt:
                         type: string
+                        description: Timestamp when the article was archived
                     required:
                       - originalUrl
                       - archivedAt
                     additionalProperties: false
+                    description: Article metadata
                   createdAt:
                     type: string
+                    format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
+                    format: date-time
+                    description: Last update timestamp
                   isBookmarked:
                     type: boolean
+                    description: Whether the article is bookmarked
                   isDeleted:
                     type: boolean
+                    description: Whether the article is soft-deleted
                   labels:
                     type: array
                     items:
                       type: string
+                    description: Array of label names assigned to this article
                   commentCount:
-                    type: number
+                    type: integer
+                    minimum: 0
+                    description: Number of comments on this article
                 required:
                   - id
                   - type
@@ -6524,25 +6979,57 @@ paths:
                   - isBookmarked
                   - isDeleted
                 additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
     get:
+      operationId: listArticles
+      summary: List articles
       tags:
         - Articles
+      description: List all articles with optional filters
       parameters:
         - schema:
-            type: number
+            type: integer
+            exclusiveMinimum: true
+            minimum: 0
           in: query
           name: limit
           required: false
+          description: Maximum number of articles to return
         - schema:
-            type: number
+            type: integer
+            minimum: 0
           in: query
           name: offset
           required: false
+          description: Number of articles to skip
         - schema:
             type: string
           in: query
           name: search
           required: false
+          description: Search articles by title or content
       responses:
         "200":
           description: Default Response
@@ -6554,43 +7041,62 @@ paths:
                   type: object
                   properties:
                     id:
-                      type: number
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Unique article ID
                     type:
                       type: string
                       enum:
                         - article
+                      description: Issue type (always "article")
                     title:
                       type: string
+                      description: Article title
                     bodyMd:
                       type: string
+                      description: Article content in Markdown format
                     meta:
                       type: object
                       properties:
                         originalUrl:
                           type: string
+                          description: Original URL of the article
                         siteName:
                           type: string
                           nullable: true
+                          description: Name of the source site
                         archivedAt:
                           type: string
+                          description: Timestamp when the article was archived
                       required:
                         - originalUrl
                         - archivedAt
                       additionalProperties: false
+                      description: Article metadata
                     createdAt:
                       type: string
+                      format: date-time
+                      description: Creation timestamp
                     updatedAt:
                       type: string
+                      format: date-time
+                      description: Last update timestamp
                     isBookmarked:
                       type: boolean
+                      description: Whether the article is bookmarked
                     isDeleted:
                       type: boolean
+                      description: Whether the article is soft-deleted
                     labels:
                       type: array
                       items:
                         type: string
+                      description: Array of label names assigned to this article
                     commentCount:
-                      type: number
+                      type: integer
+                      minimum: 0
+                      description: Number of comments on this article
                   required:
                     - id
                     - type
@@ -6602,16 +7108,44 @@ paths:
                     - isBookmarked
                     - isDeleted
                   additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
   /api/articles/{id}:
     get:
+      operationId: getArticle
+      summary: Get article
       tags:
         - Articles
+      description: Get article by ID
       parameters:
         - schema:
-            type: number
+            type: string
+            pattern: ^\d+$
           in: path
           name: id
           required: true
+          description: Article ID
       responses:
         "200":
           description: Default Response
@@ -6621,43 +7155,62 @@ paths:
                 type: object
                 properties:
                   id:
-                    type: number
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique article ID
                   type:
                     type: string
                     enum:
                       - article
+                    description: Issue type (always "article")
                   title:
                     type: string
+                    description: Article title
                   bodyMd:
                     type: string
+                    description: Article content in Markdown format
                   meta:
                     type: object
                     properties:
                       originalUrl:
                         type: string
+                        description: Original URL of the article
                       siteName:
                         type: string
                         nullable: true
+                        description: Name of the source site
                       archivedAt:
                         type: string
+                        description: Timestamp when the article was archived
                     required:
                       - originalUrl
                       - archivedAt
                     additionalProperties: false
+                    description: Article metadata
                   createdAt:
                     type: string
+                    format: date-time
+                    description: Creation timestamp
                   updatedAt:
                     type: string
+                    format: date-time
+                    description: Last update timestamp
                   isBookmarked:
                     type: boolean
+                    description: Whether the article is bookmarked
                   isDeleted:
                     type: boolean
+                    description: Whether the article is soft-deleted
                   labels:
                     type: array
                     items:
                       type: string
+                    description: Array of label names assigned to this article
                   commentCount:
-                    type: number
+                    type: integer
+                    minimum: 0
+                    description: Number of comments on this article
                 required:
                   - id
                   - type
@@ -6678,27 +7231,37 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
+                  - message
                 additionalProperties: false
     delete:
+      operationId: deleteArticle
+      summary: Delete article
       tags:
         - Articles
+      description: Delete article (soft delete)
       parameters:
         - schema:
-            type: number
+            type: string
+            pattern: ^\d+$
           in: path
           name: id
           required: true
+          description: Article ID
       responses:
         "204":
           description: Default Response
-          content:
-            application/json:
-              schema:
-                enum:
-                  - "null"
-                nullable: true
         "404":
           description: Default Response
           content:
@@ -6708,8 +7271,19 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
                 required:
                   - error
+                  - message
                 additionalProperties: false
 servers:
   - url: http://localhost:3000
@@ -6723,6 +7297,8 @@ tags:
     description: Label management endpoints
   - name: Links
     description: Link management endpoints
+  - name: URL Links
+    description: External URL link management endpoints
   - name: Projects
     description: Project management endpoints
   - name: Comments

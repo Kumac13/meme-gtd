@@ -143,3 +143,14 @@ export {
   type CreateArticleInput,
   type ListArticleFilters
 } from './articleRepository.js';
+
+// URL link repository exports
+export {
+  createUrlLink,
+  getUrlLinkById,
+  listUrlLinks,
+  deleteUrlLink,
+  updateUrlLink,
+  type CreateUrlLinkInput,
+  type UpdateUrlLinkInput
+} from './urlLinkRepository.js';

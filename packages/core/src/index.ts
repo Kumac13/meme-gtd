@@ -492,6 +492,9 @@ export class ArticleService {
 // Link Service
 export { LinkService, type LinkServiceOptions } from './linkService.js';
 
+// URL Link Service
+export { UrlLinkService, type UrlLinkServiceOptions } from './urlLinkService.js';
+
 // Project Service
 export { ProjectService, type ProjectServiceOptions } from './projectService.js';
 

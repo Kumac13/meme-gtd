@@ -1,19 +1,25 @@
 /**
  * AddLinkInline Component
  *
- * Multi-step inline form for creating new links.
- * Step 1: Select link type (parent/child/relates/derived_from)
- * Step 2: Search and select target issue using IssuePicker
+ * Two-step inline form for creating new links.
+ * Step 1: Select link type (parent/child/relates/derived_from/url)
+ * Step 2a (Issue): Search and select target issue using IssuePicker
+ * Step 2b (URL): Enter URL and optional title
  */
 
+import { useState } from 'react';
 import type { LinkType, LinkCreationState, IssuePickerItem } from '../types/links';
 import IssuePicker from './IssuePicker';
+
+type ExtendedLinkType = LinkType | 'url';
 
 interface AddLinkInlineProps {
   /** Source issue ID (the issue being viewed) */
   sourceIssueId: number;
-  /** Callback when link is successfully created */
+  /** Callback when issue link is successfully created */
   onAdd: (targetId: number, linkType: LinkType) => Promise<void>;
+  /** Callback when URL link is successfully created */
+  onAddUrlLink?: (url: string, title?: string) => Promise<void>;
   /** Callback when user cancels */
   onCancel: () => void;
   /** Creation state from parent component */
@@ -25,25 +31,37 @@ interface AddLinkInlineProps {
 export default function AddLinkInline({
   sourceIssueId,
   onAdd,
+  onAddUrlLink,
   onCancel,
   creationState,
   setCreationState,
 }: AddLinkInlineProps) {
   const { selectedType, error, isSubmitting } = creationState;
+  const [isUrlMode, setIsUrlMode] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
+  const [titleInput, setTitleInput] = useState('');
+  const [urlError, setUrlError] = useState<string | null>(null);
+  const [isUrlSubmitting, setIsUrlSubmitting] = useState(false);
 
-  const linkTypes: Array<{ value: LinkType; label: string; description: string }> = [
+  const linkTypes: Array<{ value: ExtendedLinkType; label: string; description: string }> = [
     { value: 'parent', label: 'Parent', description: 'This issue is a parent of...' },
     { value: 'child', label: 'Child', description: 'This issue is a child of...' },
     { value: 'relates', label: 'Related', description: 'This issue relates to...' },
     { value: 'derived_from', label: 'Derived from', description: 'This issue is derived from...' },
+    ...(onAddUrlLink ? [{ value: 'url' as const, label: 'External URL', description: 'Link to external website' }] : []),
   ];
 
-  const handleTypeSelect = (type: LinkType) => {
-    setCreationState({
-      ...creationState,
-      selectedType: type,
-      error: null,
-    });
+  const handleTypeSelect = (type: ExtendedLinkType) => {
+    if (type === 'url') {
+      setIsUrlMode(true);
+      setUrlError(null);
+    } else {
+      setCreationState({
+        ...creationState,
+        selectedType: type,
+        error: null,
+      });
+    }
   };
 
   const handleIssueSelect = async (issue: IssuePickerItem) => {
@@ -55,14 +73,68 @@ export default function AddLinkInline({
     await onAdd(issue.id, selectedType);
   };
 
+  const handleUrlSubmit = async () => {
+    if (!urlInput.trim()) {
+      setUrlError('URL is required');
+      return;
+    }
+
+    // Validate URL format
+    try {
+      new URL(urlInput);
+    } catch {
+      setUrlError('Please enter a valid URL');
+      return;
+    }
+
+    if (!onAddUrlLink) {
+      setUrlError('URL links are not supported');
+      return;
+    }
+
+    setIsUrlSubmitting(true);
+    setUrlError(null);
+
+    try {
+      await onAddUrlLink(urlInput, titleInput || undefined);
+      // Reset form on success
+      setUrlInput('');
+      setTitleInput('');
+      setIsUrlMode(false);
+    } catch (err) {
+      setUrlError(err instanceof Error ? err.message : 'Failed to add URL link');
+    } finally {
+      setIsUrlSubmitting(false);
+    }
+  };
+
   const handleCancel = () => {
+    setIsUrlMode(false);
+    setUrlInput('');
+    setTitleInput('');
+    setUrlError(null);
     onCancel();
+  };
+
+  const handleBack = () => {
+    if (isUrlMode) {
+      setIsUrlMode(false);
+      setUrlInput('');
+      setTitleInput('');
+      setUrlError(null);
+    } else if (selectedType) {
+      setCreationState({
+        ...creationState,
+        selectedType: null,
+        error: null,
+      });
+    }
   };
 
   return (
     <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-md">
-      {/* Step 1: Type Selection */}
-      {!selectedType && (
+      {/* Step 1: Type Selection (shown when no type selected and not in URL mode) */}
+      {!selectedType && !isUrlMode && (
         <div>
           <div className="text-xs font-medium text-gray-700 mb-2">Select link type:</div>
           <div className="grid grid-cols-2 gap-2">
@@ -90,8 +162,8 @@ export default function AddLinkInline({
         </div>
       )}
 
-      {/* Step 2: Issue Search and Selection */}
-      {selectedType && (
+      {/* Step 2a: Issue Search and Selection */}
+      {selectedType && !isUrlMode && (
         <div>
           <div className="text-xs font-medium text-gray-700 mb-2">
             Adding {selectedType} link:
@@ -121,6 +193,80 @@ export default function AddLinkInline({
               onCancel={handleCancel}
             />
           )}
+        </div>
+      )}
+
+      {/* Step 2b: URL Input Form */}
+      {isUrlMode && (
+        <div>
+          <div className="text-xs font-medium text-gray-700 mb-2">Add external URL:</div>
+
+          {urlError && (
+            <div className="mb-2 text-xs text-red-600 flex items-center gap-1">
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M8 0a8 8 0 100 16A8 8 0 008 0zM7.002 11a1 1 0 112 0 1 1 0 01-2 0zM7.1 4.995a.905.905 0 111.8 0l-.35 3.507a.552.552 0 01-1.1 0z" />
+              </svg>
+              {urlError}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="url-input" className="block text-xs text-gray-600 mb-1">
+                URL <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="url-input"
+                type="url"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="https://..."
+                disabled={isUrlSubmitting}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 disabled:opacity-50 disabled:bg-gray-100"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="title-input" className="block text-xs text-gray-600 mb-1">
+                Title <span className="text-gray-400">(optional)</span>
+              </label>
+              <input
+                id="title-input"
+                type="text"
+                value={titleInput}
+                onChange={(e) => setTitleInput(e.target.value)}
+                placeholder="Display title"
+                disabled={isUrlSubmitting}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 disabled:opacity-50 disabled:bg-gray-100"
+              />
+            </div>
+          </div>
+
+          <div className="mt-3 flex justify-between">
+            <button
+              onClick={handleBack}
+              disabled={isUrlSubmitting}
+              className="text-sm px-3 py-1.5 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded disabled:opacity-50"
+            >
+              Back
+            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleCancel}
+                disabled={isUrlSubmitting}
+                className="text-sm px-3 py-1.5 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUrlSubmit}
+                disabled={isUrlSubmitting || !urlInput.trim()}
+                className="text-sm px-3 py-1.5 bg-github-green-600 text-white rounded hover:bg-github-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isUrlSubmitting ? 'Adding...' : 'Add Link'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
