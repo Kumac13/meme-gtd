@@ -20,6 +20,13 @@ export const CreateUrlLinkRequestSchema = z.object({
 });
 
 /**
+ * Request schema for updating a URL link
+ */
+export const UpdateUrlLinkRequestSchema = z.object({
+  title: z.string().max(200).nullable().describe('Display title (null to clear)'),
+});
+
+/**
  * Params schema for URL link ID
  */
 export const UrlLinkIdParamsSchema = z.object({
@@ -36,3 +43,4 @@ export const IssueIdForUrlLinksParamsSchema = z.object({
 // Export inferred types
 export type UrlLink = z.infer<typeof UrlLinkSchema>;
 export type CreateUrlLinkRequest = z.infer<typeof CreateUrlLinkRequestSchema>;
+export type UpdateUrlLinkRequest = z.infer<typeof UpdateUrlLinkRequestSchema>;

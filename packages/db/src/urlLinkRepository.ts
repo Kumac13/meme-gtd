@@ -7,6 +7,10 @@ export interface CreateUrlLinkInput {
   title?: string | null;
 }
 
+export interface UpdateUrlLinkInput {
+  title?: string | null;
+}
+
 /**
  * Convert database row to UrlLink object
  */
@@ -94,4 +98,30 @@ export const deleteUrlLink = (db: Database.Database, urlLinkId: number): void =>
 
   const stmt = db.prepare('DELETE FROM url_links WHERE id = @urlLinkId');
   stmt.run({ urlLinkId });
+};
+
+/**
+ * Update a URL link's title
+ * @param db Database instance
+ * @param urlLinkId URL link ID to update
+ * @param input Update parameters
+ * @returns Updated URL link object
+ * @throws Error if URL link not found
+ */
+export const updateUrlLink = (db: Database.Database, urlLinkId: number, input: UpdateUrlLinkInput): UrlLink => {
+  // Verify URL link exists first
+  getUrlLinkById(db, urlLinkId);
+
+  const stmt = db.prepare(`
+    UPDATE url_links
+    SET title = @title
+    WHERE id = @urlLinkId
+  `);
+
+  stmt.run({
+    urlLinkId,
+    title: input.title ?? null,
+  });
+
+  return getUrlLinkById(db, urlLinkId);
 };

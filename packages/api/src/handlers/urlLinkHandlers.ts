@@ -1,7 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { UrlLinkService } from 'meme-gtd-core';
 import { NotFoundError } from '../errors/index.js';
-import type { CreateUrlLinkRequest } from '../schemas/urlLinkSchemas.js';
+import type { CreateUrlLinkRequest, UpdateUrlLinkRequest } from '../schemas/urlLinkSchemas.js';
 
 /**
  * Create a new URL link for an issue
@@ -62,6 +62,31 @@ export async function deleteUrlLinkHandler(
   try {
     urlLinkService.remove(urlLinkId);
     return reply.status(204).send();
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw new NotFoundError('URL link', urlLinkId);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Update a URL link's title
+ */
+export async function updateUrlLinkHandler(
+  request: FastifyRequest<{
+    Params: { id: string };
+    Body: UpdateUrlLinkRequest;
+  }>,
+  reply: FastifyReply
+) {
+  const urlLinkId = parseInt(request.params.id, 10);
+  const { title } = request.body;
+  const urlLinkService = new UrlLinkService({ db: request.server.db });
+
+  try {
+    const urlLink = urlLinkService.update(urlLinkId, title);
+    return reply.status(200).send(urlLink);
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
       throw new NotFoundError('URL link', urlLinkId);

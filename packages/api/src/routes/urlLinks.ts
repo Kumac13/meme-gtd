@@ -5,9 +5,11 @@ import {
   createUrlLinkHandler,
   listUrlLinksHandler,
   deleteUrlLinkHandler,
+  updateUrlLinkHandler,
 } from '../handlers/urlLinkHandlers.js';
 import {
   CreateUrlLinkRequestSchema,
+  UpdateUrlLinkRequestSchema,
   UrlLinkSchema,
   UrlLinkIdParamsSchema,
   IssueIdForUrlLinksParamsSchema,

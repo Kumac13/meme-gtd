@@ -150,5 +150,7 @@ export {
   getUrlLinkById,
   listUrlLinks,
   deleteUrlLink,
-  type CreateUrlLinkInput
+  updateUrlLink,
+  type CreateUrlLinkInput,
+  type UpdateUrlLinkInput
 } from './urlLinkRepository.js';

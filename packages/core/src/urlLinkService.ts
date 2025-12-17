@@ -7,7 +7,9 @@ import {
   listUrlLinks as dbListUrlLinks,
   deleteUrlLink as dbDeleteUrlLink,
   getUrlLinkById as dbGetUrlLinkById,
-  type CreateUrlLinkInput
+  updateUrlLink as dbUpdateUrlLink,
+  type CreateUrlLinkInput,
+  type UpdateUrlLinkInput
 } from 'meme-gtd-db';
 
 export interface UrlLinkServiceOptions {
@@ -91,5 +93,17 @@ export class UrlLinkService {
    */
   remove(urlLinkId: number): void {
     dbDeleteUrlLink(this.db, urlLinkId);
+  }
+
+  /**
+   * Update a URL link's title
+   * @param urlLinkId URL link ID to update
+   * @param title New title (or null to clear)
+   * @returns Updated URL link
+   * @throws Error if URL link not found
+   */
+  update(urlLinkId: number, title: string | null): UrlLink {
+    const input: UpdateUrlLinkInput = { title };
+    return dbUpdateUrlLink(this.db, urlLinkId, input);
   }
 }
