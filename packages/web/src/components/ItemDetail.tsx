@@ -183,7 +183,7 @@ export default function ItemDetail({
       if (itemType === 'memo') {
         updatedItem = await MemosService.getMemo(String(item.id));
       } else if (itemType === 'article') {
-        updatedItem = await ArticlesService.getApiArticles1(item.id);
+        updatedItem = await ArticlesService.getArticle(String(item.id));
       } else {
         updatedItem = await TasksService.getTask(String(item.id));
       }
