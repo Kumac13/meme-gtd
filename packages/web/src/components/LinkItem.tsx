@@ -65,7 +65,7 @@ export default function LinkItem({ link, onDelete, isDeleting = false, onItemCli
   };
 
   return (
-    <div className="py-2 px-3 hover:bg-gray-50 rounded group">
+    <div className="py-2 px-3 hover:bg-gray-50 rounded">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {/* Icon and direction */}
@@ -115,7 +115,7 @@ export default function LinkItem({ link, onDelete, isDeleting = false, onItemCli
           <div className="relative">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="flex-shrink-0 ml-2 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+              className="flex-shrink-0 ml-2 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
               aria-label="More options"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
