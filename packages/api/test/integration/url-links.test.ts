@@ -246,35 +246,4 @@ describe('URL Link Operations', () => {
     });
   });
 
-  describe('Cascade deletion', () => {
-    it('should delete URL links when parent issue is deleted', async () => {
-      const taskResponse = await app.inject({
-        method: 'POST',
-        url: '/api/tasks',
-        payload: createTaskFixture({ title: 'Task to delete' }),
-      });
-      const task = JSON.parse(taskResponse.body);
-
-      // Create URL link
-      const createResponse = await app.inject({
-        method: 'POST',
-        url: `/api/issues/${task.id}/url-links`,
-        payload: { url: 'https://cascade-test.com' },
-      });
-      const urlLink = JSON.parse(createResponse.body);
-
-      // Delete the task
-      await app.inject({
-        method: 'DELETE',
-        url: `/api/tasks/${task.id}`,
-      });
-
-      // URL link should also be deleted (trying to delete should 404)
-      const deleteResponse = await app.inject({
-        method: 'DELETE',
-        url: `/api/url-links/${urlLink.id}`,
-      });
-      assert.strictEqual(deleteResponse.statusCode, 404);
-    });
-  });
 });

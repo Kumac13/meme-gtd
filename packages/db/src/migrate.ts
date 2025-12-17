@@ -23,7 +23,8 @@ const migrations = [
   { version: '007_add_calendar_datetime_fields', file: path.join(schemaDir, '007_add_calendar_datetime_fields.sql') },
   { version: '008_add_activity_log', file: path.join(schemaDir, '008_add_activity_log.sql') },
   { version: '009_activity_log_immutability', file: path.join(schemaDir, '009_activity_log_immutability.sql') },
-  { version: '010_update_issues_type_check', file: path.join(schemaDir, '010_update_issues_type_check.sql') }
+  { version: '010_update_issues_type_check', file: path.join(schemaDir, '010_update_issues_type_check.sql') },
+  { version: '011_add_url_links', file: path.join(schemaDir, '011_add_url_links.sql') }
 ] as const;
 
 const prepareDatabase = (db: Database.Database): void => {
