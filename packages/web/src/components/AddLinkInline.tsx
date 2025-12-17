@@ -1,16 +1,17 @@
 /**
  * AddLinkInline Component
  *
- * Multi-step inline form for creating new links.
- * Step 0: Select link category (Issue Link / URL Link)
- * Step 1a (Issue): Select link type (parent/child/relates/derived_from)
+ * Two-step inline form for creating new links.
+ * Step 1: Select link type (parent/child/relates/derived_from/url)
  * Step 2a (Issue): Search and select target issue using IssuePicker
- * Step 1b (URL): Enter URL and optional title
+ * Step 2b (URL): Enter URL and optional title
  */
 
 import { useState } from 'react';
-import type { LinkType, LinkCreationState, IssuePickerItem, LinkCategory } from '../types/links';
+import type { LinkType, LinkCreationState, IssuePickerItem } from '../types/links';
 import IssuePicker from './IssuePicker';
+
+type ExtendedLinkType = LinkType | 'url';
 
 interface AddLinkInlineProps {
   /** Source issue ID (the issue being viewed) */
@@ -36,30 +37,31 @@ export default function AddLinkInline({
   setCreationState,
 }: AddLinkInlineProps) {
   const { selectedType, error, isSubmitting } = creationState;
-  const [category, setCategory] = useState<LinkCategory | null>(null);
+  const [isUrlMode, setIsUrlMode] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const [titleInput, setTitleInput] = useState('');
   const [urlError, setUrlError] = useState<string | null>(null);
   const [isUrlSubmitting, setIsUrlSubmitting] = useState(false);
 
-  const linkTypes: Array<{ value: LinkType; label: string; description: string }> = [
+  const linkTypes: Array<{ value: ExtendedLinkType; label: string; description: string }> = [
     { value: 'parent', label: 'Parent', description: 'This issue is a parent of...' },
     { value: 'child', label: 'Child', description: 'This issue is a child of...' },
     { value: 'relates', label: 'Related', description: 'This issue relates to...' },
     { value: 'derived_from', label: 'Derived from', description: 'This issue is derived from...' },
+    ...(onAddUrlLink ? [{ value: 'url' as const, label: 'External URL', description: 'Link to external website' }] : []),
   ];
 
-  const handleCategorySelect = (cat: LinkCategory) => {
-    setCategory(cat);
-    setUrlError(null);
-  };
-
-  const handleTypeSelect = (type: LinkType) => {
-    setCreationState({
-      ...creationState,
-      selectedType: type,
-      error: null,
-    });
+  const handleTypeSelect = (type: ExtendedLinkType) => {
+    if (type === 'url') {
+      setIsUrlMode(true);
+      setUrlError(null);
+    } else {
+      setCreationState({
+        ...creationState,
+        selectedType: type,
+        error: null,
+      });
+    }
   };
 
   const handleIssueSelect = async (issue: IssuePickerItem) => {
@@ -98,7 +100,7 @@ export default function AddLinkInline({
       // Reset form on success
       setUrlInput('');
       setTitleInput('');
-      setCategory(null);
+      setIsUrlMode(false);
     } catch (err) {
       setUrlError(err instanceof Error ? err.message : 'Failed to add URL link');
     } finally {
@@ -107,7 +109,7 @@ export default function AddLinkInline({
   };
 
   const handleCancel = () => {
-    setCategory(null);
+    setIsUrlMode(false);
     setUrlInput('');
     setTitleInput('');
     setUrlError(null);
@@ -115,19 +117,12 @@ export default function AddLinkInline({
   };
 
   const handleBack = () => {
-    if (category === 'issue' && selectedType) {
-      // Go back to issue type selection
-      setCreationState({
-        ...creationState,
-        selectedType: null,
-        error: null,
-      });
-    } else {
-      // Go back to category selection
-      setCategory(null);
+    if (isUrlMode) {
+      setIsUrlMode(false);
       setUrlInput('');
       setTitleInput('');
       setUrlError(null);
+    } else if (selectedType) {
       setCreationState({
         ...creationState,
         selectedType: null,
@@ -138,46 +133,10 @@ export default function AddLinkInline({
 
   return (
     <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-md">
-      {/* Step 0: Category Selection */}
-      {!category && (
+      {/* Step 1: Type Selection (shown when no type selected and not in URL mode) */}
+      {!selectedType && !isUrlMode && (
         <div>
           <div className="text-xs font-medium text-gray-700 mb-2">Select link type:</div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => handleCategorySelect('issue')}
-              disabled={isSubmitting}
-              className="px-3 py-2 text-left text-sm border border-gray-300 rounded hover:bg-white hover:border-github-green-500 focus:outline-none focus:ring-2 focus:ring-github-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <div className="font-medium text-gray-900">Issue Link</div>
-              <div className="text-xs text-gray-500">Link to another task or memo</div>
-            </button>
-            {onAddUrlLink && (
-              <button
-                onClick={() => handleCategorySelect('url')}
-                disabled={isSubmitting}
-                className="px-3 py-2 text-left text-sm border border-gray-300 rounded hover:bg-white hover:border-github-green-500 focus:outline-none focus:ring-2 focus:ring-github-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="font-medium text-gray-900">URL Link</div>
-                <div className="text-xs text-gray-500">Link to external URL</div>
-              </button>
-            )}
-          </div>
-          <div className="mt-2 flex justify-end">
-            <button
-              onClick={handleCancel}
-              disabled={isSubmitting}
-              className="text-sm px-3 py-1.5 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded disabled:opacity-50"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Issue Link Flow: Step 1 - Type Selection */}
-      {category === 'issue' && !selectedType && (
-        <div>
-          <div className="text-xs font-medium text-gray-700 mb-2">Select relationship type:</div>
           <div className="grid grid-cols-2 gap-2">
             {linkTypes.map((type) => (
               <button
@@ -191,14 +150,7 @@ export default function AddLinkInline({
               </button>
             ))}
           </div>
-          <div className="mt-2 flex justify-between">
-            <button
-              onClick={handleBack}
-              disabled={isSubmitting}
-              className="text-sm px-3 py-1.5 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded disabled:opacity-50"
-            >
-              Back
-            </button>
+          <div className="mt-2 flex justify-end">
             <button
               onClick={handleCancel}
               disabled={isSubmitting}
@@ -210,8 +162,8 @@ export default function AddLinkInline({
         </div>
       )}
 
-      {/* Issue Link Flow: Step 2 - Issue Search and Selection */}
-      {category === 'issue' && selectedType && (
+      {/* Step 2a: Issue Search and Selection */}
+      {selectedType && !isUrlMode && (
         <div>
           <div className="text-xs font-medium text-gray-700 mb-2">
             Adding {selectedType} link:
@@ -244,8 +196,8 @@ export default function AddLinkInline({
         </div>
       )}
 
-      {/* URL Link Flow: URL Input Form */}
-      {category === 'url' && (
+      {/* Step 2b: URL Input Form */}
+      {isUrlMode && (
         <div>
           <div className="text-xs font-medium text-gray-700 mb-2">Add external URL:</div>
 

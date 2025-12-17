@@ -125,7 +125,3 @@ export interface UrlLinkDisplayItem {
   createdAt: string;
 }
 
-/**
- * Link category for the inline form
- */
-export type LinkCategory = 'issue' | 'url';
