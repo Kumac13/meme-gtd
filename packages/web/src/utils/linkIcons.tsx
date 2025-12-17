@@ -47,6 +47,13 @@ const IconDerivedFrom = () => (
   </svg>
 );
 
+const IconExternalLink = () => (
+  <svg className="w-4 h-4 inline-block" fill="currentColor" viewBox="0 0 16 16" aria-label="External link">
+    <path d="M3.75 2h3.5a.75.75 0 010 1.5h-2.44l5.72 5.72a.75.75 0 11-1.06 1.06L3.75 4.56v2.44a.75.75 0 01-1.5 0v-3.5A1.5 1.5 0 013.75 2z"/>
+    <path d="M6.75 5.5a.75.75 0 01.75-.75h5.75a2 2 0 012 2v5.5a2 2 0 01-2 2H7.75a2 2 0 01-2-2V9a.75.75 0 011.5 0v3.25a.5.5 0 00.5.5h5.5a.5.5 0 00.5-.5v-5.5a.5.5 0 00-.5-.5H7.5a.75.75 0 01-.75-.75z"/>
+  </svg>
+);
+
 /**
  * Get the appropriate icon component for a link type and direction
  *
@@ -100,4 +107,42 @@ export function getLinkLabel(linkType: LinkType, direction: Direction): string {
  */
 export function getDirectionArrow(direction: Direction): string {
   return direction === 'outgoing' ? '→' : '←';
+}
+
+/**
+ * Get the external link icon component
+ *
+ * @returns React element containing the external link SVG icon
+ */
+export function getUrlLinkIcon(): React.ReactElement {
+  return <IconExternalLink />;
+}
+
+/**
+ * Get display label for a URL link
+ *
+ * @param title - User-provided title (may be null)
+ * @param url - The URL string
+ * @returns Display label (title or hostname derived from URL)
+ */
+export function getUrlLinkLabel(title: string | null, url: string): string {
+  if (title) return title;
+  try {
+    const hostname = new URL(url).hostname;
+    return hostname.replace(/^www\./, '');
+  } catch {
+    return url.substring(0, 30);
+  }
+}
+
+/**
+ * Truncate URL for display
+ *
+ * @param url - The full URL
+ * @param maxLength - Maximum length (default 60)
+ * @returns Truncated URL string
+ */
+export function truncateUrl(url: string, maxLength = 60): string {
+  if (url.length <= maxLength) return url;
+  return url.substring(0, maxLength - 3) + '...';
 }

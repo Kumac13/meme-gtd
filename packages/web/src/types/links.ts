@@ -108,3 +108,40 @@ export interface IssuePickerItem {
   /** Last update timestamp for sorting */
   updatedAt: string;
 }
+
+/**
+ * URL Link display item - represents an external URL link in the UI
+ */
+export interface UrlLinkDisplayItem {
+  /** Unique URL link ID from database */
+  id: number;
+  /** Parent issue ID */
+  issueId: number;
+  /** External URL */
+  url: string;
+  /** Display title (null = derive from URL hostname) */
+  title: string | null;
+  /** Link creation timestamp */
+  createdAt: string;
+}
+
+/**
+ * URL Link creation form state
+ */
+export interface UrlLinkCreationState {
+  /** Whether the URL input form is visible */
+  isAdding: boolean;
+  /** User-entered URL */
+  url: string;
+  /** User-entered title (optional) */
+  title: string;
+  /** API validation error message */
+  error: string | null;
+  /** Whether the create API call is in progress */
+  isSubmitting: boolean;
+}
+
+/**
+ * Link category for the inline form
+ */
+export type LinkCategory = 'issue' | 'url';
