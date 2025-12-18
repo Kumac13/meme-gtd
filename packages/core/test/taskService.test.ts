@@ -35,9 +35,10 @@ test('TaskService create and list', async () => {
   assert.equal(task.title, 'Service Task');
   assert.equal(task.type, 'task');
 
-  const list = service.list({ label: 'test' });
-  assert.equal(list.length, 1);
-  assert.equal(list[0].id, task.id);
+  const result = service.list({ label: 'test' });
+  assert.equal(result.data.length, 1);
+  assert.equal(result.total, 1);
+  assert.equal(result.data[0].id, task.id);
 
   delete process.env.MGTD_CONFIG_PATH;
   fs.removeSync(dir);
@@ -93,8 +94,9 @@ test('TaskService remove', async () => {
   const task = service.create({ title: 'Delete Test', bodyMd: 'To be deleted' });
   service.remove(task.id);
 
-  const list = service.list();
-  assert.equal(list.length, 0);
+  const result = service.list();
+  assert.equal(result.data.length, 0);
+  assert.equal(result.total, 0);
 
   delete process.env.MGTD_CONFIG_PATH;
   fs.removeSync(dir);
@@ -246,6 +248,74 @@ test('TaskService bookmark methods', async () => {
   fs.removeSync(dir);
 });
 
+// ============================================================
+// Pagination: TaskService.list tests
+// ============================================================
+
+test('TaskService.list returns { data, total } format', async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'mgtd-core-task-'));
+  const { configPath } = await setupConfig(dir);
+  process.env.MGTD_CONFIG_PATH = configPath;
+  const { config } = await loadConfig({ configPath });
+  const service = new TaskService({ config });
+
+  // Setup: 5 tasks
+  for (let i = 0; i < 5; i++) {
+    service.create({ title: `Task ${i}`, bodyMd: `Body ${i}` });
+  }
+
+  const result = service.list({ limit: 2 });
+  assert.ok(result.data, 'result.data should exist');
+  assert.ok(Array.isArray(result.data), 'result.data should be an array');
+  assert.equal(result.data.length, 2);
+  assert.equal(result.total, 5);
+
+  delete process.env.MGTD_CONFIG_PATH;
+  fs.removeSync(dir);
+});
+
+test('TaskService.list applies offset correctly', async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'mgtd-core-task-'));
+  const { configPath } = await setupConfig(dir);
+  process.env.MGTD_CONFIG_PATH = configPath;
+  const { config } = await loadConfig({ configPath });
+  const service = new TaskService({ config });
+
+  // Setup: 5 tasks
+  for (let i = 0; i < 5; i++) {
+    service.create({ title: `Task ${i}`, bodyMd: `Body ${i}` });
+  }
+
+  const result = service.list({ limit: 2, offset: 2, order: 'asc' });
+  assert.equal(result.data.length, 2);
+  assert.equal(result.total, 5);
+  assert.equal(result.data[0].title, 'Task 2');
+  assert.equal(result.data[1].title, 'Task 3');
+
+  delete process.env.MGTD_CONFIG_PATH;
+  fs.removeSync(dir);
+});
+
+test('TaskService.list total ignores limit and offset', async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'mgtd-core-task-'));
+  const { configPath } = await setupConfig(dir);
+  process.env.MGTD_CONFIG_PATH = configPath;
+  const { config } = await loadConfig({ configPath });
+  const service = new TaskService({ config });
+
+  // Setup: 10 tasks
+  for (let i = 0; i < 10; i++) {
+    service.create({ title: `Task ${i}`, bodyMd: `Body ${i}` });
+  }
+
+  const result = service.list({ limit: 3, offset: 5 });
+  assert.equal(result.data.length, 3);
+  assert.equal(result.total, 10);
+
+  delete process.env.MGTD_CONFIG_PATH;
+  fs.removeSync(dir);
+});
+
 test('TaskService list returns projectIds and linkIds', async () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'mgtd-core-task-'));
   const { configPath } = await setupConfig(dir);
@@ -257,12 +327,13 @@ test('TaskService list returns projectIds and linkIds', async () => {
   const task = service.create({ title: 'Task with associations', bodyMd: 'Body' });
 
   // List tasks and verify projectIds and linkIds are present (empty arrays for now)
-  const list = service.list();
-  assert.equal(list.length, 1);
-  assert.ok(Array.isArray(list[0].projectIds), 'projectIds should be an array');
-  assert.ok(Array.isArray(list[0].linkIds), 'linkIds should be an array');
-  assert.deepEqual(list[0].projectIds, []);
-  assert.deepEqual(list[0].linkIds, []);
+  const result = service.list();
+  assert.equal(result.data.length, 1);
+  assert.equal(result.total, 1);
+  assert.ok(Array.isArray(result.data[0].projectIds), 'projectIds should be an array');
+  assert.ok(Array.isArray(result.data[0].linkIds), 'linkIds should be an array');
+  assert.deepEqual(result.data[0].projectIds, []);
+  assert.deepEqual(result.data[0].linkIds, []);
 
   delete process.env.MGTD_CONFIG_PATH;
   fs.removeSync(dir);
