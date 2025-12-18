@@ -109,16 +109,16 @@ export default function IssuePicker({
 
     try {
       // Parallel fetch of tasks, memos, and articles
-      const [tasks, memos, articles] = await Promise.all([
+      const [tasksResponse, memosResponse, articles] = await Promise.all([
         TasksService.listTasks(undefined, undefined, undefined, search || undefined),
         MemosService.listMemos(undefined, undefined, search || undefined),
         ArticlesService.listArticles(undefined, undefined, search || undefined),
       ]);
 
       // Convert to unified format
-      const taskItems = tasks.map(taskToPickerItem);
-      const memoItems = memos.map(memoToPickerItem);
-      const articleItems = articles.map(articleToPickerItem);
+      const taskItems = (tasksResponse?.data || []).map(taskToPickerItem);
+      const memoItems = (memosResponse?.data || []).map(memoToPickerItem);
+      const articleItems = (articles?.data || []).map(articleToPickerItem);
 
       // Merge and sort by updatedAt (descending)
       let merged = [...taskItems, ...memoItems, ...articleItems];

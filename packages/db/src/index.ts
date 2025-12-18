@@ -35,6 +35,7 @@ export {
   createMemo,
   getMemo,
   listMemos,
+  countMemos,
   updateMemo,
   deleteMemo,
   promoteMemo,
@@ -56,6 +57,7 @@ export {
   createTask,
   getTask,
   listTasks,
+  countTasks,
   updateTask,
   deleteTask,
   setTaskStatus,
@@ -139,6 +141,7 @@ export {
   createArticle,
   getArticle,
   listArticles,
+  countArticles,
   deleteArticle,
   type CreateArticleInput,
   type ListArticleFilters

@@ -130,6 +130,25 @@ export const listArticles = (db: Database.Database, filters: ListArticleFilters 
   });
 };
 
+export const countArticles = (db: Database.Database, filters: ListArticleFilters = {}): number => {
+  const conditions = ["type = 'article'", "is_deleted = 0"];
+  const params: Record<string, string | number> = {};
+
+  if (filters.search) {
+    conditions.push("(title LIKE @search OR body_md LIKE @search)");
+    params.search = `%${filters.search}%`;
+  }
+
+  const sql = `
+    SELECT COUNT(*) as count
+    FROM issues
+    WHERE ${conditions.join(" AND ")}
+  `;
+
+  const row = db.prepare(sql).get(params) as { count: number };
+  return row.count;
+};
+
 export const deleteArticle = (db: Database.Database, id: number): void => {
   const result = db
     .prepare("UPDATE issues SET is_deleted = 1, updated_at = @updatedAt WHERE id = @id AND type = 'article'")

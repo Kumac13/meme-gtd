@@ -127,7 +127,7 @@ export default function ListView() {
         setLoading(true);
 
         // Get all tasks and memos lists (with commentCount)
-        const [allTasks, allMemos] = await Promise.all([
+        const [allTasksResponse, allMemosResponse] = await Promise.all([
           TasksService.listTasks(),
           MemosService.listMemos()
         ]);
@@ -135,8 +135,8 @@ export default function ListView() {
         // Filter to only items in this project
         const projectIssueIds = new Set(project.items.map(item => item.issueId));
 
-        const projectTasks = (allTasks || []).filter(task => projectIssueIds.has(task.id));
-        const projectMemos = (allMemos || []).filter(memo => projectIssueIds.has(memo.id));
+        const projectTasks = (allTasksResponse?.data || []).filter(task => projectIssueIds.has(task.id));
+        const projectMemos = (allMemosResponse?.data || []).filter(memo => projectIssueIds.has(memo.id));
 
         setTasks(projectTasks);
         setMemos(projectMemos);

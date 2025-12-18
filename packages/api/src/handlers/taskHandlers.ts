@@ -55,6 +55,12 @@ export async function createTaskHandler(
 }
 
 /**
+ * Default pagination values
+ */
+const DEFAULT_LIMIT = 100;
+const DEFAULT_OFFSET = 0;
+
+/**
  * Return a filtered list of tasks.
  */
 export async function listTasksHandler(
@@ -66,14 +72,22 @@ export async function listTasksHandler(
       search?: string;
       scheduledFrom?: string;
       scheduledTo?: string;
+      limit?: number;
+      offset?: number;
     };
   }>,
   reply: FastifyReply
 ) {
   const taskService = new TaskService({ db: request.server.db });
-  const { status, bookmarked, label, search, scheduledFrom, scheduledTo } = request.query;
+  const { status, bookmarked, label, search, scheduledFrom, scheduledTo, limit, offset } = request.query;
 
-  const filters: any = {};
+  const actualLimit = limit ?? DEFAULT_LIMIT;
+  const actualOffset = offset ?? DEFAULT_OFFSET;
+
+  const filters: any = {
+    limit: actualLimit,
+    offset: actualOffset,
+  };
   if (status) {
     filters.status = status;
   }
@@ -94,8 +108,13 @@ export async function listTasksHandler(
   }
 
   try {
-    const tasks = taskService.list(filters);
-    return reply.status(200).send(tasks);
+    const result = taskService.list(filters);
+    return reply.status(200).send({
+      data: result.data,
+      total: result.total,
+      limit: actualLimit,
+      offset: actualOffset,
+    });
   } catch (error) {
     throw error;
   }

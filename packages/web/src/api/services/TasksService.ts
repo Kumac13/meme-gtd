@@ -158,13 +158,15 @@ export class TasksService {
     }
     /**
      * List tasks
-     * List all tasks with optional filters
+     * List all tasks with optional filters and pagination
      * @param status Filter by task status
      * @param bookmarked Filter by bookmark status
      * @param label Filter by label name(s). Supports comma-separated values for OR logic (e.g., bug,enhancement)
      * @param search Search tasks by title using free-text partial matching
      * @param scheduledFrom Filter tasks where scheduled_on >= this date (YYYY-MM-DD)
      * @param scheduledTo Filter tasks where scheduled_on <= this date (YYYY-MM-DD)
+     * @param limit Maximum number of tasks to return (default: 100, max: 1000)
+     * @param offset Number of tasks to skip (default: 0)
      * @returns any Default Response
      * @throws ApiError
      */
@@ -175,108 +177,127 @@ export class TasksService {
         search?: string,
         scheduledFrom?: string,
         scheduledTo?: string,
-    ): CancelablePromise<Array<{
+        limit?: number,
+        offset?: number,
+    ): CancelablePromise<{
         /**
-         * Unique task ID
+         * Array of tasks
          */
-        id: number;
+        data: Array<{
+            /**
+             * Unique task ID
+             */
+            id: number;
+            /**
+             * Issue type (always "task")
+             */
+            type: 'task';
+            /**
+             * Task title
+             */
+            title: string;
+            /**
+             * Task description in Markdown format
+             */
+            bodyMd: string;
+            /**
+             * Current task status
+             */
+            status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
+            /**
+             * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+             */
+            scheduledStart: string | null;
+            /**
+             * Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
+             */
+            scheduledEnd: string | null;
+            /**
+             * Whether this is an all-day event
+             */
+            isAllDay: boolean;
+            /**
+             * Actual start datetime (ISO 8601, null if not started)
+             */
+            actualStart: string | null;
+            /**
+             * Actual end datetime (ISO 8601, null if not completed)
+             */
+            actualEnd: string | null;
+            /**
+             * Scheduled date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
+             */
+            scheduledOn: string | null;
+            /**
+             * Start time (HH:MM, null if not set) [DEPRECATED]
+             */
+            startTime: string | null;
+            /**
+             * End date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
+             */
+            endDate: string | null;
+            /**
+             * End time (HH:MM, null if not set) [DEPRECATED]
+             */
+            endTime: string | null;
+            /**
+             * Duration in minutes (null if not set)
+             */
+            duration: number | null;
+            /**
+             * Metadata object
+             */
+            meta: Record<string, any>;
+            /**
+             * Whether the task is bookmarked
+             */
+            isBookmarked: boolean;
+            /**
+             * Whether the task is soft-deleted
+             */
+            isDeleted: boolean;
+            /**
+             * Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * Last update timestamp
+             */
+            updatedAt: string;
+            /**
+             * Array of label names assigned to this task
+             */
+            labels: Array<string>;
+            /**
+             * Number of non-deleted comments on this task
+             */
+            commentCount: number;
+            /**
+             * Context preview with highlighted search terms (only present when search parameter is active)
+             */
+            preview?: string;
+            /**
+             * Array of project IDs that contain this task
+             */
+            projectIds: Array<number>;
+            /**
+             * Array of link IDs associated with this task
+             */
+            linkIds: Array<number>;
+        }>;
         /**
-         * Issue type (always "task")
+         * Total count of tasks matching the filters (ignoring pagination)
          */
-        type: 'task';
+        total: number;
         /**
-         * Task title
+         * Maximum number of tasks returned per page
          */
-        title: string;
+        limit: number;
         /**
-         * Task description in Markdown format
+         * Number of tasks skipped
          */
-        bodyMd: string;
-        /**
-         * Current task status
-         */
-        status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
-        /**
-         * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
-         */
-        scheduledStart: string | null;
-        /**
-         * Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
-         */
-        scheduledEnd: string | null;
-        /**
-         * Whether this is an all-day event
-         */
-        isAllDay: boolean;
-        /**
-         * Actual start datetime (ISO 8601, null if not started)
-         */
-        actualStart: string | null;
-        /**
-         * Actual end datetime (ISO 8601, null if not completed)
-         */
-        actualEnd: string | null;
-        /**
-         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
-         */
-        scheduledOn: string | null;
-        /**
-         * Start time (HH:MM, null if not set) [DEPRECATED]
-         */
-        startTime: string | null;
-        /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
-         */
-        endDate: string | null;
-        /**
-         * End time (HH:MM, null if not set) [DEPRECATED]
-         */
-        endTime: string | null;
-        /**
-         * Duration in minutes (null if not set)
-         */
-        duration: number | null;
-        /**
-         * Metadata object
-         */
-        meta: Record<string, any>;
-        /**
-         * Whether the task is bookmarked
-         */
-        isBookmarked: boolean;
-        /**
-         * Whether the task is soft-deleted
-         */
-        isDeleted: boolean;
-        /**
-         * Creation timestamp
-         */
-        createdAt: string;
-        /**
-         * Last update timestamp
-         */
-        updatedAt: string;
-        /**
-         * Array of label names assigned to this task
-         */
-        labels: Array<string>;
-        /**
-         * Number of non-deleted comments on this task
-         */
-        commentCount: number;
-        /**
-         * Context preview with highlighted search terms (only present when search parameter is active)
-         */
-        preview?: string;
-        /**
-         * Array of project IDs that contain this task
-         */
-        projectIds: Array<number>;
-        /**
-         * Array of link IDs associated with this task
-         */
-        linkIds: Array<number>;
-    }>> {
+        offset: number;
+    }> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/tasks',
@@ -287,6 +308,8 @@ export class TasksService {
                 'search': search,
                 'scheduledFrom': scheduledFrom,
                 'scheduledTo': scheduledTo,
+                'limit': limit,
+                'offset': offset,
             },
             errors: {
                 400: `Default Response`,

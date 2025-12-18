@@ -13,6 +13,7 @@ import {
   listComments,
   listMemoLabels,
   listMemos,
+  countMemos,
   promoteMemo,
   setBookmark,
   setMemoLabels,
@@ -28,6 +29,7 @@ import {
   listTaskComments,
   listTaskLabels,
   listTasks,
+  countTasks,
   setTaskBookmark,
   setTaskLabels,
   setTaskStatus,
@@ -37,6 +39,7 @@ import {
   createArticle,
   getArticle,
   listArticles,
+  countArticles,
   deleteArticle,
   // Label functions
   listAllLabels,
@@ -94,10 +97,12 @@ export class MemoService {
 
   public list(filters: ListMemoFilters = {}) {
     const memos = listMemos(this.db, filters);
-    return memos.map(memo => ({
+    const total = countMemos(this.db, filters);
+    const data = memos.map(memo => ({
       ...memo,
       labels: listMemoLabels(this.db, memo.id)
     }));
+    return { data, total };
   }
 
   public show(id: number) {
@@ -234,7 +239,8 @@ export class TaskService {
 
   public list(filters: ListTaskFilters = {}) {
     const tasks = listTasks(this.db, filters);
-    return tasks.map(task => {
+    const total = countTasks(this.db, filters);
+    const data = tasks.map(task => {
       const projects = getProjectsForIssue(this.db, task.id);
       const links = listLinks(this.db, task.id);
       return {
@@ -244,6 +250,7 @@ export class TaskService {
         linkIds: links.map(l => l.id)
       };
     });
+    return { data, total };
   }
 
   public show(id: number) {
@@ -478,7 +485,9 @@ export class ArticleService {
   }
 
   public list(filters: ListArticleFilters = {}) {
-    return listArticles(this.db, filters);
+    const data = listArticles(this.db, filters);
+    const total = countArticles(this.db, filters);
+    return { data, total };
   }
 
   public remove(id: number) {

@@ -78,7 +78,7 @@ export default class TaskList extends Command {
       ? flags.label.split(',').map(l => l.trim()).filter(Boolean)
       : undefined;
 
-    const tasks = service.list({
+    const result = service.list({
       status: flags.status as any,
       labels,
       search: flags.search,
@@ -90,16 +90,16 @@ export default class TaskList extends Command {
     });
 
     if (flags.json) {
-      this.log(JSON.stringify({ tasks }, null, 2));
+      this.log(JSON.stringify({ data: result.data, total: result.total }, null, 2));
       return;
     }
 
-    if (tasks.length === 0) {
+    if (result.data.length === 0) {
       this.log('No tasks found.');
       return;
     }
 
-    for (const task of tasks) {
+    for (const task of result.data) {
       const indicator = task.isBookmarked ? '★' : ' ';
       const statusBadge = `[${task.status}]`;
       const labelsStr = task.labels && task.labels.length > 0 ? `[${task.labels.join(', ')}]` : '';

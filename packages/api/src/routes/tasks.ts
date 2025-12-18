@@ -24,12 +24,12 @@ import {
   CreateTaskRequestSchema,
   UpdateTaskRequestSchema,
   TaskSchema,
-  TaskListItemSchema,
   TaskDetailSchema,
   TaskIdParamsSchema,
   TaskQuerySchema,
   DemoteTaskRequestSchema,
   DemoteTaskResponseSchema,
+  PaginatedTaskListResponseSchema,
 } from '../schemas/taskSchemas.js';
 import {
   CreateCommentRequestSchema,
@@ -73,11 +73,11 @@ export async function taskRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Tasks'],
         summary: 'List tasks',
-        description: 'List all tasks with optional filters',
+        description: 'List all tasks with optional filters and pagination',
         operationId: 'listTasks',
         querystring: TaskQuerySchema,
         response: {
-          200: z.array(TaskListItemSchema),
+          200: PaginatedTaskListResponseSchema,
           400: ErrorResponseSchema,
         },
       },

@@ -71,11 +71,15 @@ describe('Task CRUD Operations', () => {
     });
 
     assert.strictEqual(response.statusCode, 200);
-    const tasks = JSON.parse(response.body);
-    assert.ok(Array.isArray(tasks));
-    assert.strictEqual(tasks.length, 2);
+    const result = JSON.parse(response.body);
+    assert.ok(result.data, 'result.data should exist');
+    assert.ok(Array.isArray(result.data));
+    assert.strictEqual(result.data.length, 2);
+    assert.strictEqual(result.total, 2);
+    assert.strictEqual(result.limit, 100);
+    assert.strictEqual(result.offset, 0);
     // T018: Assert labels field exists and is an array
-    tasks.forEach((task: any) => {
+    result.data.forEach((task: any) => {
       assert.ok(Array.isArray(task.labels), 'labels should be an array');
     });
   });
@@ -98,9 +102,10 @@ describe('Task CRUD Operations', () => {
     });
 
     assert.strictEqual(response.statusCode, 200);
-    const tasks = JSON.parse(response.body);
-    assert.strictEqual(tasks.length, 1);
-    assert.strictEqual(tasks[0].status, 'next');
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.data.length, 1);
+    assert.strictEqual(result.total, 1);
+    assert.strictEqual(result.data[0].status, 'next');
   });
 
   it('should filter bookmarked tasks (GET /api/tasks?bookmarked=true)', async () => {
@@ -122,9 +127,10 @@ describe('Task CRUD Operations', () => {
     });
 
     assert.strictEqual(response.statusCode, 200);
-    const tasks = JSON.parse(response.body);
-    assert.strictEqual(tasks.length, 1);
-    assert.strictEqual(tasks[0].isBookmarked, true);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.data.length, 1);
+    assert.strictEqual(result.total, 1);
+    assert.strictEqual(result.data[0].isBookmarked, true);
   });
 
   it('should get task by ID (GET /api/tasks/:id)', async () => {
@@ -316,8 +322,8 @@ describe('Task CRUD Operations', () => {
     });
 
     assert.strictEqual(response.statusCode, 200);
-    const tasks = JSON.parse(response.body);
-    const foundTask = tasks.find((t: any) => t.id === task.id);
+    const result = JSON.parse(response.body);
+    const foundTask = result.data.find((t: any) => t.id === task.id);
     assert.ok(foundTask);
     assert.ok(Array.isArray(foundTask.projectIds), 'projectIds should be an array');
     assert.ok(Array.isArray(foundTask.linkIds), 'linkIds should be an array');
@@ -341,8 +347,8 @@ describe('Task CRUD Operations', () => {
     });
 
     assert.strictEqual(response.statusCode, 200);
-    const tasks = JSON.parse(response.body);
-    const foundTask = tasks.find((t: any) => t.id === task.id);
+    const result = JSON.parse(response.body);
+    const foundTask = result.data.find((t: any) => t.id === task.id);
     assert.ok(foundTask);
     assert.ok(Array.isArray(foundTask.projectIds), 'projectIds should be an array');
     assert.ok(Array.isArray(foundTask.linkIds), 'linkIds should be an array');
@@ -722,8 +728,8 @@ describe('Task Comment Operations', () => {
       url: '/api/tasks',
     });
     assert.strictEqual(listResponse.statusCode, 200);
-    const tasks = JSON.parse(listResponse.body);
-    const foundTask = tasks.find((t: any) => t.id === task.id);
+    const result = JSON.parse(listResponse.body);
+    const foundTask = result.data.find((t: any) => t.id === task.id);
     assert.ok(foundTask);
     assert.strictEqual(foundTask.commentCount, 3);
 
@@ -740,8 +746,8 @@ describe('Task Comment Operations', () => {
       method: 'GET',
       url: '/api/tasks?status=open',
     });
-    const tasks2 = JSON.parse(listResponse2.body);
-    tasks2.forEach((t: any) => {
+    const result2 = JSON.parse(listResponse2.body);
+    result2.data.forEach((t: any) => {
       assert.ok(typeof t.commentCount === 'number');
       assert.ok(t.commentCount >= 0);
     });
@@ -1280,11 +1286,12 @@ describe('Task Datetime Fields Operations', () => {
     });
 
     assert.strictEqual(response.statusCode, 200);
-    const tasks = JSON.parse(response.body);
-    assert.strictEqual(tasks.length, 1);
-    assert.strictEqual(tasks[0].scheduledStart, '2025-12-07T14:00:00');
-    assert.strictEqual(tasks[0].scheduledEnd, '2025-12-07T15:00:00');
-    assert.strictEqual(tasks[0].isAllDay, false);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.data.length, 1);
+    assert.strictEqual(result.total, 1);
+    assert.strictEqual(result.data[0].scheduledStart, '2025-12-07T14:00:00');
+    assert.strictEqual(result.data[0].scheduledEnd, '2025-12-07T15:00:00');
+    assert.strictEqual(result.data[0].isAllDay, false);
   });
 
   it('should return task by ID with new datetime fields (GET /api/tasks/:id)', async () => {

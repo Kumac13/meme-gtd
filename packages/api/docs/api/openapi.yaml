@@ -126,7 +126,7 @@ paths:
       summary: List memos
       tags:
         - Memos
-      description: List all memos with optional filters
+      description: List all memos with optional filters and pagination
       parameters:
         - schema:
             type: string
@@ -149,87 +149,125 @@ paths:
           name: search
           required: false
           description: Search memos by body content using free-text partial matching
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+          in: query
+          name: limit
+          required: false
+          description: "Maximum number of memos to return (default: 100, max: 1000)"
+        - schema:
+            type: integer
+            minimum: 0
+          in: query
+          name: offset
+          required: false
+          description: "Number of memos to skip (default: 0)"
       responses:
         "200":
           description: Default Response
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      exclusiveMinimum: true
-                      minimum: 0
-                      description: Unique memo ID
-                    type:
-                      type: string
-                      enum:
-                        - memo
-                      description: Issue type (always "memo")
-                    title:
-                      type: string
-                      nullable: true
-                      description: Title (always null for memos)
-                    bodyMd:
-                      type: string
-                      description: Memo content in Markdown format
-                    status:
-                      type: string
-                      nullable: true
-                      description: Status (always null for memos)
-                    scheduledOn:
-                      type: string
-                      format: date
-                      nullable: true
-                      description: Scheduled date (always null for memos)
-                    meta:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
                       type: object
-                      additionalProperties: {}
-                      description: Metadata object
-                    isBookmarked:
-                      type: boolean
-                      description: Whether the memo is bookmarked
-                    isDeleted:
-                      type: boolean
-                      description: Whether the memo is soft-deleted
-                    createdAt:
-                      type: string
-                      format: date-time
-                      description: Creation timestamp
-                    updatedAt:
-                      type: string
-                      format: date-time
-                      description: Last update timestamp
-                    labels:
-                      type: array
-                      items:
-                        type: string
-                      description: Array of label names assigned to this memo
-                    commentCount:
-                      type: integer
-                      minimum: 0
-                      description: Number of non-deleted comments on this memo
-                    preview:
-                      type: string
-                      description: Context preview with highlighted search terms (only present when search parameter is active)
-                  required:
-                    - id
-                    - type
-                    - title
-                    - bodyMd
-                    - status
-                    - scheduledOn
-                    - meta
-                    - isBookmarked
-                    - isDeleted
-                    - createdAt
-                    - updatedAt
-                    - labels
-                    - commentCount
-                  additionalProperties: false
+                      properties:
+                        id:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                          description: Unique memo ID
+                        type:
+                          type: string
+                          enum:
+                            - memo
+                          description: Issue type (always "memo")
+                        title:
+                          type: string
+                          nullable: true
+                          description: Title (always null for memos)
+                        bodyMd:
+                          type: string
+                          description: Memo content in Markdown format
+                        status:
+                          type: string
+                          nullable: true
+                          description: Status (always null for memos)
+                        scheduledOn:
+                          type: string
+                          format: date
+                          nullable: true
+                          description: Scheduled date (always null for memos)
+                        meta:
+                          type: object
+                          additionalProperties: {}
+                          description: Metadata object
+                        isBookmarked:
+                          type: boolean
+                          description: Whether the memo is bookmarked
+                        isDeleted:
+                          type: boolean
+                          description: Whether the memo is soft-deleted
+                        createdAt:
+                          type: string
+                          format: date-time
+                          description: Creation timestamp
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          description: Last update timestamp
+                        labels:
+                          type: array
+                          items:
+                            type: string
+                          description: Array of label names assigned to this memo
+                        commentCount:
+                          type: integer
+                          minimum: 0
+                          description: Number of non-deleted comments on this memo
+                        preview:
+                          type: string
+                          description: Context preview with highlighted search terms (only present when search parameter is active)
+                      required:
+                        - id
+                        - type
+                        - title
+                        - bodyMd
+                        - status
+                        - scheduledOn
+                        - meta
+                        - isBookmarked
+                        - isDeleted
+                        - createdAt
+                        - updatedAt
+                        - labels
+                        - commentCount
+                      additionalProperties: false
+                    description: Array of memos
+                  total:
+                    type: integer
+                    minimum: 0
+                    description: Total count of memos matching the filters (ignoring pagination)
+                  limit:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Maximum number of memos returned per page
+                  offset:
+                    type: integer
+                    minimum: 0
+                    description: Number of memos skipped
+                required:
+                  - data
+                  - total
+                  - limit
+                  - offset
+                additionalProperties: false
         "400":
           description: Default Response
           content:
@@ -1408,7 +1446,7 @@ paths:
       summary: List tasks
       tags:
         - Tasks
-      description: List all tasks with optional filters
+      description: List all tasks with optional filters and pagination
       parameters:
         - schema:
             type: string
@@ -1460,155 +1498,193 @@ paths:
           name: scheduledTo
           required: false
           description: Filter tasks where scheduled_on <= this date (YYYY-MM-DD)
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+          in: query
+          name: limit
+          required: false
+          description: "Maximum number of tasks to return (default: 100, max: 1000)"
+        - schema:
+            type: integer
+            minimum: 0
+          in: query
+          name: offset
+          required: false
+          description: "Number of tasks to skip (default: 0)"
       responses:
         "200":
           description: Default Response
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      exclusiveMinimum: true
-                      minimum: 0
-                      description: Unique task ID
-                    type:
-                      type: string
-                      enum:
-                        - task
-                      description: Issue type (always "task")
-                    title:
-                      type: string
-                      description: Task title
-                    bodyMd:
-                      type: string
-                      description: Task description in Markdown format
-                    status:
-                      type: string
-                      enum:
-                        - inbox
-                        - open
-                        - next
-                        - waiting
-                        - scheduled
-                        - someday
-                        - done
-                        - canceled
-                      description: Current task status
-                    scheduledStart:
-                      type: string
-                      nullable: true
-                      description: "Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)"
-                    scheduledEnd:
-                      type: string
-                      nullable: true
-                      description: "Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)"
-                    isAllDay:
-                      type: boolean
-                      description: Whether this is an all-day event
-                    actualStart:
-                      type: string
-                      nullable: true
-                      description: Actual start datetime (ISO 8601, null if not started)
-                    actualEnd:
-                      type: string
-                      nullable: true
-                      description: Actual end datetime (ISO 8601, null if not completed)
-                    scheduledOn:
-                      type: string
-                      format: date
-                      nullable: true
-                      description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
-                    startTime:
-                      type: string
-                      nullable: true
-                      description: Start time (HH:MM, null if not set) [DEPRECATED]
-                    endDate:
-                      type: string
-                      format: date
-                      nullable: true
-                      description: End date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
-                    endTime:
-                      type: string
-                      nullable: true
-                      description: End time (HH:MM, null if not set) [DEPRECATED]
-                    duration:
-                      type: integer
-                      nullable: true
-                      description: Duration in minutes (null if not set)
-                    meta:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
                       type: object
-                      additionalProperties: {}
-                      description: Metadata object
-                    isBookmarked:
-                      type: boolean
-                      description: Whether the task is bookmarked
-                    isDeleted:
-                      type: boolean
-                      description: Whether the task is soft-deleted
-                    createdAt:
-                      type: string
-                      format: date-time
-                      description: Creation timestamp
-                    updatedAt:
-                      type: string
-                      format: date-time
-                      description: Last update timestamp
-                    labels:
-                      type: array
-                      items:
-                        type: string
-                      description: Array of label names assigned to this task
-                    commentCount:
-                      type: integer
-                      minimum: 0
-                      description: Number of non-deleted comments on this task
-                    preview:
-                      type: string
-                      description: Context preview with highlighted search terms (only present when search parameter is active)
-                    projectIds:
-                      type: array
-                      items:
-                        type: integer
-                        exclusiveMinimum: true
-                        minimum: 0
-                      description: Array of project IDs that contain this task
-                    linkIds:
-                      type: array
-                      items:
-                        type: integer
-                        exclusiveMinimum: true
-                        minimum: 0
-                      description: Array of link IDs associated with this task
-                  required:
-                    - id
-                    - type
-                    - title
-                    - bodyMd
-                    - status
-                    - scheduledStart
-                    - scheduledEnd
-                    - isAllDay
-                    - actualStart
-                    - actualEnd
-                    - scheduledOn
-                    - startTime
-                    - endDate
-                    - endTime
-                    - duration
-                    - meta
-                    - isBookmarked
-                    - isDeleted
-                    - createdAt
-                    - updatedAt
-                    - labels
-                    - commentCount
-                    - projectIds
-                    - linkIds
-                  additionalProperties: false
+                      properties:
+                        id:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                          description: Unique task ID
+                        type:
+                          type: string
+                          enum:
+                            - task
+                          description: Issue type (always "task")
+                        title:
+                          type: string
+                          description: Task title
+                        bodyMd:
+                          type: string
+                          description: Task description in Markdown format
+                        status:
+                          type: string
+                          enum:
+                            - inbox
+                            - open
+                            - next
+                            - waiting
+                            - scheduled
+                            - someday
+                            - done
+                            - canceled
+                          description: Current task status
+                        scheduledStart:
+                          type: string
+                          nullable: true
+                          description: "Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)"
+                        scheduledEnd:
+                          type: string
+                          nullable: true
+                          description: "Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)"
+                        isAllDay:
+                          type: boolean
+                          description: Whether this is an all-day event
+                        actualStart:
+                          type: string
+                          nullable: true
+                          description: Actual start datetime (ISO 8601, null if not started)
+                        actualEnd:
+                          type: string
+                          nullable: true
+                          description: Actual end datetime (ISO 8601, null if not completed)
+                        scheduledOn:
+                          type: string
+                          format: date
+                          nullable: true
+                          description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
+                        startTime:
+                          type: string
+                          nullable: true
+                          description: Start time (HH:MM, null if not set) [DEPRECATED]
+                        endDate:
+                          type: string
+                          format: date
+                          nullable: true
+                          description: End date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
+                        endTime:
+                          type: string
+                          nullable: true
+                          description: End time (HH:MM, null if not set) [DEPRECATED]
+                        duration:
+                          type: integer
+                          nullable: true
+                          description: Duration in minutes (null if not set)
+                        meta:
+                          type: object
+                          additionalProperties: {}
+                          description: Metadata object
+                        isBookmarked:
+                          type: boolean
+                          description: Whether the task is bookmarked
+                        isDeleted:
+                          type: boolean
+                          description: Whether the task is soft-deleted
+                        createdAt:
+                          type: string
+                          format: date-time
+                          description: Creation timestamp
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          description: Last update timestamp
+                        labels:
+                          type: array
+                          items:
+                            type: string
+                          description: Array of label names assigned to this task
+                        commentCount:
+                          type: integer
+                          minimum: 0
+                          description: Number of non-deleted comments on this task
+                        preview:
+                          type: string
+                          description: Context preview with highlighted search terms (only present when search parameter is active)
+                        projectIds:
+                          type: array
+                          items:
+                            type: integer
+                            exclusiveMinimum: true
+                            minimum: 0
+                          description: Array of project IDs that contain this task
+                        linkIds:
+                          type: array
+                          items:
+                            type: integer
+                            exclusiveMinimum: true
+                            minimum: 0
+                          description: Array of link IDs associated with this task
+                      required:
+                        - id
+                        - type
+                        - title
+                        - bodyMd
+                        - status
+                        - scheduledStart
+                        - scheduledEnd
+                        - isAllDay
+                        - actualStart
+                        - actualEnd
+                        - scheduledOn
+                        - startTime
+                        - endDate
+                        - endTime
+                        - duration
+                        - meta
+                        - isBookmarked
+                        - isDeleted
+                        - createdAt
+                        - updatedAt
+                        - labels
+                        - commentCount
+                        - projectIds
+                        - linkIds
+                      additionalProperties: false
+                    description: Array of tasks
+                  total:
+                    type: integer
+                    minimum: 0
+                    description: Total count of tasks matching the filters (ignoring pagination)
+                  limit:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Maximum number of tasks returned per page
+                  offset:
+                    type: integer
+                    minimum: 0
+                    description: Number of tasks skipped
+                required:
+                  - data
+                  - total
+                  - limit
+                  - offset
+                additionalProperties: false
         "400":
           description: Default Response
           content:
@@ -7037,78 +7113,101 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      exclusiveMinimum: true
-                      minimum: 0
-                      description: Unique article ID
-                    type:
-                      type: string
-                      enum:
-                        - article
-                      description: Issue type (always "article")
-                    title:
-                      type: string
-                      description: Article title
-                    bodyMd:
-                      type: string
-                      description: Article content in Markdown format
-                    meta:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
                       type: object
                       properties:
-                        originalUrl:
+                        id:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                          description: Unique article ID
+                        type:
                           type: string
-                          description: Original URL of the article
-                        siteName:
+                          enum:
+                            - article
+                          description: Issue type (always "article")
+                        title:
                           type: string
-                          nullable: true
-                          description: Name of the source site
-                        archivedAt:
+                          description: Article title
+                        bodyMd:
                           type: string
-                          description: Timestamp when the article was archived
+                          description: Article content in Markdown format
+                        meta:
+                          type: object
+                          properties:
+                            originalUrl:
+                              type: string
+                              description: Original URL of the article
+                            siteName:
+                              type: string
+                              nullable: true
+                              description: Name of the source site
+                            archivedAt:
+                              type: string
+                              description: Timestamp when the article was archived
+                          required:
+                            - originalUrl
+                            - archivedAt
+                          additionalProperties: false
+                          description: Article metadata
+                        createdAt:
+                          type: string
+                          format: date-time
+                          description: Creation timestamp
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          description: Last update timestamp
+                        isBookmarked:
+                          type: boolean
+                          description: Whether the article is bookmarked
+                        isDeleted:
+                          type: boolean
+                          description: Whether the article is soft-deleted
+                        labels:
+                          type: array
+                          items:
+                            type: string
+                          description: Array of label names assigned to this article
+                        commentCount:
+                          type: integer
+                          minimum: 0
+                          description: Number of comments on this article
                       required:
-                        - originalUrl
-                        - archivedAt
+                        - id
+                        - type
+                        - title
+                        - bodyMd
+                        - meta
+                        - createdAt
+                        - updatedAt
+                        - isBookmarked
+                        - isDeleted
                       additionalProperties: false
-                      description: Article metadata
-                    createdAt:
-                      type: string
-                      format: date-time
-                      description: Creation timestamp
-                    updatedAt:
-                      type: string
-                      format: date-time
-                      description: Last update timestamp
-                    isBookmarked:
-                      type: boolean
-                      description: Whether the article is bookmarked
-                    isDeleted:
-                      type: boolean
-                      description: Whether the article is soft-deleted
-                    labels:
-                      type: array
-                      items:
-                        type: string
-                      description: Array of label names assigned to this article
-                    commentCount:
-                      type: integer
-                      minimum: 0
-                      description: Number of comments on this article
-                  required:
-                    - id
-                    - type
-                    - title
-                    - bodyMd
-                    - meta
-                    - createdAt
-                    - updatedAt
-                    - isBookmarked
-                    - isDeleted
-                  additionalProperties: false
+                    description: Array of articles
+                  total:
+                    type: integer
+                    minimum: 0
+                    description: Total count of articles matching the filters (ignoring pagination)
+                  limit:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Maximum number of articles returned per page
+                  offset:
+                    type: integer
+                    minimum: 0
+                    description: Number of articles skipped
+                required:
+                  - data
+                  - total
+                  - limit
+                  - offset
+                additionalProperties: false
         "400":
           description: Default Response
           content:

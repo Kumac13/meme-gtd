@@ -60,3 +60,15 @@ export const ArticleSchema = z.object({
 });
 
 export type Article = z.infer<typeof ArticleSchema>;
+
+/**
+ * Schema for paginated article list response
+ */
+export const PaginatedArticleListResponseSchema = z.object({
+  data: z.array(ArticleSchema).describe('Array of articles'),
+  total: z.number().int().nonnegative().describe('Total count of articles matching the filters (ignoring pagination)'),
+  limit: z.number().int().positive().describe('Maximum number of articles returned per page'),
+  offset: z.number().int().nonnegative().describe('Number of articles skipped'),
+});
+
+export type PaginatedArticleListResponse = z.infer<typeof PaginatedArticleListResponseSchema>;

@@ -1,5 +1,4 @@
 import { FastifyPluginAsync } from "fastify";
-import { z } from "zod";
 import {
   createArticleHandler,
   listArticlesHandler,
@@ -11,6 +10,7 @@ import {
   ListArticlesQuerySchema,
   ArticleIdParamsSchema,
   ArticleSchema,
+  PaginatedArticleListResponseSchema,
 } from "../schemas/articleSchemas.js";
 import { ErrorResponseSchema } from "../schemas/errorSchemas.js";
 
@@ -45,7 +45,7 @@ const articlesRoutes: FastifyPluginAsync = async (fastify) => {
         operationId: "listArticles",
         querystring: ListArticlesQuerySchema,
         response: {
-          200: z.array(ArticleSchema),
+          200: PaginatedArticleListResponseSchema,
           400: ErrorResponseSchema,
         },
       },

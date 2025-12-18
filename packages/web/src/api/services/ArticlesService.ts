@@ -118,65 +118,82 @@ export class ArticlesService {
         limit?: number,
         offset?: number,
         search?: string,
-    ): CancelablePromise<Array<{
+    ): CancelablePromise<{
         /**
-         * Unique article ID
+         * Array of articles
          */
-        id: number;
-        /**
-         * Issue type (always "article")
-         */
-        type: 'article';
-        /**
-         * Article title
-         */
-        title: string;
-        /**
-         * Article content in Markdown format
-         */
-        bodyMd: string;
-        /**
-         * Article metadata
-         */
-        meta: {
+        data: Array<{
             /**
-             * Original URL of the article
+             * Unique article ID
              */
-            originalUrl: string;
+            id: number;
             /**
-             * Name of the source site
+             * Issue type (always "article")
              */
-            siteName?: string | null;
+            type: 'article';
             /**
-             * Timestamp when the article was archived
+             * Article title
              */
-            archivedAt: string;
-        };
+            title: string;
+            /**
+             * Article content in Markdown format
+             */
+            bodyMd: string;
+            /**
+             * Article metadata
+             */
+            meta: {
+                /**
+                 * Original URL of the article
+                 */
+                originalUrl: string;
+                /**
+                 * Name of the source site
+                 */
+                siteName?: string | null;
+                /**
+                 * Timestamp when the article was archived
+                 */
+                archivedAt: string;
+            };
+            /**
+             * Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * Last update timestamp
+             */
+            updatedAt: string;
+            /**
+             * Whether the article is bookmarked
+             */
+            isBookmarked: boolean;
+            /**
+             * Whether the article is soft-deleted
+             */
+            isDeleted: boolean;
+            /**
+             * Array of label names assigned to this article
+             */
+            labels?: Array<string>;
+            /**
+             * Number of comments on this article
+             */
+            commentCount?: number;
+        }>;
         /**
-         * Creation timestamp
+         * Total count of articles matching the filters (ignoring pagination)
          */
-        createdAt: string;
+        total: number;
         /**
-         * Last update timestamp
+         * Maximum number of articles returned per page
          */
-        updatedAt: string;
+        limit: number;
         /**
-         * Whether the article is bookmarked
+         * Number of articles skipped
          */
-        isBookmarked: boolean;
-        /**
-         * Whether the article is soft-deleted
-         */
-        isDeleted: boolean;
-        /**
-         * Array of label names assigned to this article
-         */
-        labels?: Array<string>;
-        /**
-         * Number of comments on this article
-         */
-        commentCount?: number;
-    }>> {
+        offset: number;
+    }> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/articles/',

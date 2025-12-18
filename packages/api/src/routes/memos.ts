@@ -22,10 +22,10 @@ import {
   UpdateMemoRequestSchema,
   PromoteMemoRequestSchema,
   MemoSchema,
-  MemoListItemSchema,
   MemoDetailSchema,
   MemoIdParamsSchema,
   MemoQuerySchema,
+  PaginatedMemoListResponseSchema,
 } from '../schemas/memoSchemas.js';
 import {
   CreateCommentRequestSchema,
@@ -69,11 +69,11 @@ export async function memoRoutes(app: FastifyInstance) {
       schema: {
         tags: ['Memos'],
         summary: 'List memos',
-        description: 'List all memos with optional filters',
+        description: 'List all memos with optional filters and pagination',
         operationId: 'listMemos',
         querystring: MemoQuerySchema,
         response: {
-          200: z.array(MemoListItemSchema),
+          200: PaginatedMemoListResponseSchema,
           400: ErrorResponseSchema,
         },
       },

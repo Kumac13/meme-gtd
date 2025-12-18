@@ -71,11 +71,15 @@ describe('Memo CRUD Operations', () => {
     });
 
     assert.strictEqual(response.statusCode, 200);
-    const memos = JSON.parse(response.body);
-    assert.ok(Array.isArray(memos));
-    assert.strictEqual(memos.length, 2);
+    const result = JSON.parse(response.body);
+    assert.ok(result.data, 'result.data should exist');
+    assert.ok(Array.isArray(result.data));
+    assert.strictEqual(result.data.length, 2);
+    assert.strictEqual(result.total, 2);
+    assert.strictEqual(result.limit, 100);
+    assert.strictEqual(result.offset, 0);
     // T014: Assert labels field exists and is an array
-    memos.forEach((memo: any) => {
+    result.data.forEach((memo: any) => {
       assert.ok(Array.isArray(memo.labels), 'labels should be an array');
     });
   });
@@ -107,9 +111,10 @@ describe('Memo CRUD Operations', () => {
     });
 
     assert.strictEqual(response.statusCode, 200);
-    const memos = JSON.parse(response.body);
-    assert.strictEqual(memos.length, 1);
-    assert.strictEqual(memos[0].isBookmarked, true);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.data.length, 1);
+    assert.strictEqual(result.total, 1);
+    assert.strictEqual(result.data[0].isBookmarked, true);
   });
 
   it('should get memo by ID (GET /api/memos/:id)', async () => {
@@ -425,8 +430,8 @@ describe('Memo Bookmark Operations', () => {
       url: '/api/memos',
     });
     assert.strictEqual(listResponse.statusCode, 200);
-    const memos = JSON.parse(listResponse.body);
-    const foundMemo = memos.find((m: any) => m.id === memo.id);
+    const result = JSON.parse(listResponse.body);
+    const foundMemo = result.data.find((m: any) => m.id === memo.id);
     assert.ok(foundMemo);
     assert.strictEqual(foundMemo.commentCount, 2);
 
@@ -443,8 +448,8 @@ describe('Memo Bookmark Operations', () => {
       method: 'GET',
       url: '/api/memos',
     });
-    const memos2 = JSON.parse(listResponse2.body);
-    const memo2 = memos2.find((m: any) => m.bodyMd === 'Memo without comments');
+    const result2 = JSON.parse(listResponse2.body);
+    const memo2 = result2.data.find((m: any) => m.bodyMd === 'Memo without comments');
     assert.ok(memo2);
     assert.strictEqual(memo2.commentCount, 0);
   });

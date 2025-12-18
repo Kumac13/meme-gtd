@@ -50,6 +50,7 @@ export interface ListTaskFilters {
   searchTitle?: string;  // Search title only
   searchBody?: string;  // Search body only
   limit?: number;
+  offset?: number;  // Pagination offset
   order?: 'asc' | 'desc';
   isBookmarked?: boolean;
   scheduledFrom?: string;  // Filter tasks where scheduled_on >= this date (YYYY-MM-DD)
@@ -162,6 +163,83 @@ export const getTask = (db: Database.Database, id: number): Task => {
   return taskRowToTask(row);
 };
 
+// Build WHERE conditions for tasks (shared by listTasks and countTasks)
+const buildTaskConditions = (filters: ListTaskFilters): { conditions: string[]; params: Record<string, any> } => {
+  const conditions = ["type = 'task'", 'is_deleted = 0'];
+  const params: Record<string, any> = {};
+
+  if (filters.status) {
+    conditions.push('status = @status');
+    params.status = filters.status;
+  }
+
+  if (filters.label) {
+    conditions.push(
+      `id IN(SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name = @label)`
+    );
+    params.label = filters.label;
+  }
+
+  if (filters.labels && filters.labels.length > 0) {
+    const labelPlaceholders = filters.labels.map((_, i) => `@label${i}`).join(', ');
+    conditions.push(
+      `id IN(SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name IN(${labelPlaceholders}))`
+    );
+    filters.labels.forEach((labelName, i) => {
+      params[`label${i}`] = labelName;
+    });
+  }
+
+  if (filters.isBookmarked !== undefined) {
+    conditions.push('is_bookmarked = @isBookmarked');
+    params.isBookmarked = filters.isBookmarked ? 1 : 0;
+  }
+
+  // Date range filters for calendar view
+  if (filters.scheduledFrom && filters.scheduledTo) {
+    conditions.push(`(
+      (scheduled_start IS NOT NULL AND DATE(scheduled_start) >= @scheduledFrom AND DATE(scheduled_start) <= @scheduledTo)
+      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start) >= @scheduledFrom AND DATE(actual_start) <= @scheduledTo)
+    )`);
+    params.scheduledFrom = filters.scheduledFrom;
+    params.scheduledTo = filters.scheduledTo;
+  } else if (filters.scheduledFrom) {
+    conditions.push(`(
+      (scheduled_start IS NOT NULL AND DATE(scheduled_start) >= @scheduledFrom)
+      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start) >= @scheduledFrom)
+    )`);
+    params.scheduledFrom = filters.scheduledFrom;
+  } else if (filters.scheduledTo) {
+    conditions.push(`(
+      (scheduled_start IS NOT NULL AND DATE(scheduled_start) <= @scheduledTo)
+      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start) <= @scheduledTo)
+    )`);
+    params.scheduledTo = filters.scheduledTo;
+  }
+
+  // Search filter (LIKE for title)
+  if (filters.search) {
+    conditions.push('title LIKE @search');
+    params.search = `%${filters.search}%`;
+  }
+
+  return { conditions, params };
+};
+
+// Count tasks with filters (ignores limit/offset)
+export const countTasks = (db: Database.Database, filters: ListTaskFilters = {}): number => {
+  const { conditions, params } = buildTaskConditions(filters);
+
+  const sql = `
+    SELECT COUNT(*) as count
+    FROM issues
+    WHERE ${conditions.join(' AND ')}
+  `;
+
+  const row = db.prepare(sql).get(params) as { count: number };
+  return row.count;
+};
+
 // T014: Implement listTasks() with filters
 export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}): Task[] => {
   const conditions = ["type = 'task'", 'is_deleted = 0'];
@@ -234,6 +312,10 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
   if (filters.limit) {
     sql += ' LIMIT @limit';
     params.limit = filters.limit;
+  }
+  if (filters.offset !== undefined) {
+    sql += ' OFFSET @offset';
+    params.offset = filters.offset;
   }
 
   // Handle search filters (search, searchTitle, searchBody)
@@ -331,6 +413,9 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
     }
     if (filters.limit) {
       sql += ' LIMIT @limit';
+    }
+    if (filters.offset !== undefined) {
+      sql += ' OFFSET @offset';
     }
   }
 

@@ -21,9 +21,61 @@ export interface ListMemoFilters {
   search?: string;  // Search body (same as searchBody for memos)
   searchBody?: string;  // Search body only (explicit)
   limit?: number;
+  offset?: number;  // Pagination offset
   order?: 'asc' | 'desc';
   isBookmarked?: boolean;
 }
+
+// Build WHERE conditions for memos (shared by listMemos and countMemos)
+const buildMemoConditions = (filters: ListMemoFilters): { conditions: string[]; params: Record<string, any> } => {
+  const conditions = ["type = 'memo'", 'is_deleted = 0'];
+  const params: Record<string, any> = {};
+
+  if (filters.label) {
+    conditions.push(
+      `id IN (SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name = @label)`
+    );
+    params.label = filters.label;
+  }
+
+  if (filters.labels && filters.labels.length > 0) {
+    const labelPlaceholders = filters.labels.map((_, i) => `@label${i}`).join(', ');
+    conditions.push(
+      `id IN (SELECT issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name IN (${labelPlaceholders}))`
+    );
+    filters.labels.forEach((labelName, i) => {
+      params[`label${i}`] = labelName;
+    });
+  }
+
+  if (filters.isBookmarked !== undefined) {
+    conditions.push('is_bookmarked = @isBookmarked');
+    params.isBookmarked = filters.isBookmarked ? 1 : 0;
+  }
+
+  // Search filter (search body)
+  const searchTerm = filters.search || filters.searchBody;
+  if (searchTerm) {
+    conditions.push('body_md LIKE @search');
+    params.search = `%${searchTerm}%`;
+  }
+
+  return { conditions, params };
+};
+
+// Count memos with filters (ignores limit/offset)
+export const countMemos = (db: Database.Database, filters: ListMemoFilters = {}): number => {
+  const { conditions, params } = buildMemoConditions(filters);
+
+  const sql = `
+    SELECT COUNT(*) as count
+    FROM issues
+    WHERE ${conditions.join(' AND ')}
+  `;
+
+  const row = db.prepare(sql).get(params) as { count: number };
+  return row.count;
+};
 
 const memoRowToMemo = (row: any): Memo => ({
   id: row.id,
@@ -137,6 +189,10 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
     sql += ' LIMIT @limit';
     params.limit = filters.limit;
   }
+  if (filters.offset !== undefined) {
+    sql += ' OFFSET @offset';
+    params.offset = filters.offset;
+  }
 
   // Handle search filters (search or searchBody - both search body for memos)
   const searchTerm = filters.search || filters.searchBody;
@@ -171,6 +227,9 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
       ORDER BY i.updated_at ${filters.order === 'asc' ? 'ASC' : 'DESC'}`;
     if (filters.limit) {
       sql += ' LIMIT @limit';
+    }
+    if (filters.offset !== undefined) {
+      sql += ' OFFSET @offset';
     }
   }
 

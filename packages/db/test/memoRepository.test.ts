@@ -8,11 +8,14 @@ import { applyMigrations, openDatabase } from '../src/index';
 import {
   createMemo,
   listMemos,
+  countMemos,
   promoteMemo,
   addComment,
   deleteComment,
   listComments,
-  listMemoLabels
+  listMemoLabels,
+  deleteMemo,
+  setBookmark
 } from '../src/memoRepository';
 
 const createTempDb = () => {
@@ -91,6 +94,170 @@ test('listMemos returns commentCount field', () => {
   const bookmarkedMemos = listMemos(db, { isBookmarked: true });
   assert.equal(bookmarkedMemos.length, 1);
   assert.equal(bookmarkedMemos[0].commentCount, 1);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+// ============================================================
+// Pagination: countMemos tests
+// ============================================================
+
+test('countMemos() returns total count without filters', () => {
+  const { dir, db } = createTempDb();
+
+  // Create 3 memos
+  createMemo(db, { bodyMd: 'Memo 1' });
+  createMemo(db, { bodyMd: 'Memo 2' });
+  createMemo(db, { bodyMd: 'Memo 3' });
+
+  const count = countMemos(db, {});
+  assert.equal(count, 3);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('countMemos() returns filtered count with label filter', () => {
+  const { dir, db } = createTempDb();
+
+  createMemo(db, { bodyMd: 'Idea 1', labels: ['idea'] });
+  createMemo(db, { bodyMd: 'Idea 2', labels: ['idea'] });
+  createMemo(db, { bodyMd: 'Note 1', labels: ['note'] });
+
+  const ideaCount = countMemos(db, { label: 'idea' });
+  assert.equal(ideaCount, 2);
+
+  const noteCount = countMemos(db, { label: 'note' });
+  assert.equal(noteCount, 1);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('countMemos() returns filtered count with search filter', () => {
+  const { dir, db } = createTempDb();
+
+  createMemo(db, { bodyMd: 'Meeting notes from Monday' });
+  createMemo(db, { bodyMd: 'Meeting notes from Tuesday' });
+  createMemo(db, { bodyMd: 'Random thoughts' });
+
+  const meetingCount = countMemos(db, { search: 'Meeting' });
+  assert.equal(meetingCount, 2);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('countMemos() returns filtered count with isBookmarked filter', () => {
+  const { dir, db } = createTempDb();
+
+  const memo1 = createMemo(db, { bodyMd: 'Memo 1' });
+  createMemo(db, { bodyMd: 'Memo 2' });
+  setBookmark(db, memo1.id, true);
+
+  const bookmarkedCount = countMemos(db, { isBookmarked: true });
+  assert.equal(bookmarkedCount, 1);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('countMemos() excludes deleted memos', () => {
+  const { dir, db } = createTempDb();
+
+  createMemo(db, { bodyMd: 'Memo 1' });
+  const memo2 = createMemo(db, { bodyMd: 'Memo 2' });
+  createMemo(db, { bodyMd: 'Memo 3' });
+
+  deleteMemo(db, memo2.id);
+
+  const count = countMemos(db, {});
+  assert.equal(count, 2);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('countMemos() ignores limit parameter', () => {
+  const { dir, db } = createTempDb();
+
+  for (let i = 0; i < 5; i++) {
+    createMemo(db, { bodyMd: `Memo ${i}` });
+  }
+
+  const count = countMemos(db, { limit: 2 });
+  assert.equal(count, 5);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+// ============================================================
+// Pagination: listMemos offset tests
+// ============================================================
+
+test('listMemos() returns correct slice with offset', () => {
+  const { dir, db } = createTempDb();
+
+  for (let i = 0; i < 10; i++) {
+    createMemo(db, { bodyMd: `Memo ${i}` });
+  }
+
+  const memos = listMemos(db, { limit: 3, offset: 3, order: 'asc' });
+  assert.equal(memos.length, 3);
+  assert.equal(memos[0].bodyMd, 'Memo 3');
+  assert.equal(memos[1].bodyMd, 'Memo 4');
+  assert.equal(memos[2].bodyMd, 'Memo 5');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('listMemos() with offset beyond results returns empty array', () => {
+  const { dir, db } = createTempDb();
+
+  createMemo(db, { bodyMd: 'Memo 1' });
+  createMemo(db, { bodyMd: 'Memo 2' });
+
+  const memos = listMemos(db, { limit: 10, offset: 100 });
+  assert.equal(memos.length, 0);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('listMemos() offset works with label filter', () => {
+  const { dir, db } = createTempDb();
+
+  for (let i = 0; i < 5; i++) {
+    createMemo(db, { bodyMd: `Idea ${i}`, labels: ['idea'] });
+  }
+  for (let i = 0; i < 2; i++) {
+    createMemo(db, { bodyMd: `Note ${i}`, labels: ['note'] });
+  }
+
+  const memos = listMemos(db, { label: 'idea', limit: 2, offset: 2, order: 'asc' });
+  assert.equal(memos.length, 2);
+  assert.equal(memos[0].bodyMd, 'Idea 2');
+  assert.equal(memos[1].bodyMd, 'Idea 3');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('listMemos() offset works with search filter', () => {
+  const { dir, db } = createTempDb();
+
+  for (let i = 0; i < 5; i++) {
+    createMemo(db, { bodyMd: `Meeting notes ${i}` });
+  }
+  createMemo(db, { bodyMd: 'Other content' });
+
+  const memos = listMemos(db, { search: 'Meeting', limit: 2, offset: 2, order: 'asc' });
+  assert.equal(memos.length, 2);
+  assert.equal(memos[0].bodyMd, 'Meeting notes 2');
+  assert.equal(memos[1].bodyMd, 'Meeting notes 3');
 
   db.close();
   fs.removeSync(dir);

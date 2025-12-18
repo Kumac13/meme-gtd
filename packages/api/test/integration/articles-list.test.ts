@@ -31,17 +31,21 @@ describe("Article List API", () => {
     await cleanup();
   });
 
-  it("GET /api/articles should return list of articles", async () => {
+  it("GET /api/articles should return paginated list of articles", async () => {
     const res = await app.inject({
       method: "GET",
       url: "/api/articles"
     });
 
     assert.strictEqual(res.statusCode, 200);
-    const body = JSON.parse(res.payload);
-    assert.strictEqual(Array.isArray(body), true);
-    assert.strictEqual(body.length, 2);
-    assert.strictEqual(body[0].title, "Article 2"); // Descending order
+    const result = JSON.parse(res.payload);
+    assert.ok(result.data);
+    assert.strictEqual(Array.isArray(result.data), true);
+    assert.strictEqual(result.data.length, 2);
+    assert.strictEqual(result.total, 2);
+    assert.strictEqual(result.limit, 100);
+    assert.strictEqual(result.offset, 0);
+    assert.strictEqual(result.data[0].title, "Article 2"); // Descending order
   });
 
   it("GET /api/articles?search= should filter by title", async () => {
@@ -51,10 +55,12 @@ describe("Article List API", () => {
     });
 
     assert.strictEqual(res.statusCode, 200);
-    const body = JSON.parse(res.payload);
-    assert.strictEqual(Array.isArray(body), true);
-    assert.strictEqual(body.length, 1);
-    assert.strictEqual(body[0].title, "Article 1");
+    const result = JSON.parse(res.payload);
+    assert.ok(result.data);
+    assert.strictEqual(Array.isArray(result.data), true);
+    assert.strictEqual(result.data.length, 1);
+    assert.strictEqual(result.total, 1);
+    assert.strictEqual(result.data[0].title, "Article 1");
   });
 
   it("GET /api/articles?search= should filter by body", async () => {
@@ -64,10 +70,12 @@ describe("Article List API", () => {
     });
 
     assert.strictEqual(res.statusCode, 200);
-    const body = JSON.parse(res.payload);
-    assert.strictEqual(Array.isArray(body), true);
-    assert.strictEqual(body.length, 1);
-    assert.strictEqual(body[0].title, "Article 2");
+    const result = JSON.parse(res.payload);
+    assert.ok(result.data);
+    assert.strictEqual(Array.isArray(result.data), true);
+    assert.strictEqual(result.data.length, 1);
+    assert.strictEqual(result.total, 1);
+    assert.strictEqual(result.data[0].title, "Article 2");
   });
 
   it("GET /api/articles?search= should return empty for no match", async () => {
@@ -77,8 +85,25 @@ describe("Article List API", () => {
     });
 
     assert.strictEqual(res.statusCode, 200);
-    const body = JSON.parse(res.payload);
-    assert.strictEqual(Array.isArray(body), true);
-    assert.strictEqual(body.length, 0);
+    const result = JSON.parse(res.payload);
+    assert.ok(result.data);
+    assert.strictEqual(Array.isArray(result.data), true);
+    assert.strictEqual(result.data.length, 0);
+    assert.strictEqual(result.total, 0);
+  });
+
+  it("GET /api/articles should support pagination parameters", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/articles?limit=1&offset=1"
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const result = JSON.parse(res.payload);
+    assert.strictEqual(result.data.length, 1);
+    assert.strictEqual(result.total, 2);
+    assert.strictEqual(result.limit, 1);
+    assert.strictEqual(result.offset, 1);
+    assert.strictEqual(result.data[0].title, "Article 1"); // Second article (offset=1)
   });
 });

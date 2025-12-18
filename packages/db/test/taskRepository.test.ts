@@ -9,6 +9,7 @@ import {
   createTask,
   getTask,
   listTasks,
+  countTasks,
   updateTask,
   deleteTask,
   setTaskStatus,
@@ -902,6 +903,271 @@ test('createTask() with default status does not set actual_start', () => {
 
   assert.equal(task.status, 'inbox');
   assert.equal(task.actualStart, null, 'actual_start should NOT be set for default (inbox) status');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+// ============================================================
+// Pagination: countTasks tests
+// ============================================================
+
+test('countTasks() returns total count without filters', () => {
+  const { dir, db } = createTempDb();
+
+  // Create 3 tasks
+  createTask(db, { title: 'Task 1', bodyMd: 'Body' });
+  createTask(db, { title: 'Task 2', bodyMd: 'Body' });
+  createTask(db, { title: 'Task 3', bodyMd: 'Body' });
+
+  const count = countTasks(db, {});
+  assert.equal(count, 3);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('countTasks() returns filtered count with status filter', () => {
+  const { dir, db } = createTempDb();
+
+  // Create tasks with different statuses
+  createTask(db, { title: 'Inbox 1', bodyMd: 'Body', status: 'inbox' });
+  createTask(db, { title: 'Inbox 2', bodyMd: 'Body', status: 'inbox' });
+  createTask(db, { title: 'Next 1', bodyMd: 'Body', status: 'next' });
+
+  const inboxCount = countTasks(db, { status: 'inbox' });
+  assert.equal(inboxCount, 2);
+
+  const nextCount = countTasks(db, { status: 'next' });
+  assert.equal(nextCount, 1);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('countTasks() returns filtered count with label filter', () => {
+  const { dir, db } = createTempDb();
+
+  // Create tasks with different labels
+  createTask(db, { title: 'Bug 1', bodyMd: 'Body', labels: ['bug'] });
+  createTask(db, { title: 'Bug 2', bodyMd: 'Body', labels: ['bug'] });
+  createTask(db, { title: 'Feature 1', bodyMd: 'Body', labels: ['feature'] });
+  createTask(db, { title: 'Both', bodyMd: 'Body', labels: ['bug', 'feature'] });
+
+  const bugCount = countTasks(db, { label: 'bug' });
+  assert.equal(bugCount, 3); // Bug 1, Bug 2, Both
+
+  const featureCount = countTasks(db, { label: 'feature' });
+  assert.equal(featureCount, 2); // Feature 1, Both
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('countTasks() returns filtered count with labels (multiple) filter', () => {
+  const { dir, db } = createTempDb();
+
+  // Create tasks with different labels
+  createTask(db, { title: 'Bug', bodyMd: 'Body', labels: ['bug'] });
+  createTask(db, { title: 'Feature', bodyMd: 'Body', labels: ['feature'] });
+  createTask(db, { title: 'Enhancement', bodyMd: 'Body', labels: ['enhancement'] });
+
+  // OR logic: any of the labels
+  const count = countTasks(db, { labels: ['bug', 'feature'] });
+  assert.equal(count, 2); // Bug, Feature
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('countTasks() returns filtered count with search filter', () => {
+  const { dir, db } = createTempDb();
+
+  createTask(db, { title: 'Fix login bug', bodyMd: 'Body' });
+  createTask(db, { title: 'Add login feature', bodyMd: 'Body' });
+  createTask(db, { title: 'Update dashboard', bodyMd: 'Body' });
+
+  const loginCount = countTasks(db, { search: 'login' });
+  assert.equal(loginCount, 2);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('countTasks() returns filtered count with isBookmarked filter', () => {
+  const { dir, db } = createTempDb();
+
+  const task1 = createTask(db, { title: 'Task 1', bodyMd: 'Body' });
+  createTask(db, { title: 'Task 2', bodyMd: 'Body' });
+  setTaskBookmark(db, task1.id, true);
+
+  const bookmarkedCount = countTasks(db, { isBookmarked: true });
+  assert.equal(bookmarkedCount, 1);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('countTasks() returns filtered count with combined filters', () => {
+  const { dir, db } = createTempDb();
+
+  // Create diverse tasks
+  createTask(db, { title: 'Inbox bug', bodyMd: 'Body', status: 'inbox', labels: ['bug'] });
+  createTask(db, { title: 'Next bug', bodyMd: 'Body', status: 'next', labels: ['bug'] });
+  createTask(db, { title: 'Inbox feature', bodyMd: 'Body', status: 'inbox', labels: ['feature'] });
+
+  // Filter by status AND label
+  const count = countTasks(db, { status: 'inbox', label: 'bug' });
+  assert.equal(count, 1); // Only 'Inbox bug'
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('countTasks() excludes deleted tasks', () => {
+  const { dir, db } = createTempDb();
+
+  createTask(db, { title: 'Task 1', bodyMd: 'Body' });
+  const task2 = createTask(db, { title: 'Task 2', bodyMd: 'Body' });
+  createTask(db, { title: 'Task 3', bodyMd: 'Body' });
+
+  // Delete task2
+  deleteTask(db, task2.id);
+
+  const count = countTasks(db, {});
+  assert.equal(count, 2); // Only 2 active tasks
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('countTasks() ignores limit parameter (counts all matching)', () => {
+  const { dir, db } = createTempDb();
+
+  // Create 5 tasks
+  for (let i = 0; i < 5; i++) {
+    createTask(db, { title: `Task ${i}`, bodyMd: 'Body' });
+  }
+
+  // Count should be 5 even if limit is provided
+  const count = countTasks(db, { limit: 2 });
+  assert.equal(count, 5);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+// ============================================================
+// Pagination: listTasks offset tests
+// ============================================================
+
+test('listTasks() returns correct slice with offset', () => {
+  const { dir, db } = createTempDb();
+
+  // Create 10 tasks with predictable titles
+  for (let i = 0; i < 10; i++) {
+    createTask(db, { title: `Task ${i}`, bodyMd: 'Body' });
+  }
+
+  // Get tasks 4-6 (offset=3, limit=3)
+  const tasks = listTasks(db, { limit: 3, offset: 3, order: 'asc' });
+  assert.equal(tasks.length, 3);
+  // With order=asc, oldest first, so offset=3 skips first 3
+  assert.equal(tasks[0].title, 'Task 3');
+  assert.equal(tasks[1].title, 'Task 4');
+  assert.equal(tasks[2].title, 'Task 5');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('listTasks() with offset=0 returns from beginning', () => {
+  const { dir, db } = createTempDb();
+
+  for (let i = 0; i < 5; i++) {
+    createTask(db, { title: `Task ${i}`, bodyMd: 'Body' });
+  }
+
+  const tasks = listTasks(db, { limit: 2, offset: 0, order: 'asc' });
+  assert.equal(tasks.length, 2);
+  assert.equal(tasks[0].title, 'Task 0');
+  assert.equal(tasks[1].title, 'Task 1');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('listTasks() with offset beyond results returns empty array', () => {
+  const { dir, db } = createTempDb();
+
+  createTask(db, { title: 'Task 1', bodyMd: 'Body' });
+  createTask(db, { title: 'Task 2', bodyMd: 'Body' });
+
+  const tasks = listTasks(db, { limit: 10, offset: 100 });
+  assert.equal(tasks.length, 0);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('listTasks() offset works with status filter', () => {
+  const { dir, db } = createTempDb();
+
+  // Create 5 inbox tasks, 3 next tasks
+  for (let i = 0; i < 5; i++) {
+    createTask(db, { title: `Inbox ${i}`, bodyMd: 'Body', status: 'inbox' });
+  }
+  for (let i = 0; i < 3; i++) {
+    createTask(db, { title: `Next ${i}`, bodyMd: 'Body', status: 'next' });
+  }
+
+  // Get inbox tasks with offset
+  const tasks = listTasks(db, { status: 'inbox', limit: 2, offset: 2, order: 'asc' });
+  assert.equal(tasks.length, 2);
+  assert.equal(tasks[0].title, 'Inbox 2');
+  assert.equal(tasks[1].title, 'Inbox 3');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('listTasks() offset works with label filter', () => {
+  const { dir, db } = createTempDb();
+
+  // Create 5 bug tasks
+  for (let i = 0; i < 5; i++) {
+    createTask(db, { title: `Bug ${i}`, bodyMd: 'Body', labels: ['bug'] });
+  }
+  // Create 2 feature tasks
+  for (let i = 0; i < 2; i++) {
+    createTask(db, { title: `Feature ${i}`, bodyMd: 'Body', labels: ['feature'] });
+  }
+
+  // Get bug tasks with offset
+  const tasks = listTasks(db, { label: 'bug', limit: 2, offset: 3, order: 'asc' });
+  assert.equal(tasks.length, 2);
+  assert.equal(tasks[0].title, 'Bug 3');
+  assert.equal(tasks[1].title, 'Bug 4');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('listTasks() offset works with search filter', () => {
+  const { dir, db } = createTempDb();
+
+  // Create 5 tasks with 'login' in title
+  for (let i = 0; i < 5; i++) {
+    createTask(db, { title: `Fix login ${i}`, bodyMd: 'Body' });
+  }
+  // Create other tasks
+  createTask(db, { title: 'Other task', bodyMd: 'Body' });
+
+  // Get login tasks with offset
+  const tasks = listTasks(db, { search: 'login', limit: 2, offset: 2, order: 'asc' });
+  assert.equal(tasks.length, 2);
+  assert.equal(tasks[0].title, 'Fix login 2');
+  assert.equal(tasks[1].title, 'Fix login 3');
 
   db.close();
   fs.removeSync(dir);

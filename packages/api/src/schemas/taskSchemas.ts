@@ -132,9 +132,23 @@ export const TaskQuerySchema = z.object({
   search: z.string().optional().describe('Search tasks by title using free-text partial matching'),
   scheduledFrom: z.string().date().optional().describe('Filter tasks where scheduled_on >= this date (YYYY-MM-DD)'),
   scheduledTo: z.string().date().optional().describe('Filter tasks where scheduled_on <= this date (YYYY-MM-DD)'),
+  limit: z.coerce.number().int().min(1).max(1000).optional().describe('Maximum number of tasks to return (default: 100, max: 1000)'),
+  offset: z.coerce.number().int().min(0).optional().describe('Number of tasks to skip (default: 0)'),
 });
 
 export type TaskQuery = z.infer<typeof TaskQuerySchema>;
+
+/**
+ * Schema for paginated task list response
+ */
+export const PaginatedTaskListResponseSchema = z.object({
+  data: z.array(TaskListItemSchema).describe('Array of tasks'),
+  total: z.number().int().nonnegative().describe('Total count of tasks matching the filters (ignoring pagination)'),
+  limit: z.number().int().positive().describe('Maximum number of tasks returned per page'),
+  offset: z.number().int().nonnegative().describe('Number of tasks skipped'),
+});
+
+export type PaginatedTaskListResponse = z.infer<typeof PaginatedTaskListResponseSchema>;
 
 /**
  * Schema for demoting a task to a memo
