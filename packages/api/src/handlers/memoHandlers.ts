@@ -27,18 +27,36 @@ export async function createMemoHandler(
 }
 
 /**
+ * Default pagination values
+ */
+const DEFAULT_LIMIT = 100;
+const DEFAULT_OFFSET = 0;
+
+/**
  * Return a list of memos with optional filter parameters.
  */
 export async function listMemosHandler(
   request: FastifyRequest<{
-    Querystring: { bookmarked?: string; label?: string; search?: string };
+    Querystring: {
+      bookmarked?: string;
+      label?: string;
+      search?: string;
+      limit?: number;
+      offset?: number;
+    };
   }>,
   reply: FastifyReply
 ) {
   const memoService = new MemoService({ db: request.server.db });
-  const { bookmarked, label, search } = request.query;
+  const { bookmarked, label, search, limit, offset } = request.query;
 
-  const filters: any = {};
+  const actualLimit = limit ?? DEFAULT_LIMIT;
+  const actualOffset = offset ?? DEFAULT_OFFSET;
+
+  const filters: any = {
+    limit: actualLimit,
+    offset: actualOffset,
+  };
   if (bookmarked === 'true') {
     filters.isBookmarked = true;
   }
@@ -50,8 +68,13 @@ export async function listMemosHandler(
   }
 
   try {
-    const memos = memoService.list(filters);
-    return reply.status(200).send(memos);
+    const result = memoService.list(filters);
+    return reply.status(200).send({
+      data: result.data,
+      total: result.total,
+      limit: actualLimit,
+      offset: actualOffset,
+    });
   } catch (error) {
     throw error;
   }
