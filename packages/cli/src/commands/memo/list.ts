@@ -67,7 +67,7 @@ export default class MemoList extends Command {
       ? flags.label.split(',').map(l => l.trim()).filter(Boolean)
       : undefined;
 
-    const memos = service.list({
+    const result = service.list({
       labels,
       search: flags.search,
       searchBody: flags['search-body'],
@@ -77,16 +77,16 @@ export default class MemoList extends Command {
     });
 
     if (flags.json) {
-      this.log(JSON.stringify({ memos }, null, 2));
+      this.log(JSON.stringify({ data: result.data, total: result.total }, null, 2));
       return;
     }
 
-    if (memos.length === 0) {
+    if (result.data.length === 0) {
       this.log('No memos found.');
       return;
     }
 
-    for (const memo of memos) {
+    for (const memo of result.data) {
       const indicator = memo.isBookmarked ? '★' : ' ';
       const labelsStr = memo.labels && memo.labels.length > 0 ? `[${memo.labels.join(', ')}]` : '';
       const bodyPreview = memo.bodyMd.split('\n')[0].slice(0, 80);
