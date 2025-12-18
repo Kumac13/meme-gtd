@@ -76,7 +76,7 @@ export default function TasksList() {
           labelParam,
           searchParam
         );
-        setTasks(response || []);
+        setTasks(response?.data || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load tasks');
         console.error('Error fetching tasks:', err);

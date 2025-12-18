@@ -48,7 +48,7 @@ export default function MemosList() {
         const searchParam = filters.parsedQuery.freeText;
 
         const response = await MemosService.listMemos(undefined, labelParam, searchParam);
-        setMemos(response || []);
+        setMemos(response?.data || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load memos');
         console.error('Error fetching memos:', err);

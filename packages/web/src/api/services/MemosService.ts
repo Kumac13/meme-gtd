@@ -82,10 +82,12 @@ export class MemosService {
     }
     /**
      * List memos
-     * List all memos with optional filters
+     * List all memos with optional filters and pagination
      * @param bookmarked Filter by bookmark status
      * @param label Filter by label name(s). Supports comma-separated values for OR logic (e.g., idea,meeting-notes)
      * @param search Search memos by body content using free-text partial matching
+     * @param limit Maximum number of memos to return (default: 100, max: 1000)
+     * @param offset Number of memos to skip (default: 0)
      * @returns any Default Response
      * @throws ApiError
      */
@@ -93,64 +95,83 @@ export class MemosService {
         bookmarked?: 'true' | 'false',
         label?: string,
         search?: string,
-    ): CancelablePromise<Array<{
+        limit?: number,
+        offset?: number,
+    ): CancelablePromise<{
         /**
-         * Unique memo ID
+         * Array of memos
          */
-        id: number;
+        data: Array<{
+            /**
+             * Unique memo ID
+             */
+            id: number;
+            /**
+             * Issue type (always "memo")
+             */
+            type: 'memo';
+            /**
+             * Title (always null for memos)
+             */
+            title: string | null;
+            /**
+             * Memo content in Markdown format
+             */
+            bodyMd: string;
+            /**
+             * Status (always null for memos)
+             */
+            status: string | null;
+            /**
+             * Scheduled date (always null for memos)
+             */
+            scheduledOn: string | null;
+            /**
+             * Metadata object
+             */
+            meta: Record<string, any>;
+            /**
+             * Whether the memo is bookmarked
+             */
+            isBookmarked: boolean;
+            /**
+             * Whether the memo is soft-deleted
+             */
+            isDeleted: boolean;
+            /**
+             * Creation timestamp
+             */
+            createdAt: string;
+            /**
+             * Last update timestamp
+             */
+            updatedAt: string;
+            /**
+             * Array of label names assigned to this memo
+             */
+            labels: Array<string>;
+            /**
+             * Number of non-deleted comments on this memo
+             */
+            commentCount: number;
+            /**
+             * Context preview with highlighted search terms (only present when search parameter is active)
+             */
+            preview?: string;
+        }>;
         /**
-         * Issue type (always "memo")
+         * Total count of memos matching the filters (ignoring pagination)
          */
-        type: 'memo';
+        total: number;
         /**
-         * Title (always null for memos)
+         * Maximum number of memos returned per page
          */
-        title: string | null;
+        limit: number;
         /**
-         * Memo content in Markdown format
+         * Number of memos skipped
          */
-        bodyMd: string;
-        /**
-         * Status (always null for memos)
-         */
-        status: string | null;
-        /**
-         * Scheduled date (always null for memos)
-         */
-        scheduledOn: string | null;
-        /**
-         * Metadata object
-         */
-        meta: Record<string, any>;
-        /**
-         * Whether the memo is bookmarked
-         */
-        isBookmarked: boolean;
-        /**
-         * Whether the memo is soft-deleted
-         */
-        isDeleted: boolean;
-        /**
-         * Creation timestamp
-         */
-        createdAt: string;
-        /**
-         * Last update timestamp
-         */
-        updatedAt: string;
-        /**
-         * Array of label names assigned to this memo
-         */
-        labels: Array<string>;
-        /**
-         * Number of non-deleted comments on this memo
-         */
-        commentCount: number;
-        /**
-         * Context preview with highlighted search terms (only present when search parameter is active)
-         */
-        preview?: string;
-    }>> {
+        offset: number;
+    }> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/memos',
@@ -158,6 +179,8 @@ export class MemosService {
                 'bookmarked': bookmarked,
                 'label': label,
                 'search': search,
+                'limit': limit,
+                'offset': offset,
             },
             errors: {
                 400: `Default Response`,
