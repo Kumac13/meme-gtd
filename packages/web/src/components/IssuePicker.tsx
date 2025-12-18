@@ -118,7 +118,7 @@ export default function IssuePicker({
       // Convert to unified format
       const taskItems = (tasksResponse?.data || []).map(taskToPickerItem);
       const memoItems = (memosResponse?.data || []).map(memoToPickerItem);
-      const articleItems = articles.map(articleToPickerItem);
+      const articleItems = (articles?.data || []).map(articleToPickerItem);
 
       // Merge and sort by updatedAt (descending)
       let merged = [...taskItems, ...memoItems, ...articleItems];

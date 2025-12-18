@@ -7113,78 +7113,101 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      exclusiveMinimum: true
-                      minimum: 0
-                      description: Unique article ID
-                    type:
-                      type: string
-                      enum:
-                        - article
-                      description: Issue type (always "article")
-                    title:
-                      type: string
-                      description: Article title
-                    bodyMd:
-                      type: string
-                      description: Article content in Markdown format
-                    meta:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
                       type: object
                       properties:
-                        originalUrl:
+                        id:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                          description: Unique article ID
+                        type:
                           type: string
-                          description: Original URL of the article
-                        siteName:
+                          enum:
+                            - article
+                          description: Issue type (always "article")
+                        title:
                           type: string
-                          nullable: true
-                          description: Name of the source site
-                        archivedAt:
+                          description: Article title
+                        bodyMd:
                           type: string
-                          description: Timestamp when the article was archived
+                          description: Article content in Markdown format
+                        meta:
+                          type: object
+                          properties:
+                            originalUrl:
+                              type: string
+                              description: Original URL of the article
+                            siteName:
+                              type: string
+                              nullable: true
+                              description: Name of the source site
+                            archivedAt:
+                              type: string
+                              description: Timestamp when the article was archived
+                          required:
+                            - originalUrl
+                            - archivedAt
+                          additionalProperties: false
+                          description: Article metadata
+                        createdAt:
+                          type: string
+                          format: date-time
+                          description: Creation timestamp
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          description: Last update timestamp
+                        isBookmarked:
+                          type: boolean
+                          description: Whether the article is bookmarked
+                        isDeleted:
+                          type: boolean
+                          description: Whether the article is soft-deleted
+                        labels:
+                          type: array
+                          items:
+                            type: string
+                          description: Array of label names assigned to this article
+                        commentCount:
+                          type: integer
+                          minimum: 0
+                          description: Number of comments on this article
                       required:
-                        - originalUrl
-                        - archivedAt
+                        - id
+                        - type
+                        - title
+                        - bodyMd
+                        - meta
+                        - createdAt
+                        - updatedAt
+                        - isBookmarked
+                        - isDeleted
                       additionalProperties: false
-                      description: Article metadata
-                    createdAt:
-                      type: string
-                      format: date-time
-                      description: Creation timestamp
-                    updatedAt:
-                      type: string
-                      format: date-time
-                      description: Last update timestamp
-                    isBookmarked:
-                      type: boolean
-                      description: Whether the article is bookmarked
-                    isDeleted:
-                      type: boolean
-                      description: Whether the article is soft-deleted
-                    labels:
-                      type: array
-                      items:
-                        type: string
-                      description: Array of label names assigned to this article
-                    commentCount:
-                      type: integer
-                      minimum: 0
-                      description: Number of comments on this article
-                  required:
-                    - id
-                    - type
-                    - title
-                    - bodyMd
-                    - meta
-                    - createdAt
-                    - updatedAt
-                    - isBookmarked
-                    - isDeleted
-                  additionalProperties: false
+                    description: Array of articles
+                  total:
+                    type: integer
+                    minimum: 0
+                    description: Total count of articles matching the filters (ignoring pagination)
+                  limit:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Maximum number of articles returned per page
+                  offset:
+                    type: integer
+                    minimum: 0
+                    description: Number of articles skipped
+                required:
+                  - data
+                  - total
+                  - limit
+                  - offset
+                additionalProperties: false
         "400":
           description: Default Response
           content:

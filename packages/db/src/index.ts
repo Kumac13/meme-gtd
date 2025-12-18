@@ -141,6 +141,7 @@ export {
   createArticle,
   getArticle,
   listArticles,
+  countArticles,
   deleteArticle,
   type CreateArticleInput,
   type ListArticleFilters

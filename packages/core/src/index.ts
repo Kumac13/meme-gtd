@@ -39,6 +39,7 @@ import {
   createArticle,
   getArticle,
   listArticles,
+  countArticles,
   deleteArticle,
   // Label functions
   listAllLabels,
@@ -484,7 +485,9 @@ export class ArticleService {
   }
 
   public list(filters: ListArticleFilters = {}) {
-    return listArticles(this.db, filters);
+    const data = listArticles(this.db, filters);
+    const total = countArticles(this.db, filters);
+    return { data, total };
   }
 
   public remove(id: number) {

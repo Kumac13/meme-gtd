@@ -31,6 +31,12 @@ export async function createArticleHandler(
 }
 
 /**
+ * Default pagination values
+ */
+const DEFAULT_LIMIT = 100;
+const DEFAULT_OFFSET = 0;
+
+/**
  * Return a list of articles with optional filter parameters.
  */
 export async function listArticlesHandler(
@@ -40,9 +46,17 @@ export async function listArticlesHandler(
   const articleService = new ArticleService({ db: request.server.db });
   const { limit, offset, search } = request.query;
 
+  const actualLimit = limit ?? DEFAULT_LIMIT;
+  const actualOffset = offset ?? DEFAULT_OFFSET;
+
   try {
-    const articles = articleService.list({ limit, offset, search });
-    return reply.status(200).send(articles);
+    const result = articleService.list({ limit: actualLimit, offset: actualOffset, search });
+    return reply.status(200).send({
+      data: result.data,
+      total: result.total,
+      limit: actualLimit,
+      offset: actualOffset,
+    });
   } catch (error) {
     throw error;
   }
