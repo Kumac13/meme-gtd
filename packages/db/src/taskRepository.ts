@@ -50,6 +50,7 @@ export interface ListTaskFilters {
   searchTitle?: string;  // Search title only
   searchBody?: string;  // Search body only
   limit?: number;
+  offset?: number;  // Pagination offset
   order?: 'asc' | 'desc';
   isBookmarked?: boolean;
   scheduledFrom?: string;  // Filter tasks where scheduled_on >= this date (YYYY-MM-DD)
@@ -312,6 +313,10 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
     sql += ' LIMIT @limit';
     params.limit = filters.limit;
   }
+  if (filters.offset !== undefined) {
+    sql += ' OFFSET @offset';
+    params.offset = filters.offset;
+  }
 
   // Handle search filters (search, searchTitle, searchBody)
   const hasSearch = filters.search || filters.searchTitle || filters.searchBody;
@@ -408,6 +413,9 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
     }
     if (filters.limit) {
       sql += ' LIMIT @limit';
+    }
+    if (filters.offset !== undefined) {
+      sql += ' OFFSET @offset';
     }
   }
 
