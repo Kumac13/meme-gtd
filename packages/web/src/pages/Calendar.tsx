@@ -17,7 +17,9 @@ async function fetchTasks(scheduledFrom: string, scheduledTo: string): Promise<T
   if (!response.ok) {
     throw new Error('Failed to fetch tasks');
   }
-  return response.json();
+  const result = await response.json();
+  // API returns { data: Task[], total: number } format
+  return result.data || [];
 }
 
 export default function Calendar() {
