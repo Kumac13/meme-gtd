@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.19.1 - 2025-12-22
+
+### Bug Fixes
+
+- **Search Console**: Fixed critical issues with search functionality.
+  - Resolved a race condition where search input was ignored/cleared immediately.
+  - Fixed filtering logic to correctly search across all statuses (e.g. Inbox) when a label or search term is present, instead of being restricted to "Next" tasks by default.
+  - Removed strict blocking on validation errors to allow forced search submission.
+
 ## 0.18.0 - 2025-12-11
 
 ### New Features

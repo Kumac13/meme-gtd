@@ -45,9 +45,9 @@ export default function SearchInput({
 
   const handleSearch = () => {
     // Block submission only for syntax/status errors, not warnings
-    if (validationError && validationError.type !== 'warning') {
-      return;
-    }
+    // if (validationError && validationError.type !== 'warning') {
+    //   return;
+    // }
     onChange(localValue);
   };
 

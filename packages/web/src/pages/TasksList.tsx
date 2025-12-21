@@ -14,6 +14,7 @@ import {
   validateBookmarked,
   updateStatusParam,
   updateBookmarkedParam,
+  updateSearchParam,
 } from '../utils/urlFilterHelpers';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
@@ -46,7 +47,7 @@ const PAGE_SIZE = 20;
 
 export default function TasksList() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { filters, actions } = useUrlFilters();
+  const { filters } = useUrlFilters();
   const statusFilter = validateStatus(searchParams.get('status'));
   const bookmarkFilter = validateBookmarked(searchParams.get('bookmarked'));
 
@@ -72,9 +73,14 @@ export default function TasksList() {
         // Build label parameter from parsed query
         const labelParam = filters.parsedQuery.labels?.join(',');
 
-        // Use parsed status from search query if available, otherwise use FilterBar status
+        // Use parsed status from search query if available.
+        // If searching (labels or free-text) and on the default "next" view (status param absent),
+        // broaden the search to all statuses.
+        const isSearching = !!(filters.parsedQuery.labels?.length || filters.parsedQuery.freeText);
+        const isDefaultStatusView = !searchParams.get('status');
+
         const effectiveStatus = filters.parsedQuery.status ||
-          (statusFilter !== 'all' ? statusFilter : undefined);
+          (isSearching && isDefaultStatusView ? undefined : (statusFilter !== 'all' ? statusFilter : undefined));
 
         // Extract free-text search from parsed query
         const searchParam = filters.parsedQuery.freeText;
@@ -155,9 +161,8 @@ export default function TasksList() {
         <SearchInput
           value={filters.searchQuery}
           onChange={(value) => {
-            actions.setSearchQuery(value);
-            // Reset to page 1 when searching
-            const params = new URLSearchParams(searchParams);
+            // Update search query and reset page number in one atomic operation
+            const params = updateSearchParam(searchParams, value);
             params.delete('page');
             setSearchParams(params);
           }}
