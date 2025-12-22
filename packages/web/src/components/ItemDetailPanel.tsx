@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
 import { MemosService } from '../api/services/MemosService';
 import { ArticlesService } from '../api/services/ArticlesService';
@@ -35,6 +35,7 @@ interface ItemDetailPanelProps {
 }
 
 export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: ItemDetailPanelProps) {
+  const navigate = useNavigate();
   const [item, setItem] = useState<BaseItem | Task | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -213,12 +214,15 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
             <h2 className="text-lg font-semibold text-gray-900 truncate">
               {loading ? 'Loading...' : displayTitle}
             </h2>
-            <Link
-              to={`${basePath}/${itemId}`}
+            <button
+              onClick={() => {
+                onClose();
+                navigate(`${basePath}/${itemId}`);
+              }}
               className="text-gray-500 hover:text-github-green-600 text-sm font-medium flex-shrink-0"
             >
               #{itemId}
-            </Link>
+            </button>
           </div>
           <button
             onClick={onClose}
