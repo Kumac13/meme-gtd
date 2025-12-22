@@ -34,6 +34,7 @@ export default function CreateTaskModal({
   // Pre-configure a 'relates' link to the source task
   const initialLinks: PendingLink[] = [
     {
+      linkKind: 'issue',
       targetIssueId: sourceTask.id,
       linkType: 'relates',
       targetIssue: {

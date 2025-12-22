@@ -78,8 +78,17 @@ export interface LinkCreationState {
  *
  * Used in TaskForm to track links that will be created after
  * the task is successfully created.
+ *
+ * Discriminated union supporting both issue-to-issue links and external URL links.
  */
-export interface PendingLink {
+export type PendingLink = PendingIssueLink | PendingUrlLink;
+
+/**
+ * Pending issue link - link to another issue (task/memo/article)
+ */
+export interface PendingIssueLink {
+  /** Discriminator for union type */
+  linkKind: 'issue';
   /** Target issue ID to link to */
   targetIssueId: number;
   /** Type of relationship */
@@ -90,6 +99,32 @@ export interface PendingLink {
     type: IssueType;
     title: string;
   };
+}
+
+/**
+ * Pending URL link - link to external website
+ */
+export interface PendingUrlLink {
+  /** Discriminator for union type */
+  linkKind: 'url';
+  /** External URL */
+  url: string;
+  /** Display title (optional) */
+  title?: string;
+}
+
+/**
+ * Type guard for PendingIssueLink
+ */
+export function isPendingIssueLink(link: PendingLink): link is PendingIssueLink {
+  return link.linkKind === 'issue';
+}
+
+/**
+ * Type guard for PendingUrlLink
+ */
+export function isPendingUrlLink(link: PendingLink): link is PendingUrlLink {
+  return link.linkKind === 'url';
 }
 
 /**

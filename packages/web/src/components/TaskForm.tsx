@@ -5,6 +5,8 @@ import { MemosService } from '../api/services/MemosService';
 import { ProjectsService } from '../api/services/ProjectsService';
 import { LabelsService } from '../api/services/LabelsService';
 import { LinksService } from '../api/services/LinksService';
+import { UrlLinksService } from '../api/services/UrlLinksService';
+import { isPendingIssueLink, isPendingUrlLink } from '../types/links';
 import { validateTaskForm } from '../utils/validation';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
@@ -184,17 +186,29 @@ export default function TaskForm({
           );
         }
 
-        // Create links
+        // Create links (both issue and URL links)
         if (pendingLinks.length > 0) {
-          const linkResults = await Promise.allSettled(
-            pendingLinks.map(link =>
-              LinksService.createLink({
-                sourceIssueId: task.id,
-                targetIssueId: link.targetIssueId,
-                linkType: link.linkType,
-              })
-            )
-          );
+          const linkResults = await Promise.allSettled([
+            // Issue links
+            ...pendingLinks
+              .filter(isPendingIssueLink)
+              .map(link =>
+                LinksService.createLink({
+                  sourceIssueId: task.id,
+                  targetIssueId: link.targetIssueId,
+                  linkType: link.linkType,
+                })
+              ),
+            // URL links
+            ...pendingLinks
+              .filter(isPendingUrlLink)
+              .map(link =>
+                UrlLinksService.createUrlLink(String(task.id), {
+                  url: link.url,
+                  title: link.title,
+                })
+              ),
+          ]);
 
           // Check for any failed link creations
           const failedLinks = linkResults.filter(result => result.status === 'rejected');
@@ -363,8 +377,8 @@ export default function TaskForm({
     setPendingLinks(prev => [...prev, link]);
   };
 
-  const handleRemoveLink = (targetIssueId: number) => {
-    setPendingLinks(prev => prev.filter(l => l.targetIssueId !== targetIssueId));
+  const handleRemoveLink = (link: PendingLink) => {
+    setPendingLinks(prev => prev.filter(l => l !== link));
   };
 
   const filteredProjects = allProjects.filter(p =>
