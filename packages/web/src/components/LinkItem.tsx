@@ -7,7 +7,7 @@
  */
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { LinkDisplayItem } from '../types/links';
 import type { IssueType } from 'meme-gtd-shared';
 import { getLinkIcon, getLinkLabel, getDirectionArrow } from '../utils/linkIcons';
@@ -38,6 +38,7 @@ interface LinkItemProps {
 }
 
 export default function LinkItem({ link, onDelete, isDeleting = false, onItemClick, onBeforeNavigate }: LinkItemProps) {
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const isDeleted = link.targetIssue.title.includes('(deleted)');
@@ -93,10 +94,20 @@ export default function LinkItem({ link, onDelete, isDeleting = false, onItemCli
             >
               #{link.targetIssue.id}: {displayTitle}
             </button>
+          ) : onBeforeNavigate ? (
+            <button
+              onClick={() => {
+                onBeforeNavigate();
+                navigate(targetPath);
+              }}
+              className="text-sm text-github-green-600 hover:text-github-green-800 hover:underline truncate text-left"
+              title={link.targetIssue.title}
+            >
+              #{link.targetIssue.id}: {displayTitle}
+            </button>
           ) : (
             <Link
               to={targetPath}
-              onClick={onBeforeNavigate}
               className="text-sm text-github-green-600 hover:text-github-green-800 hover:underline truncate"
               title={link.targetIssue.title}
             >
