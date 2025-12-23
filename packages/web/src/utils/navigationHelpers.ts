@@ -1,17 +1,32 @@
 /**
  * Navigation helpers for filter preservation across item list/detail pages
- *
- * @see specs/022-github/data-model.md for data model documentation
- * @see specs/022-github/contracts/return-filters.types.ts for type definitions
  */
 
-import type {
-  ItemType,
-  FilterMap,
-  DecodedReturnFilters,
-  ItemDetailUrlConfig,
-  BackUrlConfig,
-} from '../../../../specs/022-github/contracts/return-filters.types';
+/** Item types supporting filter preservation */
+type ItemType = 'task' | 'memo' | 'project';
+
+/** Filter map for return navigation */
+type FilterMap = Record<string, string>;
+
+/** Result of decoding return filters from URL */
+interface DecodedReturnFilters {
+  success: boolean;
+  filters: FilterMap;
+  error?: string;
+}
+
+/** Configuration for creating item detail URLs with return filters */
+interface ItemDetailUrlConfig {
+  basePath: string;
+  itemId: number | string;
+  currentFilters?: URLSearchParams;
+}
+
+/** Configuration for creating back-to-list URLs from detail pages */
+interface BackUrlConfig {
+  basePath: string;
+  returnFiltersEncoded?: string | null;
+}
 
 /**
  * Encodes current filter state for inclusion in detail page URL
