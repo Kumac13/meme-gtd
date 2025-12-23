@@ -328,7 +328,7 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
         <div className="flex gap-1">
           {parentTask && (
             <button
-              className="text-xs px-2 py-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-xs px-2 py-1 text-[#5f7a5f] hover:text-[#4a6a4a] hover:bg-gray-100 rounded border border-[#8a9f8a] disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={(e) => {
                 e.stopPropagation();
                 setIsAddingChild(true);
