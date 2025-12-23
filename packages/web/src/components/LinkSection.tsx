@@ -14,6 +14,9 @@ import type { LinkDisplayItem, LinkCreationState, LinkType, UrlLinkDisplayItem }
 import type { IssueType } from 'meme-gtd-shared';
 import { LinksService } from '../api/services/LinksService';
 import { UrlLinksService } from '../api/services/UrlLinksService';
+import { TasksService } from '../api/services/TasksService';
+import { LabelsService } from '../api/services/LabelsService';
+import { ProjectsService } from '../api/services/ProjectsService';
 
 // Status priority for sorting (lower = higher priority, displayed first)
 const statusPriority: Record<string, number> = {
@@ -63,6 +66,9 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
   const [urlLinks, setUrlLinks] = useState<UrlLinkDisplayItem[]>([]);
   // Child task creation state
   const [isAddingChild, setIsAddingChild] = useState(false);
+  const [childTitle, setChildTitle] = useState('');
+  const [isCreatingChild, setIsCreatingChild] = useState(false);
+  const [childCreationError, setChildCreationError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(true);
@@ -166,6 +172,67 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
       error: null,
       isSubmitting: false,
     });
+  };
+
+  const handleCancelAddChild = () => {
+    setIsAddingChild(false);
+    setChildTitle('');
+    setChildCreationError(null);
+  };
+
+  const handleCreateChildTask = async () => {
+    if (!childTitle.trim() || !parentTask) return;
+
+    setIsCreatingChild(true);
+    setChildCreationError(null);
+
+    try {
+      // 1. Create task with parent's status
+      const newTask = await TasksService.createTask({
+        title: childTitle.trim(),
+        status: (parentTask.status as 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled') || 'inbox',
+      });
+
+      // 2. Inherit labels from parent
+      if (parentTask.labels && parentTask.labels.length > 0) {
+        const allLabels = await LabelsService.listLabels();
+        const labelIdMap = new Map(allLabels.map(l => [l.name, l.id]));
+        await Promise.all(
+          parentTask.labels
+            .filter(name => labelIdMap.has(name))
+            .map(name =>
+              LabelsService.assignLabelToIssue(String(newTask.id), { labelId: labelIdMap.get(name)! })
+            )
+        );
+      }
+
+      // 3. Inherit projects from parent
+      const parentProjects = await ProjectsService.getProjectsForIssue(String(parentTask.id));
+      if (parentProjects.length > 0) {
+        await Promise.all(
+          parentProjects.map(project =>
+            ProjectsService.addProjectItem(String(project.id), { issueId: newTask.id })
+          )
+        );
+      }
+
+      // 4. Create child link (new task -> parent task)
+      await LinksService.createLink({
+        sourceIssueId: newTask.id,
+        targetIssueId: parentTask.id,
+        linkType: 'child',
+      });
+
+      // 5. Refresh links and reset form
+      await fetchAllLinks();
+      setChildTitle('');
+      setIsAddingChild(false);
+    } catch (err) {
+      console.error('Failed to create child task:', err);
+      setChildCreationError('Failed to create child task. Please try again.');
+    } finally {
+      setIsCreatingChild(false);
+    }
   };
 
   const handleAddLink = async (targetId: number, linkType: LinkType) => {
@@ -322,6 +389,52 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
               creationState={creationState}
               setCreationState={setCreationState}
             />
+          )}
+
+          {/* Add child task form */}
+          {isAddingChild && (
+            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="text-xs font-medium text-gray-700 mb-2">
+                Add child task:
+              </div>
+              <input
+                type="text"
+                value={childTitle}
+                onChange={(e) => setChildTitle(e.target.value)}
+                placeholder="Enter child task title..."
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isCreatingChild}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && childTitle.trim()) {
+                    handleCreateChildTask();
+                  } else if (e.key === 'Escape') {
+                    handleCancelAddChild();
+                  }
+                }}
+              />
+              {childCreationError && (
+                <div className="mt-2 text-xs text-red-600">
+                  {childCreationError}
+                </div>
+              )}
+              <div className="mt-2 flex justify-end gap-2">
+                <button
+                  onClick={handleCancelAddChild}
+                  disabled={isCreatingChild}
+                  className="text-sm px-3 py-1.5 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateChildTask}
+                  disabled={isCreatingChild || !childTitle.trim()}
+                  className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isCreatingChild ? 'Creating...' : 'Create'}
+                </button>
+              </div>
+            </div>
           )}
 
           {!loading && !error && totalLinksCount > 0 && (
