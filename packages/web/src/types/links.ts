@@ -86,7 +86,7 @@ export type PendingLink = PendingIssueLink | PendingUrlLink;
 /**
  * Pending issue link - link to another issue (task/memo/article)
  */
-export interface PendingIssueLink {
+interface PendingIssueLink {
   /** Discriminator for union type */
   linkKind: 'issue';
   /** Target issue ID to link to */
@@ -104,7 +104,7 @@ export interface PendingIssueLink {
 /**
  * Pending URL link - link to external website
  */
-export interface PendingUrlLink {
+interface PendingUrlLink {
   /** Discriminator for union type */
   linkKind: 'url';
   /** External URL */
