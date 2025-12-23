@@ -36,6 +36,13 @@ const sortLinksByStatus = (links: LinkDisplayItem[]): LinkDisplayItem[] => {
   });
 };
 
+interface ParentTaskInfo {
+  id: number;
+  title: string;
+  status: string | null;
+  labels: string[];
+}
+
 interface LinkSectionProps {
   /** ID of the issue (task, memo, or article) */
   itemId: number;
@@ -45,11 +52,17 @@ interface LinkSectionProps {
   onItemClick?: (id: number, type: IssueType) => void;
   /** Optional callback before navigation (used in panel mode to close modal first) */
   onBeforeNavigate?: () => void;
+  /** Parent task info for creating child tasks (only for tasks) */
+  parentTask?: ParentTaskInfo;
+  /** Callback when a child task is created */
+  onChildTaskCreated?: () => void;
 }
 
-export default function LinkSection({ itemId, itemType: _itemType, onItemClick, onBeforeNavigate }: LinkSectionProps) {
+export default function LinkSection({ itemId, itemType: _itemType, onItemClick, onBeforeNavigate, parentTask, onChildTaskCreated: _onChildTaskCreated }: LinkSectionProps) {
   const [links, setLinks] = useState<LinkDisplayItem[]>([]);
   const [urlLinks, setUrlLinks] = useState<UrlLinkDisplayItem[]>([]);
+  // Child task creation state
+  const [isAddingChild, setIsAddingChild] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(true);
@@ -244,17 +257,32 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
           </h3>
         </div>
 
-        {/* Add button */}
-        <button
-          className="text-xs px-2 py-1 text-github-green-600 hover:text-github-green-800 hover:bg-github-green-50 rounded border border-github-green-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleAddClick();
-          }}
-          disabled={loading || creationState.isAdding}
-        >
-          + Add
-        </button>
+        {/* Add buttons */}
+        <div className="flex gap-1">
+          <button
+            className="text-xs px-2 py-1 text-github-green-600 hover:text-github-green-800 hover:bg-github-green-50 rounded border border-github-green-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleAddClick();
+            }}
+            disabled={loading || creationState.isAdding || isAddingChild}
+          >
+            + Add
+          </button>
+          {parentTask && (
+            <button
+              className="text-xs px-2 py-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded border border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsAddingChild(true);
+                setIsExpanded(true);
+              }}
+              disabled={loading || creationState.isAdding || isAddingChild}
+            >
+              Add Child
+            </button>
+          )}
+        </div>
       </button>
 
       {/* Section Content */}
