@@ -251,7 +251,18 @@ export default function ItemDetail({
           />
 
           {/* Links section */}
-          <LinkSection itemId={item.id} itemType={itemType} onItemClick={onItemClick} onBeforeNavigate={onBeforeNavigate} />
+          <LinkSection
+            itemId={item.id}
+            itemType={itemType}
+            onItemClick={onItemClick}
+            onBeforeNavigate={onBeforeNavigate}
+            parentTask={itemType === 'task' ? {
+              id: item.id,
+              title: item.title || '',
+              status: 'status' in item ? item.status : null,
+              labels: item.labels || [],
+            } : undefined}
+          />
 
           {/* Comments section (memo/task only) */}
           {itemType !== 'article' && (

@@ -14,6 +14,9 @@ import type { LinkDisplayItem, LinkCreationState, LinkType, UrlLinkDisplayItem }
 import type { IssueType } from 'meme-gtd-shared';
 import { LinksService } from '../api/services/LinksService';
 import { UrlLinksService } from '../api/services/UrlLinksService';
+import { TasksService } from '../api/services/TasksService';
+import { LabelsService } from '../api/services/LabelsService';
+import { ProjectsService } from '../api/services/ProjectsService';
 
 // Status priority for sorting (lower = higher priority, displayed first)
 const statusPriority: Record<string, number> = {
@@ -36,6 +39,13 @@ const sortLinksByStatus = (links: LinkDisplayItem[]): LinkDisplayItem[] => {
   });
 };
 
+interface ParentTaskInfo {
+  id: number;
+  title: string;
+  status: string | null;
+  labels: string[];
+}
+
 interface LinkSectionProps {
   /** ID of the issue (task, memo, or article) */
   itemId: number;
@@ -45,11 +55,20 @@ interface LinkSectionProps {
   onItemClick?: (id: number, type: IssueType) => void;
   /** Optional callback before navigation (used in panel mode to close modal first) */
   onBeforeNavigate?: () => void;
+  /** Parent task info for creating child tasks (only for tasks) */
+  parentTask?: ParentTaskInfo;
+  /** Callback when a child task is created */
+  onChildTaskCreated?: () => void;
 }
 
-export default function LinkSection({ itemId, itemType: _itemType, onItemClick, onBeforeNavigate }: LinkSectionProps) {
+export default function LinkSection({ itemId, itemType: _itemType, onItemClick, onBeforeNavigate, parentTask, onChildTaskCreated: _onChildTaskCreated }: LinkSectionProps) {
   const [links, setLinks] = useState<LinkDisplayItem[]>([]);
   const [urlLinks, setUrlLinks] = useState<UrlLinkDisplayItem[]>([]);
+  // Child task creation state
+  const [isAddingChild, setIsAddingChild] = useState(false);
+  const [childTitle, setChildTitle] = useState('');
+  const [isCreatingChild, setIsCreatingChild] = useState(false);
+  const [childCreationError, setChildCreationError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(true);
@@ -155,6 +174,67 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
     });
   };
 
+  const handleCancelAddChild = () => {
+    setIsAddingChild(false);
+    setChildTitle('');
+    setChildCreationError(null);
+  };
+
+  const handleCreateChildTask = async () => {
+    if (!childTitle.trim() || !parentTask) return;
+
+    setIsCreatingChild(true);
+    setChildCreationError(null);
+
+    try {
+      // 1. Create task with parent's status
+      const newTask = await TasksService.createTask({
+        title: childTitle.trim(),
+        status: (parentTask.status as 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled') || 'inbox',
+      });
+
+      // 2. Inherit labels from parent
+      if (parentTask.labels && parentTask.labels.length > 0) {
+        const allLabels = await LabelsService.listLabels();
+        const labelIdMap = new Map(allLabels.map(l => [l.name, l.id]));
+        await Promise.all(
+          parentTask.labels
+            .filter(name => labelIdMap.has(name))
+            .map(name =>
+              LabelsService.assignLabelToIssue(String(newTask.id), { labelId: labelIdMap.get(name)! })
+            )
+        );
+      }
+
+      // 3. Inherit projects from parent
+      const parentProjects = await ProjectsService.getProjectsForIssue(String(parentTask.id));
+      if (parentProjects.length > 0) {
+        await Promise.all(
+          parentProjects.map(project =>
+            ProjectsService.addProjectItem(String(project.id), { issueId: newTask.id })
+          )
+        );
+      }
+
+      // 4. Create child link (new task -> parent task)
+      await LinksService.createLink({
+        sourceIssueId: newTask.id,
+        targetIssueId: parentTask.id,
+        linkType: 'child',
+      });
+
+      // 5. Refresh links and reset form
+      await fetchAllLinks();
+      setChildTitle('');
+      setIsAddingChild(false);
+    } catch (err) {
+      console.error('Failed to create child task:', err);
+      setChildCreationError('Failed to create child task. Please try again.');
+    } finally {
+      setIsCreatingChild(false);
+    }
+  };
+
   const handleAddLink = async (targetId: number, linkType: LinkType) => {
     setCreationState((prev) => ({ ...prev, isSubmitting: true, error: null }));
     try {
@@ -244,17 +324,32 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
           </h3>
         </div>
 
-        {/* Add button */}
-        <button
-          className="text-xs px-2 py-1 text-github-green-600 hover:text-github-green-800 hover:bg-github-green-50 rounded border border-github-green-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleAddClick();
-          }}
-          disabled={loading || creationState.isAdding}
-        >
-          + Add
-        </button>
+        {/* Add buttons */}
+        <div className="flex gap-1">
+          {parentTask && (
+            <button
+              className="text-xs px-2 py-1 text-[#5f7a5f] hover:text-[#4a6a4a] hover:bg-gray-100 rounded border border-[#8a9f8a] disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsAddingChild(true);
+                setIsExpanded(true);
+              }}
+              disabled={loading || creationState.isAdding || isAddingChild}
+            >
+              + Child
+            </button>
+          )}
+          <button
+            className="text-xs px-2 py-1 text-github-green-600 hover:text-github-green-800 hover:bg-github-green-50 rounded border border-github-green-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleAddClick();
+            }}
+            disabled={loading || creationState.isAdding || isAddingChild}
+          >
+            + Add
+          </button>
+        </div>
       </button>
 
       {/* Section Content */}
@@ -294,6 +389,52 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
               creationState={creationState}
               setCreationState={setCreationState}
             />
+          )}
+
+          {/* Add child task form */}
+          {isAddingChild && (
+            <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-md">
+              <div className="text-xs font-medium text-gray-700 mb-2">
+                Add child task:
+              </div>
+              <input
+                type="text"
+                value={childTitle}
+                onChange={(e) => setChildTitle(e.target.value)}
+                placeholder="Enter child task title..."
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500"
+                disabled={isCreatingChild}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && childTitle.trim()) {
+                    handleCreateChildTask();
+                  } else if (e.key === 'Escape') {
+                    handleCancelAddChild();
+                  }
+                }}
+              />
+              {childCreationError && (
+                <div className="mt-2 text-xs text-red-600">
+                  {childCreationError}
+                </div>
+              )}
+              <div className="mt-2 flex justify-end gap-2">
+                <button
+                  onClick={handleCancelAddChild}
+                  disabled={isCreatingChild}
+                  className="text-sm px-3 py-1.5 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateChildTask}
+                  disabled={isCreatingChild || !childTitle.trim()}
+                  className="text-sm px-3 py-1.5 bg-github-green-600 text-white rounded hover:bg-github-green-700 disabled:opacity-50"
+                >
+                  {isCreatingChild ? 'Creating...' : 'Create'}
+                </button>
+              </div>
+            </div>
           )}
 
           {!loading && !error && totalLinksCount > 0 && (
