@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import type { LinkType, LinkCreationState, IssuePickerItem } from '../types/links';
 import IssuePicker from './IssuePicker';
+import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 
 type ExtendedLinkType = LinkType | 'url';
 
@@ -107,6 +108,10 @@ export default function AddLinkInline({
       setIsUrlSubmitting(false);
     }
   };
+
+  const handleKeyDown = useKeyboardShortcut(handleUrlSubmit, {
+    disabled: isUrlSubmitting || !urlInput.trim(),
+  });
 
   const handleCancel = () => {
     setIsUrlMode(false);
@@ -220,6 +225,7 @@ export default function AddLinkInline({
                 type="url"
                 value={urlInput}
                 onChange={(e) => setUrlInput(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="https://..."
                 disabled={isUrlSubmitting}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 disabled:opacity-50 disabled:bg-gray-100"
@@ -235,6 +241,7 @@ export default function AddLinkInline({
                 type="text"
                 value={titleInput}
                 onChange={(e) => setTitleInput(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Display title"
                 disabled={isUrlSubmitting}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 disabled:opacity-50 disabled:bg-gray-100"
