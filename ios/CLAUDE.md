@@ -1,5 +1,22 @@
 # iOS開発ガイド
 
+## ビルド必須ルール
+
+**IMPORTANT: ユーザーへの報告・確認を求める前に、必ず`xcodebuild`でビルドして動作確認すること**
+
+```bash
+xcodebuild -scheme MemeGTD -destination 'platform=iOS Simulator,name=iPhone 17' build
+```
+
+ビルドエラーや動作不良をユーザーに発見させない。
+
+## コミットルール
+
+**IMPORTANT: 変更を加えたら適宜コミットすること**
+
+- 機能追加・修正ごとにコミット
+- feature branchで作業し、進捗に合わせてpush
+
 ## プロジェクト構成
 
 ```
