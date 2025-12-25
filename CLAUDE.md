@@ -15,13 +15,12 @@
 - Both positive examples (✅ do this) and negative examples (❌ never do this)
 - Clear explanation of consequences (e.g., "wipes production DB")
 
-## 参照資料
+## docsを見るタイミング
 
-1. **`README.ai.md`** - 他AIへ渡す用のプロジェクト概要（コンセプト、データモデル、インターフェース）
-2. **`docs/gtd.md`** - GTDワークフローの概念図
-3. **`docs/requirement.md`** - 実装要件とデータモデル（最重要）
-4. **`docs/cli-commands.md`** - CLIコマンド仕様
-5. **GitHub CLI (`gh`)** - UX設計の参照元（`gh issue`, `gh project`コマンド）
+- **実装開始前**: 要件・仕様の確認
+- **リリース前**: バージョニングルールの確認
+
+詳細は `docs/CLAUDE.md` を参照。
 
 ## 開発時の原則
 
