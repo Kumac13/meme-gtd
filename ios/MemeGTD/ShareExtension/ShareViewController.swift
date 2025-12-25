@@ -16,7 +16,7 @@ class ShareViewController: UIViewController {
     }
 
     private func setupUI() {
-        view.backgroundColor = UIColor(red: 249/255, green: 250/255, blue: 251/255, alpha: 1) // gray-50
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.4)
 
         // Container for status UI
         containerView = UIView()
@@ -30,7 +30,7 @@ class ShareViewController: UIViewController {
 
         // Activity indicator
         activityIndicator = UIActivityIndicatorView(style: .large)
-        activityIndicator.color = UIColor(red: 45/255, green: 164/255, blue: 78/255, alpha: 1) // accent
+        activityIndicator.color = UIColor(red: 45/255, green: 164/255, blue: 78/255, alpha: 1)
         activityIndicator.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(activityIndicator)
 
@@ -39,7 +39,7 @@ class ShareViewController: UIViewController {
         statusLabel.text = "Saving article..."
         statusLabel.textAlignment = .center
         statusLabel.font = .systemFont(ofSize: 16, weight: .medium)
-        statusLabel.textColor = UIColor(red: 17/255, green: 24/255, blue: 39/255, alpha: 1) // textPrimary
+        statusLabel.textColor = UIColor(red: 17/255, green: 24/255, blue: 39/255, alpha: 1)
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(statusLabel)
 
@@ -75,26 +75,36 @@ class ShareViewController: UIViewController {
             return
         }
 
-        // Try to get URL
-        if itemProvider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
-            itemProvider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) { [weak self] item, error in
-                if let error = error {
-                    self?.showError("Failed to load URL: \(error.localizedDescription)")
-                    return
+        Task {
+            do {
+                let url = try await loadURL(from: itemProvider)
+                await MainActor.run {
+                    self.loadAndExtract(url: url)
                 }
-
-                guard let url = item as? URL else {
-                    self?.showError("Invalid URL")
-                    return
-                }
-
-                DispatchQueue.main.async {
-                    self?.loadAndExtract(url: url)
+            } catch {
+                await MainActor.run {
+                    self.showError("Failed to load URL: \(error.localizedDescription)")
                 }
             }
-        } else {
-            showError("No URL found in shared content")
         }
+    }
+
+    private func loadURL(from itemProvider: NSItemProvider) async throws -> URL {
+        if itemProvider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
+            let item = try await itemProvider.loadItem(forTypeIdentifier: UTType.url.identifier)
+            if let url = item as? URL {
+                return url
+            }
+        }
+
+        if itemProvider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
+            let item = try await itemProvider.loadItem(forTypeIdentifier: UTType.plainText.identifier)
+            if let urlString = item as? String, let url = URL(string: urlString) {
+                return url
+            }
+        }
+
+        throw NSError(domain: "MemeGTD", code: 2, userInfo: [NSLocalizedDescriptionKey: "No valid URL found"])
     }
 
     private func loadAndExtract(url: URL) {
@@ -105,49 +115,55 @@ class ShareViewController: UIViewController {
     private func executeExtraction() {
         updateStatus("Extracting article...")
 
-        // Load the bundled JavaScript
         guard let jsPath = Bundle.main.path(forResource: "extractor.bundle", ofType: "js"),
               let jsCode = try? String(contentsOfFile: jsPath, encoding: .utf8) else {
             showError("Failed to load extractor")
             return
         }
 
-        // Execute the extraction script
-        let script = """
-        \(jsCode)
-        (async function() {
-            try {
-                const result = await window.MemeGTDExtractor.extractArticle();
-                return result;
-            } catch (e) {
-                return JSON.stringify({ error: e.message || String(e) });
-            }
-        })();
-        """
-
-        webView.evaluateJavaScript(script) { [weak self] result, error in
+        webView.evaluateJavaScript(jsCode) { [weak self] _, error in
             if let error = error {
-                self?.showError("Extraction failed: \(error.localizedDescription)")
+                self?.showError("Failed to inject extractor: \(error.localizedDescription)")
                 return
             }
 
-            guard let jsonString = result as? String,
-                  let data = jsonString.data(using: .utf8) else {
-                self?.showError("Invalid extraction result")
-                return
-            }
+            guard let webView = self?.webView else { return }
 
-            do {
-                let article = try JSONDecoder().decode(ExtractedArticle.self, from: data)
+            let extractScript = """
+            const result = await window.MemeGTDExtractor.extractArticle();
+            return result;
+            """
 
-                if let errorMsg = article.error {
-                    self?.showError("Extraction error: \(errorMsg)")
-                    return
+            webView.callAsyncJavaScript(
+                extractScript,
+                arguments: [:],
+                in: nil,
+                in: .page
+            ) { result in
+                switch result {
+                case .success(let value):
+                    guard let jsonString = value as? String,
+                          let data = jsonString.data(using: .utf8) else {
+                        self?.showError("Invalid extraction result")
+                        return
+                    }
+
+                    do {
+                        let article = try JSONDecoder().decode(ExtractedArticle.self, from: data)
+
+                        if let errorMsg = article.error {
+                            self?.showError("Extraction error: \(errorMsg)")
+                            return
+                        }
+
+                        self?.saveToAPI(article: article)
+                    } catch {
+                        self?.showError("Failed to parse article: \(error.localizedDescription)")
+                    }
+
+                case .failure(let error):
+                    self?.showError("Extraction failed: \(error.localizedDescription)")
                 }
-
-                self?.saveToAPI(article: article)
-            } catch {
-                self?.showError("Failed to parse article: \(error.localizedDescription)")
             }
         }
     }
@@ -185,9 +201,8 @@ class ShareViewController: UIViewController {
     private func showSuccess(_ message: String) {
         activityIndicator.stopAnimating()
         statusLabel.text = message
-        statusLabel.textColor = UIColor(red: 45/255, green: 164/255, blue: 78/255, alpha: 1) // accent
+        statusLabel.textColor = UIColor(red: 45/255, green: 164/255, blue: 78/255, alpha: 1)
 
-        // Add checkmark
         let checkmark = UIImageView(image: UIImage(systemName: "checkmark.circle.fill"))
         checkmark.tintColor = UIColor(red: 45/255, green: 164/255, blue: 78/255, alpha: 1)
         checkmark.translatesAutoresizingMaskIntoConstraints = false
@@ -200,7 +215,6 @@ class ShareViewController: UIViewController {
             checkmark.heightAnchor.constraint(equalToConstant: 40)
         ])
 
-        // Dismiss after delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
         }
@@ -212,7 +226,6 @@ class ShareViewController: UIViewController {
             self.statusLabel.text = message
             self.statusLabel.textColor = .systemRed
 
-            // Add error icon
             let errorIcon = UIImageView(image: UIImage(systemName: "xmark.circle.fill"))
             errorIcon.tintColor = .systemRed
             errorIcon.translatesAutoresizingMaskIntoConstraints = false
@@ -225,7 +238,6 @@ class ShareViewController: UIViewController {
                 errorIcon.heightAnchor.constraint(equalToConstant: 40)
             ])
 
-            // Dismiss after delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                 self.extensionContext?.cancelRequest(withError: NSError(domain: "MemeGTD", code: 1, userInfo: [NSLocalizedDescriptionKey: message]))
             }
