@@ -41,3 +41,7 @@ Thumbs.db
 test-data/
 /test-data/
 .gemini-clipboard/
+
+# Xcode user data
+*.xcuserstate
+xcuserdata/
