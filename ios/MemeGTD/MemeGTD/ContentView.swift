@@ -166,6 +166,7 @@ struct CustomTextFieldStyle: TextFieldStyle {
         configuration
             .padding(12)
             .background(Color.surface)
+            .foregroundColor(.textPrimary)
             .cornerRadius(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
