@@ -1,93 +1,77 @@
-# Meme GTD iOS
+# iOS MemeGTD
 
-Safari Share Extension for saving articles to Meme GTD.
+Safari Share Extension for saving articles to meme-gtd.
 
-## Setup
-
-### Prerequisites
+## Requirements
 
 - Xcode 15.0+
 - iOS 16.0+
-- Apple Developer Account (free account works for development)
-
-### Create Xcode Project
-
-1. Open Xcode
-2. File > New > Project
-3. Select "App" under iOS
-4. Configure:
-   - Product Name: `MemeGTD`
-   - Team: Your Apple ID
-   - Organization Identifier: `com.memegtd` (or your own)
-   - Interface: SwiftUI
-   - Language: Swift
-5. Save to `ios/MemeGTD/` (replace existing files if prompted)
-
-### Add Share Extension Target
-
-1. File > New > Target
-2. Select "Share Extension" under iOS
-3. Configure:
-   - Product Name: `ShareExtension`
-   - Activate scheme when prompted
-4. Delete the auto-generated files (ShareViewController.swift, MainInterface.storyboard)
-
-### Configure App Group
-
-1. Select MemeGTD project in navigator
-2. Select MemeGTD target > Signing & Capabilities
-3. Click "+ Capability" > Add "App Groups"
-4. Add group: `group.com.memegtd.app`
-5. Repeat for ShareExtension target
-
-### Add Source Files
-
-1. Drag the following folders into the project:
-   - `Shared/` folder (add to both MemeGTD and ShareExtension targets)
-   - `MemeGTD/` Swift files (MemeGTD target only)
-   - `ShareExtension/` Swift files (ShareExtension target only)
-   - `ShareExtension/Resources/extractor.bundle.js` (ShareExtension target only)
-
-2. For `extractor.bundle.js`:
-   - Ensure "Copy items if needed" is checked
-   - Target Membership: ShareExtension only
-
-### Update Info.plist
-
-Replace the auto-generated Info.plist files with the provided ones:
-- `MemeGTD/Info.plist` for the main app
-- `ShareExtension/Info.plist` for the extension
-
-### Build and Run
-
-1. Select your iPhone or Simulator
-2. Build and Run (Cmd+R)
-3. Open the app and configure API URL
-4. In Safari, share a page and select "Meme GTD"
+- Tailscale (for API connection)
 
 ## Project Structure
 
 ```
 ios/MemeGTD/
-├── MemeGTD/              # Main app
-│   ├── MemeGTDApp.swift
-│   ├── ContentView.swift
-│   └── Info.plist
-├── ShareExtension/       # Share Extension
-│   ├── ShareViewController.swift
-│   ├── Info.plist
-│   └── Resources/
-│       └── extractor.bundle.js
-└── Shared/               # Shared code
-    ├── Colors.swift
-    ├── Settings.swift
-    ├── ArticleModels.swift
-    └── APIClient.swift
+├── MemeGTD/          # Host app (settings screen)
+├── ShareExtension/   # Safari Share Extension
+└── Shared/           # Shared code between targets
 ```
 
-## Regenerate JavaScript Bundle
+## Build
 
-If the extractor logic changes:
+```bash
+xcodebuild -scheme MemeGTD -destination 'platform=iOS Simulator,name=iPhone 17' build
+```
+
+## Install on iPhone
+
+### 1. Connect iPhone to Mac
+
+USB cable required.
+
+### 2. Build in Xcode
+
+1. Open `ios/MemeGTD/MemeGTD.xcodeproj`
+2. Select your iPhone from device dropdown
+3. Set signing team for both targets:
+   - Project Navigator → MemeGTD project → Signing & Capabilities
+   - Select your Apple ID for Team
+   - **Do this for both MemeGTD and ShareExtension targets**
+4. Press Cmd+R to build and run
+
+### 3. Enable Developer Mode (iOS 16+)
+
+After first build attempt:
+
+1. iPhone: Settings → Privacy & Security → Developer Mode (at bottom) → ON
+2. Restart iPhone when prompted
+
+### 4. Trust Developer Certificate
+
+1. iPhone: Settings → General → VPN & Device Management
+2. Tap your Apple ID under "Developer App"
+3. Tap "Trust"
+
+### 5. Run Again
+
+Build and run from Xcode again. The app should now install and launch.
+
+## Usage
+
+1. Open host app and configure API URL (e.g., `http://100.x.x.x:3000`)
+2. In Safari, tap Share button
+3. Select "MemeGTD" from share sheet
+4. Article will be extracted and saved
+
+## Notes
+
+- **Without Apple Developer Program**: App expires after 7 days, rebuild required
+- **Tailscale**: Must be connected on iPhone for API access
+- **Share Extension Memory Limit**: 120MB
+
+## Update JavaScript Bundle
+
+When `packages/extension/src/content/extractor.ts` changes:
 
 ```bash
 cd packages/extension
@@ -96,14 +80,20 @@ pnpm exec esbuild src/ios-extractor.ts --bundle --format=iife --outfile=../../io
 
 ## Troubleshooting
 
+### "Untrusted Developer"
+
+Settings → General → VPN & Device Management → Developer App → Trust
+
 ### "API URL is not configured"
-Open the main Meme GTD app and set your API URL (e.g., your Tailscale IP).
+
+Open the main MemeGTD app and set your API URL.
 
 ### "Network error"
-- Ensure Tailscale VPN is connected on your iPhone
-- Verify the API server is running
-- Check the URL is correct (include `http://` prefix)
+
+- Ensure Tailscale VPN is connected on iPhone
+- Verify API server is running
+- Check URL is correct (include `http://` prefix)
 
 ### Extension not appearing in Share menu
-- Go to Settings > General > Share Sheet
-- Find Meme GTD and enable it
+
+Settings → General → Share Sheet → Find MemeGTD and enable it
