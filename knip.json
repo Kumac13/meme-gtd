@@ -43,10 +43,10 @@
       "ignore": ["src/api/**"]
     },
     "packages/extension": {
-      "entry": ["src/background/index.ts", "src/content/index.ts", "src/popup/index.tsx", "src/options/index.tsx"],
+      "entry": ["src/background/index.ts", "src/content/index.ts", "src/popup/index.tsx", "src/options/index.tsx", "src/ios-extractor.ts"],
       "project": ["src/**/*.{ts,tsx}"],
-      "ignoreDependencies": ["@types/chrome"]
+      "ignoreDependencies": ["@types/chrome", "esbuild"]
     }
   },
-  "ignore": ["specs/**", "test-data/**"]
+  "ignore": ["specs/**", "test-data/**", "ios/**"]
 }
