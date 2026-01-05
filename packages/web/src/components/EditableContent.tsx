@@ -52,7 +52,10 @@ export default function EditableContent({
   };
 
   const handleSaveEdit = async () => {
-    if (!editingContent.trim()) return;
+    // For tasks with title edit, allow empty body if title exists
+    // For memos (no title edit), body is required
+    if (!showTitleEdit && !editingContent.trim()) return;
+    if (showTitleEdit && !editingTitle.trim() && !editingContent.trim()) return;
 
     try {
       setSaving(true);
@@ -70,8 +73,15 @@ export default function EditableContent({
     await onDelete();
   };
 
+  // Determine if save should be disabled
+  const isSaveDisabled = saving || (
+    showTitleEdit
+      ? (!editingTitle.trim() && !editingContent.trim())  // Task: need title or body
+      : !editingContent.trim()  // Memo: need body
+  );
+
   const handleKeyDown = useKeyboardShortcut(handleSaveEdit, {
-    disabled: saving || !editingContent.trim(),
+    disabled: isSaveDisabled,
   });
 
   const insertMarkdownRef = (markdownRef: string) => {
@@ -240,7 +250,7 @@ export default function EditableContent({
             </button>
             <button
               onClick={handleSaveEdit}
-              disabled={saving || !editingContent.trim()}
+              disabled={isSaveDisabled}
               className="px-3 py-1 text-sm bg-github-green-600 text-white rounded-md hover:bg-github-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
               title={`Save (${getShortcutHint()})`}
             >
