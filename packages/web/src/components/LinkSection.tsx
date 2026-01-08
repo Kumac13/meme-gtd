@@ -17,6 +17,7 @@ import { UrlLinksService } from '../api/services/UrlLinksService';
 import { TasksService } from '../api/services/TasksService';
 import { LabelsService } from '../api/services/LabelsService';
 import { ProjectsService } from '../api/services/ProjectsService';
+import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 
 // Status priority for sorting (lower = higher priority, displayed first)
 const statusPriority: Record<string, number> = {
@@ -235,6 +236,11 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
     }
   };
 
+  // Keyboard shortcut handler for child task creation (Cmd/Ctrl+Enter)
+  const handleChildTaskKeyDown = useKeyboardShortcut(handleCreateChildTask, {
+    disabled: isCreatingChild || !childTitle.trim(),
+  });
+
   const handleAddLink = async (targetId: number, linkType: LinkType) => {
     setCreationState((prev) => ({ ...prev, isSubmitting: true, error: null }));
     try {
@@ -406,9 +412,8 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
                 disabled={isCreatingChild}
                 autoFocus
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && childTitle.trim()) {
-                    handleCreateChildTask();
-                  } else if (e.key === 'Escape') {
+                  handleChildTaskKeyDown(e);
+                  if (e.key === 'Escape') {
                     handleCancelAddChild();
                   }
                 }}
