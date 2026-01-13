@@ -69,6 +69,9 @@ export default function CalendarView({
     weekOptions: {
       gridHeight: 1400,
     },
+    monthGridOptions: {
+      nEventsPerDay: 10,
+    },
     callbacks: {
       onEventClick: (event) => {
         if (onEventClick) {
