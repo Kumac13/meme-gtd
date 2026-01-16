@@ -7,12 +7,12 @@ interface UseKeyboardShortcutOptions {
 
 /**
  * Custom hook for Cmd/Ctrl+Enter keyboard shortcuts
- * @param callback - Function to call when shortcut is triggered
+ * @param callback - Function to call when shortcut is triggered. Receives the event for form access.
  * @param options - Configuration options
  * @returns Keyboard event handler
  */
 export function useKeyboardShortcut(
-  callback: () => void,
+  callback: (e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => void,
   options?: UseKeyboardShortcutOptions
 ) {
   return useCallback(
@@ -21,7 +21,7 @@ export function useKeyboardShortcut(
 
       if (isSubmitShortcut(e)) {
         e.preventDefault(); // Prevent newline in textarea
-        callback();
+        callback(e);
       }
     },
     [callback, options?.disabled]

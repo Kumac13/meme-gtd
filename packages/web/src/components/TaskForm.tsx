@@ -253,8 +253,9 @@ export default function TaskForm({
     }
   };
 
-  const handleKeyDown = useKeyboardShortcut(() => {
-    const form = document.querySelector('form');
+  const handleKeyDown = useKeyboardShortcut((e) => {
+    // Get the form that contains this input element
+    const form = (e.target as HTMLElement).closest('form');
     if (form) {
       form.requestSubmit();
     }

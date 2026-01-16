@@ -80,7 +80,7 @@ export default function EditableContent({
       : !editingContent.trim()  // Memo: need body
   );
 
-  const handleKeyDown = useKeyboardShortcut(handleSaveEdit, {
+  const handleKeyDown = useKeyboardShortcut(() => handleSaveEdit(), {
     disabled: isSaveDisabled,
   });
 
