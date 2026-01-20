@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.20.0 - 2026-01-20
+
+### New Features
+
+- **Task Kind**: Distinguish between events (time-fixed appointments) and actions (tasks to do).
+  - **Database**: New `task_kind` column with values `event` or `action` (default: `action`)
+  - **Calendar Visual Distinction**:
+    - Event: Green border only (hollow style)
+    - Action: Left green border + light green background + checkbox (○/●)
+  - **Web UI**: Kind toggle buttons in TaskForm and Schedule section
+  - **CLI**: New `--kind` option for `task create` and `task edit` commands
+  - **Migration**: Existing tasks with `mtg` label automatically set to `event`
+
 ## 0.19.1 - 2025-12-22
 
 ### Bug Fixes

@@ -1,6 +1,9 @@
 export const ISSUE_TYPES = ['memo', 'task', 'article'] as const;
 export type IssueType = (typeof ISSUE_TYPES)[number];
 
+export const TASK_KINDS = ['event', 'action'] as const;
+export type TaskKind = (typeof TASK_KINDS)[number];
+
 export type TaskStatus =
   | 'inbox'
   | 'open'
@@ -100,6 +103,7 @@ export interface Task extends IssueBase {
   type: 'task';
   title: string;
   status: TaskStatus;
+  taskKind: TaskKind;
   commentCount?: number;
   preview?: string;
 }

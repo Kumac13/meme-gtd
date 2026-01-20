@@ -1,7 +1,7 @@
 import { Args, Command, Flags } from '@oclif/core';
 import { loadConfig } from 'meme-gtd-config';
 import { TaskService } from 'meme-gtd-core';
-import { TaskStatus } from 'meme-gtd-shared';
+import { TaskStatus, TaskKind } from 'meme-gtd-shared';
 import { loadBodyFromFile } from '../../lib/io.js';
 import { maybePromptEditor } from '../../lib/editor.js';
 import { detectLegacyFlags, formatLegacyFlagError } from '../../lib/legacy-flags.js';
@@ -53,6 +53,12 @@ export default class TaskEdit extends Command {
       summary: 'Update task status',
       description: 'Set task status (inbox, open, next, waiting, scheduled, someday, done, canceled).',
       options: ['inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled']
+    }),
+    kind: Flags.string({
+      char: 'k',
+      summary: 'Update task kind',
+      description: 'Set task kind: "action" for tasks to do, "event" for time-fixed appointments.',
+      options: ['event', 'action']
     }),
     // New scheduling fields (ISO 8601 datetime)
     'scheduled-start': Flags.string({
@@ -164,6 +170,7 @@ export default class TaskEdit extends Command {
       flags.body === undefined &&
       flags['body-file'] === undefined &&
       flags.status === undefined &&
+      flags.kind === undefined &&
       flags['scheduled-start'] === undefined &&
       flags['scheduled-end'] === undefined &&
       flags['all-day'] === undefined &&
@@ -205,6 +212,7 @@ export default class TaskEdit extends Command {
       title: flags.title,
       bodyMd: body,
       status: flags.status as TaskStatus | undefined,
+      taskKind: flags.kind as TaskKind | undefined,
       // New scheduling fields
       scheduledStart: flags['scheduled-start'] === '' ? null : flags['scheduled-start'],
       scheduledEnd: flags['scheduled-end'] === '' ? null : flags['scheduled-end'],

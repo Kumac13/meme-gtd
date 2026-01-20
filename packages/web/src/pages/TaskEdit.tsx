@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import type { TaskKind } from 'meme-gtd-shared';
 import { TasksService } from '../api/services/TasksService';
 import TaskForm from '../components/TaskForm';
 import LoadingState from '../components/LoadingState';
@@ -12,6 +13,7 @@ interface Task {
   title: string;
   bodyMd: string | null;
   status: TaskStatus;
+  taskKind: TaskKind;
   createdAt: string;
   updatedAt: string;
 }
@@ -75,6 +77,7 @@ export default function TaskEdit() {
           initialTitle={task.title}
           initialBodyMd={task.bodyMd || ''}
           initialStatus={task.status}
+          initialTaskKind={task.taskKind}
         />
       </div>
     </div>

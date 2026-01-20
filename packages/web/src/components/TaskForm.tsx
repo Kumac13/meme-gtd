@@ -1,5 +1,6 @@
 import { useState, FormEvent, useEffect, useRef, DragEvent, ClipboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { TaskKind } from 'meme-gtd-shared';
 import { TasksService } from '../api/services/TasksService';
 import { MemosService } from '../api/services/MemosService';
 import { ProjectsService } from '../api/services/ProjectsService';
@@ -24,6 +25,7 @@ interface TaskFormProps {
   initialTitle?: string;
   initialBodyMd?: string;
   initialStatus?: TaskStatus;
+  initialTaskKind?: TaskKind;
   initialLinks?: PendingLink[];
   taskId?: number;
   fromMemoId?: number;
@@ -62,6 +64,7 @@ export default function TaskForm({
   initialTitle = '',
   initialBodyMd = '',
   initialStatus = 'inbox',
+  initialTaskKind = 'action',
   initialLinks = [],
   taskId,
   fromMemoId,
@@ -75,6 +78,7 @@ export default function TaskForm({
   const [title, setTitle] = useState(initialTitle);
   const [bodyMd, setBodyMd] = useState(initialBodyMd);
   const [status, setStatus] = useState<TaskStatus>(initialStatus);
+  const [taskKind, setTaskKind] = useState<TaskKind>(initialTaskKind);
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -163,6 +167,7 @@ export default function TaskForm({
           title,
           bodyMd: bodyMd || undefined,
           status,
+          taskKind,
           scheduledStart: scheduleData.scheduledStart || undefined,
           scheduledEnd: scheduleData.scheduledEnd || undefined,
           isAllDay: scheduleData.isAllDay,
@@ -228,6 +233,7 @@ export default function TaskForm({
           title,
           bodyMd: bodyMd || undefined,
           status,
+          taskKind,
         });
         navigate(`/tasks/${taskId}`);
       }
@@ -479,6 +485,39 @@ export default function TaskForm({
             <option value="done">Done</option>
             <option value="canceled">Canceled</option>
           </select>
+        </div>
+      )}
+
+      {/* Kind Section */}
+      {(mode === 'edit' || mode === 'create') && !fromMemoId && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Kind
+          </label>
+          <div className="flex rounded-md border border-gray-300 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setTaskKind('action')}
+              className={`flex-1 px-3 py-2 text-sm ${
+                taskKind === 'action'
+                  ? 'bg-github-green-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Action
+            </button>
+            <button
+              type="button"
+              onClick={() => setTaskKind('event')}
+              className={`flex-1 px-3 py-2 text-sm border-l border-gray-300 ${
+                taskKind === 'event'
+                  ? 'bg-github-green-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Event
+            </button>
+          </div>
         </div>
       )}
 

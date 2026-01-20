@@ -27,17 +27,7 @@
   min-height: 29px !important;
 }
 
-/* Calendar event color - single color (#2da44e) */
-.sx__time-grid-event,
-.sx__date-grid-event,
-.sx__month-grid-event,
-.sx__month-agenda-event {
-  background-color: #2da44e !important;
-  color: white !important;
-  border: none !important;
-  border-left: none !important;
-  border-inline-start: none !important;
-}
+/* Calendar event colors are now controlled by task_kind in calendar-custom.css */
 
 /* Prevent iOS auto-zoom on input focus */
 @media screen and (max-width: 768px) {

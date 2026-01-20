@@ -13,6 +13,7 @@ function createTask(overrides: Partial<Task>): Task {
     id: 1,
     title: 'Test Task',
     status: 'next',
+    taskKind: 'action',
     scheduledStart: null,
     scheduledEnd: null,
     isAllDay: false,

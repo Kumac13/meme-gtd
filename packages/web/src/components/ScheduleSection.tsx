@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
+import type { TaskKind } from 'meme-gtd-shared';
 
 interface ScheduleSectionProps {
+    // Task Kind (event or action)
+    taskKind: TaskKind;
+    onTaskKindChange?: (taskKind: TaskKind) => Promise<void>;
     // New scheduling fields (ISO 8601 datetime: YYYY-MM-DDTHH:MM:SS)
     scheduledStart: string | null;
     scheduledEnd: string | null;
@@ -56,6 +60,8 @@ function fromDateToEndDatetime(date: string): string {
 }
 
 export function ScheduleSection({
+    taskKind,
+    onTaskKindChange,
     scheduledStart,
     scheduledEnd,
     isAllDay,
@@ -77,6 +83,7 @@ export function ScheduleSection({
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Local state for form inputs
+    const [formTaskKind, setFormTaskKind] = useState<TaskKind>(taskKind);
     const [formAllDay, setFormAllDay] = useState(isAllDay);
     const [formStartDatetime, setFormStartDatetime] = useState(toDatetimeLocal(scheduledStart));
     const [formEndDatetime, setFormEndDatetime] = useState(toDatetimeLocal(scheduledEnd));
@@ -86,12 +93,13 @@ export function ScheduleSection({
 
     // Sync local state when props change
     useEffect(() => {
+        setFormTaskKind(taskKind);
         setFormAllDay(isAllDay);
         setFormStartDatetime(toDatetimeLocal(scheduledStart));
         setFormEndDatetime(toDatetimeLocal(scheduledEnd));
         setFormActualStart(toDatetimeLocal(actualStart));
         setFormActualEnd(toDatetimeLocal(actualEnd));
-    }, [scheduledStart, scheduledEnd, isAllDay, actualStart, actualEnd]);
+    }, [taskKind, scheduledStart, scheduledEnd, isAllDay, actualStart, actualEnd]);
 
     // Close when clicking outside
     useEffect(() => {
@@ -114,6 +122,11 @@ export function ScheduleSection({
         try {
             setLoading(true);
             setError(null);
+
+            // Save taskKind if changed
+            if (formTaskKind !== taskKind && onTaskKindChange) {
+                await onTaskKindChange(formTaskKind);
+            }
 
             let newScheduledStart: string | null = null;
             let newScheduledEnd: string | null = null;
@@ -248,6 +261,35 @@ export function ScheduleSection({
 
             {isEditing ? (
                 <div className="flex flex-col space-y-3">
+                    {/* Kind Toggle */}
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Kind</label>
+                        <div className="flex rounded-md border border-gray-300 overflow-hidden">
+                            <button
+                                type="button"
+                                onClick={() => setFormTaskKind('action')}
+                                className={`flex-1 px-3 py-1.5 text-sm ${
+                                    formTaskKind === 'action'
+                                        ? 'bg-github-green-600 text-white'
+                                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                                }`}
+                            >
+                                Action
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setFormTaskKind('event')}
+                                className={`flex-1 px-3 py-1.5 text-sm border-l border-gray-300 ${
+                                    formTaskKind === 'event'
+                                        ? 'bg-github-green-600 text-white'
+                                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                                }`}
+                            >
+                                Event
+                            </button>
+                        </div>
+                    </div>
+
                     {/* All Day Toggle */}
                     <div className="flex items-center">
                         <input
@@ -353,9 +395,23 @@ export function ScheduleSection({
                     onClick={() => setIsEditing(true)}
                     className="text-sm text-gray-700 hover:bg-gray-100 p-2 -mx-2 rounded cursor-pointer"
                 >
+                    {/* Task Kind */}
+                    <div className="flex items-center mb-1">
+                        {taskKind === 'event' ? (
+                            <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        ) : (
+                            <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                            </svg>
+                        )}
+                        <span className="ml-2">{taskKind === 'event' ? 'Event' : 'Action'}</span>
+                    </div>
+                    {/* Schedule */}
                     <div className="flex items-center">
                         <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span className="ml-2">{formatDisplay()}</span>
                     </div>

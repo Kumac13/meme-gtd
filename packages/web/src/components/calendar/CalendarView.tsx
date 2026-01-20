@@ -9,6 +9,7 @@ import { createCalendarControlsPlugin } from '@schedule-x/calendar-controls';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import type { CalendarView as ViewType } from '../../hooks/useCalendarState';
 import '@schedule-x/theme-default/dist/index.css';
+import './calendar-custom.css';
 
 interface CalendarViewProps {
   events: CalendarEventExternal[];
@@ -71,6 +72,40 @@ export default function CalendarView({
     },
     monthGridOptions: {
       nEventsPerDay: 10,
+    },
+    calendars: {
+      'event-incomplete': {
+        colorName: 'event-incomplete',
+        lightColors: {
+          main: '#16a34a',
+          container: 'transparent',
+          onContainer: '#16a34a',
+        },
+      },
+      'event-complete': {
+        colorName: 'event-complete',
+        lightColors: {
+          main: '#16a34a',
+          container: '#16a34a',
+          onContainer: '#ffffff',
+        },
+      },
+      'action-incomplete': {
+        colorName: 'action-incomplete',
+        lightColors: {
+          main: '#16a34a',
+          container: '#dcfce7',
+          onContainer: '#166534',
+        },
+      },
+      'action-complete': {
+        colorName: 'action-complete',
+        lightColors: {
+          main: '#16a34a',
+          container: '#dcfce7',
+          onContainer: '#166534',
+        },
+      },
     },
     callbacks: {
       onEventClick: (event) => {

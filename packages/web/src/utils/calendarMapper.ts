@@ -1,9 +1,11 @@
 import type { CalendarEventExternal } from '@schedule-x/calendar';
+import type { TaskKind } from 'meme-gtd-shared';
 
 export interface Task {
   id: number;
   title: string | null;
   status: string;
+  taskKind: TaskKind;
   // New scheduling fields (ISO 8601 datetime: YYYY-MM-DDTHH:MM:SS)
   scheduledStart: string | null;
   scheduledEnd: string | null;
@@ -79,11 +81,28 @@ export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
     return null;
   }
 
+  // Determine calendarId and CSS class based on taskKind and status
+  const isComplete = task.status === 'done' || task.status === 'canceled';
+  const taskKind = task.taskKind || 'action';
+  let calendarId: string;
+  let taskKindClass: string;
+  if (taskKind === 'event') {
+    calendarId = isComplete ? 'event-complete' : 'event-incomplete';
+    taskKindClass = isComplete ? 'task-kind-event-complete' : 'task-kind-event';
+  } else {
+    calendarId = isComplete ? 'action-complete' : 'action-incomplete';
+    taskKindClass = isComplete ? 'task-kind-action-complete' : 'task-kind-action';
+  }
+
   return {
     id: task.id,
     title,
     start,
     end,
+    calendarId,
+    _options: {
+      additionalClasses: [taskKindClass],
+    },
   };
 }
 
@@ -121,11 +140,28 @@ function taskToCalendarEventLegacy(task: Task): CalendarEventExternal | null {
     end = Temporal.PlainDate.from(task.endDate || task.scheduledOn);
   }
 
+  // Determine calendarId and CSS class based on taskKind and status
+  const isComplete = task.status === 'done' || task.status === 'canceled';
+  const taskKind = task.taskKind || 'action';
+  let calendarId: string;
+  let taskKindClass: string;
+  if (taskKind === 'event') {
+    calendarId = isComplete ? 'event-complete' : 'event-incomplete';
+    taskKindClass = isComplete ? 'task-kind-event-complete' : 'task-kind-event';
+  } else {
+    calendarId = isComplete ? 'action-complete' : 'action-incomplete';
+    taskKindClass = isComplete ? 'task-kind-action-complete' : 'task-kind-action';
+  }
+
   return {
     id: task.id,
     title,
     start,
     end,
+    calendarId,
+    _options: {
+      additionalClasses: [taskKindClass],
+    },
   };
 }
 

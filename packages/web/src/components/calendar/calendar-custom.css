@@ -1,0 +1,67 @@
+/* Custom styles for task_kind visual distinction in calendar */
+
+/* Event (incomplete): border-only style (中抜き - hollow with full border) */
+.task-kind-event {
+  background-color: transparent !important;
+  border: 2px solid #16a34a !important;
+  color: #16a34a !important;
+}
+
+.task-kind-event * {
+  color: #16a34a !important;
+}
+
+/* Event (complete): filled green */
+.task-kind-event-complete {
+  background-color: #16a34a !important;
+  border: none !important;
+  color: #ffffff !important;
+}
+
+.task-kind-event-complete * {
+  color: #ffffff !important;
+}
+
+/* Action (incomplete): left border + light background + circle checkbox */
+.task-kind-action {
+  background-color: #dcfce7 !important;
+  border: none !important;
+  border-left: 4px solid #16a34a !important;
+  color: #166534 !important;
+}
+
+/* Checkbox for all calendar views */
+.task-kind-action .sx__month-grid-event-time::before,
+.task-kind-action .sx__month-agenda-event__title::before,
+.task-kind-action .sx__time-grid-event-title::before,
+.task-kind-action .sx__date-grid-event-text::before {
+  content: '○';
+  margin-right: 4px;
+  color: #16a34a;
+}
+
+.task-kind-action * {
+  color: #166534 !important;
+}
+
+/* Action (complete): filled checkbox */
+.task-kind-action-complete {
+  background-color: #dcfce7 !important;
+  border: none !important;
+  border-left: 4px solid #16a34a !important;
+  color: #166534 !important;
+}
+
+/* Filled checkbox for all calendar views */
+.task-kind-action-complete .sx__month-grid-event-time::before,
+.task-kind-action-complete .sx__month-agenda-event__title::before,
+.task-kind-action-complete .sx__time-grid-event-title::before,
+.task-kind-action-complete .sx__date-grid-event-text::before {
+  content: '●';
+  margin-right: 4px;
+  color: #16a34a;
+}
+
+.task-kind-action-complete * {
+  color: #166534 !important;
+}

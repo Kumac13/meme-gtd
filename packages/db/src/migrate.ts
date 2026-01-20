@@ -24,7 +24,8 @@ const migrations = [
   { version: '008_add_activity_log', file: path.join(schemaDir, '008_add_activity_log.sql') },
   { version: '009_activity_log_immutability', file: path.join(schemaDir, '009_activity_log_immutability.sql') },
   { version: '010_update_issues_type_check', file: path.join(schemaDir, '010_update_issues_type_check.sql') },
-  { version: '011_add_url_links', file: path.join(schemaDir, '011_add_url_links.sql') }
+  { version: '011_add_url_links', file: path.join(schemaDir, '011_add_url_links.sql') },
+  { version: '012_add_task_kind', file: path.join(schemaDir, '012_add_task_kind.sql') }
 ] as const;
 
 const prepareDatabase = (db: Database.Database): void => {

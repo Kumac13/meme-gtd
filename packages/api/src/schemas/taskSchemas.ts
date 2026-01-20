@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TASK_KINDS } from 'meme-gtd-shared';
 
 /**
  * Schema for task status values
@@ -6,6 +7,14 @@ import { z } from 'zod';
 export const TaskStatusSchema = z.enum(['inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled']);
 
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
+
+/**
+ * Schema for task kind values (event vs action)
+ * Uses shared TASK_KINDS constant for consistency
+ */
+export const TaskKindSchema = z.enum(TASK_KINDS);
+
+export type { TaskKind } from 'meme-gtd-shared';
 
 /**
  * ISO 8601 datetime regex pattern (YYYY-MM-DDTHH:MM:SS)
@@ -19,6 +28,7 @@ export const CreateTaskRequestSchema = z.object({
   title: z.string().min(1, 'Task title is required').describe('Task title'),
   bodyMd: z.string().optional().describe('Task description in Markdown format'),
   status: TaskStatusSchema.optional().describe('Task status (defaults to "inbox")'),
+  taskKind: TaskKindSchema.optional().describe('Task kind (defaults to "action")'),
   // New scheduling fields (ISO 8601 datetime)
   scheduledStart: z.string().regex(iso8601DatetimeRegex, 'Invalid datetime format (YYYY-MM-DDTHH:MM:SS)').optional().describe('Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS)'),
   scheduledEnd: z.string().regex(iso8601DatetimeRegex, 'Invalid datetime format (YYYY-MM-DDTHH:MM:SS)').optional().describe('Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS)'),
@@ -40,6 +50,7 @@ export const UpdateTaskRequestSchema = z.object({
   title: z.string().min(1, 'Task title cannot be empty').optional().describe('Updated task title'),
   bodyMd: z.string().optional().describe('Updated task description in Markdown format'),
   status: TaskStatusSchema.optional().describe('Updated task status'),
+  taskKind: TaskKindSchema.optional().describe('Updated task kind'),
   // New scheduling fields (ISO 8601 datetime)
   scheduledStart: z.string().regex(iso8601DatetimeRegex, 'Invalid datetime format (YYYY-MM-DDTHH:MM:SS)').nullish().describe('Updated scheduled start datetime (null to clear)'),
   scheduledEnd: z.string().regex(iso8601DatetimeRegex, 'Invalid datetime format (YYYY-MM-DDTHH:MM:SS)').nullish().describe('Updated scheduled end datetime (null to clear)'),
@@ -69,6 +80,7 @@ export const TaskSchema = z.object({
   title: z.string().describe('Task title'),
   bodyMd: z.string().describe('Task description in Markdown format'),
   status: TaskStatusSchema.describe('Current task status'),
+  taskKind: TaskKindSchema.describe('Task kind (event or action)'),
   // New scheduling fields (ISO 8601 datetime)
   scheduledStart: z.string().nullable().describe('Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)'),
   scheduledEnd: z.string().nullable().describe('Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)'),

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { IssueType } from 'meme-gtd-shared';
+import type { IssueType, TaskKind } from 'meme-gtd-shared';
 import { MemosService } from '../api/services/MemosService';
 import { TasksService } from '../api/services/TasksService';
 import { ArticlesService } from '../api/services/ArticlesService';
@@ -23,7 +23,6 @@ const TASK_STATUS_OPTIONS = [
   { value: 'canceled', label: 'Canceled' },
 ];
 
-
 interface BaseItem {
   id: number;
   title: string | null;
@@ -36,6 +35,7 @@ interface BaseItem {
 
 interface Task extends BaseItem {
   status: string | null;
+  taskKind: TaskKind;
   // New scheduling fields (ISO 8601 datetime)
   scheduledStart: string | null;
   scheduledEnd: string | null;
@@ -281,9 +281,16 @@ export default function ItemDetail({
           {/* Projects Section */}
           <ProjectsSection itemId={item.id} itemType={itemType} />
 
-          {/* Schedule Section */}
+          {/* Schedule Section (includes Task Kind) */}
           {itemType === 'task' && 'scheduledStart' in item && (
             <ScheduleSection
+              taskKind={(item as Task).taskKind || 'action'}
+              onTaskKindChange={async (newKind) => {
+                const updatedItem = await TasksService.updateTask(String(item.id), {
+                  taskKind: newKind,
+                });
+                onUpdate(updatedItem as Item);
+              }}
               scheduledStart={(item as Task).scheduledStart}
               scheduledEnd={(item as Task).scheduledEnd}
               isAllDay={(item as Task).isAllDay}
