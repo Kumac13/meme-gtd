@@ -488,24 +488,36 @@ export default function TaskForm({
         </div>
       )}
 
-      {/* Task Kind Section */}
+      {/* Kind Section */}
       {(mode === 'edit' || mode === 'create') && !fromMemoId && (
         <div>
-          <label htmlFor="taskKind" className="block text-sm font-medium text-gray-700 mb-2">
-            Task Kind
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Kind
           </label>
-          <select
-            id="taskKind"
-            value={taskKind}
-            onChange={(e) => setTaskKind(e.target.value as TaskKind)}
-            className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 appearance-none bg-white bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3d%22http%3a%2f%2fwww.w3.org%2f2000%2fsvg%22%20viewBox%3d%220%200%2020%2020%22%20fill%3d%22%236b7280%22%3e%3cpath%20fill-rule%3d%22evenodd%22%20d%3d%22M5.23%207.21a.75.75%200%20011.06.02L10%2011.168l3.71-3.938a.75.75%200%20111.08%201.04l-4.25%204.5a.75.75%200%2001-1.08%200l-4.25-4.5a.75.75%200%2001.02-1.06z%22%20clip-rule%3d%22evenodd%22%2f%3e%3c%2fsvg%3e')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
-          >
-            <option value="action">Action</option>
-            <option value="event">Event</option>
-          </select>
-          <p className="mt-1 text-xs text-gray-500">
-            Action: Tasks to do. Event: Time-fixed appointments.
-          </p>
+          <div className="flex rounded-md border border-gray-300 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setTaskKind('action')}
+              className={`flex-1 px-3 py-2 text-sm ${
+                taskKind === 'action'
+                  ? 'bg-github-green-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Action
+            </button>
+            <button
+              type="button"
+              onClick={() => setTaskKind('event')}
+              className={`flex-1 px-3 py-2 text-sm border-l border-gray-300 ${
+                taskKind === 'event'
+                  ? 'bg-github-green-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Event
+            </button>
+          </div>
         </div>
       )}
 

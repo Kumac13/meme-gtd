@@ -260,9 +260,9 @@ export function ScheduleSection({
 
             {isEditing ? (
                 <div className="flex flex-col space-y-3">
-                    {/* Task Kind Toggle */}
+                    {/* Kind Toggle */}
                     <div>
-                        <label className="block text-xs text-gray-500 mb-1">Type</label>
+                        <label className="block text-xs text-gray-500 mb-1">Kind</label>
                         <div className="flex rounded-md border border-gray-300 overflow-hidden">
                             <button
                                 type="button"
