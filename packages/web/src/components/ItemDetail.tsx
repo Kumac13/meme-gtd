@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { IssueType } from 'meme-gtd-shared';
+import type { IssueType, TaskKind } from 'meme-gtd-shared';
 import { MemosService } from '../api/services/MemosService';
 import { TasksService } from '../api/services/TasksService';
 import { ArticlesService } from '../api/services/ArticlesService';
@@ -35,7 +35,7 @@ interface BaseItem {
 
 interface Task extends BaseItem {
   status: string | null;
-  taskKind: 'event' | 'action';
+  taskKind: TaskKind;
   // New scheduling fields (ISO 8601 datetime)
   scheduledStart: string | null;
   scheduledEnd: string | null;

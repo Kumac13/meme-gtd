@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import type { TaskKind } from 'meme-gtd-shared';
 import { TasksService } from '../api/services/TasksService';
 import TaskForm from '../components/TaskForm';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 
 type TaskStatus = 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
-type TaskKind = 'event' | 'action';
 
 interface Task {
   id: number;

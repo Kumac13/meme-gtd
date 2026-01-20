@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TASK_KINDS } from 'meme-gtd-shared';
 
 /**
  * Schema for task status values
@@ -9,10 +10,11 @@ export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 
 /**
  * Schema for task kind values (event vs action)
+ * Uses shared TASK_KINDS constant for consistency
  */
-export const TaskKindSchema = z.enum(['event', 'action']);
+export const TaskKindSchema = z.enum(TASK_KINDS);
 
-export type TaskKind = z.infer<typeof TaskKindSchema>;
+export type { TaskKind } from 'meme-gtd-shared';
 
 /**
  * ISO 8601 datetime regex pattern (YYYY-MM-DDTHH:MM:SS)

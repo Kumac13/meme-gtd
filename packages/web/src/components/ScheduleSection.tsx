@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
+import type { TaskKind } from 'meme-gtd-shared';
 
 interface ScheduleSectionProps {
     // Task Kind (event or action)
-    taskKind: 'event' | 'action';
-    onTaskKindChange?: (taskKind: 'event' | 'action') => Promise<void>;
+    taskKind: TaskKind;
+    onTaskKindChange?: (taskKind: TaskKind) => Promise<void>;
     // New scheduling fields (ISO 8601 datetime: YYYY-MM-DDTHH:MM:SS)
     scheduledStart: string | null;
     scheduledEnd: string | null;
@@ -82,7 +83,7 @@ export function ScheduleSection({
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Local state for form inputs
-    const [formTaskKind, setFormTaskKind] = useState<'event' | 'action'>(taskKind);
+    const [formTaskKind, setFormTaskKind] = useState<TaskKind>(taskKind);
     const [formAllDay, setFormAllDay] = useState(isAllDay);
     const [formStartDatetime, setFormStartDatetime] = useState(toDatetimeLocal(scheduledStart));
     const [formEndDatetime, setFormEndDatetime] = useState(toDatetimeLocal(scheduledEnd));

@@ -1,10 +1,11 @@
 import type { CalendarEventExternal } from '@schedule-x/calendar';
+import type { TaskKind } from 'meme-gtd-shared';
 
 export interface Task {
   id: number;
   title: string | null;
   status: string;
-  taskKind: 'event' | 'action';
+  taskKind: TaskKind;
   // New scheduling fields (ISO 8601 datetime: YYYY-MM-DDTHH:MM:SS)
   scheduledStart: string | null;
   scheduledEnd: string | null;

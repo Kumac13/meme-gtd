@@ -1,5 +1,6 @@
 import { useState, FormEvent, useEffect, useRef, DragEvent, ClipboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { TaskKind } from 'meme-gtd-shared';
 import { TasksService } from '../api/services/TasksService';
 import { MemosService } from '../api/services/MemosService';
 import { ProjectsService } from '../api/services/ProjectsService';
@@ -19,7 +20,6 @@ import { useImageUpload } from '../hooks/useImageUpload';
 import type { PendingLink } from '../types/links';
 
 type TaskStatus = 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
-type TaskKind = 'event' | 'action';
 
 interface TaskFormProps {
   initialTitle?: string;
