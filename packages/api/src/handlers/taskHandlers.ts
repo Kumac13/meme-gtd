@@ -18,6 +18,7 @@ export async function createTaskHandler(
     title,
     bodyMd,
     status,
+    taskKind,
     // New scheduling fields
     scheduledStart,
     scheduledEnd,
@@ -36,6 +37,7 @@ export async function createTaskHandler(
       title,
       bodyMd: bodyMd ?? '', // Default to empty string if undefined
       status,
+      taskKind,
       // New scheduling fields
       scheduledStart,
       scheduledEnd,

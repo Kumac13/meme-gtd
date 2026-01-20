@@ -1,10 +1,11 @@
 import Database from 'better-sqlite3';
-import { nowIso, type Task, type Comment, toBoolean, type TaskStatus } from 'meme-gtd-shared';
+import { nowIso, type Task, type Comment, toBoolean, type TaskStatus, type TaskKind } from 'meme-gtd-shared';
 
 export interface CreateTaskInput {
   title: string;
   bodyMd: string;
   status?: TaskStatus;
+  taskKind?: TaskKind;
   // New scheduling fields (ISO 8601 datetime)
   scheduledStart?: string;
   scheduledEnd?: string;
@@ -24,6 +25,7 @@ export interface UpdateTaskInput {
   title?: string;
   bodyMd?: string;
   status?: TaskStatus;
+  taskKind?: TaskKind;
   // New scheduling fields (ISO 8601 datetime)
   scheduledStart?: string | null;
   scheduledEnd?: string | null;
@@ -63,6 +65,7 @@ const taskRowToTask = (row: any): Task => ({
   title: row.title,
   bodyMd: row.body_md,
   status: row.status as TaskStatus,
+  taskKind: (row.task_kind ?? 'action') as TaskKind,
   // New fields
   scheduledStart: row.scheduled_start,
   scheduledEnd: row.scheduled_end,
@@ -110,14 +113,17 @@ export const createTask = (db: Database.Database, input: CreateTaskInput): Task 
     actualStart = `${date}T${time}:00`;
   }
 
+  const taskKind = input.taskKind ?? 'action';
+
   const stmt = db.prepare(
-    `INSERT INTO issues (type, title, body_md, status, actual_start, scheduled_start, scheduled_end, is_all_day, scheduled_on, end_date, start_time, end_time, duration, meta, created_at, updated_at, is_bookmarked, is_deleted)
-     VALUES ('task', @title, @body, @status, @actualStart, @scheduledStart, @scheduledEnd, @isAllDay, @scheduledOn, @endDate, @startTime, @endTime, @duration, json('{}'), @createdAt, @createdAt, 0, 0)`
+    `INSERT INTO issues (type, title, body_md, status, task_kind, actual_start, scheduled_start, scheduled_end, is_all_day, scheduled_on, end_date, start_time, end_time, duration, meta, created_at, updated_at, is_bookmarked, is_deleted)
+     VALUES ('task', @title, @body, @status, @taskKind, @actualStart, @scheduledStart, @scheduledEnd, @isAllDay, @scheduledOn, @endDate, @startTime, @endTime, @duration, json('{}'), @createdAt, @createdAt, 0, 0)`
   );
   const result = stmt.run({
     title: input.title,
     body: input.bodyMd,
     status,
+    taskKind,
     actualStart,
     // New fields
     scheduledStart: input.scheduledStart ?? null,
@@ -432,6 +438,7 @@ export const updateTask = (db: Database.Database, input: UpdateTaskInput): Task 
     input.title === undefined &&
     input.bodyMd === undefined &&
     input.status === undefined &&
+    input.taskKind === undefined &&
     // New fields
     input.scheduledStart === undefined &&
     input.scheduledEnd === undefined &&
@@ -462,6 +469,11 @@ export const updateTask = (db: Database.Database, input: UpdateTaskInput): Task 
   if (input.bodyMd !== undefined) {
     updates.push('body_md = @bodyMd');
     params.bodyMd = input.bodyMd;
+  }
+
+  if (input.taskKind !== undefined) {
+    updates.push('task_kind = @taskKind');
+    params.taskKind = input.taskKind;
   }
 
   // New scheduling fields

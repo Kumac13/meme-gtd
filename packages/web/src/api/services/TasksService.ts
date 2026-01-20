@@ -28,6 +28,10 @@ export class TasksService {
              */
             status?: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
             /**
+             * Task kind (defaults to "action")
+             */
+            taskKind?: 'event' | 'action';
+            /**
              * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS)
              */
             scheduledStart?: string;
@@ -81,6 +85,10 @@ export class TasksService {
          * Current task status
          */
         status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
+        /**
+         * Task kind (event or action)
+         */
+        taskKind: 'event' | 'action';
         /**
          * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
          */
@@ -204,6 +212,10 @@ export class TasksService {
              * Current task status
              */
             status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
+            /**
+             * Task kind (event or action)
+             */
+            taskKind: 'event' | 'action';
             /**
              * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
              */
@@ -347,6 +359,10 @@ export class TasksService {
          */
         status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
+         * Task kind (event or action)
+         */
+        taskKind: 'event' | 'action';
+        /**
          * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
          */
         scheduledStart: string | null;
@@ -450,6 +466,10 @@ export class TasksService {
              */
             status?: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
             /**
+             * Updated task kind
+             */
+            taskKind?: 'event' | 'action';
+            /**
              * Updated scheduled start datetime (null to clear)
              */
             scheduledStart?: string | null;
@@ -514,6 +534,10 @@ export class TasksService {
          * Current task status
          */
         status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
+        /**
+         * Task kind (event or action)
+         */
+        taskKind: 'event' | 'action';
         /**
          * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
          */
@@ -645,6 +669,10 @@ export class TasksService {
          */
         status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
+         * Task kind (event or action)
+         */
+        taskKind: 'event' | 'action';
+        /**
          * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
          */
         scheduledStart: string | null;
@@ -750,6 +778,10 @@ export class TasksService {
          * Current task status
          */
         status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
+        /**
+         * Task kind (event or action)
+         */
+        taskKind: 'event' | 'action';
         /**
          * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
          */
@@ -857,6 +889,10 @@ export class TasksService {
          */
         status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
+         * Task kind (event or action)
+         */
+        taskKind: 'event' | 'action';
+        /**
          * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
          */
         scheduledStart: string | null;
@@ -963,6 +999,10 @@ export class TasksService {
          */
         status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
         /**
+         * Task kind (event or action)
+         */
+        taskKind: 'event' | 'action';
+        /**
          * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
          */
         scheduledStart: string | null;
@@ -1068,6 +1108,10 @@ export class TasksService {
          * Current task status
          */
         status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
+        /**
+         * Task kind (event or action)
+         */
+        taskKind: 'event' | 'action';
         /**
          * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
          */
@@ -1189,6 +1233,10 @@ export class TasksService {
              * Current task status
              */
             status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
+            /**
+             * Task kind (event or action)
+             */
+            taskKind: 'event' | 'action';
             /**
              * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
              */

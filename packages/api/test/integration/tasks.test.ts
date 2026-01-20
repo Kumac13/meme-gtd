@@ -1321,3 +1321,120 @@ describe('Task Datetime Fields Operations', () => {
     assert.strictEqual(task.actualEnd, null);
   });
 });
+
+// ============================================================
+// Task Kind Operations (T1-1 to T1-7)
+// New field: taskKind = 'event' | 'action'
+// ============================================================
+
+describe('Task Kind Operations', () => {
+  let app: FastifyInstance;
+  let cleanup: () => Promise<void>;
+
+  beforeEach(async () => {
+    const server = await createTestServer();
+    app = server.app;
+    cleanup = server.cleanup;
+  });
+
+  afterEach(async () => {
+    await cleanup();
+  });
+
+  // T1-1: taskKind='event'でタスクを作成できる
+  it('should create task with taskKind=event', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: { title: 'Team meeting', taskKind: 'event' },
+    });
+    assert.strictEqual(response.statusCode, 201);
+    const task = JSON.parse(response.body);
+    assert.strictEqual(task.taskKind, 'event');
+  });
+
+  // T1-2: taskKind='action'でタスクを作成できる
+  it('should create task with taskKind=action', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: { title: 'Review PR', taskKind: 'action' },
+    });
+    assert.strictEqual(response.statusCode, 201);
+    const task = JSON.parse(response.body);
+    assert.strictEqual(task.taskKind, 'action');
+  });
+
+  // T1-3: taskKind未指定時はデフォルトで'action'になる
+  it('should default taskKind to action when not specified', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: { title: 'Regular task' },
+    });
+    assert.strictEqual(response.statusCode, 201);
+    const task = JSON.parse(response.body);
+    assert.strictEqual(task.taskKind, 'action');
+  });
+
+  // T1-4: PATCHでtaskKindを変更できる
+  it('should update taskKind via PATCH', async () => {
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: { title: 'Task to update' },
+    });
+    const task = JSON.parse(createRes.body);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/tasks/${task.id}`,
+      payload: { taskKind: 'event' },
+    });
+    assert.strictEqual(response.statusCode, 200);
+    const updated = JSON.parse(response.body);
+    assert.strictEqual(updated.taskKind, 'event');
+  });
+
+  // T1-5: 不正なtaskKind値は400エラー
+  it('should reject invalid taskKind value', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: { title: 'Invalid', taskKind: 'invalid' },
+    });
+    assert.strictEqual(response.statusCode, 400);
+  });
+
+  // T1-6: GET /api/tasksでtaskKindが返る
+  it('should return taskKind in GET /api/tasks', async () => {
+    await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: { title: 'Event task', taskKind: 'event' },
+    });
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/tasks',
+    });
+    const result = JSON.parse(response.body);
+    assert.ok(result.data.some((t: any) => t.taskKind === 'event'));
+  });
+
+  // T1-7: GET /api/tasks/:idでtaskKindが返る
+  it('should return taskKind in GET /api/tasks/:id', async () => {
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: { title: 'Single task', taskKind: 'event' },
+    });
+    const task = JSON.parse(createRes.body);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/tasks/${task.id}`,
+    });
+    const fetched = JSON.parse(response.body);
+    assert.strictEqual(fetched.taskKind, 'event');
+  });
+});

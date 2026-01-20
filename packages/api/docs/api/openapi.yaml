@@ -1259,6 +1259,12 @@ paths:
                     - done
                     - canceled
                   description: Task status (defaults to "inbox")
+                taskKind:
+                  type: string
+                  enum:
+                    - event
+                    - action
+                  description: Task kind (defaults to "action")
                 scheduledStart:
                   type: string
                   pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$
@@ -1331,6 +1337,12 @@ paths:
                       - done
                       - canceled
                     description: Current task status
+                  taskKind:
+                    type: string
+                    enum:
+                      - event
+                      - action
+                    description: Task kind (event or action)
                   scheduledStart:
                     type: string
                     nullable: true
@@ -1401,6 +1413,7 @@ paths:
                   - title
                   - bodyMd
                   - status
+                  - taskKind
                   - scheduledStart
                   - scheduledEnd
                   - isAllDay
@@ -1554,6 +1567,12 @@ paths:
                             - done
                             - canceled
                           description: Current task status
+                        taskKind:
+                          type: string
+                          enum:
+                            - event
+                            - action
+                          description: Task kind (event or action)
                         scheduledStart:
                           type: string
                           nullable: true
@@ -1645,6 +1664,7 @@ paths:
                         - title
                         - bodyMd
                         - status
+                        - taskKind
                         - scheduledStart
                         - scheduledEnd
                         - isAllDay
@@ -1759,6 +1779,12 @@ paths:
                       - done
                       - canceled
                     description: Current task status
+                  taskKind:
+                    type: string
+                    enum:
+                      - event
+                      - action
+                    description: Task kind (event or action)
                   scheduledStart:
                     type: string
                     nullable: true
@@ -1833,6 +1859,7 @@ paths:
                   - title
                   - bodyMd
                   - status
+                  - taskKind
                   - scheduledStart
                   - scheduledEnd
                   - isAllDay
@@ -1904,6 +1931,12 @@ paths:
                     - done
                     - canceled
                   description: Updated task status
+                taskKind:
+                  type: string
+                  enum:
+                    - event
+                    - action
+                  description: Updated task kind
                 scheduledStart:
                   type: string
                   pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$
@@ -2010,6 +2043,12 @@ paths:
                       - done
                       - canceled
                     description: Current task status
+                  taskKind:
+                    type: string
+                    enum:
+                      - event
+                      - action
+                    description: Task kind (event or action)
                   scheduledStart:
                     type: string
                     nullable: true
@@ -2080,6 +2119,7 @@ paths:
                   - title
                   - bodyMd
                   - status
+                  - taskKind
                   - scheduledStart
                   - scheduledEnd
                   - isAllDay
@@ -2234,6 +2274,12 @@ paths:
                       - done
                       - canceled
                     description: Current task status
+                  taskKind:
+                    type: string
+                    enum:
+                      - event
+                      - action
+                    description: Task kind (event or action)
                   scheduledStart:
                     type: string
                     nullable: true
@@ -2304,6 +2350,7 @@ paths:
                   - title
                   - bodyMd
                   - status
+                  - taskKind
                   - scheduledStart
                   - scheduledEnd
                   - isAllDay
@@ -2395,6 +2442,12 @@ paths:
                       - done
                       - canceled
                     description: Current task status
+                  taskKind:
+                    type: string
+                    enum:
+                      - event
+                      - action
+                    description: Task kind (event or action)
                   scheduledStart:
                     type: string
                     nullable: true
@@ -2465,6 +2518,7 @@ paths:
                   - title
                   - bodyMd
                   - status
+                  - taskKind
                   - scheduledStart
                   - scheduledEnd
                   - isAllDay
@@ -2556,6 +2610,12 @@ paths:
                       - done
                       - canceled
                     description: Current task status
+                  taskKind:
+                    type: string
+                    enum:
+                      - event
+                      - action
+                    description: Task kind (event or action)
                   scheduledStart:
                     type: string
                     nullable: true
@@ -2626,6 +2686,7 @@ paths:
                   - title
                   - bodyMd
                   - status
+                  - taskKind
                   - scheduledStart
                   - scheduledEnd
                   - isAllDay
@@ -2717,6 +2778,12 @@ paths:
                       - done
                       - canceled
                     description: Current task status
+                  taskKind:
+                    type: string
+                    enum:
+                      - event
+                      - action
+                    description: Task kind (event or action)
                   scheduledStart:
                     type: string
                     nullable: true
@@ -2787,6 +2854,7 @@ paths:
                   - title
                   - bodyMd
                   - status
+                  - taskKind
                   - scheduledStart
                   - scheduledEnd
                   - isAllDay
@@ -2878,6 +2946,12 @@ paths:
                       - done
                       - canceled
                     description: Current task status
+                  taskKind:
+                    type: string
+                    enum:
+                      - event
+                      - action
+                    description: Task kind (event or action)
                   scheduledStart:
                     type: string
                     nullable: true
@@ -2948,6 +3022,7 @@ paths:
                   - title
                   - bodyMd
                   - status
+                  - taskKind
                   - scheduledStart
                   - scheduledEnd
                   - isAllDay
@@ -3057,6 +3132,12 @@ paths:
                           - done
                           - canceled
                         description: Current task status
+                      taskKind:
+                        type: string
+                        enum:
+                          - event
+                          - action
+                        description: Task kind (event or action)
                       scheduledStart:
                         type: string
                         nullable: true
@@ -3127,6 +3208,7 @@ paths:
                       - title
                       - bodyMd
                       - status
+                      - taskKind
                       - scheduledStart
                       - scheduledEnd
                       - isAllDay
