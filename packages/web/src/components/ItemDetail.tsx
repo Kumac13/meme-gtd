@@ -287,10 +287,12 @@ export default function ItemDetail({
           {/* Projects Section */}
           <ProjectsSection itemId={item.id} itemType={itemType} />
 
-          {/* Task Kind Section */}
+          {/* Task Kind Section - matches ScheduleSection/LabelsSection styling */}
           {itemType === 'task' && 'taskKind' in item && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-gray-900 mb-2">Task Kind</h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-gray-900">Task Kind</h3>
+              </div>
               <StatusSelector
                 value={(item as Task).taskKind || 'action'}
                 onChange={async (newKind) => {
@@ -305,9 +307,6 @@ export default function ItemDetail({
                 }}
                 options={TASK_KIND_OPTIONS}
               />
-              <p className="mt-2 text-xs text-gray-500">
-                Action: Tasks to do. Event: Time-fixed appointments.
-              </p>
             </div>
           )}
 

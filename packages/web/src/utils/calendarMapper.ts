@@ -80,14 +80,17 @@ export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
     return null;
   }
 
-  // Determine calendarId based on taskKind and status
+  // Determine calendarId and CSS class based on taskKind and status
   const isComplete = task.status === 'done' || task.status === 'canceled';
   const taskKind = task.taskKind || 'action';
   let calendarId: string;
+  let taskKindClass: string;
   if (taskKind === 'event') {
     calendarId = isComplete ? 'event-complete' : 'event-incomplete';
+    taskKindClass = isComplete ? 'task-kind-event-complete' : 'task-kind-event';
   } else {
     calendarId = isComplete ? 'action-complete' : 'action-incomplete';
+    taskKindClass = isComplete ? 'task-kind-action-complete' : 'task-kind-action';
   }
 
   return {
@@ -96,6 +99,9 @@ export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
     start,
     end,
     calendarId,
+    _options: {
+      additionalClasses: [taskKindClass],
+    },
   };
 }
 
@@ -133,14 +139,17 @@ function taskToCalendarEventLegacy(task: Task): CalendarEventExternal | null {
     end = Temporal.PlainDate.from(task.endDate || task.scheduledOn);
   }
 
-  // Determine calendarId based on taskKind and status
+  // Determine calendarId and CSS class based on taskKind and status
   const isComplete = task.status === 'done' || task.status === 'canceled';
   const taskKind = task.taskKind || 'action';
   let calendarId: string;
+  let taskKindClass: string;
   if (taskKind === 'event') {
     calendarId = isComplete ? 'event-complete' : 'event-incomplete';
+    taskKindClass = isComplete ? 'task-kind-event-complete' : 'task-kind-event';
   } else {
     calendarId = isComplete ? 'action-complete' : 'action-incomplete';
+    taskKindClass = isComplete ? 'task-kind-action-complete' : 'task-kind-action';
   }
 
   return {
@@ -149,6 +158,9 @@ function taskToCalendarEventLegacy(task: Task): CalendarEventExternal | null {
     start,
     end,
     calendarId,
+    _options: {
+      additionalClasses: [taskKindClass],
+    },
   };
 }
 
