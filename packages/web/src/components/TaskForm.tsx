@@ -19,11 +19,13 @@ import { useImageUpload } from '../hooks/useImageUpload';
 import type { PendingLink } from '../types/links';
 
 type TaskStatus = 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
+type TaskKind = 'event' | 'action';
 
 interface TaskFormProps {
   initialTitle?: string;
   initialBodyMd?: string;
   initialStatus?: TaskStatus;
+  initialTaskKind?: TaskKind;
   initialLinks?: PendingLink[];
   taskId?: number;
   fromMemoId?: number;
@@ -62,6 +64,7 @@ export default function TaskForm({
   initialTitle = '',
   initialBodyMd = '',
   initialStatus = 'inbox',
+  initialTaskKind = 'action',
   initialLinks = [],
   taskId,
   fromMemoId,
@@ -75,6 +78,7 @@ export default function TaskForm({
   const [title, setTitle] = useState(initialTitle);
   const [bodyMd, setBodyMd] = useState(initialBodyMd);
   const [status, setStatus] = useState<TaskStatus>(initialStatus);
+  const [taskKind, setTaskKind] = useState<TaskKind>(initialTaskKind);
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -163,6 +167,7 @@ export default function TaskForm({
           title,
           bodyMd: bodyMd || undefined,
           status,
+          taskKind,
           scheduledStart: scheduleData.scheduledStart || undefined,
           scheduledEnd: scheduleData.scheduledEnd || undefined,
           isAllDay: scheduleData.isAllDay,
@@ -228,6 +233,7 @@ export default function TaskForm({
           title,
           bodyMd: bodyMd || undefined,
           status,
+          taskKind,
         });
         navigate(`/tasks/${taskId}`);
       }
@@ -479,6 +485,27 @@ export default function TaskForm({
             <option value="done">Done</option>
             <option value="canceled">Canceled</option>
           </select>
+        </div>
+      )}
+
+      {/* Task Kind Section */}
+      {(mode === 'edit' || mode === 'create') && !fromMemoId && (
+        <div>
+          <label htmlFor="taskKind" className="block text-sm font-medium text-gray-700 mb-2">
+            Task Kind
+          </label>
+          <select
+            id="taskKind"
+            value={taskKind}
+            onChange={(e) => setTaskKind(e.target.value as TaskKind)}
+            className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 appearance-none bg-white bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3d%22http%3a%2f%2fwww.w3.org%2f2000%2fsvg%22%20viewBox%3d%220%200%2020%2020%22%20fill%3d%22%236b7280%22%3e%3cpath%20fill-rule%3d%22evenodd%22%20d%3d%22M5.23%207.21a.75.75%200%20011.06.02L10%2011.168l3.71-3.938a.75.75%200%20111.08%201.04l-4.25%204.5a.75.75%200%2001-1.08%200l-4.25-4.5a.75.75%200%2001.02-1.06z%22%20clip-rule%3d%22evenodd%22%2f%3e%3c%2fsvg%3e')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
+          >
+            <option value="action">Action</option>
+            <option value="event">Event</option>
+          </select>
+          <p className="mt-1 text-xs text-gray-500">
+            Action: Tasks to do. Event: Time-fixed appointments.
+          </p>
         </div>
       )}
 

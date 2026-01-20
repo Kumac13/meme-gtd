@@ -6,12 +6,14 @@ import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 
 type TaskStatus = 'open' | 'next' | 'waiting' | 'scheduled' | 'done' | 'canceled';
+type TaskKind = 'event' | 'action';
 
 interface Task {
   id: number;
   title: string;
   bodyMd: string | null;
   status: TaskStatus;
+  taskKind: TaskKind;
   createdAt: string;
   updatedAt: string;
 }
@@ -75,6 +77,7 @@ export default function TaskEdit() {
           initialTitle={task.title}
           initialBodyMd={task.bodyMd || ''}
           initialStatus={task.status}
+          initialTaskKind={task.taskKind}
         />
       </div>
     </div>
