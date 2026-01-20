@@ -23,6 +23,11 @@ const TASK_STATUS_OPTIONS = [
   { value: 'canceled', label: 'Canceled' },
 ];
 
+const TASK_KIND_OPTIONS = [
+  { value: 'action', label: 'Action' },
+  { value: 'event', label: 'Event' },
+];
+
 
 interface BaseItem {
   id: number;
@@ -36,6 +41,7 @@ interface BaseItem {
 
 interface Task extends BaseItem {
   status: string | null;
+  taskKind: 'event' | 'action';
   // New scheduling fields (ISO 8601 datetime)
   scheduledStart: string | null;
   scheduledEnd: string | null;
@@ -280,6 +286,30 @@ export default function ItemDetail({
         <div className={`w-full flex-shrink-0 space-y-6 ${mode === 'page' ? 'lg:w-80' : ''}`}>
           {/* Projects Section */}
           <ProjectsSection itemId={item.id} itemType={itemType} />
+
+          {/* Task Kind Section */}
+          {itemType === 'task' && 'taskKind' in item && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-gray-900 mb-2">Task Kind</h3>
+              <StatusSelector
+                value={(item as Task).taskKind || 'action'}
+                onChange={async (newKind) => {
+                  try {
+                    const updatedItem = await TasksService.updateTask(String(item.id), {
+                      taskKind: newKind as 'event' | 'action',
+                    });
+                    onUpdate(updatedItem as Item);
+                  } catch (err) {
+                    console.error('Failed to update task kind:', err);
+                  }
+                }}
+                options={TASK_KIND_OPTIONS}
+              />
+              <p className="mt-2 text-xs text-gray-500">
+                Action: Tasks to do. Event: Time-fixed appointments.
+              </p>
+            </div>
+          )}
 
           {/* Schedule Section */}
           {itemType === 'task' && 'scheduledStart' in item && (
