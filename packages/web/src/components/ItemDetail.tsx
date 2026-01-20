@@ -23,12 +23,6 @@ const TASK_STATUS_OPTIONS = [
   { value: 'canceled', label: 'Canceled' },
 ];
 
-const TASK_KIND_OPTIONS = [
-  { value: 'action', label: 'Action' },
-  { value: 'event', label: 'Event' },
-];
-
-
 interface BaseItem {
   id: number;
   title: string | null;
@@ -287,32 +281,16 @@ export default function ItemDetail({
           {/* Projects Section */}
           <ProjectsSection itemId={item.id} itemType={itemType} />
 
-          {/* Task Kind Section - matches ScheduleSection/LabelsSection styling */}
-          {itemType === 'task' && 'taskKind' in item && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-900">Task Kind</h3>
-              </div>
-              <StatusSelector
-                value={(item as Task).taskKind || 'action'}
-                onChange={async (newKind) => {
-                  try {
-                    const updatedItem = await TasksService.updateTask(String(item.id), {
-                      taskKind: newKind as 'event' | 'action',
-                    });
-                    onUpdate(updatedItem as Item);
-                  } catch (err) {
-                    console.error('Failed to update task kind:', err);
-                  }
-                }}
-                options={TASK_KIND_OPTIONS}
-              />
-            </div>
-          )}
-
-          {/* Schedule Section */}
+          {/* Schedule Section (includes Task Kind) */}
           {itemType === 'task' && 'scheduledStart' in item && (
             <ScheduleSection
+              taskKind={(item as Task).taskKind || 'action'}
+              onTaskKindChange={async (newKind) => {
+                const updatedItem = await TasksService.updateTask(String(item.id), {
+                  taskKind: newKind,
+                });
+                onUpdate(updatedItem as Item);
+              }}
               scheduledStart={(item as Task).scheduledStart}
               scheduledEnd={(item as Task).scheduledEnd}
               isAllDay={(item as Task).isAllDay}
