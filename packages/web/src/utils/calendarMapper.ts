@@ -4,6 +4,7 @@ export interface Task {
   id: number;
   title: string | null;
   status: string;
+  taskKind: 'event' | 'action';
   // New scheduling fields (ISO 8601 datetime: YYYY-MM-DDTHH:MM:SS)
   scheduledStart: string | null;
   scheduledEnd: string | null;
@@ -79,11 +80,22 @@ export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
     return null;
   }
 
+  // Determine calendarId based on taskKind and status
+  const isComplete = task.status === 'done' || task.status === 'canceled';
+  const taskKind = task.taskKind || 'action';
+  let calendarId: string;
+  if (taskKind === 'event') {
+    calendarId = isComplete ? 'event-complete' : 'event-incomplete';
+  } else {
+    calendarId = isComplete ? 'action-complete' : 'action-incomplete';
+  }
+
   return {
     id: task.id,
     title,
     start,
     end,
+    calendarId,
   };
 }
 
@@ -121,11 +133,22 @@ function taskToCalendarEventLegacy(task: Task): CalendarEventExternal | null {
     end = Temporal.PlainDate.from(task.endDate || task.scheduledOn);
   }
 
+  // Determine calendarId based on taskKind and status
+  const isComplete = task.status === 'done' || task.status === 'canceled';
+  const taskKind = task.taskKind || 'action';
+  let calendarId: string;
+  if (taskKind === 'event') {
+    calendarId = isComplete ? 'event-complete' : 'event-incomplete';
+  } else {
+    calendarId = isComplete ? 'action-complete' : 'action-incomplete';
+  }
+
   return {
     id: task.id,
     title,
     start,
     end,
+    calendarId,
   };
 }
 

@@ -1,0 +1,15 @@
+/* Custom styles for task_kind visual distinction in calendar */
+
+/* Event (incomplete): border-only style (中抜き) */
+.sx-react-calendar-wrapper [data-calendar-id="event-incomplete"] {
+  background-color: transparent !important;
+  border: 2px solid #16a34a !important;
+}
+
+/* Event (complete): filled green - default styling from calendars config */
+
+/* Action: left border style */
+.sx-react-calendar-wrapper [data-calendar-id="action-incomplete"],
+.sx-react-calendar-wrapper [data-calendar-id="action-complete"] {
+  border-left: 4px solid #16a34a !important;
+}
