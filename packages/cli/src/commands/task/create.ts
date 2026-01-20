@@ -2,7 +2,7 @@ import { Args, Command, Flags } from '@oclif/core';
 import { loadConfig } from 'meme-gtd-config';
 import { TaskService } from 'meme-gtd-core';
 import { createLogger } from 'meme-gtd-logger';
-import type { TaskStatus } from 'meme-gtd-shared';
+import type { TaskStatus, TaskKind } from 'meme-gtd-shared';
 import { loadBodyFromFile } from '../../lib/io.js';
 import { maybePromptEditor } from '../../lib/editor.js';
 import { detectLegacyFlags, formatLegacyFlagError } from '../../lib/legacy-flags.js';
@@ -47,6 +47,13 @@ export default class TaskCreate extends Command {
       description: 'Set task status (inbox, open, next, waiting, scheduled, someday, done, canceled). Default: inbox',
       options: ['inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled'],
       default: 'inbox'
+    }),
+    kind: Flags.string({
+      char: 'k',
+      summary: 'Task kind (event or action)',
+      description: 'Set task kind: "action" for tasks to do, "event" for time-fixed appointments. Default: action',
+      options: ['event', 'action'],
+      default: 'action'
     }),
     // New scheduling fields (ISO 8601 datetime)
     'scheduled-start': Flags.string({
@@ -151,6 +158,7 @@ export default class TaskCreate extends Command {
       title: flags.title,
       bodyMd: body,
       status: flags.status as TaskStatus,
+      taskKind: flags.kind as TaskKind,
       // New scheduling fields
       scheduledStart: flags['scheduled-start'],
       scheduledEnd: flags['scheduled-end'],
