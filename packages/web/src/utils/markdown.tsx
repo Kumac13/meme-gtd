@@ -9,6 +9,8 @@ import remarkBreaks from 'remark-breaks';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import type { Components } from 'react-markdown';
+import type { Element } from 'hast';
+import { MermaidDiagram } from '../components/MermaidDiagram';
 
 /**
  * Recursively extract plain text from React children
@@ -223,8 +225,22 @@ const defaultComponents: Components = {
   // Horizontal rule
   hr: () => <hr className="my-6 border-gray-300" />,
 
-  // Pre element wrapper for fenced code blocks with copy button
-  pre: ({ children }) => <CodeBlockWithCopy>{children}</CodeBlockWithCopy>,
+  // Pre element wrapper for fenced code blocks with copy button and Mermaid support
+  pre: ({ children, node }) => {
+    // Check if this is a Mermaid code block
+    const codeChild = node?.children?.[0] as Element | undefined;
+    if (codeChild?.type === 'element' && codeChild?.tagName === 'code') {
+      const className = codeChild.properties?.className;
+      if (Array.isArray(className) && className.some((c) => c === 'language-mermaid')) {
+        // Extract text content from code element
+        const textNode = codeChild.children?.[0];
+        if (textNode?.type === 'text') {
+          return <MermaidDiagram chart={textNode.value} />;
+        }
+      }
+    }
+    return <CodeBlockWithCopy>{children}</CodeBlockWithCopy>;
+  },
 };
 
 interface MarkdownRendererProps {
@@ -324,6 +340,8 @@ export function InlineMarkdownRenderer({ content }: { content: string }) {
     ol: ({ children }) => <span>{children}</span>,
     li: ({ children }) => <span className="mr-2">{children}</span>,
     blockquote: ({ children }) => <span className="italic text-gray-600">{children}</span>,
+    // Show placeholder for code blocks (including Mermaid diagrams)
+    pre: () => <span className="text-gray-500 text-xs">[code]</span>,
     hr: () => null,
     table: () => null,
     thead: () => null,
