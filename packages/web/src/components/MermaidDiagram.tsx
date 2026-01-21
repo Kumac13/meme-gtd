@@ -19,6 +19,7 @@ function initializeMermaid() {
     startOnLoad: false,
     securityLevel: 'strict',
     theme: 'default',
+    suppressErrorRendering: true,
   });
 
   mermaidInitialized = true;
