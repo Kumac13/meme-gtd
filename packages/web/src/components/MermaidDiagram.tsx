@@ -68,16 +68,11 @@ export function MermaidDiagram({ chart }: MermaidDiagramProps) {
   if (error) {
     return (
       <div className="mb-4">
-        <div className="relative">
-          <div className="absolute top-2 right-2 px-2 py-1 text-xs bg-red-100 text-red-600 rounded">
-            Invalid Mermaid
-          </div>
-          <pre className="bg-gray-900 text-gray-100 py-3 px-4 rounded-lg overflow-x-auto text-sm font-mono">
-            <code>{chart}</code>
-          </pre>
-        </div>
+        <pre className="bg-gray-900 text-gray-100 py-3 px-4 rounded-lg overflow-x-auto text-sm font-mono">
+          <code>{chart}</code>
+        </pre>
         <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700 font-mono overflow-x-auto">
-          {error}
+          <span className="font-bold">Invalid Mermaid:</span> {error}
         </div>
       </div>
     );
