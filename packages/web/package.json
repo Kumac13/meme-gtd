@@ -22,6 +22,7 @@
     "@schedule-x/theme-default": "^3.4.2",
     "@tailwindcss/typography": "^0.5.19",
     "meme-gtd-shared": "workspace:^",
+    "mermaid": "^11.12.2",
     "nuqs": "^2.8.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
