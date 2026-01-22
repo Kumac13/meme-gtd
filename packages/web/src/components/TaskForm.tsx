@@ -18,6 +18,7 @@ import { LabelBadge } from './LabelBadge';
 import TaskFormLinks from './TaskFormLinks';
 import { useImageUpload } from '../hooks/useImageUpload';
 import type { PendingLink } from '../types/links';
+import { MarkdownTextarea } from './MarkdownTextarea';
 
 type TaskStatus = 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
 
@@ -441,25 +442,23 @@ export default function TaskForm({
         <label htmlFor="bodyMd" className="block text-sm font-medium text-gray-700 mb-2">
           Task Description (Markdown, optional)
         </label>
-        <textarea
-          ref={textareaRef}
+        <MarkdownTextarea
+          textareaRef={textareaRef}
           id="bodyMd"
           value={bodyMd}
-          onChange={(e) => setBodyMd(e.target.value)}
+          onChange={setBodyMd}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          aria-keyshortcuts="Control+Enter"
           rows={10}
-          className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 font-mono text-sm ${isDragging ? 'border-github-green-500 bg-github-green-50' : 'border-gray-300'} ${isUploading ? 'opacity-50' : ''}`}
           placeholder="Enter task description in Markdown format..."
-          disabled={submitting || isUploading}
+          disabled={submitting}
+          isDragging={isDragging}
+          isUploading={isUploading}
+          minHeightClass="min-h-[200px]"
         />
-        {isUploading && (
-          <div className="mt-1 text-xs text-gray-500">Uploading image...</div>
-        )}
         <p className="mt-1 text-xs text-gray-500">
           Optional. Supports Markdown formatting. Max 10,000 characters.
         </p>

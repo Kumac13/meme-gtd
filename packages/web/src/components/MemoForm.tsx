@@ -12,6 +12,7 @@ import { useRecentLabels } from '../hooks/useRecentLabels';
 import { LabelBadge } from './LabelBadge';
 import { useImageUpload } from '../hooks/useImageUpload';
 import type { LinkDisplayItem } from '../types/links';
+import { MarkdownTextarea } from './MarkdownTextarea';
 
 const linkTypeLabels: Record<string, string> = {
   parent: 'PARENT',
@@ -365,25 +366,23 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
         <label htmlFor="bodyMd" className="block text-sm font-medium text-gray-700 mb-2">
           Memo Content (Markdown)
         </label>
-        <textarea
-          ref={textareaRef}
+        <MarkdownTextarea
+          textareaRef={textareaRef}
           id="bodyMd"
           value={bodyMd}
-          onChange={(e) => setBodyMd(e.target.value)}
+          onChange={setBodyMd}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          aria-keyshortcuts="Control+Enter"
           rows={15}
-          className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 font-mono text-sm ${validationError ? 'border-red-300' : 'border-gray-300'} ${isDragging ? 'border-github-green-500 bg-github-green-50' : ''} ${isUploading ? 'opacity-50' : ''}`}
           placeholder="Enter your memo content in Markdown format..."
-          disabled={submitting || isUploading}
+          disabled={submitting}
+          isDragging={isDragging}
+          isUploading={isUploading}
+          minHeightClass="min-h-[300px]"
         />
-        {isUploading && (
-          <div className="mt-1 text-xs text-gray-500">Uploading image...</div>
-        )}
         {validationError && (
           <p className="mt-1 text-sm text-red-600">{validationError}</p>
         )}
