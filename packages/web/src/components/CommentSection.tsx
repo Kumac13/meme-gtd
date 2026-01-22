@@ -3,6 +3,7 @@ import EditableContent from './EditableContent';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
 import { useImageUpload } from '../hooks/useImageUpload';
+import { MarkdownTextarea } from './MarkdownTextarea';
 
 export interface Comment {
   id: number;
@@ -151,25 +152,22 @@ export default function CommentSection({
 
       {/* New Comment Form */}
       <form onSubmit={handleSubmitNewComment} className="bg-white border border-gray-200 rounded-lg p-4">
-        <textarea
-          ref={textareaRef}
+        <MarkdownTextarea
+          textareaRef={textareaRef}
           value={newCommentBody}
-          onChange={(e) => setNewCommentBody(e.target.value)}
+          onChange={setNewCommentBody}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          aria-keyshortcuts="Control+Enter"
+          rows={4}
           placeholder="Write a comment..."
-          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500 min-h-[100px] ${
-            isDragging ? 'border-github-green-500 bg-github-green-50' : 'border-gray-300'
-          } ${isUploading ? 'opacity-50' : ''}`}
-          disabled={submitting || isUploading}
+          disabled={submitting}
+          isDragging={isDragging}
+          isUploading={isUploading}
+          minHeightClass="min-h-[100px]"
         />
-        {isUploading && (
-          <div className="mt-1 text-xs text-gray-500">Uploading image...</div>
-        )}
         <div className="mt-2 flex justify-end">
           <button
             type="submit"
