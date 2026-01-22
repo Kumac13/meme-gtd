@@ -5,6 +5,7 @@ import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
 import { useImageUpload } from '../hooks/useImageUpload';
+import { MarkdownTextarea } from './MarkdownTextarea';
 
 interface EditableContentProps {
   content: string;
@@ -222,24 +223,21 @@ export default function EditableContent({
               />
             </div>
           )}
-          <textarea
-            ref={textareaRef}
+          <MarkdownTextarea
+            textareaRef={textareaRef}
             value={editingContent}
-            onChange={(e) => setEditingContent(e.target.value)}
+            onChange={setEditingContent}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            aria-keyshortcuts="Control+Enter"
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500 min-h-[100px] ${
-              isDragging ? 'border-github-green-500 bg-github-green-50' : 'border-gray-300'
-            } ${isUploading ? 'opacity-50' : ''}`}
-            disabled={isUploading}
+            rows={6}
+            disabled={false}
+            isDragging={isDragging}
+            isUploading={isUploading}
+            minHeightClass="min-h-[100px]"
           />
-          {isUploading && (
-            <div className="mt-1 text-xs text-gray-500">Uploading image...</div>
-          )}
           <div className="mt-2 flex justify-end space-x-2">
             <button
               onClick={handleCancelEdit}
