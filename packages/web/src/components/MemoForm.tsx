@@ -13,6 +13,7 @@ import { LabelBadge } from './LabelBadge';
 import { useImageUpload } from '../hooks/useImageUpload';
 import type { LinkDisplayItem } from '../types/links';
 import { MarkdownTextarea } from './MarkdownTextarea';
+import { OcrCameraButton } from './OcrCameraButton';
 
 const linkTypeLabels: Record<string, string> = {
   parent: 'PARENT',
@@ -386,9 +387,16 @@ export default function MemoForm({ initialBodyMd = '', memoId, mode, fromTaskId,
         {validationError && (
           <p className="mt-1 text-sm text-red-600">{validationError}</p>
         )}
-        <p className="mt-1 text-xs text-gray-500">
-          Supports Markdown formatting. Max 10,000 characters.
-        </p>
+        <div className="mt-1 flex justify-between items-center">
+          <OcrCameraButton
+            onTextExtracted={(text) => setBodyMd(prev => prev ? prev + '\n\n' + text : text)}
+            onImageAttached={insertMarkdownRef}
+            disabled={submitting}
+          />
+          <p className="text-xs text-gray-500">
+            Supports Markdown formatting. Max 10,000 characters.
+          </p>
+        </div>
       </div>
 
       {/* Projects Section - Only for create mode */}

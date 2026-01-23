@@ -4,6 +4,7 @@ import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
 import { useImageUpload } from '../hooks/useImageUpload';
 import { MarkdownTextarea } from './MarkdownTextarea';
+import { OcrCameraButton } from './OcrCameraButton';
 
 export interface Comment {
   id: number;
@@ -168,7 +169,12 @@ export default function CommentSection({
           isUploading={isUploading}
           minHeightClass="min-h-[100px]"
         />
-        <div className="mt-2 flex justify-end">
+        <div className="mt-2 flex justify-between items-center">
+          <OcrCameraButton
+            onTextExtracted={(text) => setNewCommentBody(prev => prev ? prev + '\n\n' + text : text)}
+            onImageAttached={insertMarkdownRef}
+            disabled={submitting}
+          />
           <button
             type="submit"
             disabled={submitting || !newCommentBody.trim()}

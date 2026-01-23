@@ -19,6 +19,7 @@ import TaskFormLinks from './TaskFormLinks';
 import { useImageUpload } from '../hooks/useImageUpload';
 import type { PendingLink } from '../types/links';
 import { MarkdownTextarea } from './MarkdownTextarea';
+import { OcrCameraButton } from './OcrCameraButton';
 
 type TaskStatus = 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
 
@@ -459,9 +460,16 @@ export default function TaskForm({
           isUploading={isUploading}
           minHeightClass="min-h-[200px]"
         />
-        <p className="mt-1 text-xs text-gray-500">
-          Optional. Supports Markdown formatting. Max 10,000 characters.
-        </p>
+        <div className="mt-1 flex justify-between items-center">
+          <OcrCameraButton
+            onTextExtracted={(text) => setBodyMd(prev => prev ? prev + '\n\n' + text : text)}
+            onImageAttached={insertMarkdownRef}
+            disabled={submitting}
+          />
+          <p className="text-xs text-gray-500">
+            Optional. Supports Markdown formatting. Max 10,000 characters.
+          </p>
+        </div>
       </div>
 
       {(mode === 'edit' || mode === 'create') && (

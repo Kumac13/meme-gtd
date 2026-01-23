@@ -6,6 +6,7 @@ import { getShortcutHint } from '../utils/keyboard';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
 import { useImageUpload } from '../hooks/useImageUpload';
 import { MarkdownTextarea } from './MarkdownTextarea';
+import { OcrCameraButton } from './OcrCameraButton';
 
 interface EditableContentProps {
   content: string;
@@ -238,22 +239,29 @@ export default function EditableContent({
             isUploading={isUploading}
             minHeightClass="min-h-[100px]"
           />
-          <div className="mt-2 flex justify-end space-x-2">
-            <button
-              onClick={handleCancelEdit}
+          <div className="mt-2 flex justify-between items-center">
+            <OcrCameraButton
+              onTextExtracted={(text) => setEditingContent(prev => prev ? prev + '\n\n' + text : text)}
+              onImageAttached={insertMarkdownRef}
               disabled={saving}
-              className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSaveEdit}
-              disabled={isSaveDisabled}
-              className="px-3 py-1 text-sm bg-github-green-600 text-white rounded-md hover:bg-github-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              title={`Save (${getShortcutHint()})`}
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </button>
+            />
+            <div className="flex space-x-2">
+              <button
+                onClick={handleCancelEdit}
+                disabled={saving}
+                className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={isSaveDisabled}
+                className="px-3 py-1 text-sm bg-github-green-600 text-white rounded-md hover:bg-github-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={`Save (${getShortcutHint()})`}
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
           </div>
         </div>
       ) : (
