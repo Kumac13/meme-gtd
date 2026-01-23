@@ -101,9 +101,12 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   app.decorate('config', config);
   app.decorate('db', db);
 
-  // Close database connection when server shuts down
+  // Close database connection and cleanup resources when server shuts down
   app.addHook('onClose', async () => {
     db.close();
+    // Clean up OCR resources (lazy import to avoid loading if never used)
+    const { closeOcr } = await import('./services/ocrService.js');
+    await closeOcr();
   });
 
   // Register CORS middleware
@@ -196,6 +199,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
         { name: 'Projects', description: 'Project management endpoints' },
         { name: 'Comments', description: 'Comment management endpoints' },
         { name: 'Attachments', description: 'Image attachment endpoints' },
+        { name: 'OCR', description: 'OCR text extraction endpoints' },
         { name: 'ActivityLog', description: 'Activity log endpoints' },
       ],
     },
@@ -241,6 +245,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   const { activityLogRoutes } = await import('./routes/activity-log.js');
   await app.register(activityLogRoutes);
+
+  const { ocrRoutes } = await import('./routes/ocr.js');
+  await app.register(ocrRoutes);
 
   // Register Article routes
   const { default: articlesRoutes } = await import('./routes/articles.js');
