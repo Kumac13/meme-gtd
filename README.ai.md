@@ -208,6 +208,7 @@ mgtd project create/list/view
 | `DELETE /api/url-links/{id}` | URLリンク削除 |
 | `GET/POST /api/issues/{id}/comments` | コメント一覧・作成 |
 | `GET /api/activity-log` | アクティビティログ一覧（フィルタ対応） |
+| `POST /api/ocr` | OCRテキスト抽出（multipart/form-data） |
 
 ### Web UI
 
@@ -215,6 +216,17 @@ mgtd project create/list/view
 - カンバンボード（ステータス別表示）
 - カレンダー表示（予定/実績）
 - プロジェクト管理
+- OCRテキスト抽出（カメラ/画像から文字起こし）
+
+### OCR機能
+
+画像からテキストを抽出し、タスク/メモ/コメント入力に活用。
+
+- **対応フォーマット**: PNG, JPEG, GIF, WebP（最大10MB）
+- **ライブラリ**: @gutenye/ocr-node（PaddleOCR + ONNX runtime）
+- **モデル**: PP-OCRv4 Chinese（バンドル済み、外部DL不要）
+- **制限事項**: 漢字認識は良好、ひらがな・カタカナは精度が低い（中国語モデルの制限）
+- **UI**: カメラボタンをテキスト入力フォームに配置、OCR後に元画像添付オプション
 
 ## 技術スタック
 
