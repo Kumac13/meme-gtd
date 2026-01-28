@@ -6,7 +6,8 @@ export default function Layout() {
   const isTasksActive = location.pathname.startsWith("/tasks");
   const isProjectsActive = location.pathname.startsWith("/projects");
   const isCalendarActive = location.pathname.startsWith("/calendar");
-  const isArticlesActive = location.pathname.startsWith("/articles"); // Add for Articles
+  const isArticlesActive = location.pathname.startsWith("/articles");
+  const isActivityActive = location.pathname.startsWith("/activity");
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -67,6 +68,16 @@ export default function Layout() {
                   }`}
                 >
                   Calendar
+                </Link>
+                <Link
+                  to="/activity"
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                    isActivityActive
+                      ? "border-github-green-500 text-gray-900"
+                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                  }`}
+                >
+                  Activity
                 </Link>
               </div>
             </div>

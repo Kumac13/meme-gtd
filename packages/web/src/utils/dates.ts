@@ -18,6 +18,53 @@ export function formatDateTime(isoString: string): string {
 }
 
 /**
+ * Format ISO date string to time only (HH:mm:ss)
+ * @param isoString ISO 8601 date string
+ * @returns Time string (e.g., "10:23:02")
+ */
+export function formatTimeOnly(isoString: string): string {
+  const date = new Date(isoString);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${hours}:${minutes}:${seconds}`;
+}
+
+/**
+ * Format ISO date string to date only (e.g., "Mon, Jan 27")
+ * Used for date separators in activity logs
+ * @param isoString ISO 8601 date string
+ * @returns Date string (e.g., "Mon, Jan 27" or "Mon, Jan 27, 2025" if not current year)
+ */
+export function formatDateOnly(isoString: string): string {
+  const date = new Date(isoString);
+  const now = new Date();
+  const isCurrentYear = date.getFullYear() === now.getFullYear();
+
+  const options: Intl.DateTimeFormatOptions = {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    ...(isCurrentYear ? {} : { year: 'numeric' }),
+  };
+
+  return date.toLocaleDateString('en-US', options);
+}
+
+/**
+ * Get date key for grouping (YYYY-MM-DD in local timezone)
+ * @param isoString ISO 8601 date string
+ * @returns Date key string (e.g., "2026-01-27")
+ */
+export function getDateKey(isoString: string): string {
+  const date = new Date(isoString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Format ISO date string to relative time (e.g., "2 hours ago", "3 days ago")
  * @param isoString ISO 8601 date string
  * @returns Relative time string

@@ -19,6 +19,7 @@ import Calendar from "./pages/Calendar";
 import ProjectDefaultRedirect from "./components/ProjectDefaultRedirect";
 import { ArticleList } from "./pages/Articles/ArticleList";
 import { ArticleReader } from "./pages/Articles/ArticleReader";
+import ActivityLogPage from "./pages/ActivityLog";
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
               <Route path="calendar" element={<Calendar />} />
               <Route path="articles" element={<ArticleList />} />
               <Route path="articles/:id" element={<ArticleReader />} />
+              <Route path="activity" element={<ActivityLogPage />} />
             </Route>
           </Routes>
         </NuqsAdapter>
