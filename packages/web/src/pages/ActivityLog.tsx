@@ -14,6 +14,7 @@ import {
 } from '../utils/activityLogHelpers';
 
 type ViewMode = 'timeline' | 'swimlane';
+type DateRange = '24h' | '7d' | '30d' | 'custom';
 
 export default function ActivityLogPage() {
   useDocumentTitle('Activity');
@@ -23,15 +24,41 @@ export default function ActivityLogPage() {
   const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState<ActivityCategory>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('timeline');
+  const [dateRange, setDateRange] = useState<DateRange>('24h');
+  const [customStart, setCustomStart] = useState<string>(''); // YYYY-MM-DD
+  const [customEnd, setCustomEnd] = useState<string>('');     // YYYY-MM-DD
+
+  const { from, to } = useMemo(() => {
+    const now = new Date();
+    switch (dateRange) {
+      case '24h':
+        return {
+          from: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
+          to: undefined,
+        };
+      case '7d':
+        return {
+          from: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          to: undefined,
+        };
+      case '30d':
+        return {
+          from: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          to: undefined,
+        };
+      case 'custom':
+        return {
+          from: customStart ? new Date(customStart).toISOString() : undefined,
+          to: customEnd ? new Date(customEnd + 'T23:59:59').toISOString() : undefined,
+        };
+    }
+  }, [dateRange, customStart, customEnd]);
 
   useEffect(() => {
     async function fetchActivities() {
       try {
         setLoading(true);
         setError(null);
-
-        // Get activities from the last 24 hours
-        const from = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
         const response = await ActivityLogService.listActivityLog(
           undefined, // issueId
@@ -40,7 +67,7 @@ export default function ActivityLogPage() {
           undefined, // eventType
           undefined, // sourceType
           from,      // from
-          undefined, // to
+          to,        // to
           100,       // limit
           undefined, // offset
           'asc'      // order - oldest first (top), newest last (bottom)
@@ -56,7 +83,7 @@ export default function ActivityLogPage() {
     }
 
     fetchActivities();
-  }, []);
+  }, [from, to]);
 
   const filteredActivities = useMemo(() => {
     return filterByCategory(activities, category);
@@ -98,6 +125,38 @@ export default function ActivityLogPage() {
         </div>
       </div>
 
+      {/* Date range filter */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <select
+          value={dateRange}
+          onChange={(e) => setDateRange(e.target.value as DateRange)}
+          className="px-3 py-1.5 border border-gray-300 rounded-md text-sm bg-white"
+        >
+          <option value="24h">Last 24 hours</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+          <option value="custom">Custom</option>
+        </select>
+
+        {dateRange === 'custom' && (
+          <>
+            <input
+              type="date"
+              value={customStart}
+              onChange={(e) => setCustomStart(e.target.value)}
+              className="px-2 py-1.5 border border-gray-300 rounded-md text-sm"
+            />
+            <span className="text-gray-500">to</span>
+            <input
+              type="date"
+              value={customEnd}
+              onChange={(e) => setCustomEnd(e.target.value)}
+              className="px-2 py-1.5 border border-gray-300 rounded-md text-sm"
+            />
+          </>
+        )}
+      </div>
+
       <ActivityCategoryFilter
         category={category}
         onCategoryChange={setCategory}
@@ -106,7 +165,12 @@ export default function ActivityLogPage() {
       {filteredActivities.length === 0 ? (
         <EmptyState
           message={category === 'all' ? 'No recent activity' : `No ${category} activity`}
-          submessage="Activities from the last 24 hours will appear here"
+          submessage={
+            dateRange === '24h' ? 'Activities from the last 24 hours will appear here' :
+            dateRange === '7d' ? 'Activities from the last 7 days will appear here' :
+            dateRange === '30d' ? 'Activities from the last 30 days will appear here' :
+            'Activities in the selected date range will appear here'
+          }
         />
       ) : (
         <>

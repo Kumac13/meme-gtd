@@ -32,6 +32,523 @@ function createActivity(overrides: Partial<ActivityLogEntry>): ActivityLogEntry 
   };
 }
 
+describe('activityLogHelpers - extractString (via getActivityTitle)', () => {
+  describe('handles { old, new } object structure', () => {
+    it('task.updated with { old, new } title extracts new value', () => {
+      const activity = createActivity({
+        eventType: 'task.updated',
+        payload: { title: { old: 'Old title', new: 'New title' } },
+      });
+      expect(getActivityTitle(activity)).toBe('New title');
+    });
+
+    it('task.updated with { old, new } title falls back to old value if new is missing', () => {
+      const activity = createActivity({
+        eventType: 'task.updated',
+        payload: { title: { old: 'Old title' } },
+      });
+      expect(getActivityTitle(activity)).toBe('Old title');
+    });
+
+    it('task.status_changed with { old, new } status fields', () => {
+      const activity = createActivity({
+        eventType: 'task.status_changed',
+        payload: {
+          title: 'Task title',
+          from_status: { old: 'inbox', new: 'next' },
+          to_status: { old: 'next', new: 'done' },
+        },
+      });
+      expect(getActivityDetails(activity)).toBe('next → done');
+    });
+
+    it('memo.updated with { old, new } body extracts new value', () => {
+      const activity = createActivity({
+        eventType: 'memo.updated',
+        payload: { body: { old: 'Old memo content', new: 'New memo content' } },
+      });
+      expect(getActivityTitle(activity)).toBe('New memo content');
+    });
+
+    it('label.assigned with { old, new } issue_title extracts new value', () => {
+      const activity = createActivity({
+        eventType: 'label.assigned',
+        payload: {
+          label_name: 'urgent',
+          issue_title: { old: 'Old issue title', new: 'New issue title' },
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('"urgent" → New issue title');
+    });
+
+    it('project.item_added with { old, new } project_name extracts new value', () => {
+      const activity = createActivity({
+        eventType: 'project.item_added',
+        payload: {
+          project_name: { old: 'Old Project', new: 'New Project' },
+          issue_title: 'Task',
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('"New Project" ← Task');
+    });
+
+    it('comment.created with { old, new } body extracts new value for details', () => {
+      const activity = createActivity({
+        eventType: 'comment.created',
+        payload: {
+          issue_title: 'Task',
+          body: { old: 'Old comment', new: 'New comment' },
+        },
+      });
+      expect(getActivityDetails(activity)).toBe('"New comment"');
+    });
+  });
+
+  describe('handles backend-specific payload structures', () => {
+    // Backend uses 'name' field for project.updated (not 'project_name')
+    it('project.updated uses name field (backend format)', () => {
+      const activity = createActivity({
+        eventType: 'project.updated',
+        projectId: 10,
+        payload: {
+          project_id: 10,
+          name: { old: 'Old Project Name', new: 'New Project Name' },
+          description: { old: 'Old desc', new: 'New desc' },
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('New Project Name');
+      expect(getProjectHeadline(activity)).toBe('project "New Project Name" updated');
+    });
+
+    // Backend uses 'is_bookmarked' field (not 'bookmarked')
+    it('task.bookmarked uses is_bookmarked field (backend format)', () => {
+      const activity1 = createActivity({
+        eventType: 'task.bookmarked',
+        issueId: 42,
+        payload: {
+          issue_id: 42,
+          issue_type: 'task',
+          title: 'Test task',
+          is_bookmarked: true,
+        },
+      });
+      expect(getActivityDetails(activity1)).toBe('Bookmarked');
+
+      const activity2 = createActivity({
+        eventType: 'task.bookmarked',
+        issueId: 42,
+        payload: {
+          issue_id: 42,
+          issue_type: 'task',
+          title: 'Test task',
+          is_bookmarked: false,
+        },
+      });
+      expect(getActivityDetails(activity2)).toBe('Unbookmarked');
+    });
+
+    it('memo.bookmarked uses is_bookmarked field (backend format)', () => {
+      const activity1 = createActivity({
+        eventType: 'memo.bookmarked',
+        issueId: 42,
+        payload: {
+          issue_id: 42,
+          issue_type: 'memo',
+          is_bookmarked: true,
+        },
+      });
+      expect(getActivityDetails(activity1)).toBe('Bookmarked');
+
+      const activity2 = createActivity({
+        eventType: 'memo.bookmarked',
+        issueId: 42,
+        payload: {
+          issue_id: 42,
+          issue_type: 'memo',
+          is_bookmarked: false,
+        },
+      });
+      expect(getActivityDetails(activity2)).toBe('Unbookmarked');
+    });
+
+    // comment.updated payload structure from backend
+    it('comment.updated with { old, new } body structure', () => {
+      const activity = createActivity({
+        eventType: 'comment.updated',
+        issueId: 42,
+        payload: {
+          comment_id: 1,
+          issue_id: 42,
+          issue_type: 'task',
+          issue_title: 'My Task',
+          body: { old: 'Original comment', new: 'Updated comment' },
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('My Task');
+      expect(getActivityDetails(activity)).toBe('Comment updated');
+    });
+  });
+
+  describe('graceful degradation for missing/null values', () => {
+    it('task.updated with null title shows Unknown task', () => {
+      const activity = createActivity({
+        eventType: 'task.updated',
+        payload: { title: null },
+      });
+      expect(getActivityTitle(activity)).toBe('Unknown task');
+    });
+
+    it('project.updated with missing name field uses fallback', () => {
+      const activity = createActivity({
+        eventType: 'project.updated',
+        projectId: 10,
+        payload: { project_id: 10 },
+      });
+      expect(getActivityTitle(activity)).toBe('Unknown project');
+    });
+  });
+});
+
+// Test all backend payload structures to ensure frontend handles them correctly
+describe('activityLogHelpers - backend payload compatibility', () => {
+  describe('task.created (buildTaskCreatedPayload)', () => {
+    it('handles full payload with labels and projects arrays', () => {
+      const activity = createActivity({
+        eventType: 'task.created',
+        issueId: 42,
+        payload: {
+          issue_id: 42,
+          issue_type: 'task',
+          title: 'New Task',
+          status: 'inbox',
+          scheduled_start: '2026-01-28T10:00:00Z',
+          is_all_day: false,
+          labels: [{ id: 1, name: 'urgent' }],
+          projects: [{ id: 1, name: 'Q1 Planning' }],
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('New Task');
+      expect(getActivityDetails(activity)).toBe('Status: inbox');
+      expect(getActivityLink(activity)).toBe('/tasks/42');
+    });
+  });
+
+  describe('task.status_changed (buildTaskStatusChangedPayload)', () => {
+    it('handles payload with snapshot arrays', () => {
+      const activity = createActivity({
+        eventType: 'task.status_changed',
+        issueId: 42,
+        payload: {
+          issue_id: 42,
+          issue_type: 'task',
+          title: 'Task Title',
+          from_status: 'next',
+          to_status: 'done',
+          project_snapshot: [{ id: 1, name: 'Q1' }],
+          label_snapshot: [{ id: 1, name: 'urgent' }],
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('Task Title');
+      expect(getActivityDetails(activity)).toBe('next → done');
+    });
+
+    it('handles null title', () => {
+      const activity = createActivity({
+        eventType: 'task.status_changed',
+        issueId: 42,
+        payload: {
+          issue_id: 42,
+          issue_type: 'task',
+          title: null,
+          from_status: 'next',
+          to_status: 'done',
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('Unknown task');
+    });
+  });
+
+  describe('memo.created', () => {
+    it('handles full payload with labels and projects', () => {
+      const activity = createActivity({
+        eventType: 'memo.created',
+        issueId: 42,
+        payload: {
+          issue_id: 42,
+          issue_type: 'memo',
+          body: 'Memo content\nSecond line',
+          labels: [{ id: 1, name: 'idea' }],
+          projects: [{ id: 1, name: 'Project' }],
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('Memo content');
+      expect(getActivityLink(activity)).toBe('/memos/42');
+    });
+  });
+
+  describe('memo.promoted (buildMemoPromotedPayload)', () => {
+    it('handles full payload structure', () => {
+      const activity = createActivity({
+        eventType: 'memo.promoted',
+        issueId: 10,
+        payload: {
+          issue_id: 20, // promoted task id
+          source_memo_id: 10,
+          source_memo_body: 'Original memo',
+          promoted_task: {
+            id: 20,
+            title: 'New Task From Memo',
+            status: 'inbox',
+          },
+          link_id: 5,
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('New Task From Memo');
+      expect(getActivityDetails(activity)).toBe('Promoted from memo #10');
+      expect(getActivityLink(activity)).toBe('/tasks/20');
+    });
+
+    it('handles missing promoted_task', () => {
+      const activity = createActivity({
+        eventType: 'memo.promoted',
+        issueId: 10,
+        payload: {
+          issue_id: 20,
+          source_memo_id: 10,
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('Unknown task');
+    });
+  });
+
+  describe('label.assigned (buildLabelAssignedPayload)', () => {
+    it('handles full payload with issue type', () => {
+      const activity = createActivity({
+        eventType: 'label.assigned',
+        issueId: 42,
+        payload: {
+          issue_id: 42,
+          issue_type: 'task',
+          issue_title: 'My Task',
+          label_id: 1,
+          label_name: 'urgent',
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('"urgent" → My Task');
+      expect(getLabelHeadline(activity)).toBe('label "urgent" on #42');
+      expect(getActivityLink(activity)).toBe('/tasks/42');
+    });
+
+    it('handles memo issue type', () => {
+      const activity = createActivity({
+        eventType: 'label.assigned',
+        issueId: 42,
+        payload: {
+          issue_id: 42,
+          issue_type: 'memo',
+          issue_title: 'My Memo',
+          label_id: 1,
+          label_name: 'idea',
+        },
+      });
+      expect(getActivityLink(activity)).toBe('/memos/42');
+    });
+
+    it('handles null values', () => {
+      const activity = createActivity({
+        eventType: 'label.assigned',
+        issueId: 42,
+        payload: {
+          issue_id: 42,
+          issue_type: 'task',
+          issue_title: null,
+          label_id: 1,
+          label_name: null,
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('"label" → item');
+    });
+  });
+
+  describe('project.item_added (buildProjectItemAddedPayload)', () => {
+    it('handles full payload with position', () => {
+      const activity = createActivity({
+        eventType: 'project.item_added',
+        projectId: 10,
+        payload: {
+          project_id: 10,
+          project_name: 'Q1 Planning',
+          issue_id: 42,
+          issue_type: 'task',
+          issue_title: 'Task Title',
+          position: 3,
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('"Q1 Planning" ← Task Title');
+      expect(getProjectHeadline(activity)).toBe('project "Q1 Planning" ← #42');
+      expect(getActivityLink(activity)).toBe('/projects/10');
+    });
+
+    it('handles null project_name', () => {
+      const activity = createActivity({
+        eventType: 'project.item_added',
+        projectId: 10,
+        payload: {
+          project_id: 10,
+          project_name: null,
+          issue_id: 42,
+          issue_title: 'Task',
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('"project" ← Task');
+    });
+  });
+
+  describe('link.created (buildLinkCreatedPayload)', () => {
+    it('handles full payload with all issue types', () => {
+      const activity = createActivity({
+        eventType: 'link.created',
+        payload: {
+          link_id: 5,
+          link_type: 'relates_to',
+          source_issue_id: 10,
+          source_issue_type: 'task',
+          source_issue_title: 'Task A',
+          target_issue_id: 20,
+          target_issue_type: 'memo',
+          target_issue_title: 'Memo B',
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('Task A ↔ Memo B');
+      expect(getActivityDetails(activity)).toBe('relates_to');
+      expect(getLinkDescription(activity)).toBe('#10 to #20 (relates_to)');
+      expect(getActivityLink(activity)).toBe('/tasks/10');
+    });
+
+    it('handles null source_issue_type with fallback', () => {
+      const activity = createActivity({
+        eventType: 'link.created',
+        payload: {
+          link_id: 5,
+          link_type: 'blocks',
+          source_issue_id: 10,
+          source_issue_type: null,
+          source_issue_title: null,
+          target_issue_id: 20,
+          target_issue_type: null,
+          target_issue_title: null,
+        },
+      });
+      // Falls back to "Unknown" for missing type+id combination
+      expect(getActivityTitle(activity)).toBe('Unknown ↔ Unknown');
+    });
+  });
+
+  describe('comment.created (buildCommentCreatedPayload)', () => {
+    it('handles full payload', () => {
+      const activity = createActivity({
+        eventType: 'comment.created',
+        issueId: 42,
+        payload: {
+          comment_id: 5,
+          issue_id: 42,
+          issue_type: 'task',
+          issue_title: 'My Task',
+          body: 'This is a comment',
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('My Task');
+      expect(getActivityDetails(activity)).toBe('"This is a comment"');
+      expect(getCommentHeadline(activity)).toBe('comment on #42');
+      expect(getCommentBody(activity)).toBe('"This is a comment"');
+      expect(getActivityLink(activity)).toBe('/tasks/42');
+    });
+
+    it('handles memo issue type', () => {
+      const activity = createActivity({
+        eventType: 'comment.created',
+        issueId: 42,
+        payload: {
+          comment_id: 5,
+          issue_id: 42,
+          issue_type: 'memo',
+          issue_title: 'My Memo',
+          body: 'Comment on memo',
+        },
+      });
+      expect(getActivityLink(activity)).toBe('/memos/42');
+    });
+  });
+
+  describe('article.created (buildArticleCreatedPayload)', () => {
+    it('handles full payload', () => {
+      const activity = createActivity({
+        eventType: 'article.created',
+        issueId: 42,
+        payload: {
+          issue_id: 42,
+          issue_type: 'article',
+          title: 'Interesting Article',
+          body: 'Article content...',
+          original_url: 'https://example.com/article',
+          labels: [{ id: 1, name: 'reading' }],
+          projects: [{ id: 1, name: 'Research' }],
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('Interesting Article');
+      expect(getActivityDetails(activity)).toBe('example.com');
+      expect(getActivityLink(activity)).toBe('/articles/42');
+      expect(getPrimaryEntityTitle(activity)).toBe('Interesting Article');
+    });
+
+    it('handles null original_url', () => {
+      const activity = createActivity({
+        eventType: 'article.created',
+        issueId: 42,
+        payload: {
+          issue_id: 42,
+          issue_type: 'article',
+          title: 'Article',
+          original_url: null,
+        },
+      });
+      expect(getActivityDetails(activity)).toBeNull();
+    });
+  });
+
+  describe('project.updated (uses name not project_name)', () => {
+    it('handles name field with { old, new } structure', () => {
+      const activity = createActivity({
+        eventType: 'project.updated',
+        projectId: 10,
+        payload: {
+          project_id: 10,
+          name: { old: 'Old Name', new: 'New Name' },
+          description: { old: null, new: 'New description' },
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('New Name');
+      expect(getProjectHeadline(activity)).toBe('project "New Name" updated');
+    });
+  });
+
+  describe('article.deleted', () => {
+    it('handles payload with title', () => {
+      const activity = createActivity({
+        eventType: 'article.deleted',
+        issueId: 42,
+        payload: {
+          issue_id: 42,
+          issue_type: 'article',
+          title: 'Deleted Article',
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('Deleted Article');
+      expect(getActivityLink(activity)).toBeNull();
+    });
+  });
+});
+
 describe('activityLogHelpers - parseEventType', () => {
   it('parses task.created correctly', () => {
     const result = parseEventType('task.created');

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { formatTimeOnly, formatDateTime } from '../utils/dates';
+import { formatTimeOnly, formatDateTime, formatDateOnly, getDateKey } from '../utils/dates';
 import {
   parseEventType,
   getActivityDetails,
@@ -18,15 +18,21 @@ import {
 
 interface TimeColumnProps {
   time: string;
+  showDate?: boolean;
 }
 
-function TimeColumn({ time }: TimeColumnProps) {
+function TimeColumn({ time, showDate }: TimeColumnProps) {
   return (
     <div
-      className="w-20 text-xs text-gray-500 text-right flex-shrink-0 mt-0.5"
+      className="w-20 text-right flex-shrink-0 mt-0.5"
       title={formatDateTime(time)}
     >
-      {formatTimeOnly(time)}
+      {showDate && (
+        <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-0.5">
+          {formatDateOnly(time)}
+        </div>
+      )}
+      <div className="text-xs text-gray-500">{formatTimeOnly(time)}</div>
     </div>
   );
 }
@@ -37,9 +43,9 @@ interface TimelineNodeProps {
 
 function TimelineNode({ isLast }: TimelineNodeProps) {
   return (
-    <div className="relative flex flex-col items-center flex-shrink-0 mt-1">
-      <div className="w-3 h-3 rounded-full bg-gray-400 z-10 flex-shrink-0" />
-      {!isLast && <div className="w-0.5 bg-gray-200 flex-1 min-h-[24px]" />}
+    <div className="flex-shrink-0 w-3 flex flex-col items-center self-stretch">
+      <div className="w-3 h-3 rounded-full bg-gray-400 flex-shrink-0 mt-1" />
+      {!isLast && <div className="w-0.5 bg-gray-200 flex-1" />}
     </div>
   );
 }
@@ -47,9 +53,10 @@ function TimelineNode({ isLast }: TimelineNodeProps) {
 interface ActivityTimelineItemProps {
   activity: ActivityLogEntry;
   isLast: boolean;
+  showDate?: boolean;
 }
 
-function ActivityTimelineItem({ activity, isLast }: ActivityTimelineItemProps) {
+function ActivityTimelineItem({ activity, isLast, showDate }: ActivityTimelineItemProps) {
   const { type, action } = parseEventType(activity.eventType);
   const issueId = getActivityIssueId(activity);
   const link = getActivityLink(activity);
@@ -63,8 +70,8 @@ function ActivityTimelineItem({ activity, isLast }: ActivityTimelineItemProps) {
 
     return (
       <div className="px-4 first:pt-4">
-        <div className="flex gap-4">
-          <TimeColumn time={activity.occurredAt} />
+        <div className="flex gap-4 items-stretch">
+          <TimeColumn time={activity.occurredAt} showDate={showDate} />
           <TimelineNode isLast={isLast} />
           <div className="flex-1 pb-6">
             {/* Line 1: Clickable badge [#ID Type] + title */}
@@ -101,8 +108,8 @@ function ActivityTimelineItem({ activity, isLast }: ActivityTimelineItemProps) {
     const description = getLinkDescription(activity);
 
     const content = (
-      <div className="flex gap-4">
-        <TimeColumn time={activity.occurredAt} />
+      <div className="flex gap-4 items-stretch">
+        <TimeColumn time={activity.occurredAt} showDate={showDate} />
         <TimelineNode isLast={isLast} />
         <div className="flex-1 pb-4">
           <p className="text-gray-700 text-sm">{linkText}</p>
@@ -130,8 +137,8 @@ function ActivityTimelineItem({ activity, isLast }: ActivityTimelineItemProps) {
     const body = getCommentBody(activity);
 
     const content = (
-      <div className="flex gap-4">
-        <TimeColumn time={activity.occurredAt} />
+      <div className="flex gap-4 items-stretch">
+        <TimeColumn time={activity.occurredAt} showDate={showDate} />
         <TimelineNode isLast={isLast} />
         <div className="flex-1 pb-4">
           <p className="text-gray-700 text-sm">{headline}</p>
@@ -158,8 +165,8 @@ function ActivityTimelineItem({ activity, isLast }: ActivityTimelineItemProps) {
     const headline = getLabelHeadline(activity);
 
     const content = (
-      <div className="flex gap-4">
-        <TimeColumn time={activity.occurredAt} />
+      <div className="flex gap-4 items-stretch">
+        <TimeColumn time={activity.occurredAt} showDate={showDate} />
         <TimelineNode isLast={isLast} />
         <div className="flex-1 pb-4">
           <p className="text-gray-700 text-sm">{headline}</p>
@@ -185,8 +192,8 @@ function ActivityTimelineItem({ activity, isLast }: ActivityTimelineItemProps) {
     const headline = getProjectHeadline(activity);
 
     const content = (
-      <div className="flex gap-4">
-        <TimeColumn time={activity.occurredAt} />
+      <div className="flex gap-4 items-stretch">
+        <TimeColumn time={activity.occurredAt} showDate={showDate} />
         <TimelineNode isLast={isLast} />
         <div className="flex-1 pb-4">
           <p className="text-gray-700 text-sm">{headline}</p>
@@ -210,8 +217,8 @@ function ActivityTimelineItem({ activity, isLast }: ActivityTimelineItemProps) {
   // Fallback for unknown types
   const details = getActivityDetails(activity);
   const content = (
-    <div className="flex gap-4">
-      <TimeColumn time={activity.occurredAt} />
+    <div className="flex gap-4 items-stretch">
+      <TimeColumn time={activity.occurredAt} showDate={showDate} />
       <TimelineNode isLast={isLast} />
       <div className="flex-1 pb-4">
         <p className="text-gray-700 text-sm">
@@ -238,15 +245,26 @@ export function ActivityList({ activities }: ActivityListProps) {
     );
   }
 
+  // Pre-compute date keys to determine where to show date labels
+  const dateKeys = activities.map((a) => getDateKey(a.occurredAt));
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg pb-4">
-      {activities.map((activity, index) => (
-        <ActivityTimelineItem
-          key={activity.id}
-          activity={activity}
-          isLast={index === activities.length - 1}
-        />
-      ))}
+      {activities.map((activity, index) => {
+        const currentDateKey = dateKeys[index];
+        const prevDateKey = index > 0 ? dateKeys[index - 1] : null;
+        const isFirstOfDate = index === 0 || currentDateKey !== prevDateKey;
+        const isLast = index === activities.length - 1;
+
+        return (
+          <ActivityTimelineItem
+            key={activity.id}
+            activity={activity}
+            isLast={isLast}
+            showDate={isFirstOfDate}
+          />
+        );
+      })}
     </div>
   );
 }

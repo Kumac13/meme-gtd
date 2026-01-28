@@ -97,6 +97,30 @@ function truncate(text: string, maxLength: number): string {
 }
 
 /**
+ * Safely extract string value from payload field
+ * Handles cases where field might be:
+ * - A direct string value
+ * - An object with { old, new } structure (from update events)
+ * - null/undefined
+ */
+function extractString(value: unknown): string | null {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value && typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    // Handle { old, new } structure - prefer 'new' value
+    if ('new' in obj && typeof obj.new === 'string') {
+      return obj.new;
+    }
+    if ('old' in obj && typeof obj.old === 'string') {
+      return obj.old;
+    }
+  }
+  return null;
+}
+
+/**
  * Get first line of text, then truncate to maxLength
  */
 function getFirstLineTruncated(text: string, maxLength: number): string {
@@ -109,7 +133,7 @@ function getFirstLineTruncated(text: string, maxLength: number): string {
  * Example: formatIssueIdFallback('task', 14) -> 'Task #14'
  * Example: formatIssueIdFallback('memo', 15) -> 'Memo #15'
  */
-function formatIssueIdFallback(issueType: string | undefined, issueId: number | undefined): string {
+function formatIssueIdFallback(issueType: string | null | undefined, issueId: number | undefined): string {
   if (!issueType || !issueId) return 'Unknown';
   const capitalized = issueType.charAt(0).toUpperCase() + issueType.slice(1);
   return `${capitalized} #${issueId}`;
@@ -176,20 +200,18 @@ export function getActivityTitle(activity: ActivityLogEntry): string {
     // Task events
     case 'task.created':
     case 'task.status_changed':
-      return (payload.title as string) || 'Unknown task';
+      return extractString(payload.title) || 'Unknown task';
     case 'task.updated':
     case 'task.deleted':
     case 'task.bookmarked':
-      return (payload.title as string) || (payload.issue_title as string) || 'Unknown task';
+      return extractString(payload.title) || extractString(payload.issue_title) || 'Unknown task';
 
     // Memo events
     case 'memo.created':
     case 'memo.updated':
     case 'memo.deleted':
     case 'memo.bookmarked': {
-      const body = payload.body;
-      const bodyPreview = payload.body_preview;
-      const memoBody = (typeof body === 'string' ? body : null) || (typeof bodyPreview === 'string' ? bodyPreview : null);
+      const memoBody = extractString(payload.body) || extractString(payload.body_preview);
       if (!memoBody) return 'Unknown memo';
       return getFirstLineTruncated(memoBody, 50);
     }
@@ -201,36 +223,38 @@ export function getActivityTitle(activity: ActivityLogEntry): string {
     // Article events
     case 'article.created':
     case 'article.deleted':
-      return (payload.title as string) || 'Unknown article';
+      return extractString(payload.title) || 'Unknown article';
 
     // Label events
     case 'label.created':
     case 'label.deleted':
-      return (payload.label_name as string) || 'Unknown label';
+      return extractString(payload.label_name) || 'Unknown label';
     case 'label.assigned':
-      return `"${payload.label_name}" → ${payload.issue_title}`;
+      return `"${extractString(payload.label_name) || 'label'}" → ${extractString(payload.issue_title) || 'item'}`;
     case 'label.removed':
-      return `"${payload.label_name}" ← ${payload.issue_title}`;
+      return `"${extractString(payload.label_name) || 'label'}" ← ${extractString(payload.issue_title) || 'item'}`;
 
     // Project events
     case 'project.created':
-    case 'project.updated':
     case 'project.deleted':
-      return (payload.project_name as string) || 'Unknown project';
+      return extractString(payload.project_name) || 'Unknown project';
+    case 'project.updated':
+      // project.updated uses 'name' field (not 'project_name')
+      return extractString(payload.name) || extractString(payload.project_name) || 'Unknown project';
     case 'project.item_added':
-      return `"${payload.project_name}" ← ${payload.issue_title}`;
+      return `"${extractString(payload.project_name) || 'project'}" ← ${extractString(payload.issue_title) || 'item'}`;
     case 'project.item_removed':
-      return `"${payload.project_name}" → ${payload.issue_title}`;
+      return `"${extractString(payload.project_name) || 'project'}" → ${extractString(payload.issue_title) || 'item'}`;
 
     // Link events
     case 'link.created':
     case 'link.deleted': {
       const sourceTitle =
-        (payload.source_issue_title as string) ||
-        formatIssueIdFallback(payload.source_issue_type as string, payload.source_issue_id as number);
+        extractString(payload.source_issue_title) ||
+        formatIssueIdFallback(extractString(payload.source_issue_type), payload.source_issue_id as number);
       const targetTitle =
-        (payload.target_issue_title as string) ||
-        formatIssueIdFallback(payload.target_issue_type as string, payload.target_issue_id as number);
+        extractString(payload.target_issue_title) ||
+        formatIssueIdFallback(extractString(payload.target_issue_type), payload.target_issue_id as number);
       return `${sourceTitle} ↔ ${targetTitle}`;
     }
 
@@ -238,7 +262,7 @@ export function getActivityTitle(activity: ActivityLogEntry): string {
     case 'comment.created':
     case 'comment.updated':
     case 'comment.deleted':
-      return (payload.issue_title as string) || 'Unknown item';
+      return extractString(payload.issue_title) || 'Unknown item';
 
     default:
       return 'Unknown activity';
@@ -254,11 +278,12 @@ export function getActivityDetails(activity: ActivityLogEntry): string | null {
   switch (eventType) {
     // Task events
     case 'task.created':
-      return `Status: ${payload.status}`;
+      return `Status: ${extractString(payload.status) || 'unknown'}`;
     case 'task.status_changed':
-      return `${payload.from_status} → ${payload.to_status}`;
+      return `${extractString(payload.from_status) || '?'} → ${extractString(payload.to_status) || '?'}`;
     case 'task.bookmarked':
-      return payload.bookmarked ? 'Bookmarked' : 'Unbookmarked';
+      // Backend uses 'is_bookmarked', support both for compatibility
+      return (payload.is_bookmarked ?? payload.bookmarked) ? 'Bookmarked' : 'Unbookmarked';
     case 'task.updated':
     case 'task.deleted':
       return null;
@@ -267,7 +292,8 @@ export function getActivityDetails(activity: ActivityLogEntry): string | null {
     case 'memo.promoted':
       return `Promoted from memo #${payload.source_memo_id}`;
     case 'memo.bookmarked':
-      return payload.bookmarked ? 'Bookmarked' : 'Unbookmarked';
+      // Backend uses 'is_bookmarked', support both for compatibility
+      return (payload.is_bookmarked ?? payload.bookmarked) ? 'Bookmarked' : 'Unbookmarked';
     case 'memo.created':
     case 'memo.updated':
     case 'memo.deleted':
@@ -275,7 +301,7 @@ export function getActivityDetails(activity: ActivityLogEntry): string | null {
 
     // Article events
     case 'article.created': {
-      const url = payload.original_url as string | undefined;
+      const url = extractString(payload.original_url);
       if (!url) return null;
       try {
         return new URL(url).hostname;
@@ -304,14 +330,14 @@ export function getActivityDetails(activity: ActivityLogEntry): string | null {
 
     // Link events
     case 'link.created':
-      return payload.link_type as string;
+      return extractString(payload.link_type);
     case 'link.deleted':
       return 'Link removed';
 
     // Comment events
     case 'comment.created': {
-      const body = payload.body;
-      if (!body || typeof body !== 'string') return null;
+      const body = extractString(payload.body);
+      if (!body) return null;
       const truncated = truncate(body, 50);
       return `"${truncated}"`;
     }
@@ -487,7 +513,7 @@ export function getCommentBody(activity: ActivityLogEntry): string | null {
  */
 export function getLabelHeadline(activity: ActivityLogEntry): string {
   const { eventType, payload } = activity;
-  const labelName = payload.label_name as string | undefined;
+  const labelName = extractString(payload.label_name) || 'unknown';
   const issueId = getActivityIssueId(activity);
 
   switch (eventType) {
@@ -510,7 +536,10 @@ export function getLabelHeadline(activity: ActivityLogEntry): string {
  */
 export function getProjectHeadline(activity: ActivityLogEntry): string {
   const { eventType, payload } = activity;
-  const projectName = payload.project_name as string | undefined;
+  // project.updated uses 'name' field, others use 'project_name'
+  const projectName = eventType === 'project.updated'
+    ? (extractString(payload.name) || extractString(payload.project_name) || 'unknown')
+    : (extractString(payload.project_name) || 'unknown');
   const issueId = payload.issue_id as number | undefined;
 
   switch (eventType) {
@@ -544,7 +573,7 @@ export function getPrimaryEntityTitle(activity: ActivityLogEntry): string | null
 
   // Task events
   if (eventType.startsWith('task.')) {
-    return (payload.title as string) || (payload.issue_title as string) || null;
+    return extractString(payload.title) || extractString(payload.issue_title) || null;
   }
 
   // Memo events
@@ -553,16 +582,14 @@ export function getPrimaryEntityTitle(activity: ActivityLogEntry): string | null
       const promotedTask = payload.promoted_task as { id: number; title: string } | undefined;
       return promotedTask?.title || null;
     }
-    const body = payload.body;
-    const bodyPreview = payload.body_preview;
-    const memoBody = (typeof body === 'string' ? body : null) || (typeof bodyPreview === 'string' ? bodyPreview : null);
+    const memoBody = extractString(payload.body) || extractString(payload.body_preview);
     if (!memoBody) return null;
     return getFirstLineTruncated(memoBody, 40);
   }
 
   // Article events
   if (eventType.startsWith('article.')) {
-    return (payload.title as string) || null;
+    return extractString(payload.title) || null;
   }
 
   return null;
@@ -612,12 +639,10 @@ function getEntityInfo(activity: ActivityLogEntry): EntityInfo | null {
   if (['task', 'memo', 'article'].includes(type) && issueId) {
     let title: string;
     if (type === 'memo') {
-      const body = payload.body;
-      const bodyPreview = payload.body_preview;
-      const memoBody = (typeof body === 'string' ? body : null) || (typeof bodyPreview === 'string' ? bodyPreview : null);
+      const memoBody = extractString(payload.body) || extractString(payload.body_preview);
       title = memoBody ? getFirstLineTruncated(memoBody, 20) : `#${issueId}`;
     } else {
-      title = (payload.title as string) || (payload.issue_title as string) || `#${issueId}`;
+      title = extractString(payload.title) || extractString(payload.issue_title) || `#${issueId}`;
     }
     return {
       id: issueId,
@@ -629,8 +654,8 @@ function getEntityInfo(activity: ActivityLogEntry): EntityInfo | null {
   // Link events - use source issue
   if (type === 'link') {
     const sourceIssueId = payload.source_issue_id as number | undefined;
-    const sourceIssueType = payload.source_issue_type as string | undefined;
-    const sourceIssueTitle = payload.source_issue_title as string | undefined;
+    const sourceIssueType = extractString(payload.source_issue_type);
+    const sourceIssueTitle = extractString(payload.source_issue_title);
     if (sourceIssueId) {
       return {
         id: sourceIssueId,
@@ -643,8 +668,8 @@ function getEntityInfo(activity: ActivityLogEntry): EntityInfo | null {
 
   // Comment events - use associated issue
   if (type === 'comment' && issueId) {
-    const issueType = payload.issue_type as string | undefined;
-    const issueTitle = payload.issue_title as string | undefined;
+    const issueType = extractString(payload.issue_type);
+    const issueTitle = extractString(payload.issue_title);
     return {
       id: issueId,
       type: (issueType as EntityType) || 'task',
@@ -654,7 +679,7 @@ function getEntityInfo(activity: ActivityLogEntry): EntityInfo | null {
 
   // Project events
   if (type === 'project' && projectId) {
-    const projectName = payload.project_name as string | undefined;
+    const projectName = extractString(payload.project_name);
     return {
       id: projectId,
       type: 'project',
@@ -664,8 +689,8 @@ function getEntityInfo(activity: ActivityLogEntry): EntityInfo | null {
 
   // Label events with issueId (assign/remove to an issue)
   if (type === 'label' && issueId) {
-    const issueType = payload.issue_type as string | undefined;
-    const issueTitle = payload.issue_title as string | undefined;
+    const issueType = extractString(payload.issue_type);
+    const issueTitle = extractString(payload.issue_title);
     return {
       id: issueId,
       type: (issueType as EntityType) || 'task',
@@ -687,10 +712,11 @@ export function getShortActionLabel(activity: ActivityLogEntry): string {
   // Special cases
   switch (eventType) {
     case 'task.status_changed':
-      return (payload.to_status as string) || action;
+      return extractString(payload.to_status) || action;
     case 'task.bookmarked':
     case 'memo.bookmarked':
-      return payload.bookmarked ? 'bookmarked' : 'unbookmarked';
+      // Backend uses 'is_bookmarked', support both for compatibility
+      return (payload.is_bookmarked ?? payload.bookmarked) ? 'bookmarked' : 'unbookmarked';
     case 'memo.promoted':
       return 'promoted';
     case 'link.created':
@@ -704,9 +730,9 @@ export function getShortActionLabel(activity: ActivityLogEntry): string {
     case 'comment.deleted':
       return 'comment del';
     case 'label.assigned':
-      return `+${truncate((payload.label_name as string) || 'label', 10)}`;
+      return `+${truncate(extractString(payload.label_name) || 'label', 10)}`;
     case 'label.removed':
-      return `-${truncate((payload.label_name as string) || 'label', 10)}`;
+      return `-${truncate(extractString(payload.label_name) || 'label', 10)}`;
     default:
       return action;
   }
