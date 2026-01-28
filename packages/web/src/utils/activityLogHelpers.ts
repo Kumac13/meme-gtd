@@ -3,7 +3,7 @@
  */
 
 // Event types from OpenAPI spec
-export type EventType =
+type EventType =
   | 'task.created'
   | 'task.updated'
   | 'task.status_changed'
@@ -52,7 +52,7 @@ export type ActivityCategory =
   | 'links'
   | 'comments';
 
-export type ActivityType =
+type ActivityType =
   | 'task'
   | 'memo'
   | 'project'
@@ -61,7 +61,7 @@ export type ActivityType =
   | 'link'
   | 'comment';
 
-export interface ParsedEventType {
+interface ParsedEventType {
   type: ActivityType;
   action: string;
 }

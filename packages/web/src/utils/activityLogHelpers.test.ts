@@ -7,7 +7,6 @@ import {
   filterByCategory,
   getActivityTypeColor,
   type ActivityLogEntry,
-  type ActivityCategory,
 } from './activityLogHelpers';
 
 // Helper to create a minimal activity log entry with defaults
