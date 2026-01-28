@@ -21,7 +21,7 @@ function SwimlaneHeader({ entities }: SwimlaneHeaderProps) {
     <thead>
       <tr className="border-b border-gray-200">
         {/* Empty header for time column */}
-        <th className="sticky left-0 z-10 bg-white w-20 py-2" />
+        <th className="sticky left-0 z-20 bg-white w-24 py-2" />
         {entities.map((entity) => {
           const typeColor = getActivityTypeColor(entity.type);
           const capitalizedType =
@@ -139,9 +139,9 @@ interface SwimlaneRowProps {
 function SwimlaneRow({ slot, entities, entitiesWithMoreAbove, entitiesWithMoreBelow }: SwimlaneRowProps) {
   return (
     <tr className="hover:bg-gray-50/50 transition-colors">
-      {/* Time column: right-aligned, tabular-nums */}
+      {/* Time column: right-aligned, tabular-nums, z-20 to stay above dots */}
       <td
-        className="sticky left-0 z-10 bg-white w-20 text-xs text-gray-500 text-right pr-3 align-top py-2"
+        className="sticky left-0 z-20 bg-white w-24 text-xs text-gray-500 text-right pr-3 pl-3 align-top py-2"
         style={{ fontVariantNumeric: 'tabular-nums' }}
         title={formatDateTime(slot.displayTime)}
       >

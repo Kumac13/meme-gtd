@@ -160,6 +160,22 @@ describe('activityLogHelpers - getActivityTitle', () => {
       expect(getActivityTitle(activity)).toBe('Full body');
     });
 
+    it('memo.created returns Unknown memo when body is not a string', () => {
+      const activity = createActivity({
+        eventType: 'memo.created',
+        payload: { body: { text: 'nested' } },
+      });
+      expect(getActivityTitle(activity)).toBe('Unknown memo');
+    });
+
+    it('memo.created returns Unknown memo when body is array', () => {
+      const activity = createActivity({
+        eventType: 'memo.created',
+        payload: { body: ['item1', 'item2'] },
+      });
+      expect(getActivityTitle(activity)).toBe('Unknown memo');
+    });
+
     it('memo.updated returns first line of payload.body', () => {
       const activity = createActivity({
         eventType: 'memo.updated',
@@ -614,6 +630,22 @@ describe('activityLogHelpers - getActivityDetails', () => {
         payload: { issue_title: 'Task', body: longBody },
       });
       expect(getActivityDetails(activity2)).toBe('"' + 'A'.repeat(50) + '..."');
+    });
+
+    it('comment.created returns null when body is not a string', () => {
+      const activity = createActivity({
+        eventType: 'comment.created',
+        payload: { issue_title: 'Task', body: { text: 'nested' } },
+      });
+      expect(getActivityDetails(activity)).toBeNull();
+    });
+
+    it('comment.created returns null when body is array', () => {
+      const activity = createActivity({
+        eventType: 'comment.created',
+        payload: { issue_title: 'Task', body: ['item1', 'item2'] },
+      });
+      expect(getActivityDetails(activity)).toBeNull();
     });
 
     it('comment.updated returns "Comment updated"', () => {
@@ -1196,6 +1228,33 @@ describe('activityLogHelpers - getCommentBody', () => {
     });
     expect(getCommentBody(activity)).toBeNull();
   });
+
+  it('returns null when body is not a string (object)', () => {
+    const activity = createActivity({
+      eventType: 'comment.created',
+      issueId: 42,
+      payload: { body: { text: 'nested' } },
+    });
+    expect(getCommentBody(activity)).toBeNull();
+  });
+
+  it('returns null when body is not a string (array)', () => {
+    const activity = createActivity({
+      eventType: 'comment.created',
+      issueId: 42,
+      payload: { body: ['item1', 'item2'] },
+    });
+    expect(getCommentBody(activity)).toBeNull();
+  });
+
+  it('returns null when body is not a string (number)', () => {
+    const activity = createActivity({
+      eventType: 'comment.created',
+      issueId: 42,
+      payload: { body: 12345 },
+    });
+    expect(getCommentBody(activity)).toBeNull();
+  });
 });
 
 describe('activityLogHelpers - getLabelHeadline', () => {
@@ -1340,6 +1399,22 @@ describe('activityLogHelpers - getPrimaryEntityTitle', () => {
       const activity = createActivity({
         eventType: 'memo.created',
         payload: {},
+      });
+      expect(getPrimaryEntityTitle(activity)).toBeNull();
+    });
+
+    it('returns null when body is not a string (object)', () => {
+      const activity = createActivity({
+        eventType: 'memo.created',
+        payload: { body: { text: 'nested' } },
+      });
+      expect(getPrimaryEntityTitle(activity)).toBeNull();
+    });
+
+    it('returns null when body is not a string (array)', () => {
+      const activity = createActivity({
+        eventType: 'memo.created',
+        payload: { body: ['item1', 'item2'] },
       });
       expect(getPrimaryEntityTitle(activity)).toBeNull();
     });

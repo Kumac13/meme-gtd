@@ -187,7 +187,9 @@ export function getActivityTitle(activity: ActivityLogEntry): string {
     case 'memo.updated':
     case 'memo.deleted':
     case 'memo.bookmarked': {
-      const memoBody = (payload.body as string) || (payload.body_preview as string);
+      const body = payload.body;
+      const bodyPreview = payload.body_preview;
+      const memoBody = (typeof body === 'string' ? body : null) || (typeof bodyPreview === 'string' ? bodyPreview : null);
       if (!memoBody) return 'Unknown memo';
       return getFirstLineTruncated(memoBody, 50);
     }
@@ -308,8 +310,8 @@ export function getActivityDetails(activity: ActivityLogEntry): string | null {
 
     // Comment events
     case 'comment.created': {
-      const body = payload.body as string | undefined;
-      if (!body) return null;
+      const body = payload.body;
+      if (!body || typeof body !== 'string') return null;
       const truncated = truncate(body, 50);
       return `"${truncated}"`;
     }
@@ -474,8 +476,8 @@ export function getCommentHeadline(activity: ActivityLogEntry): string {
  * Example: '"Hello world..."'
  */
 export function getCommentBody(activity: ActivityLogEntry): string | null {
-  const body = activity.payload.body as string | undefined;
-  if (!body) return null;
+  const body = activity.payload.body;
+  if (!body || typeof body !== 'string') return null;
   return `"${truncate(body, 50)}"`;
 }
 
@@ -551,7 +553,9 @@ export function getPrimaryEntityTitle(activity: ActivityLogEntry): string | null
       const promotedTask = payload.promoted_task as { id: number; title: string } | undefined;
       return promotedTask?.title || null;
     }
-    const memoBody = (payload.body as string) || (payload.body_preview as string);
+    const body = payload.body;
+    const bodyPreview = payload.body_preview;
+    const memoBody = (typeof body === 'string' ? body : null) || (typeof bodyPreview === 'string' ? bodyPreview : null);
     if (!memoBody) return null;
     return getFirstLineTruncated(memoBody, 40);
   }
@@ -608,7 +612,9 @@ function getEntityInfo(activity: ActivityLogEntry): EntityInfo | null {
   if (['task', 'memo', 'article'].includes(type) && issueId) {
     let title: string;
     if (type === 'memo') {
-      const memoBody = (payload.body as string) || (payload.body_preview as string);
+      const body = payload.body;
+      const bodyPreview = payload.body_preview;
+      const memoBody = (typeof body === 'string' ? body : null) || (typeof bodyPreview === 'string' ? bodyPreview : null);
       title = memoBody ? getFirstLineTruncated(memoBody, 20) : `#${issueId}`;
     } else {
       title = (payload.title as string) || (payload.issue_title as string) || `#${issueId}`;
