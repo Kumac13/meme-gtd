@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ActivityLogService } from '../api/services/ActivityLogService';
 import { ActivityList } from '../components/ActivityCard';
+import { ActivitySwimlane } from '../components/ActivitySwimlane';
 import { ActivityCategoryFilter } from '../components/ActivityCategoryFilter';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
@@ -12,6 +13,8 @@ import {
   type ActivityCategory,
 } from '../utils/activityLogHelpers';
 
+type ViewMode = 'timeline' | 'swimlane';
+
 export default function ActivityLogPage() {
   useDocumentTitle('Activity');
 
@@ -19,6 +22,7 @@ export default function ActivityLogPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState<ActivityCategory>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('timeline');
 
   useEffect(() => {
     async function fetchActivities() {
@@ -39,7 +43,7 @@ export default function ActivityLogPage() {
           undefined, // to
           100,       // limit
           undefined, // offset
-          'desc'     // order
+          'asc'      // order - oldest first (top), newest last (bottom)
         );
 
         setActivities(response as ActivityLogEntry[]);
@@ -67,9 +71,31 @@ export default function ActivityLogPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-2">
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">Activity (Last 24H)</h1>
+    <div className={viewMode === 'swimlane' ? 'max-w-7xl mx-auto px-4 py-2' : 'max-w-4xl mx-auto px-4 py-2'}>
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Activity</h1>
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('timeline')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              viewMode === 'timeline'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Timeline
+          </button>
+          <button
+            onClick={() => setViewMode('swimlane')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              viewMode === 'swimlane'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Swimlane
+          </button>
+        </div>
       </div>
 
       <ActivityCategoryFilter
@@ -87,7 +113,11 @@ export default function ActivityLogPage() {
           <div className="text-sm text-gray-500 mb-2">
             {filteredActivities.length} {filteredActivities.length === 1 ? 'activity' : 'activities'}
           </div>
-          <ActivityList activities={filteredActivities} />
+          {viewMode === 'timeline' ? (
+            <ActivityList activities={filteredActivities} />
+          ) : (
+            <ActivitySwimlane activities={filteredActivities} />
+          )}
         </>
       )}
     </div>

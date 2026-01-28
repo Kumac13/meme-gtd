@@ -18,6 +18,19 @@ export function formatDateTime(isoString: string): string {
 }
 
 /**
+ * Format ISO date string to time only (HH:mm:ss)
+ * @param isoString ISO 8601 date string
+ * @returns Time string (e.g., "10:23:02")
+ */
+export function formatTimeOnly(isoString: string): string {
+  const date = new Date(isoString);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${hours}:${minutes}:${seconds}`;
+}
+
+/**
  * Format ISO date string to relative time (e.g., "2 hours ago", "3 days ago")
  * @param isoString ISO 8601 date string
  * @returns Relative time string

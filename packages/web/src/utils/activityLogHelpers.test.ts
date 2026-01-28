@@ -4,8 +4,16 @@ import {
   getActivityTitle,
   getActivityDetails,
   getActivityLink,
+  getActivityIssueId,
   filterByCategory,
   getActivityTypeColor,
+  isPrimaryEntity,
+  getLinkDescription,
+  getCommentHeadline,
+  getCommentBody,
+  getLabelHeadline,
+  getProjectHeadline,
+  getPrimaryEntityTitle,
   type ActivityLogEntry,
 } from './activityLogHelpers';
 
@@ -111,26 +119,51 @@ describe('activityLogHelpers - getActivityTitle', () => {
   });
 
   describe('Memo Events', () => {
-    it('memo.created returns payload.body_preview (truncated to 100 chars)', () => {
+    it('memo.created returns first line of payload.body (truncated to 50 chars)', () => {
       const shortBody = 'Short memo content';
       const activity1 = createActivity({
         eventType: 'memo.created',
-        payload: { body_preview: shortBody },
+        payload: { body: shortBody },
       });
       expect(getActivityTitle(activity1)).toBe(shortBody);
 
-      const longBody = 'A'.repeat(150);
+      const longBody = 'A'.repeat(80);
       const activity2 = createActivity({
         eventType: 'memo.created',
-        payload: { body_preview: longBody },
+        payload: { body: longBody },
       });
-      expect(getActivityTitle(activity2)).toBe('A'.repeat(100) + '...');
+      expect(getActivityTitle(activity2)).toBe('A'.repeat(50) + '...');
     });
 
-    it('memo.updated returns payload.body_preview', () => {
+    it('memo.created uses first line only for multiline body', () => {
+      const multilineBody = 'First line content\nSecond line\nThird line';
+      const activity = createActivity({
+        eventType: 'memo.created',
+        payload: { body: multilineBody },
+      });
+      expect(getActivityTitle(activity)).toBe('First line content');
+    });
+
+    it('memo.created falls back to body_preview when body is missing', () => {
+      const activity = createActivity({
+        eventType: 'memo.created',
+        payload: { body_preview: 'Fallback preview' },
+      });
+      expect(getActivityTitle(activity)).toBe('Fallback preview');
+    });
+
+    it('memo.created prefers body over body_preview', () => {
+      const activity = createActivity({
+        eventType: 'memo.created',
+        payload: { body: 'Full body', body_preview: 'Preview' },
+      });
+      expect(getActivityTitle(activity)).toBe('Full body');
+    });
+
+    it('memo.updated returns first line of payload.body', () => {
       const activity = createActivity({
         eventType: 'memo.updated',
-        payload: { body_preview: 'Updated memo' },
+        payload: { body: 'Updated memo' },
       });
       expect(getActivityTitle(activity)).toBe('Updated memo');
     });
@@ -143,18 +176,18 @@ describe('activityLogHelpers - getActivityTitle', () => {
       expect(getActivityTitle(activity)).toBe('New task from memo');
     });
 
-    it('memo.deleted returns payload.body_preview', () => {
+    it('memo.deleted returns first line of payload.body', () => {
       const activity = createActivity({
         eventType: 'memo.deleted',
-        payload: { body_preview: 'Deleted memo' },
+        payload: { body: 'Deleted memo' },
       });
       expect(getActivityTitle(activity)).toBe('Deleted memo');
     });
 
-    it('memo.bookmarked returns payload.body_preview', () => {
+    it('memo.bookmarked returns first line of payload.body', () => {
       const activity = createActivity({
         eventType: 'memo.bookmarked',
-        payload: { body_preview: 'Bookmarked memo', bookmarked: true },
+        payload: { body: 'Bookmarked memo', bookmarked: true },
       });
       expect(getActivityTitle(activity)).toBe('Bookmarked memo');
     });
@@ -267,12 +300,59 @@ describe('activityLogHelpers - getActivityTitle', () => {
       expect(getActivityTitle(activity)).toBe('Task A ↔ Task B');
     });
 
+    it('link.created falls back to Type #ID format when target title is null', () => {
+      const activity = createActivity({
+        eventType: 'link.created',
+        payload: {
+          source_issue_title: 'Task A',
+          source_issue_type: 'task',
+          source_issue_id: 14,
+          target_issue_title: null,
+          target_issue_type: 'memo',
+          target_issue_id: 15,
+          link_type: 'relates_to',
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('Task A ↔ Memo #15');
+    });
+
+    it('link.created falls back to Type #ID format for both when titles are null', () => {
+      const activity = createActivity({
+        eventType: 'link.created',
+        payload: {
+          source_issue_title: null,
+          source_issue_type: 'task',
+          source_issue_id: 14,
+          target_issue_title: null,
+          target_issue_type: 'memo',
+          target_issue_id: 15,
+          link_type: 'relates_to',
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('Task #14 ↔ Memo #15');
+    });
+
     it('link.deleted returns {source_issue_title} ↔ {target_issue_title}', () => {
       const activity = createActivity({
         eventType: 'link.deleted',
         payload: { source_issue_title: 'Task A', target_issue_title: 'Task B' },
       });
       expect(getActivityTitle(activity)).toBe('Task A ↔ Task B');
+    });
+
+    it('link.deleted falls back to Type #ID format when titles are null', () => {
+      const activity = createActivity({
+        eventType: 'link.deleted',
+        payload: {
+          source_issue_title: null,
+          source_issue_type: 'task',
+          source_issue_id: 10,
+          target_issue_title: null,
+          target_issue_type: 'memo',
+          target_issue_id: 20,
+        },
+      });
+      expect(getActivityTitle(activity)).toBe('Task #10 ↔ Memo #20');
     });
   });
 
@@ -888,5 +968,416 @@ describe('activityLogHelpers - getActivityTypeColor', () => {
 
   it('returns default color for unknown type', () => {
     expect(getActivityTypeColor('unknown')).toBe('bg-gray-100 text-gray-700');
+  });
+});
+
+describe('activityLogHelpers - getActivityIssueId', () => {
+  describe('Task Events', () => {
+    it('task.created returns issueId', () => {
+      const activity = createActivity({
+        eventType: 'task.created',
+        issueId: 42,
+        payload: { title: 'Test' },
+      });
+      expect(getActivityIssueId(activity)).toBe(42);
+    });
+
+    it('task.created falls back to payload.issue_id', () => {
+      const activity = createActivity({
+        eventType: 'task.created',
+        issueId: null,
+        payload: { title: 'Test', issue_id: 99 },
+      });
+      expect(getActivityIssueId(activity)).toBe(99);
+    });
+  });
+
+  describe('Memo Events', () => {
+    it('memo.created returns issueId', () => {
+      const activity = createActivity({
+        eventType: 'memo.created',
+        issueId: 42,
+        payload: { body: 'Test' },
+      });
+      expect(getActivityIssueId(activity)).toBe(42);
+    });
+
+    it('memo.promoted returns promoted_task.id', () => {
+      const activity = createActivity({
+        eventType: 'memo.promoted',
+        issueId: 10,
+        payload: { promoted_task: { id: 20, title: 'New task' }, source_memo_id: 10 },
+      });
+      expect(getActivityIssueId(activity)).toBe(20);
+    });
+  });
+
+  describe('Project Events', () => {
+    it('project.created returns projectId', () => {
+      const activity = createActivity({
+        eventType: 'project.created',
+        projectId: 42,
+        payload: { project_name: 'Test' },
+      });
+      expect(getActivityIssueId(activity)).toBe(42);
+    });
+  });
+
+  describe('Label Events', () => {
+    it('label.created returns labelId', () => {
+      const activity = createActivity({
+        eventType: 'label.created',
+        labelId: 42,
+        payload: { label_name: 'urgent' },
+      });
+      expect(getActivityIssueId(activity)).toBe(42);
+    });
+
+    it('label.assigned returns issueId (target issue)', () => {
+      const activity = createActivity({
+        eventType: 'label.assigned',
+        issueId: 42,
+        labelId: 10,
+        payload: { label_name: 'urgent', issue_title: 'Task' },
+      });
+      expect(getActivityIssueId(activity)).toBe(42);
+    });
+  });
+
+  describe('Link Events', () => {
+    it('link.created returns source_issue_id', () => {
+      const activity = createActivity({
+        eventType: 'link.created',
+        payload: {
+          source_issue_id: 10,
+          source_issue_type: 'task',
+          target_issue_id: 20,
+          target_issue_type: 'memo',
+        },
+      });
+      expect(getActivityIssueId(activity)).toBe(10);
+    });
+  });
+
+  describe('Comment Events', () => {
+    it('comment.created returns issueId', () => {
+      const activity = createActivity({
+        eventType: 'comment.created',
+        issueId: 42,
+        payload: { issue_title: 'Task', body: 'Test' },
+      });
+      expect(getActivityIssueId(activity)).toBe(42);
+    });
+  });
+
+  describe('Article Events', () => {
+    it('article.created returns issueId', () => {
+      const activity = createActivity({
+        eventType: 'article.created',
+        issueId: 42,
+        payload: { title: 'Test' },
+      });
+      expect(getActivityIssueId(activity)).toBe(42);
+    });
+  });
+});
+
+describe('activityLogHelpers - isPrimaryEntity', () => {
+  it('returns true for task', () => {
+    expect(isPrimaryEntity('task')).toBe(true);
+  });
+
+  it('returns true for memo', () => {
+    expect(isPrimaryEntity('memo')).toBe(true);
+  });
+
+  it('returns true for article', () => {
+    expect(isPrimaryEntity('article')).toBe(true);
+  });
+
+  it('returns false for link', () => {
+    expect(isPrimaryEntity('link')).toBe(false);
+  });
+
+  it('returns false for comment', () => {
+    expect(isPrimaryEntity('comment')).toBe(false);
+  });
+
+  it('returns false for label', () => {
+    expect(isPrimaryEntity('label')).toBe(false);
+  });
+
+  it('returns false for project', () => {
+    expect(isPrimaryEntity('project')).toBe(false);
+  });
+});
+
+describe('activityLogHelpers - getLinkDescription', () => {
+  it('returns "#sourceId to #targetId (linkType)" format', () => {
+    const activity = createActivity({
+      eventType: 'link.created',
+      payload: {
+        source_issue_id: 14,
+        target_issue_id: 15,
+        link_type: 'relates_to',
+      },
+    });
+    expect(getLinkDescription(activity)).toBe('#14 to #15 (relates_to)');
+  });
+
+  it('handles missing link type', () => {
+    const activity = createActivity({
+      eventType: 'link.created',
+      payload: {
+        source_issue_id: 14,
+        target_issue_id: 15,
+      },
+    });
+    expect(getLinkDescription(activity)).toBe('#14 to #15');
+  });
+
+  it('handles missing source ID', () => {
+    const activity = createActivity({
+      eventType: 'link.created',
+      payload: {
+        target_issue_id: 15,
+        link_type: 'blocks',
+      },
+    });
+    expect(getLinkDescription(activity)).toBe('to #15 (blocks)');
+  });
+});
+
+describe('activityLogHelpers - getCommentHeadline', () => {
+  it('returns "comment on #issueId" format', () => {
+    const activity = createActivity({
+      eventType: 'comment.created',
+      issueId: 42,
+      payload: { issue_title: 'Test', body: 'Hello' },
+    });
+    expect(getCommentHeadline(activity)).toBe('comment on #42');
+  });
+
+  it('returns "comment" when issueId is null', () => {
+    const activity = createActivity({
+      eventType: 'comment.created',
+      issueId: null,
+      payload: { body: 'Hello' },
+    });
+    expect(getCommentHeadline(activity)).toBe('comment');
+  });
+});
+
+describe('activityLogHelpers - getCommentBody', () => {
+  it('returns quoted body', () => {
+    const activity = createActivity({
+      eventType: 'comment.created',
+      issueId: 42,
+      payload: { body: 'Short comment' },
+    });
+    expect(getCommentBody(activity)).toBe('"Short comment"');
+  });
+
+  it('truncates long body to 50 chars', () => {
+    const longBody = 'A'.repeat(100);
+    const activity = createActivity({
+      eventType: 'comment.created',
+      issueId: 42,
+      payload: { body: longBody },
+    });
+    expect(getCommentBody(activity)).toBe('"' + 'A'.repeat(50) + '..."');
+  });
+
+  it('returns null when body is missing', () => {
+    const activity = createActivity({
+      eventType: 'comment.created',
+      issueId: 42,
+      payload: {},
+    });
+    expect(getCommentBody(activity)).toBeNull();
+  });
+});
+
+describe('activityLogHelpers - getLabelHeadline', () => {
+  it('label.assigned returns \'label "name" on #issueId\'', () => {
+    const activity = createActivity({
+      eventType: 'label.assigned',
+      issueId: 42,
+      payload: { label_name: 'urgent', issue_title: 'Test' },
+    });
+    expect(getLabelHeadline(activity)).toBe('label "urgent" on #42');
+  });
+
+  it('label.removed returns \'label "name" from #issueId\'', () => {
+    const activity = createActivity({
+      eventType: 'label.removed',
+      issueId: 42,
+      payload: { label_name: 'urgent', issue_title: 'Test' },
+    });
+    expect(getLabelHeadline(activity)).toBe('label "urgent" from #42');
+  });
+
+  it('label.created returns \'label "name" created\'', () => {
+    const activity = createActivity({
+      eventType: 'label.created',
+      labelId: 10,
+      payload: { label_name: 'urgent' },
+    });
+    expect(getLabelHeadline(activity)).toBe('label "urgent" created');
+  });
+
+  it('label.deleted returns \'label "name" deleted\'', () => {
+    const activity = createActivity({
+      eventType: 'label.deleted',
+      labelId: 10,
+      payload: { label_name: 'old-label' },
+    });
+    expect(getLabelHeadline(activity)).toBe('label "old-label" deleted');
+  });
+});
+
+describe('activityLogHelpers - getProjectHeadline', () => {
+  it('project.item_added returns \'project "name" <- #issueId\'', () => {
+    const activity = createActivity({
+      eventType: 'project.item_added',
+      projectId: 10,
+      payload: { project_name: 'Q1 Planning', issue_id: 42, issue_title: 'Test' },
+    });
+    expect(getProjectHeadline(activity)).toBe('project "Q1 Planning" \u2190 #42');
+  });
+
+  it('project.item_removed returns \'project "name" -> #issueId\'', () => {
+    const activity = createActivity({
+      eventType: 'project.item_removed',
+      projectId: 10,
+      payload: { project_name: 'Q1 Planning', issue_id: 42, issue_title: 'Test' },
+    });
+    expect(getProjectHeadline(activity)).toBe('project "Q1 Planning" \u2192 #42');
+  });
+
+  it('project.created returns \'project "name" created\'', () => {
+    const activity = createActivity({
+      eventType: 'project.created',
+      projectId: 10,
+      payload: { project_name: 'Q1 Planning' },
+    });
+    expect(getProjectHeadline(activity)).toBe('project "Q1 Planning" created');
+  });
+
+  it('project.updated returns \'project "name" updated\'', () => {
+    const activity = createActivity({
+      eventType: 'project.updated',
+      projectId: 10,
+      payload: { project_name: 'Q1 Planning' },
+    });
+    expect(getProjectHeadline(activity)).toBe('project "Q1 Planning" updated');
+  });
+
+  it('project.deleted returns \'project "name" deleted\'', () => {
+    const activity = createActivity({
+      eventType: 'project.deleted',
+      projectId: 10,
+      payload: { project_name: 'Q1 Planning' },
+    });
+    expect(getProjectHeadline(activity)).toBe('project "Q1 Planning" deleted');
+  });
+});
+
+describe('activityLogHelpers - getPrimaryEntityTitle', () => {
+  describe('Task Events', () => {
+    it('task.created returns title', () => {
+      const activity = createActivity({
+        eventType: 'task.created',
+        payload: { title: 'Fix login bug', status: 'inbox' },
+      });
+      expect(getPrimaryEntityTitle(activity)).toBe('Fix login bug');
+    });
+
+    it('task.updated falls back to issue_title', () => {
+      const activity = createActivity({
+        eventType: 'task.updated',
+        payload: { issue_title: 'Fallback title' },
+      });
+      expect(getPrimaryEntityTitle(activity)).toBe('Fallback title');
+    });
+
+    it('returns null when no title available', () => {
+      const activity = createActivity({
+        eventType: 'task.created',
+        payload: { status: 'inbox' },
+      });
+      expect(getPrimaryEntityTitle(activity)).toBeNull();
+    });
+  });
+
+  describe('Memo Events', () => {
+    it('memo.created returns first line of body (truncated to 40 chars)', () => {
+      const activity = createActivity({
+        eventType: 'memo.created',
+        payload: { body: 'Short memo content' },
+      });
+      expect(getPrimaryEntityTitle(activity)).toBe('Short memo content');
+    });
+
+    it('memo.created truncates long body', () => {
+      const longBody = 'A'.repeat(60);
+      const activity = createActivity({
+        eventType: 'memo.created',
+        payload: { body: longBody },
+      });
+      expect(getPrimaryEntityTitle(activity)).toBe('A'.repeat(40) + '...');
+    });
+
+    it('memo.promoted returns promoted_task.title', () => {
+      const activity = createActivity({
+        eventType: 'memo.promoted',
+        payload: { promoted_task: { id: 10, title: 'New task from memo' }, source_memo_id: 5 },
+      });
+      expect(getPrimaryEntityTitle(activity)).toBe('New task from memo');
+    });
+
+    it('returns null when no body available', () => {
+      const activity = createActivity({
+        eventType: 'memo.created',
+        payload: {},
+      });
+      expect(getPrimaryEntityTitle(activity)).toBeNull();
+    });
+  });
+
+  describe('Article Events', () => {
+    it('article.created returns title', () => {
+      const activity = createActivity({
+        eventType: 'article.created',
+        payload: { title: 'Interesting article' },
+      });
+      expect(getPrimaryEntityTitle(activity)).toBe('Interesting article');
+    });
+
+    it('returns null when no title available', () => {
+      const activity = createActivity({
+        eventType: 'article.created',
+        payload: {},
+      });
+      expect(getPrimaryEntityTitle(activity)).toBeNull();
+    });
+  });
+
+  describe('Non-primary entity types', () => {
+    it('returns null for link events', () => {
+      const activity = createActivity({
+        eventType: 'link.created',
+        payload: { source_issue_title: 'A', target_issue_title: 'B' },
+      });
+      expect(getPrimaryEntityTitle(activity)).toBeNull();
+    });
+
+    it('returns null for comment events', () => {
+      const activity = createActivity({
+        eventType: 'comment.created',
+        payload: { issue_title: 'Test', body: 'Hello' },
+      });
+      expect(getPrimaryEntityTitle(activity)).toBeNull();
+    });
   });
 });
