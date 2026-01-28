@@ -37,15 +37,10 @@ function TimeColumn({ time, showDate }: TimeColumnProps) {
   );
 }
 
-interface TimelineNodeProps {
-  isLast: boolean;
-}
-
-function TimelineNode({ isLast }: TimelineNodeProps) {
+function TimelineNode() {
   return (
-    <div className="flex-shrink-0 w-3 flex flex-col items-center self-stretch">
-      <div className="w-3 h-3 rounded-full bg-gray-400 flex-shrink-0 mt-1" />
-      {!isLast && <div className="w-0.5 bg-gray-200 flex-1" />}
+    <div className="flex-shrink-0 w-3 mt-1">
+      <div className="w-3 h-3 rounded-full bg-gray-400" />
     </div>
   );
 }
@@ -69,10 +64,21 @@ function ActivityTimelineItem({ activity, isLast, showDate }: ActivityTimelineIt
     const capitalizedType = type.charAt(0).toUpperCase() + type.slice(1);
 
     return (
-      <div className="px-4 first:pt-4">
-        <div className="flex gap-4 items-stretch">
+      <div className="px-4 first:pt-4 relative">
+        {/* Timeline connecting line */}
+        {!isLast && (
+          <div
+            className="absolute w-0.5 bg-gray-200"
+            style={{
+              left: 'calc(1rem + 5rem + 1rem + 5px)',
+              top: '16px',
+              bottom: '-4px',
+            }}
+          />
+        )}
+        <div className="flex gap-4">
           <TimeColumn time={activity.occurredAt} showDate={showDate} />
-          <TimelineNode isLast={isLast} />
+          <TimelineNode />
           <div className="flex-1 pb-6">
             {/* Line 1: Clickable badge [#ID Type] + title */}
             <div className="flex items-center gap-2">
@@ -107,10 +113,21 @@ function ActivityTimelineItem({ activity, isLast, showDate }: ActivityTimelineIt
     const linkText = action === 'created' ? 'linked' : 'unlinked';
     const description = getLinkDescription(activity);
 
+    const timelineLine = !isLast && (
+      <div
+        className="absolute w-0.5 bg-gray-200"
+        style={{
+          left: 'calc(1rem + 5rem + 1rem + 5px)',
+          top: '16px',
+          bottom: '-4px',
+        }}
+      />
+    );
+
     const content = (
-      <div className="flex gap-4 items-stretch">
+      <div className="flex gap-4">
         <TimeColumn time={activity.occurredAt} showDate={showDate} />
-        <TimelineNode isLast={isLast} />
+        <TimelineNode />
         <div className="flex-1 pb-4">
           <p className="text-gray-700 text-sm">{linkText}</p>
           <p className="text-sm text-gray-500">{description}</p>
@@ -120,14 +137,18 @@ function ActivityTimelineItem({ activity, isLast, showDate }: ActivityTimelineIt
 
     if (link) {
       return (
-        <Link to={link} className="block hover:bg-gray-50 transition-colors px-4 first:pt-4">
+        <Link to={link} className="block hover:bg-gray-50 transition-colors px-4 first:pt-4 relative">
+          {timelineLine}
           {content}
         </Link>
       );
     }
 
     return (
-      <div className="px-4 opacity-75 cursor-not-allowed first:pt-4">{content}</div>
+      <div className="px-4 opacity-75 cursor-not-allowed first:pt-4 relative">
+        {timelineLine}
+        {content}
+      </div>
     );
   }
 
@@ -136,10 +157,21 @@ function ActivityTimelineItem({ activity, isLast, showDate }: ActivityTimelineIt
     const headline = getCommentHeadline(activity);
     const body = getCommentBody(activity);
 
+    const timelineLine = !isLast && (
+      <div
+        className="absolute w-0.5 bg-gray-200"
+        style={{
+          left: 'calc(1rem + 5rem + 1rem + 5px)',
+          top: '16px',
+          bottom: '-4px',
+        }}
+      />
+    );
+
     const content = (
-      <div className="flex gap-4 items-stretch">
+      <div className="flex gap-4">
         <TimeColumn time={activity.occurredAt} showDate={showDate} />
-        <TimelineNode isLast={isLast} />
+        <TimelineNode />
         <div className="flex-1 pb-4">
           <p className="text-gray-700 text-sm">{headline}</p>
           {body && <p className="text-sm text-gray-500">{body}</p>}
@@ -149,14 +181,18 @@ function ActivityTimelineItem({ activity, isLast, showDate }: ActivityTimelineIt
 
     if (link) {
       return (
-        <Link to={link} className="block hover:bg-gray-50 transition-colors px-4 first:pt-4">
+        <Link to={link} className="block hover:bg-gray-50 transition-colors px-4 first:pt-4 relative">
+          {timelineLine}
           {content}
         </Link>
       );
     }
 
     return (
-      <div className="px-4 opacity-75 cursor-not-allowed first:pt-4">{content}</div>
+      <div className="px-4 opacity-75 cursor-not-allowed first:pt-4 relative">
+        {timelineLine}
+        {content}
+      </div>
     );
   }
 
@@ -164,10 +200,21 @@ function ActivityTimelineItem({ activity, isLast, showDate }: ActivityTimelineIt
   if (type === 'label') {
     const headline = getLabelHeadline(activity);
 
+    const timelineLine = !isLast && (
+      <div
+        className="absolute w-0.5 bg-gray-200"
+        style={{
+          left: 'calc(1rem + 5rem + 1rem + 5px)',
+          top: '16px',
+          bottom: '-4px',
+        }}
+      />
+    );
+
     const content = (
-      <div className="flex gap-4 items-stretch">
+      <div className="flex gap-4">
         <TimeColumn time={activity.occurredAt} showDate={showDate} />
-        <TimelineNode isLast={isLast} />
+        <TimelineNode />
         <div className="flex-1 pb-4">
           <p className="text-gray-700 text-sm">{headline}</p>
         </div>
@@ -176,14 +223,18 @@ function ActivityTimelineItem({ activity, isLast, showDate }: ActivityTimelineIt
 
     if (link) {
       return (
-        <Link to={link} className="block hover:bg-gray-50 transition-colors px-4 first:pt-4">
+        <Link to={link} className="block hover:bg-gray-50 transition-colors px-4 first:pt-4 relative">
+          {timelineLine}
           {content}
         </Link>
       );
     }
 
     return (
-      <div className="px-4 opacity-75 cursor-not-allowed first:pt-4">{content}</div>
+      <div className="px-4 opacity-75 cursor-not-allowed first:pt-4 relative">
+        {timelineLine}
+        {content}
+      </div>
     );
   }
 
@@ -191,10 +242,21 @@ function ActivityTimelineItem({ activity, isLast, showDate }: ActivityTimelineIt
   if (type === 'project') {
     const headline = getProjectHeadline(activity);
 
+    const timelineLine = !isLast && (
+      <div
+        className="absolute w-0.5 bg-gray-200"
+        style={{
+          left: 'calc(1rem + 5rem + 1rem + 5px)',
+          top: '16px',
+          bottom: '-4px',
+        }}
+      />
+    );
+
     const content = (
-      <div className="flex gap-4 items-stretch">
+      <div className="flex gap-4">
         <TimeColumn time={activity.occurredAt} showDate={showDate} />
-        <TimelineNode isLast={isLast} />
+        <TimelineNode />
         <div className="flex-1 pb-4">
           <p className="text-gray-700 text-sm">{headline}</p>
         </div>
@@ -203,23 +265,27 @@ function ActivityTimelineItem({ activity, isLast, showDate }: ActivityTimelineIt
 
     if (link) {
       return (
-        <Link to={link} className="block hover:bg-gray-50 transition-colors px-4 first:pt-4">
+        <Link to={link} className="block hover:bg-gray-50 transition-colors px-4 first:pt-4 relative">
+          {timelineLine}
           {content}
         </Link>
       );
     }
 
     return (
-      <div className="px-4 opacity-75 cursor-not-allowed first:pt-4">{content}</div>
+      <div className="px-4 opacity-75 cursor-not-allowed first:pt-4 relative">
+        {timelineLine}
+        {content}
+      </div>
     );
   }
 
   // Fallback for unknown types
   const details = getActivityDetails(activity);
   const content = (
-    <div className="flex gap-4 items-stretch">
+    <div className="flex gap-4">
       <TimeColumn time={activity.occurredAt} showDate={showDate} />
-      <TimelineNode isLast={isLast} />
+      <TimelineNode />
       <div className="flex-1 pb-4">
         <p className="text-gray-700 text-sm">
           {type} {action}
@@ -229,7 +295,21 @@ function ActivityTimelineItem({ activity, isLast, showDate }: ActivityTimelineIt
     </div>
   );
 
-  return <div className="px-4 first:pt-4">{content}</div>;
+  return (
+    <div className="px-4 first:pt-4 relative">
+      {!isLast && (
+        <div
+          className="absolute w-0.5 bg-gray-200"
+          style={{
+            left: 'calc(1rem + 5rem + 1rem + 5px)',
+            top: '16px',
+            bottom: '-4px',
+          }}
+        />
+      )}
+      {content}
+    </div>
+  );
 }
 
 interface ActivityListProps {
