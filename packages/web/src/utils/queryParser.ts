@@ -35,7 +35,7 @@ export function parseSearchQuery(query: string): ParsedSearchQuery {
   };
 
   // Extract label: filters
-  const labelMatches = query.match(/label:([^\s]+)/g);
+  const labelMatches = query.match(/label:([^\s]+)/gi);
   if (labelMatches) {
     const allLabels: string[] = [];
     labelMatches.forEach(match => {

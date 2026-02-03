@@ -28,6 +28,7 @@
     "node": ">=22.0.0"
   },
   "devDependencies": {
+    "better-sqlite3": "^9.6.0",
     "knip": "^5.71.0"
   }
 }
