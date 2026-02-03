@@ -9,7 +9,7 @@ import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
 import Pagination from '../components/Pagination';
 import { useUrlFilters } from '../hooks/useUrlFilters';
-import { validateBookmarked, updateBookmarkedParam } from '../utils/urlFilterHelpers';
+import { validateBookmarked, updateBookmarkedParam, updateSearchParam } from '../utils/urlFilterHelpers';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 interface Memo {
@@ -28,7 +28,7 @@ const PAGE_SIZE = 20;
 
 export default function MemosList() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { filters, actions } = useUrlFilters();
+  const { filters } = useUrlFilters();
   const bookmarkFilter = validateBookmarked(searchParams.get('bookmarked'));
 
   // Pagination state from URL
@@ -123,9 +123,7 @@ export default function MemosList() {
         <SearchInput
           value={filters.searchQuery}
           onChange={(value) => {
-            actions.setSearchQuery(value);
-            // Reset to page 1 when searching
-            const params = new URLSearchParams(searchParams);
+            const params = updateSearchParam(searchParams, value);
             params.delete('page');
             setSearchParams(params);
           }}
