@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.1 - 2026-02-07
+
+### Bug Fixes
+
+- **Markdown Textarea**: Auto-grow textarea based on content, fixing mobile/PWA where resize handle is unavailable. Manual resize on PC is preserved. Write/Preview tab switch restores correct height.
+
 ## 0.20.0 - 2026-01-20
 
 ### New Features
