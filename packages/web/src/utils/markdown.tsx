@@ -11,6 +11,7 @@ import rehypeSanitize from 'rehype-sanitize';
 import type { Components } from 'react-markdown';
 import type { Element } from 'hast';
 import { MermaidDiagram } from '../components/MermaidDiagram';
+import { remarkFlattenListParagraphs } from './remarkFlattenListParagraphs';
 
 /**
  * Recursively extract plain text from React children
@@ -267,7 +268,7 @@ export function MarkdownRenderer({ content, components, className = '' }: Markdo
   return (
     <div className={`markdown-content ${className}`}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkBreaks]}
+        remarkPlugins={[remarkGfm, remarkBreaks, remarkFlattenListParagraphs]}
         rehypePlugins={[rehypeRaw, rehypeSanitize]}
         components={{ ...defaultComponents, ...components }}
       >
