@@ -173,9 +173,9 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
     params.isBookmarked = filters.isBookmarked ? 1 : 0;
   }
 
-  let orderBy = 'updated_at DESC';
+  let orderBy = 'created_at DESC';
   if (filters.order === 'asc') {
-    orderBy = 'updated_at ASC';
+    orderBy = 'created_at ASC';
   }
 
   let sql = `
@@ -224,7 +224,7 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
          WHERE c.issue_id = i.id AND c.is_deleted = 0) as comment_count
       FROM issues i
       WHERE ${searchConditions.join(' AND ')}
-      ORDER BY i.updated_at ${filters.order === 'asc' ? 'ASC' : 'DESC'}`;
+      ORDER BY i.created_at ${filters.order === 'asc' ? 'ASC' : 'DESC'}`;
     if (filters.limit) {
       sql += ' LIMIT @limit';
     }
