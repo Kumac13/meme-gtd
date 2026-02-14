@@ -7,6 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      minify: false,
       manifest: {
         name: 'Mëmo',
         short_name: 'Mëmo',
@@ -28,8 +29,10 @@ export default defineConfig({
         ],
       },
       workbox: {
+        mode: 'development',
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         cleanupOutdatedCaches: true,
+        sourcemap: false,
       },
     }),
   ],
@@ -44,7 +47,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    sourcemap: false,
   },
   test: {
     globals: true,

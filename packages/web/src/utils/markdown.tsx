@@ -157,7 +157,7 @@ const defaultComponents: Components = {
   ),
 
   // Paragraphs and text
-  p: ({ children }) => <p className="mb-4 text-gray-700 leading-relaxed">{children}</p>,
+  p: ({ children }) => <p className="mb-2 text-gray-700 leading-relaxed">{children}</p>,
   strong: ({ children }) => <strong className="font-bold text-gray-900">{children}</strong>,
   em: ({ children }) => <em className="italic text-gray-700">{children}</em>,
 
