@@ -11,7 +11,6 @@ import Pagination from '../components/Pagination';
 import { useUrlFilters } from '../hooks/useUrlFilters';
 import { validateBookmarked, updateBookmarkedParam, updateSearchParam } from '../utils/urlFilterHelpers';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { useMediaQuery } from '../hooks/useMediaQuery';
 import { MarkdownRenderer } from '../utils/markdown';
 import MobileFloatingComposer from '../components/MobileFloatingComposer';
 import { createItemDetailUrl } from '../utils/navigationHelpers';
@@ -40,7 +39,6 @@ export default function MemosList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { filters } = useUrlFilters();
   const bookmarkFilter = validateBookmarked(searchParams.get('bookmarked'));
-  const isMobile = useMediaQuery('(max-width: 639px)');
 
   // Pagination state from URL
   const currentPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
@@ -70,7 +68,7 @@ export default function MemosList() {
         // Extract free-text search from parsed query
         const searchParam = filters.parsedQuery.freeText;
 
-        const offset = isMobile ? 0 : (currentPage - 1) * PAGE_SIZE;
+        const offset = (currentPage - 1) * PAGE_SIZE;
 
         const response = await MemosService.listMemos(
           undefined,
@@ -90,7 +88,7 @@ export default function MemosList() {
     }
 
     fetchMemos();
-  }, [filters.searchQuery, currentPage, isMobile]);
+  }, [filters.searchQuery, currentPage]);
 
   const filteredMemos = useMemo(() => {
     return memos.filter((memo) => {
@@ -187,14 +185,12 @@ export default function MemosList() {
           placeholder="Search memos"
           itemType="memo"
         />
-        {!isMobile && (
-          <Link
-            to="/memos/new"
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 whitespace-nowrap"
-          >
-            New Memo
-          </Link>
-        )}
+        <Link
+          to="/memos/new"
+          className="hidden sm:inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 whitespace-nowrap"
+        >
+          New Memo
+        </Link>
       </div>
 
       <FilterBar
@@ -202,98 +198,106 @@ export default function MemosList() {
         onBookmarkFilterChange={handleBookmarkFilterChange}
       />
 
-      {filteredMemos.length === 0 ? (
-        <EmptyState
-          message={bookmarkFilter ? 'No bookmarked memos' : 'No memos yet'}
-          submessage={!bookmarkFilter ? 'Create your first memo to get started' : undefined}
-        />
-      ) : (
-        <>
-          <div className="text-sm text-gray-500 mb-2">
-            {total} {total === 1 ? 'memo' : 'memos'}
-          </div>
-          {isMobile ? (
-            <div className="pb-28">
-              <div>
-                {filteredMemos.map((memo, index) => {
-                  const prev = index > 0 ? filteredMemos[index - 1] : null;
-                  const currentBucket = getTimelineDateBucket(memo.createdAt);
-                  const previousBucket = prev ? getTimelineDateBucket(prev.createdAt) : null;
-                  const itemPath = createItemDetailUrl({ basePath: '/memos', itemId: memo.id, currentFilters: searchParams });
+      <div className="text-sm text-gray-500 mb-2">
+        {total} {total === 1 ? 'memo' : 'memos'}
+      </div>
 
-                  return (
-                    <div key={memo.id} className="py-1">
-                      {currentBucket !== previousBucket && (
-                        <div className="py-2 text-xs font-medium text-gray-500">{currentBucket}</div>
-                      )}
-                      {shouldShowGapTimestamp(prev?.createdAt ?? null, memo.createdAt) && (
-                        <div className="pb-1 text-xs text-gray-400">{formatTimelineTime(memo.createdAt)}</div>
-                      )}
+      <div className="sm:hidden pb-28">
+        {filteredMemos.length === 0 ? (
+          <EmptyState
+            message={bookmarkFilter ? 'No bookmarked memos' : 'No memos yet'}
+            submessage={!bookmarkFilter ? 'Create your first memo to get started' : undefined}
+          />
+        ) : (
+          <>
+            <div>
+              {filteredMemos.map((memo, index) => {
+                const prev = index > 0 ? filteredMemos[index - 1] : null;
+                const currentBucket = getTimelineDateBucket(memo.createdAt);
+                const previousBucket = prev ? getTimelineDateBucket(prev.createdAt) : null;
+                const itemPath = createItemDetailUrl({ basePath: '/memos', itemId: memo.id, currentFilters: searchParams });
 
-                      <div className="flex items-start gap-2">
-                        <Link to={itemPath} className="min-w-0 flex-1 text-sm text-gray-900">
-                          <div className="prose prose-sm max-w-none break-words text-gray-900">
-                            <MarkdownRenderer content={memo.bodyMd} />
+                return (
+                  <div key={memo.id} className="py-1">
+                    {currentBucket !== previousBucket && (
+                      <div className="py-2 text-xs font-medium text-gray-500">{currentBucket}</div>
+                    )}
+                    {shouldShowGapTimestamp(prev?.createdAt ?? null, memo.createdAt) && (
+                      <div className="pb-1 text-xs text-gray-400">{formatTimelineTime(memo.createdAt)}</div>
+                    )}
+
+                    <div className="flex items-start gap-2">
+                      <Link to={itemPath} className="min-w-0 flex-1 text-sm text-gray-900">
+                        <div className="prose prose-sm max-w-none break-words text-gray-900">
+                          <MarkdownRenderer content={memo.bodyMd} />
+                        </div>
+                        <div className="mt-1 text-xs text-gray-500">#{memo.id}</div>
+                        {memo.labels && memo.labels.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {memo.labels.map((label) => (
+                              <LabelBadge key={`${memo.id}-${label}`} name={label} />
+                            ))}
                           </div>
-                          <div className="mt-1 text-xs text-gray-500">#{memo.id}</div>
-                          {memo.labels && memo.labels.length > 0 && (
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {memo.labels.map((label) => (
-                                <LabelBadge key={`${memo.id}-${label}`} name={label} />
-                              ))}
-                            </div>
-                          )}
-                        </Link>
-
-                        {(memo.commentCount ?? 0) > 0 && (
-                          <Link to={itemPath} className="mt-1 flex items-center gap-1 text-xs text-gray-500">
-                            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
-                              <path d="M1 2.75C1 1.784 1.784 1 2.75 1h10.5c.966 0 1.75.784 1.75 1.75v7.5A1.75 1.75 0 0 1 13.25 12H9.06l-2.573 2.573A1.458 1.458 0 0 1 4 13.543V12H2.75A1.75 1.75 0 0 1 1 10.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h4.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path>
-                            </svg>
-                            {memo.commentCount ?? 0}
-                          </Link>
                         )}
-                      </div>
+                      </Link>
+
+                      {(memo.commentCount ?? 0) > 0 && (
+                        <Link to={itemPath} className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+                          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                            <path d="M1 2.75C1 1.784 1.784 1 2.75 1h10.5c.966 0 1.75.784 1.75 1.75v7.5A1.75 1.75 0 0 1 13.25 12H9.06l-2.573 2.573A1.458 1.458 0 0 1 4 13.543V12H2.75A1.75 1.75 0 0 1 1 10.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h4.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path>
+                          </svg>
+                          {memo.commentCount ?? 0}
+                        </Link>
+                      )}
                     </div>
-                  );
-                })}
-              </div>
-
-              {memos.length < total && (
-                <div className="pt-4">
-                  <button
-                    type="button"
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {loadingMore ? 'Loading...' : 'Load more'}
-                  </button>
-                </div>
-              )}
-
-              <MobileFloatingComposer
-                value={newMemoBody}
-                onChange={setNewMemoBody}
-                onSubmit={handleCreateMemo}
-                placeholder="Write a memo..."
-                submitLabel="Create memo"
-                disabled={creatingMemo}
-                submitting={creatingMemo}
-              />
+                  </div>
+                );
+              })}
             </div>
-          ) : (
-            <>
-              <ItemList items={filteredMemos} itemType="memo" basePath="/memos" currentFilters={searchParams} onDelete={handleDelete} />
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
-            </>
-          )}
-        </>
-      )}
+
+            {memos.length < total && (
+              <div className="pt-4">
+                <button
+                  type="button"
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loadingMore ? 'Loading...' : 'Load more'}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        <MobileFloatingComposer
+          value={newMemoBody}
+          onChange={setNewMemoBody}
+          onSubmit={handleCreateMemo}
+          placeholder="Write a memo..."
+          submitLabel="Create memo"
+          disabled={creatingMemo}
+          submitting={creatingMemo}
+        />
+      </div>
+
+      <div className="hidden sm:block">
+        {filteredMemos.length === 0 ? (
+          <EmptyState
+            message={bookmarkFilter ? 'No bookmarked memos' : 'No memos yet'}
+            submessage={!bookmarkFilter ? 'Create your first memo to get started' : undefined}
+          />
+        ) : (
+          <>
+            <ItemList items={filteredMemos} itemType="memo" basePath="/memos" currentFilters={searchParams} onDelete={handleDelete} />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </>
+        )}
+      </div>
     </div>
   );
 }
