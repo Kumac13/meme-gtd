@@ -37,7 +37,22 @@ export function shouldShowGapTimestamp(previousIso: string | null, currentIso: s
 
 export function formatTimelineTime(iso: string): string {
   const date = new Date(iso);
+  const now = new Date();
+
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
+  const timeText = `${hours}:${minutes}`;
+
+  const sameDay =
+    date.getFullYear() === now.getFullYear()
+    && date.getMonth() === now.getMonth()
+    && date.getDate() === now.getDate();
+
+  if (sameDay) {
+    return timeText;
+  }
+
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  return `${date.getFullYear()}/${month}/${day} ${timeText}`;
 }
