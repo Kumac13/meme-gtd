@@ -207,6 +207,7 @@ export default function MemoDetail() {
   const [threadComments, setThreadComments] = useState<MemoComment[]>([]);
   const [replyBody, setReplyBody] = useState('');
   const [replySubmitting, setReplySubmitting] = useState(false);
+  const [composerOccupiedHeight, setComposerOccupiedHeight] = useState(128);
 
   // Set document title based on memo body preview (memos don't have titles)
   const titleText = memo?.bodyMd ? truncateForTitle(memo.bodyMd) : null;
@@ -346,8 +347,12 @@ export default function MemoDetail() {
 
   return (
     <>
-      <div className="sm:hidden max-w-4xl mx-auto min-h-screen bg-white px-4 py-2 pb-[calc(env(safe-area-inset-bottom,0px)+128px)]">
-        <div className="pb-1">
+      <div className="sm:hidden fixed inset-x-0 top-16 bottom-0 overflow-hidden bg-white">
+        <div
+          className="mx-auto h-full max-w-4xl overflow-y-auto overscroll-y-contain px-4 py-2"
+          style={{ paddingBottom: `${composerOccupiedHeight}px` }}
+        >
+          <div className="pb-1">
           <div className="mb-1 flex items-center justify-between">
             <div className="text-xs text-gray-500">#{memo.id}</div>
             <button
@@ -369,57 +374,58 @@ export default function MemoDetail() {
               )}
             </button>
           </div>
-          <MobileThreadItem
-            content={memo.bodyMd}
-            createdAt={memo.createdAt}
-            labels={memo.labels}
-            showInlineTime
-            showMenu
-            onSave={handleMemoUpdate}
-            onDelete={handleDelete}
-          />
-        </div>
+            <MobileThreadItem
+              content={memo.bodyMd}
+              createdAt={memo.createdAt}
+              labels={memo.labels}
+              showInlineTime
+              showMenu
+              onSave={handleMemoUpdate}
+              onDelete={handleDelete}
+            />
+          </div>
 
-        <div className="pt-0.5">
-          {threadComments.map((comment, index) => {
-            const prevCreatedAt = index > 0 ? threadComments[index - 1].createdAt : memo.createdAt;
-            return (
-              <div key={comment.id}>
-                {shouldShowGapTimestamp(prevCreatedAt, comment.createdAt) && (
-                  <div className="pb-1 text-[11px] text-gray-400">{formatTimelineTime(comment.createdAt)}</div>
-                )}
-                <MobileThreadItem
-                  content={comment.bodyMd}
-                  createdAt={comment.createdAt}
-                  showMenu
-                  onSave={(bodyMd) => handleReplyUpdate(comment.id, bodyMd)}
-                  onDelete={() => handleReplyDelete(comment.id)}
-                />
-              </div>
-            );
-          })}
-        </div>
+          <div className="pt-0.5">
+            {threadComments.map((comment, index) => {
+              const prevCreatedAt = index > 0 ? threadComments[index - 1].createdAt : memo.createdAt;
+              return (
+                <div key={comment.id}>
+                  {shouldShowGapTimestamp(prevCreatedAt, comment.createdAt) && (
+                    <div className="pb-1 text-[11px] text-gray-400">{formatTimelineTime(comment.createdAt)}</div>
+                  )}
+                  <MobileThreadItem
+                    content={comment.bodyMd}
+                    createdAt={comment.createdAt}
+                    showMenu
+                    onSave={(bodyMd) => handleReplyUpdate(comment.id, bodyMd)}
+                    onDelete={() => handleReplyDelete(comment.id)}
+                  />
+                </div>
+              );
+            })}
+          </div>
 
-        <div className="mt-3 space-y-3">
-          <ProjectsSection itemId={memo.id} itemType="memo" />
-          <LabelsSection
-            itemId={memo.id}
-            itemType="memo"
-            assignedLabels={memo.labels || []}
-            onLabelsChanged={handleLabelsChanged}
-          />
-        </div>
+          <div className="mt-3 space-y-3">
+            <ProjectsSection itemId={memo.id} itemType="memo" />
+            <LabelsSection
+              itemId={memo.id}
+              itemType="memo"
+              assignedLabels={memo.labels || []}
+              onLabelsChanged={handleLabelsChanged}
+            />
+          </div>
 
-        <button
-          type="button"
-          onClick={handleCopyAllContents}
-          className="mt-3 inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-          </svg>
-          {isCopied ? 'Copied!' : 'Copy All Contents'}
-        </button>
+          <button
+            type="button"
+            onClick={handleCopyAllContents}
+            className="mt-3 inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+            </svg>
+            {isCopied ? 'Copied!' : 'Copy All Contents'}
+          </button>
+        </div>
 
         <MobileFloatingComposer
           value={replyBody}
@@ -429,6 +435,7 @@ export default function MemoDetail() {
           submitLabel="Comment"
           disabled={replySubmitting}
           submitting={replySubmitting}
+          onOccupiedHeightChange={setComposerOccupiedHeight}
         />
       </div>
 

@@ -53,6 +53,7 @@ export default function MemosList() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [newMemoBody, setNewMemoBody] = useState('');
   const [creatingMemo, setCreatingMemo] = useState(false);
+  const [composerOccupiedHeight, setComposerOccupiedHeight] = useState(128);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -173,8 +174,8 @@ export default function MemosList() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto min-h-screen bg-white px-4 py-2 sm:min-h-0 sm:bg-transparent">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="relative">
+      <div className="hidden sm:flex items-center gap-2 mb-4">
         <SearchInput
           value={filters.searchQuery}
           onChange={(value) => {
@@ -193,84 +194,113 @@ export default function MemosList() {
         </Link>
       </div>
 
-      <FilterBar
-        bookmarkFilter={bookmarkFilter}
-        onBookmarkFilterChange={handleBookmarkFilterChange}
-      />
+      <div className="hidden sm:block">
+        <FilterBar
+          bookmarkFilter={bookmarkFilter}
+          onBookmarkFilterChange={handleBookmarkFilterChange}
+        />
+      </div>
 
-      <div className="text-sm text-gray-500 mb-2">
+      <div className="hidden sm:block text-sm text-gray-500 mb-2">
         {total} {total === 1 ? 'memo' : 'memos'}
       </div>
 
-      <div className="sm:hidden pb-[calc(env(safe-area-inset-bottom,0px)+128px)]">
-        {filteredMemos.length === 0 ? (
-          <EmptyState
-            message={bookmarkFilter ? 'No bookmarked memos' : 'No memos yet'}
-            submessage={!bookmarkFilter ? 'Create your first memo to get started' : undefined}
+      <div className="sm:hidden fixed inset-x-0 top-16 bottom-0 overflow-hidden bg-white">
+        <div
+          className="mx-auto h-full max-w-4xl overflow-y-auto overscroll-y-contain px-4 py-2"
+          style={{ paddingBottom: `${composerOccupiedHeight}px` }}
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <SearchInput
+              value={filters.searchQuery}
+              onChange={(value) => {
+                const params = updateSearchParam(searchParams, value);
+                params.delete('page');
+                setSearchParams(params);
+              }}
+              placeholder="Search memos"
+              itemType="memo"
+            />
+          </div>
+
+          <FilterBar
+            bookmarkFilter={bookmarkFilter}
+            onBookmarkFilterChange={handleBookmarkFilterChange}
           />
-        ) : (
-          <>
-            <div>
-              {filteredMemos.map((memo, index) => {
-                const prev = index > 0 ? filteredMemos[index - 1] : null;
-                const currentBucket = getTimelineDateBucket(memo.createdAt);
-                const previousBucket = prev ? getTimelineDateBucket(prev.createdAt) : null;
-                const itemPath = createItemDetailUrl({ basePath: '/memos', itemId: memo.id, currentFilters: searchParams });
 
-                return (
-                  <div key={memo.id} className="py-1.5">
-                    {currentBucket !== previousBucket && (
-                      <div className="flex items-center gap-3 py-2">
-                        <span className="text-[13px] font-medium text-gray-500">{currentBucket}</span>
-                        <span className="h-px flex-1 bg-gray-200" />
-                      </div>
-                    )}
-                    {(currentBucket !== previousBucket || shouldShowGapTimestamp(prev?.createdAt ?? null, memo.createdAt)) && (
-                      <div className="pb-0.5 text-[11px] text-gray-400">{formatTimelineTime(memo.createdAt)}</div>
-                    )}
+          <div className="text-sm text-gray-500 mb-2">
+            {total} {total === 1 ? 'memo' : 'memos'}
+          </div>
 
-                    <div className="flex items-start gap-2.5">
-                      <Link to={itemPath} className="min-w-0 flex-1">
-                        <div className="prose prose-sm prose-p:mb-2 prose-li:my-0 prose-p:text-[13px] prose-p:leading-6 max-w-none break-words text-gray-700">
-                          <MarkdownRenderer content={memo.bodyMd} />
+          {filteredMemos.length === 0 ? (
+            <EmptyState
+              message={bookmarkFilter ? 'No bookmarked memos' : 'No memos yet'}
+              submessage={!bookmarkFilter ? 'Create your first memo to get started' : undefined}
+            />
+          ) : (
+            <>
+              <div>
+                {filteredMemos.map((memo, index) => {
+                  const prev = index > 0 ? filteredMemos[index - 1] : null;
+                  const currentBucket = getTimelineDateBucket(memo.createdAt);
+                  const previousBucket = prev ? getTimelineDateBucket(prev.createdAt) : null;
+                  const itemPath = createItemDetailUrl({ basePath: '/memos', itemId: memo.id, currentFilters: searchParams });
+
+                  return (
+                    <div key={memo.id} className="py-1.5">
+                      {currentBucket !== previousBucket && (
+                        <div className="flex items-center gap-3 py-2">
+                          <span className="text-[13px] font-medium text-gray-500">{currentBucket}</span>
+                          <span className="h-px flex-1 bg-gray-200" />
                         </div>
-                        {memo.labels && memo.labels.length > 0 && (
-                          <div className="mt-1.5 flex flex-wrap gap-1">
-                            {memo.labels.map((label) => (
-                              <LabelBadge key={`${memo.id}-${label}`} name={label} />
-                            ))}
-                          </div>
-                        )}
-                      </Link>
-
-                      {(memo.commentCount ?? 0) > 0 && (
-                        <Link to={itemPath} className="mt-0.5 flex items-center gap-1 text-[11px] text-gray-500">
-                          <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-                            <path d="M2.5 2.5h11v8h-4l-3 3v-3h-4z" />
-                          </svg>
-                          {memo.commentCount ?? 0}
-                        </Link>
                       )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                      {(currentBucket !== previousBucket || shouldShowGapTimestamp(prev?.createdAt ?? null, memo.createdAt)) && (
+                        <div className="pb-0.5 text-[11px] text-gray-400">{formatTimelineTime(memo.createdAt)}</div>
+                      )}
 
-            {memos.length < total && (
-              <div className="pt-4 text-center">
-                <button
-                  type="button"
-                  onClick={handleLoadMore}
-                  disabled={loadingMore}
-                  className="inline-flex text-sm text-gray-500 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {loadingMore ? 'Loading...' : 'Load more'}
-                </button>
+                      <div className="flex items-start gap-2.5">
+                        <Link to={itemPath} className="min-w-0 flex-1">
+                          <div className="prose prose-sm prose-p:mb-2 prose-li:my-0 prose-p:text-[13px] prose-p:leading-6 max-w-none break-words text-gray-700">
+                            <MarkdownRenderer content={memo.bodyMd} />
+                          </div>
+                          {memo.labels && memo.labels.length > 0 && (
+                            <div className="mt-1.5 flex flex-wrap gap-1">
+                              {memo.labels.map((label) => (
+                                <LabelBadge key={`${memo.id}-${label}`} name={label} />
+                              ))}
+                            </div>
+                          )}
+                        </Link>
+
+                        {(memo.commentCount ?? 0) > 0 && (
+                          <Link to={itemPath} className="mt-0.5 flex items-center gap-1 text-[11px] text-gray-500">
+                            <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                              <path d="M2.5 2.5h11v8h-4l-3 3v-3h-4z" />
+                            </svg>
+                            {memo.commentCount ?? 0}
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            )}
-          </>
-        )}
+
+              {memos.length < total && (
+                <div className="pt-4 text-center">
+                  <button
+                    type="button"
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="inline-flex text-sm text-gray-500 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {loadingMore ? 'Loading...' : 'Load more'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
         <MobileFloatingComposer
           value={newMemoBody}
@@ -280,10 +310,11 @@ export default function MemosList() {
           submitLabel="Create memo"
           disabled={creatingMemo}
           submitting={creatingMemo}
+          onOccupiedHeightChange={setComposerOccupiedHeight}
         />
       </div>
 
-      <div className="hidden sm:block">
+      <div className="hidden sm:block max-w-4xl mx-auto bg-transparent px-4 py-2">
         {filteredMemos.length === 0 ? (
           <EmptyState
             message={bookmarkFilter ? 'No bookmarked memos' : 'No memos yet'}
