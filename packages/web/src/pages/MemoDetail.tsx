@@ -1,13 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import type { IssueType } from 'meme-gtd-shared';
 import { MemosService } from '../api/services/MemosService';
+import { CommentsService } from '../api/services/CommentsService';
 import ItemDetail, { type Item, type Comment } from '../components/ItemDetail';
 import { copyItemContent } from '../utils/copyContent';
 import { ItemDetailPanel } from '../components/ItemDetailPanel';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import { useDocumentTitle, truncateForTitle } from '../hooks/useDocumentTitle';
+import { useMediaQuery } from '../hooks/useMediaQuery';
+import { MarkdownRenderer } from '../utils/markdown';
+import { LabelBadge } from '../components/LabelBadge';
+import MobileFloatingComposer from '../components/MobileFloatingComposer';
+import { formatTimelineTime, shouldShowGapTimestamp } from '../utils/memoTimeline';
+import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
+import { useAutoGrow } from '../hooks/useAutoGrow';
 
 interface Memo {
   id: number;
@@ -19,9 +27,169 @@ interface Memo {
   updatedAt: string;
 }
 
+interface MemoComment {
+  id: number;
+  issueId: number;
+  bodyMd: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface MobileThreadItemProps {
+  content: string;
+  createdAt: string;
+  labels?: string[];
+  showInlineTime?: boolean;
+  onSave: (content: string) => Promise<void>;
+  onDelete: () => Promise<void>;
+}
+
+function MobileThreadItem({
+  content,
+  createdAt,
+  labels,
+  showInlineTime = false,
+  onSave,
+  onDelete,
+}: MobileThreadItemProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [value, setValue] = useState(content);
+  const [saving, setSaving] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { copied, copy } = useCopyToClipboard();
+
+  useAutoGrow(textareaRef, value, isEditing);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setValue(content);
+    }
+  }, [content, isEditing]);
+
+  const handleSave = async () => {
+    if (!value.trim()) return;
+    try {
+      setSaving(true);
+      await onSave(value);
+      setIsEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this?')) return;
+    await onDelete();
+    setMenuOpen(false);
+  };
+
+  return (
+    <div className="group py-2">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="text-xs text-gray-500">{showInlineTime ? formatTimelineTime(createdAt) : ''}</span>
+        {!isEditing && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((prev) => !prev)}
+              aria-label="More options"
+              className="rounded p-1 text-gray-500 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+            >
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M8 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+              </svg>
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                <div className="absolute right-0 z-20 mt-1 w-32 rounded-md border border-gray-200 bg-white shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditing(true);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await copy(content);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete()}
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {isEditing ? (
+        <div>
+          <textarea
+            ref={textareaRef}
+            rows={2}
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            className="min-h-[44px] w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-github-green-500"
+          />
+          <div className="mt-2 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditing(false);
+                setValue(content);
+              }}
+              disabled={saving}
+              className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-60"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={saving || !value.trim()}
+              className="rounded-md bg-github-green-600 px-3 py-1 text-sm text-white hover:bg-github-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="prose prose-sm max-w-none break-words text-gray-900">
+          <MarkdownRenderer content={content} />
+        </div>
+      )}
+
+      {labels && labels.length > 0 && (
+        <div className="mt-1 flex flex-wrap gap-1">
+          {labels.map((label) => (
+            <LabelBadge key={label} name={label} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MemoDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const isMobile = useMediaQuery('(max-width: 639px)');
 
   const [memo, setMemo] = useState<Memo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,6 +199,9 @@ export default function MemoDetail() {
   const [selectedItem, setSelectedItem] = useState<{ id: number; type: IssueType } | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isCopied, setIsCopied] = useState(false);
+  const [threadComments, setThreadComments] = useState<MemoComment[]>([]);
+  const [replyBody, setReplyBody] = useState('');
+  const [replySubmitting, setReplySubmitting] = useState(false);
 
   // Set document title based on memo body preview (memos don't have titles)
   const titleText = memo?.bodyMd ? truncateForTitle(memo.bodyMd) : null;
@@ -49,6 +220,11 @@ export default function MemoDetail() {
         setError(null);
         const response = await MemosService.getMemo(id);
         setMemo(response as Memo);
+
+        if (isMobile) {
+          const commentResponse = await CommentsService.listMemoComments(id);
+          setThreadComments(commentResponse as MemoComment[]);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load memo');
         console.error('Error fetching memo:', err);
@@ -58,7 +234,7 @@ export default function MemoDetail() {
     }
 
     fetchMemo();
-  }, [id]);
+  }, [id, isMobile]);
 
   const handleDelete = async () => {
     if (!id) return;
@@ -116,12 +292,94 @@ export default function MemoDetail() {
     setTimeout(() => setIsCopied(false), 2000);
   };
 
+  const handleMemoUpdate = useCallback(async (bodyMd: string) => {
+    if (!id || !memo) return;
+    const updated = await MemosService.updateMemo(id, { bodyMd });
+    setMemo(updated as Memo);
+  }, [id, memo]);
+
+  const handleReplySubmit = useCallback(async () => {
+    if (!id || replySubmitting || !replyBody.trim()) return;
+
+    try {
+      setReplySubmitting(true);
+      const created = await CommentsService.createMemoComment(id, { bodyMd: replyBody.trim() });
+      setThreadComments((prev) => [...prev, created as MemoComment]);
+      setReplyBody('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add reply');
+      console.error('Error creating reply:', err);
+    } finally {
+      setReplySubmitting(false);
+    }
+  }, [id, replyBody, replySubmitting]);
+
+  const handleReplyUpdate = useCallback(async (commentId: number, bodyMd: string) => {
+    if (!id) return;
+    const updated = await CommentsService.updateMemoComment(id, String(commentId), { bodyMd });
+    setThreadComments((prev) => prev.map((comment) => (
+      comment.id === commentId ? (updated as MemoComment) : comment
+    )));
+  }, [id]);
+
+  const handleReplyDelete = useCallback(async (commentId: number) => {
+    if (!id) return;
+    await CommentsService.deleteMemoComment(id, String(commentId));
+    setThreadComments((prev) => prev.filter((comment) => comment.id !== commentId));
+  }, [id]);
+
   if (loading) {
     return <LoadingState message="Loading memo..." />;
   }
 
   if (error || !memo) {
     return <ErrorState error={error || 'Memo not found'} title="Error loading memo" />;
+  }
+
+  if (isMobile) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-2 pb-28">
+        <div className="pb-2">
+          <MobileThreadItem
+            content={memo.bodyMd}
+            createdAt={memo.createdAt}
+            labels={memo.labels}
+            showInlineTime
+            onSave={handleMemoUpdate}
+            onDelete={handleDelete}
+          />
+        </div>
+
+        <div className="pt-2">
+          {threadComments.map((comment, index) => {
+            const prev = index > 0 ? threadComments[index - 1] : null;
+            return (
+              <div key={comment.id}>
+                {shouldShowGapTimestamp(prev?.createdAt ?? null, comment.createdAt) && (
+                  <div className="pb-1 text-xs text-gray-400">{formatTimelineTime(comment.createdAt)}</div>
+                )}
+                <MobileThreadItem
+                  content={comment.bodyMd}
+                  createdAt={comment.createdAt}
+                  onSave={(bodyMd) => handleReplyUpdate(comment.id, bodyMd)}
+                  onDelete={() => handleReplyDelete(comment.id)}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        <MobileFloatingComposer
+          value={replyBody}
+          onChange={setReplyBody}
+          onSubmit={handleReplySubmit}
+          placeholder="Write a reply..."
+          submitLabel="Reply"
+          disabled={replySubmitting}
+          submitting={replySubmitting}
+        />
+      </div>
+    );
   }
 
   const handleUpdate = (updatedItem: Item) => {
