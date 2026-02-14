@@ -1,5 +1,6 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
+import { setTimeout as sleep } from 'node:timers/promises';
 import type { FastifyInstance } from 'fastify';
 import { createTestServer } from '../helpers/testServer.js';
 import { createMemoFixture } from '../helpers/fixtures.js';
@@ -401,6 +402,52 @@ describe('Memo Bookmark Operations', () => {
     });
 
     assert.strictEqual(response.statusCode, 404);
+  });
+
+  it('should list memos ordered by created_at DESC (not updated_at)', async () => {
+    // Create 3 memos with small delays to ensure distinct timestamps
+    const res1 = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'First memo' }),
+    });
+    const memo1 = JSON.parse(res1.body);
+    await sleep(50);
+
+    const res2 = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Second memo' }),
+    });
+    const memo2 = JSON.parse(res2.body);
+    await sleep(50);
+
+    const res3 = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Third memo' }),
+    });
+    const memo3 = JSON.parse(res3.body);
+    await sleep(50);
+
+    // Update the first memo so its updated_at becomes the newest
+    await app.inject({
+      method: 'PATCH',
+      url: `/api/memos/${memo1.id}`,
+      payload: { bodyMd: 'First memo updated' },
+    });
+
+    // List memos - should be ordered by created_at DESC: memo3, memo2, memo1
+    const listResponse = await app.inject({
+      method: 'GET',
+      url: '/api/memos',
+    });
+    assert.strictEqual(listResponse.statusCode, 200);
+    const result = JSON.parse(listResponse.body);
+    assert.strictEqual(result.data.length, 3);
+    assert.strictEqual(result.data[0].id, memo3.id, 'Most recently created memo should be first');
+    assert.strictEqual(result.data[1].id, memo2.id, 'Second created memo should be second');
+    assert.strictEqual(result.data[2].id, memo1.id, 'First created memo should be last despite being updated most recently');
   });
 
   it('should include commentCount field in GET /api/memos response', async () => {
