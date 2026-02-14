@@ -2,6 +2,9 @@ import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
 import { Buffer } from 'node:buffer';
 import { existsSync, unlinkSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { createTestServer } from '../helpers/testServer.js';
 
@@ -87,8 +90,13 @@ function trackFileForCleanup(filePath: string): void {
 describe('Attachment Upload Operations', () => {
   let app: FastifyInstance;
   let cleanup: () => Promise<void>;
+  let previousAttachmentsDir: string | undefined;
 
   beforeEach(async () => {
+    previousAttachmentsDir = process.env.MGTD_ATTACHMENTS_DIR;
+    const testBaseDir = mkdtempSync(join(tmpdir(), 'mgtd-attachments-test-'));
+    process.env.MGTD_ATTACHMENTS_DIR = join(testBaseDir, '.mgtd', 'attachments');
+
     const testServer = await createTestServer();
     app = testServer.app;
     cleanup = testServer.cleanup;
@@ -97,6 +105,11 @@ describe('Attachment Upload Operations', () => {
   afterEach(async () => {
     cleanupAttachments();
     await cleanup();
+    if (previousAttachmentsDir === undefined) {
+      delete process.env.MGTD_ATTACHMENTS_DIR;
+    } else {
+      process.env.MGTD_ATTACHMENTS_DIR = previousAttachmentsDir;
+    }
   });
 
   it('should upload a PNG image (POST /api/attachments)', async () => {
@@ -257,8 +270,13 @@ describe('Attachment Download Operations', () => {
   let app: FastifyInstance;
   let cleanup: () => Promise<void>;
   let uploadedFilename: string;
+  let previousAttachmentsDir: string | undefined;
 
   beforeEach(async () => {
+    previousAttachmentsDir = process.env.MGTD_ATTACHMENTS_DIR;
+    const testBaseDir = mkdtempSync(join(tmpdir(), 'mgtd-attachments-test-'));
+    process.env.MGTD_ATTACHMENTS_DIR = join(testBaseDir, '.mgtd', 'attachments');
+
     const testServer = await createTestServer();
     app = testServer.app;
     cleanup = testServer.cleanup;
@@ -285,6 +303,11 @@ describe('Attachment Download Operations', () => {
   afterEach(async () => {
     cleanupAttachments();
     await cleanup();
+    if (previousAttachmentsDir === undefined) {
+      delete process.env.MGTD_ATTACHMENTS_DIR;
+    } else {
+      process.env.MGTD_ATTACHMENTS_DIR = previousAttachmentsDir;
+    }
   });
 
   it('should download an uploaded image (GET /api/attachments/:filename)', async () => {
