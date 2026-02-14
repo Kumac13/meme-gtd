@@ -2,6 +2,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 
 export default function Layout() {
   const location = useLocation();
+  const isMemosRoute = location.pathname === "/" || location.pathname.startsWith("/memos");
   const isMemosActive = location.pathname.startsWith("/memos");
   const isTasksActive = location.pathname.startsWith("/tasks");
   const isProjectsActive = location.pathname.startsWith("/projects");
@@ -10,8 +11,8 @@ export default function Layout() {
   const isActivityActive = location.pathname.startsWith("/activity");
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
+    <div className={isMemosRoute ? "min-h-screen bg-white sm:bg-gray-50" : "min-h-screen bg-gray-50"}>
+      <header className={isMemosRoute ? "bg-white shadow border-b border-gray-200 sm:border-b-0" : "bg-white shadow"}>
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex w-full sm:w-auto">
@@ -84,7 +85,7 @@ export default function Layout() {
           </div>
         </nav>
       </header>
-      <main className="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8">
+      <main className={isMemosRoute ? "max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 bg-white sm:bg-transparent" : "max-w-7xl mx-auto py-4 sm:px-6 lg:px-8"}>
         <Outlet />
       </main>
     </div>

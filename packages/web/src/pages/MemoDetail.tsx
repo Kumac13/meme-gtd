@@ -15,6 +15,8 @@ import MobileFloatingComposer from '../components/MobileFloatingComposer';
 import { formatTimelineTime, shouldShowGapTimestamp } from '../utils/memoTimeline';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
 import { useAutoGrow } from '../hooks/useAutoGrow';
+import { ProjectsSection } from '../components/ProjectsSection';
+import { LabelsSection } from '../components/LabelsSection';
 
 interface Memo {
   id: number;
@@ -86,9 +88,9 @@ function MobileThreadItem({
   };
 
   return (
-    <div className="group relative py-1.5">
+    <div className="group relative py-1">
       {showInlineTime && (
-        <div className="mb-1 text-xs text-gray-500">{formatTimelineTime(createdAt)}</div>
+        <div className="mb-1 text-[11px] text-gray-400">{formatTimelineTime(createdAt)}</div>
       )}
 
       {!isEditing && showMenu && (
@@ -174,7 +176,7 @@ function MobileThreadItem({
           </div>
         </div>
       ) : (
-        <div className="prose prose-sm prose-p:my-0 prose-li:my-0 max-w-none break-words text-gray-700">
+        <div className="prose prose-sm prose-p:my-0 prose-li:my-0 prose-p:text-[13px] prose-p:leading-6 max-w-none break-words pr-8 text-gray-700">
           <MarkdownRenderer content={content} />
         </div>
       )}
@@ -328,6 +330,12 @@ export default function MemoDetail() {
     setThreadComments((prev) => prev.filter((comment) => comment.id !== commentId));
   }, [id]);
 
+  const handleLabelsChanged = useCallback(async () => {
+    if (!id) return;
+    const refreshed = await MemosService.getMemo(id);
+    setMemo(refreshed as Memo);
+  }, [id]);
+
   if (loading) {
     return <LoadingState message="Loading memo..." />;
   }
@@ -338,9 +346,9 @@ export default function MemoDetail() {
 
   return (
     <>
-      <div className="sm:hidden max-w-4xl mx-auto px-4 py-2 pb-[calc(env(safe-area-inset-bottom,0px)+76px)]">
-        <div className="pb-2">
-          <div className="mb-1 text-xs font-medium text-gray-500">Original memo</div>
+      <div className="sm:hidden max-w-4xl mx-auto min-h-screen bg-white px-4 py-2 pb-[calc(env(safe-area-inset-bottom,0px)+128px)]">
+        <div className="pb-1">
+          <div className="mb-1 text-xs text-gray-500">#{memo.id}</div>
           <MobileThreadItem
             content={memo.bodyMd}
             createdAt={memo.createdAt}
@@ -352,13 +360,13 @@ export default function MemoDetail() {
           />
         </div>
 
-        <div className="pt-1">
+        <div className="pt-0.5">
           {threadComments.map((comment, index) => {
             const prevCreatedAt = index > 0 ? threadComments[index - 1].createdAt : memo.createdAt;
             return (
               <div key={comment.id}>
                 {shouldShowGapTimestamp(prevCreatedAt, comment.createdAt) && (
-                  <div className="pb-1 text-sm text-gray-400">{formatTimelineTime(comment.createdAt)}</div>
+                  <div className="pb-1 text-[11px] text-gray-400">{formatTimelineTime(comment.createdAt)}</div>
                 )}
                 <MobileThreadItem
                   content={comment.bodyMd}
@@ -372,12 +380,33 @@ export default function MemoDetail() {
           })}
         </div>
 
+        <div className="mt-3 space-y-3">
+          <ProjectsSection itemId={memo.id} itemType="memo" />
+          <LabelsSection
+            itemId={memo.id}
+            itemType="memo"
+            assignedLabels={memo.labels || []}
+            onLabelsChanged={handleLabelsChanged}
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleCopyAllContents}
+          className="mt-3 inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+          </svg>
+          {isCopied ? 'Copied!' : 'Copy All Contents'}
+        </button>
+
         <MobileFloatingComposer
           value={replyBody}
           onChange={setReplyBody}
           onSubmit={handleReplySubmit}
-          placeholder="Write a reply..."
-          submitLabel="Reply"
+          placeholder="Write a comment..."
+          submitLabel="Comment"
           disabled={replySubmitting}
           submitting={replySubmitting}
         />

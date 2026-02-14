@@ -38,7 +38,7 @@ export default function MobileFloatingComposer({
   };
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+20px)] z-30 px-3">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[max(16px,calc(env(safe-area-inset-bottom,0px)+56px))] z-30 px-3">
       <div className="mx-auto max-w-4xl">
         <div className="pointer-events-auto relative rounded-xl border border-gray-200 bg-white shadow-sm">
           <textarea
@@ -49,7 +49,7 @@ export default function MobileFloatingComposer({
             rows={1}
             placeholder={placeholder}
             disabled={disabled || submitting}
-            className="min-h-[42px] w-full resize-none overflow-hidden appearance-none rounded-xl border-0 bg-transparent px-3 py-2 pr-12 text-sm text-gray-900 placeholder:text-gray-500 outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-60"
+            className="min-h-[42px] w-full resize-none overflow-hidden appearance-none rounded-xl border-0 bg-transparent px-3 py-2 pr-12 text-sm text-gray-800 placeholder:text-gray-400 outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-60"
             style={{ outline: 'none', boxShadow: 'none', border: 'none' }}
           />
           <button
