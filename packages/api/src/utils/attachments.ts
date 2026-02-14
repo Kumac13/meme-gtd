@@ -16,6 +16,10 @@ import fs from 'node:fs/promises';
  * @returns Absolute path to ~/.mgtd/attachments
  */
 function getAttachmentsDir(): string {
+  const overrideDir = process.env.MGTD_ATTACHMENTS_DIR;
+  if (overrideDir && overrideDir.trim() !== '') {
+    return overrideDir;
+  }
   return path.join(homedir(), '.mgtd', 'attachments');
 }
 

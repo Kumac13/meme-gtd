@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.2 - 2026-02-14
+
+### Bug Fixes
+
+- **Mobile Memo Composer**: Adjusted mobile composer spacing/alignment and corrected send icon orientation.
+
 ## 0.20.1 - 2026-02-07
 
 ### Bug Fixes

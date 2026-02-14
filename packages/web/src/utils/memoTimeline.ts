@@ -1,4 +1,4 @@
-export type TimelineDateBucket = 'Today' | 'Yesterday' | 'This Week' | 'Earlier';
+type TimelineDateBucket = 'Today' | 'Yesterday' | 'This Week' | 'Earlier';
 
 const HOUR_IN_MS = 60 * 60 * 1000;
 

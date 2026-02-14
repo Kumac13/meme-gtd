@@ -39,7 +39,7 @@ export default function MobileFloatingComposer({
 
   return (
     <div
-      className="sticky bottom-0 z-30 bg-white/95 px-3 pt-2 backdrop-blur supports-[backdrop-filter]:bg-white/80"
+      className="sticky bottom-0 z-30 px-3 pt-0"
       style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))' }}
     >
       <div className="mx-auto max-w-4xl">
@@ -52,7 +52,7 @@ export default function MobileFloatingComposer({
             rows={1}
             placeholder={placeholder}
             disabled={disabled || submitting}
-            className="min-h-[42px] w-full resize-none overflow-hidden appearance-none rounded-xl border-0 bg-transparent px-3 py-2 pr-12 text-sm text-gray-800 placeholder:text-gray-400 outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-60"
+            className="min-h-[42px] w-full resize-none overflow-hidden appearance-none rounded-xl border-0 bg-transparent px-3 pb-[7px] pt-[13px] pr-12 text-sm leading-[22px] text-gray-800 placeholder:text-gray-400 outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-60"
             style={{ outline: 'none', boxShadow: 'none', border: 'none' }}
           />
           <button
@@ -62,7 +62,13 @@ export default function MobileFloatingComposer({
             aria-label={submitLabel}
             className={`absolute bottom-1.5 right-1.5 inline-flex h-8 w-8 items-center justify-center rounded-full focus:outline-none focus:ring-0 ${submitButtonClass} ${canSubmit ? '' : 'cursor-not-allowed'}`}
           >
-            <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <svg
+              className="h-4 w-4"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              aria-hidden="true"
+              style={{ transform: 'rotate(90deg)' }}
+            >
               <path d="M1 8 15 1l-4 7 4 7z" />
             </svg>
           </button>
