@@ -39,6 +39,7 @@ interface MobileThreadItemProps {
   createdAt: string;
   labels?: string[];
   showInlineTime?: boolean;
+  showMenu?: boolean;
   onSave: (content: string) => Promise<void>;
   onDelete: () => Promise<void>;
 }
@@ -48,6 +49,7 @@ function MobileThreadItem({
   createdAt,
   labels,
   showInlineTime = false,
+  showMenu = true,
   onSave,
   onDelete,
 }: MobileThreadItemProps) {
@@ -84,58 +86,61 @@ function MobileThreadItem({
   };
 
   return (
-    <div className="group py-2">
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="text-xs text-gray-500">{showInlineTime ? formatTimelineTime(createdAt) : ''}</span>
-        {!isEditing && (
-          <div className="relative">
+    <div className="group relative py-1.5">
+      {showInlineTime && (
+        <div className="mb-1 text-xs text-gray-500">{formatTimelineTime(createdAt)}</div>
+      )}
+
+      {!isEditing && showMenu && (
+        <div className="relative">
+          <div className="absolute right-0 top-0">
             <button
               type="button"
               onClick={() => setMenuOpen((prev) => !prev)}
               aria-label="More options"
-              className="rounded p-1 text-gray-500 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+              className="rounded p-1 text-gray-500"
             >
               <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M8 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
               </svg>
             </button>
-            {menuOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 z-20 mt-1 w-32 rounded-md border border-gray-200 bg-white shadow-lg">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsEditing(true);
-                      setMenuOpen(false);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await copy(content);
-                      setMenuOpen(false);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-                  >
-                    {copied ? 'Copied!' : 'Copy'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete()}
-                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </>
-            )}
           </div>
-        )}
-      </div>
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+              <div className="absolute right-0 top-6 z-20 mt-1 w-32 rounded-md border border-gray-200 bg-white shadow-lg">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditing(true);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await copy(content);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDelete()}
+                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100"
+                >
+                  Delete
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {isEditing ? (
         <div>
@@ -169,7 +174,7 @@ function MobileThreadItem({
           </div>
         </div>
       ) : (
-        <div className="prose prose-sm max-w-none break-words text-gray-900">
+        <div className="prose prose-sm prose-p:my-0 prose-li:my-0 max-w-none break-words text-gray-700">
           <MarkdownRenderer content={content} />
         </div>
       )}
@@ -333,29 +338,32 @@ export default function MemoDetail() {
 
   return (
     <>
-      <div className="sm:hidden max-w-4xl mx-auto px-4 py-2 pb-28">
+      <div className="sm:hidden max-w-4xl mx-auto px-4 py-2 pb-[calc(env(safe-area-inset-bottom,0px)+76px)]">
         <div className="pb-2">
+          <div className="mb-1 text-xs font-medium text-gray-500">Original memo</div>
           <MobileThreadItem
             content={memo.bodyMd}
             createdAt={memo.createdAt}
             labels={memo.labels}
             showInlineTime
+            showMenu
             onSave={handleMemoUpdate}
             onDelete={handleDelete}
           />
         </div>
 
-        <div className="pt-2">
+        <div className="pt-1">
           {threadComments.map((comment, index) => {
-            const prev = index > 0 ? threadComments[index - 1] : null;
+            const prevCreatedAt = index > 0 ? threadComments[index - 1].createdAt : memo.createdAt;
             return (
               <div key={comment.id}>
-                {shouldShowGapTimestamp(prev?.createdAt ?? null, comment.createdAt) && (
-                  <div className="pb-1 text-xs text-gray-400">{formatTimelineTime(comment.createdAt)}</div>
+                {shouldShowGapTimestamp(prevCreatedAt, comment.createdAt) && (
+                  <div className="pb-1 text-sm text-gray-400">{formatTimelineTime(comment.createdAt)}</div>
                 )}
                 <MobileThreadItem
                   content={comment.bodyMd}
                   createdAt={comment.createdAt}
+                  showMenu
                   onSave={(bodyMd) => handleReplyUpdate(comment.id, bodyMd)}
                   onDelete={() => handleReplyDelete(comment.id)}
                 />

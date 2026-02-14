@@ -202,7 +202,7 @@ export default function MemosList() {
         {total} {total === 1 ? 'memo' : 'memos'}
       </div>
 
-      <div className="sm:hidden pb-28">
+      <div className="sm:hidden pb-[calc(env(safe-area-inset-bottom,0px)+76px)]">
         {filteredMemos.length === 0 ? (
           <EmptyState
             message={bookmarkFilter ? 'No bookmarked memos' : 'No memos yet'}
@@ -218,22 +218,24 @@ export default function MemosList() {
                 const itemPath = createItemDetailUrl({ basePath: '/memos', itemId: memo.id, currentFilters: searchParams });
 
                 return (
-                  <div key={memo.id} className="py-1">
+                  <div key={memo.id} className="py-1.5">
                     {currentBucket !== previousBucket && (
-                      <div className="py-2 text-xs font-medium text-gray-500">{currentBucket}</div>
+                      <div className="flex items-center gap-3 py-2">
+                        <span className="text-sm font-semibold text-gray-500">{currentBucket}</span>
+                        <span className="h-px flex-1 bg-gray-200" />
+                      </div>
                     )}
                     {shouldShowGapTimestamp(prev?.createdAt ?? null, memo.createdAt) && (
-                      <div className="pb-1 text-xs text-gray-400">{formatTimelineTime(memo.createdAt)}</div>
+                      <div className="pb-0.5 text-sm text-gray-400">{formatTimelineTime(memo.createdAt)}</div>
                     )}
 
-                    <div className="flex items-start gap-2">
-                      <Link to={itemPath} className="min-w-0 flex-1 text-sm text-gray-900">
-                        <div className="prose prose-sm max-w-none break-words text-gray-900">
+                    <div className="flex items-start gap-2.5">
+                      <Link to={itemPath} className="min-w-0 flex-1">
+                        <div className="prose prose-sm prose-p:my-0 prose-li:my-0 prose-p:leading-7 max-w-none break-words text-gray-700">
                           <MarkdownRenderer content={memo.bodyMd} />
                         </div>
-                        <div className="mt-1 text-xs text-gray-500">#{memo.id}</div>
                         {memo.labels && memo.labels.length > 0 && (
-                          <div className="mt-1 flex flex-wrap gap-1">
+                          <div className="mt-1.5 flex flex-wrap gap-1">
                             {memo.labels.map((label) => (
                               <LabelBadge key={`${memo.id}-${label}`} name={label} />
                             ))}
@@ -242,7 +244,7 @@ export default function MemosList() {
                       </Link>
 
                       {(memo.commentCount ?? 0) > 0 && (
-                        <Link to={itemPath} className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+                        <Link to={itemPath} className="mt-0 flex items-center gap-1 text-sm text-gray-500">
                           <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                             <path d="M1 2.75C1 1.784 1.784 1 2.75 1h10.5c.966 0 1.75.784 1.75 1.75v7.5A1.75 1.75 0 0 1 13.25 12H9.06l-2.573 2.573A1.458 1.458 0 0 1 4 13.543V12H2.75A1.75 1.75 0 0 1 1 10.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h4.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path>
                           </svg>

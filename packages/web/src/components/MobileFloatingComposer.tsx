@@ -24,6 +24,9 @@ export default function MobileFloatingComposer({
   useAutoGrow(textareaRef, value);
 
   const canSubmit = value.trim().length > 0 && !disabled && !submitting;
+  const submitButtonClass = canSubmit
+    ? 'bg-github-green-600 text-white hover:bg-github-green-700'
+    : 'bg-gray-300 text-white';
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
@@ -35,9 +38,9 @@ export default function MobileFloatingComposer({
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-20 bg-gray-50 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-2">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+20px)] z-30 px-3">
       <div className="mx-auto max-w-4xl">
-        <div className="relative rounded-2xl border border-gray-300 bg-white shadow-sm">
+        <div className="pointer-events-auto relative rounded-xl border border-gray-200 bg-white shadow-sm">
           <textarea
             ref={textareaRef}
             value={value}
@@ -46,14 +49,15 @@ export default function MobileFloatingComposer({
             rows={1}
             placeholder={placeholder}
             disabled={disabled || submitting}
-            className="max-h-40 min-h-[44px] w-full resize-none rounded-2xl px-3 py-2 pr-12 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-github-green-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="min-h-[42px] w-full resize-none overflow-hidden appearance-none rounded-xl border-0 bg-transparent px-3 py-2 pr-12 text-sm text-gray-900 placeholder:text-gray-500 outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-60"
+            style={{ outline: 'none', boxShadow: 'none', border: 'none' }}
           />
           <button
             type="button"
             onClick={() => void onSubmit()}
             disabled={!canSubmit}
             aria-label={submitLabel}
-            className="absolute bottom-1.5 right-1.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-github-green-600 text-white hover:bg-github-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`absolute bottom-1.5 right-1.5 inline-flex h-8 w-8 items-center justify-center rounded-full focus:outline-none focus:ring-0 ${submitButtonClass} ${canSubmit ? '' : 'cursor-not-allowed'}`}
           >
             <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
               <path d="M1 8 15 1l-4 7 4 7z" />
