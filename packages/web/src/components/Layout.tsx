@@ -85,7 +85,7 @@ export default function Layout() {
           </div>
         </nav>
       </header>
-      <main className={isMemosRoute ? "max-w-7xl mx-auto py-4 sm:px-6 lg:px-8 bg-white sm:bg-transparent" : "max-w-7xl mx-auto py-4 sm:px-6 lg:px-8"}>
+      <main className={isMemosRoute ? "max-w-7xl mx-auto sm:py-4 sm:px-6 lg:px-8 bg-white sm:bg-transparent" : "max-w-7xl mx-auto py-4 sm:px-6 lg:px-8"}>
         <Outlet />
       </main>
     </div>

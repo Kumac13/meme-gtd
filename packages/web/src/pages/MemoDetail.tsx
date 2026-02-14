@@ -207,7 +207,6 @@ export default function MemoDetail() {
   const [threadComments, setThreadComments] = useState<MemoComment[]>([]);
   const [replyBody, setReplyBody] = useState('');
   const [replySubmitting, setReplySubmitting] = useState(false);
-  const [composerOccupiedHeight, setComposerOccupiedHeight] = useState(128);
 
   // Set document title based on memo body preview (memos don't have titles)
   const titleText = memo?.bodyMd ? truncateForTitle(memo.bodyMd) : null;
@@ -346,34 +345,31 @@ export default function MemoDetail() {
   }
 
   return (
-    <>
-      <div className="sm:hidden fixed inset-x-0 top-16 bottom-0 overflow-hidden bg-white">
-        <div
-          className="mx-auto h-full max-w-4xl overflow-y-auto overscroll-y-contain px-4 py-2"
-          style={{ paddingBottom: `${composerOccupiedHeight}px` }}
-        >
+    <div className="relative">
+      <div className="sm:hidden mx-auto flex h-[calc(100dvh-4rem)] max-w-4xl flex-col overflow-hidden bg-white">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-2">
           <div className="pb-1">
-          <div className="mb-1 flex items-center justify-between">
-            <div className="text-xs text-gray-500">#{memo.id}</div>
-            <button
-              type="button"
-              onClick={() => void handleBookmarkToggle()}
-              disabled={bookmarking}
-              className="inline-flex items-center rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
-              title={memo.isBookmarked ? 'Unbookmark' : 'Bookmark'}
-              aria-label={memo.isBookmarked ? 'Unbookmark memo' : 'Bookmark memo'}
-            >
-              {memo.isBookmarked ? (
-                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
-                  <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Z" />
-                </svg>
-              ) : (
-                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
-                  <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.91l3.023-2.489a.75.75 0 0 1 .954 0l3.023 2.49V2.75a.25.25 0 0 0-.25-.25Z" />
-                </svg>
-              )}
-            </button>
-          </div>
+            <div className="mb-1 flex items-center justify-between">
+              <div className="text-xs text-gray-500">#{memo.id}</div>
+              <button
+                type="button"
+                onClick={() => void handleBookmarkToggle()}
+                disabled={bookmarking}
+                className="inline-flex items-center rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                title={memo.isBookmarked ? 'Unbookmark' : 'Bookmark'}
+                aria-label={memo.isBookmarked ? 'Unbookmark memo' : 'Bookmark memo'}
+              >
+                {memo.isBookmarked ? (
+                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Z" />
+                  </svg>
+                ) : (
+                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M3 2.75C3 1.784 3.784 1 4.75 1h6.5c.966 0 1.75.784 1.75 1.75v11.5a.75.75 0 0 1-1.227.579L8 11.722l-3.773 3.107A.75.75 0 0 1 3 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.91l3.023-2.489a.75.75 0 0 1 .954 0l3.023 2.49V2.75a.25.25 0 0 0-.25-.25Z" />
+                  </svg>
+                )}
+              </button>
+            </div>
             <MobileThreadItem
               content={memo.bodyMd}
               createdAt={memo.createdAt}
@@ -435,11 +431,10 @@ export default function MemoDetail() {
           submitLabel="Comment"
           disabled={replySubmitting}
           submitting={replySubmitting}
-          onOccupiedHeightChange={setComposerOccupiedHeight}
         />
       </div>
 
-      <div className="hidden sm:block">
+      <div className="hidden sm:block max-w-4xl mx-auto bg-transparent px-4 py-2">
         <ItemDetail
           item={memo}
           itemType="memo"
@@ -479,6 +474,6 @@ export default function MemoDetail() {
           onClose={handlePanelClose}
         />
       </div>
-    </>
+    </div>
   );
 }

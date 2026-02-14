@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useRef, type KeyboardEvent } from 'react';
 import { useAutoGrow } from '../hooks/useAutoGrow';
 
 interface MobileFloatingComposerProps {
@@ -9,25 +9,6 @@ interface MobileFloatingComposerProps {
   submitLabel: string;
   disabled?: boolean;
   submitting?: boolean;
-  onOccupiedHeightChange?: (height: number) => void;
-}
-
-const AESTHETIC_GAP_PX = 20;
-const KEYBOARD_THRESHOLD_PX = 120;
-
-function readSafeAreaInsetBottom(): number {
-  if (typeof window === 'undefined' || !window.document?.body) return 0;
-
-  const probe = document.createElement('div');
-  probe.style.position = 'fixed';
-  probe.style.bottom = '0';
-  probe.style.paddingBottom = 'env(safe-area-inset-bottom)';
-  probe.style.visibility = 'hidden';
-  probe.style.pointerEvents = 'none';
-  document.body.appendChild(probe);
-  const safeArea = parseFloat(window.getComputedStyle(probe).paddingBottom || '0');
-  probe.remove();
-  return Number.isFinite(safeArea) ? safeArea : 0;
 }
 
 export default function MobileFloatingComposer({
@@ -38,13 +19,8 @@ export default function MobileFloatingComposer({
   submitLabel,
   disabled = false,
   submitting = false,
-  onOccupiedHeightChange,
 }: MobileFloatingComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const isFocusedRef = useRef(false);
-  const [bottomPx, setBottomPx] = useState(AESTHETIC_GAP_PX);
-  const [occupiedHeight, setOccupiedHeight] = useState(128);
   useAutoGrow(textareaRef, value);
 
   const canSubmit = value.trim().length > 0 && !disabled && !submitting;
@@ -61,83 +37,18 @@ export default function MobileFloatingComposer({
     }
   };
 
-  useEffect(() => {
-    const safeAreaInsetBottom = readSafeAreaInsetBottom();
-    let rafId: number | null = null;
-
-    const updateMetrics = () => {
-      const vv = window.visualViewport;
-      const keyboardHeightRaw = isFocusedRef.current && vv
-        ? Math.max(0, window.innerHeight - vv.height)
-        : 0;
-      const keyboardVisible = isFocusedRef.current && keyboardHeightRaw > KEYBOARD_THRESHOLD_PX;
-      const keyboardHeight = keyboardVisible ? keyboardHeightRaw : 0;
-      const nextBottom = keyboardHeight + safeAreaInsetBottom + (keyboardVisible ? 0 : AESTHETIC_GAP_PX);
-      const panelHeight = panelRef.current?.offsetHeight ?? 0;
-      const nextOccupiedHeight = Math.ceil(nextBottom + panelHeight);
-
-      setBottomPx(nextBottom);
-      setOccupiedHeight(nextOccupiedHeight);
-    };
-
-    const scheduleUpdate = () => {
-      if (rafId != null) return;
-      rafId = window.requestAnimationFrame(() => {
-        rafId = null;
-        updateMetrics();
-      });
-    };
-
-    updateMetrics();
-
-    const vv = window.visualViewport;
-    vv?.addEventListener('resize', scheduleUpdate);
-    window.addEventListener('resize', scheduleUpdate);
-    window.addEventListener('orientationchange', scheduleUpdate);
-
-    const resizeObserver = new ResizeObserver(scheduleUpdate);
-    if (panelRef.current) {
-      resizeObserver.observe(panelRef.current);
-    }
-
-    return () => {
-      if (rafId != null) {
-        window.cancelAnimationFrame(rafId);
-      }
-      vv?.removeEventListener('resize', scheduleUpdate);
-      window.removeEventListener('resize', scheduleUpdate);
-      window.removeEventListener('orientationchange', scheduleUpdate);
-      resizeObserver.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
-    onOccupiedHeightChange?.(occupiedHeight);
-  }, [occupiedHeight, onOccupiedHeightChange]);
-
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 z-30 px-3"
-      style={{ bottom: `${bottomPx}px` }}
+      className="sticky bottom-0 z-30 bg-white/95 px-3 pt-2 backdrop-blur supports-[backdrop-filter]:bg-white/80"
+      style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))' }}
     >
       <div className="mx-auto max-w-4xl">
-        <div ref={panelRef} className="pointer-events-auto relative rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="relative rounded-xl border border-gray-200 bg-white shadow-sm">
           <textarea
             ref={textareaRef}
             value={value}
             onChange={(event) => onChange(event.target.value)}
             onKeyDown={handleKeyDown}
-            onFocus={() => {
-              isFocusedRef.current = true;
-            }}
-            onBlur={() => {
-              isFocusedRef.current = false;
-              const safe = readSafeAreaInsetBottom();
-              const nextBottom = safe + AESTHETIC_GAP_PX;
-              const panelHeight = panelRef.current?.offsetHeight ?? 0;
-              setBottomPx(nextBottom);
-              setOccupiedHeight(Math.ceil(nextBottom + panelHeight));
-            }}
             rows={1}
             placeholder={placeholder}
             disabled={disabled || submitting}

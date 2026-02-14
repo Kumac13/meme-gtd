@@ -53,7 +53,6 @@ export default function MemosList() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [newMemoBody, setNewMemoBody] = useState('');
   const [creatingMemo, setCreatingMemo] = useState(false);
-  const [composerOccupiedHeight, setComposerOccupiedHeight] = useState(128);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -205,11 +204,8 @@ export default function MemosList() {
         {total} {total === 1 ? 'memo' : 'memos'}
       </div>
 
-      <div className="sm:hidden fixed inset-x-0 top-16 bottom-0 overflow-hidden bg-white">
-        <div
-          className="mx-auto h-full max-w-4xl overflow-y-auto overscroll-y-contain px-4 py-2"
-          style={{ paddingBottom: `${composerOccupiedHeight}px` }}
-        >
+      <div className="sm:hidden mx-auto flex h-[calc(100dvh-4rem)] max-w-4xl flex-col overflow-hidden bg-white">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-2">
           <div className="flex items-center gap-2 mb-4">
             <SearchInput
               value={filters.searchQuery}
@@ -310,7 +306,6 @@ export default function MemosList() {
           submitLabel="Create memo"
           disabled={creatingMemo}
           submitting={creatingMemo}
-          onOccupiedHeightChange={setComposerOccupiedHeight}
         />
       </div>
 
