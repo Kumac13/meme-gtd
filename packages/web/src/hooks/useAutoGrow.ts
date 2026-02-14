@@ -18,8 +18,7 @@ export function useAutoGrow(
     const textarea = ref.current;
     if (!textarea) return;
 
-    const currentHeight = textarea.offsetHeight;
     textarea.style.height = 'auto';
-    textarea.style.height = `${Math.max(currentHeight, textarea.scrollHeight)}px`;
+    textarea.style.height = `${textarea.scrollHeight}px`;
   }, [ref, value, trigger]);
 }
