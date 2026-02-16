@@ -202,7 +202,6 @@ export default function MemoDetail() {
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{ id: number; type: IssueType } | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
   const [isCopied, setIsCopied] = useState(false);
   const [threadComments, setThreadComments] = useState<MemoComment[]>([]);
   const [replyBody, setReplyBody] = useState('');
@@ -280,14 +279,14 @@ export default function MemoDetail() {
   }, []);
 
   const handleCommentsLoaded = useCallback((loadedComments: Comment[]) => {
-    setComments(loadedComments);
+    setThreadComments(loadedComments as MemoComment[]);
   }, []);
 
   const handleCopyAllContents = async () => {
     await copyItemContent({
       title: null,
       body: memo?.bodyMd || '',
-      comments,
+      comments: threadComments,
       includeTitle: false,
     });
     setIsCopied(true);
