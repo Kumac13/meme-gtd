@@ -58,6 +58,7 @@ export default function MemosList() {
   // Mobile scroll management refs
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const previousScrollHeightRef = useRef(0);
+  const topHitCountRef = useRef(0);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -173,12 +174,20 @@ export default function MemosList() {
     }
   }, [isFetchingOlder, memos.length]);
 
-  const TOP_THRESHOLD = 50;
+  // Require the user to "pull" at the top: scrollTop must stay at 0 for
+  // several consecutive scroll events before triggering a load.
+  const PULL_HITS_REQUIRED = 3;
   const handleScroll = useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container || isFetchingOlder || memos.length >= total) return;
-    if (container.scrollTop <= TOP_THRESHOLD) {
-      fetchOlder();
+    if (container.scrollTop === 0) {
+      topHitCountRef.current += 1;
+      if (topHitCountRef.current >= PULL_HITS_REQUIRED) {
+        topHitCountRef.current = 0;
+        fetchOlder();
+      }
+    } else {
+      topHitCountRef.current = 0;
     }
   }, [fetchOlder, isFetchingOlder, memos.length, total]);
 
