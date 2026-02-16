@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import ItemList from '../components/ItemList';
@@ -50,9 +50,14 @@ export default function MemosList() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [isFetchingOlder, setIsFetchingOlder] = useState(false);
   const [newMemoBody, setNewMemoBody] = useState('');
   const [creatingMemo, setCreatingMemo] = useState(false);
+  const [initialScrollDone, setInitialScrollDone] = useState(false);
+
+  // Mobile scroll management refs
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const previousScrollHeightRef = useRef(0);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -90,12 +95,26 @@ export default function MemosList() {
     fetchMemos();
   }, [filters.searchQuery, currentPage]);
 
+  // Mobile: scroll to bottom after initial load so newest memos are visible
+  useEffect(() => {
+    if (!loading && memos.length > 0 && !initialScrollDone && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+      setInitialScrollDone(true);
+    }
+  }, [loading, memos.length, initialScrollDone]);
+
   const filteredMemos = useMemo(() => {
     return memos.filter((memo) => {
       if (bookmarkFilter && !memo.isBookmarked) return false;
       return true;
     });
   }, [memos, bookmarkFilter]);
+
+  // Reversed order for mobile: oldest at top, newest at bottom (chat-like)
+  const mobileFilteredMemos = useMemo(
+    () => [...filteredMemos].reverse(),
+    [filteredMemos]
+  );
 
   const handleBookmarkFilterChange = (newBookmarked: boolean) => {
     const params = updateBookmarkedParam(searchParams, newBookmarked);
@@ -114,11 +133,16 @@ export default function MemosList() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [searchParams, setSearchParams]);
 
-  const handleLoadMore = useCallback(async () => {
-    if (loadingMore || memos.length >= total) return;
+  const fetchOlder = useCallback(async () => {
+    if (isFetchingOlder || memos.length >= total) return;
 
     try {
-      setLoadingMore(true);
+      setIsFetchingOlder(true);
+
+      // Record scroll height before loading for position preservation
+      if (scrollContainerRef.current) {
+        previousScrollHeightRef.current = scrollContainerRef.current.scrollHeight;
+      }
 
       const labelParam = filters.parsedQuery.labels?.join(',');
       const searchParam = filters.parsedQuery.freeText;
@@ -136,13 +160,37 @@ export default function MemosList() {
       setError(err instanceof Error ? err.message : 'Failed to load more memos');
       console.error('Error loading more memos:', err);
     } finally {
-      setLoadingMore(false);
+      setIsFetchingOlder(false);
     }
-  }, [filters.parsedQuery.freeText, filters.parsedQuery.labels, loadingMore, memos.length, total]);
+  }, [filters.parsedQuery.freeText, filters.parsedQuery.labels, isFetchingOlder, memos.length, total]);
+
+  // Preserve scroll position after older memos are prepended (in reversed view)
+  useEffect(() => {
+    if (!isFetchingOlder && previousScrollHeightRef.current > 0 && scrollContainerRef.current) {
+      const diff = scrollContainerRef.current.scrollHeight - previousScrollHeightRef.current;
+      scrollContainerRef.current.scrollTop += diff;
+      previousScrollHeightRef.current = 0;
+    }
+  }, [isFetchingOlder, memos.length]);
+
+  const TOP_THRESHOLD = 50;
+  const handleScroll = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container || isFetchingOlder || memos.length >= total) return;
+    if (container.scrollTop <= TOP_THRESHOLD) {
+      fetchOlder();
+    }
+  }, [fetchOlder, isFetchingOlder, memos.length, total]);
 
   const handleCreateMemo = useCallback(async () => {
     const bodyMd = newMemoBody.trim();
     if (!bodyMd || creatingMemo) return;
+
+    // Check if user is near bottom before creating (for conditional auto-scroll)
+    const container = scrollContainerRef.current;
+    const wasNearBottom = container
+      ? (container.scrollHeight - (container.scrollTop + container.clientHeight)) <= 80
+      : true;
 
     try {
       setCreatingMemo(true);
@@ -150,6 +198,15 @@ export default function MemosList() {
       setMemos((prev) => [created as Memo, ...prev]);
       setTotal((prev) => prev + 1);
       setNewMemoBody('');
+
+      // Auto-scroll to bottom only if user was already near the bottom
+      if (wasNearBottom) {
+        requestAnimationFrame(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+          }
+        });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create memo');
       console.error('Error creating memo:', err);
@@ -205,7 +262,11 @@ export default function MemosList() {
       </div>
 
       <div className="sm:hidden mx-auto flex h-[calc(100dvh-4rem)] max-w-4xl flex-col overflow-hidden bg-white">
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-2">
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-2"
+        >
           <div className="flex items-center gap-2 mb-4">
             <SearchInput
               value={filters.searchQuery}
@@ -228,16 +289,29 @@ export default function MemosList() {
             {total} {total === 1 ? 'memo' : 'memos'}
           </div>
 
-          {filteredMemos.length === 0 ? (
+          {mobileFilteredMemos.length === 0 ? (
             <EmptyState
               message={bookmarkFilter ? 'No bookmarked memos' : 'No memos yet'}
               submessage={!bookmarkFilter ? 'Create your first memo to get started' : undefined}
             />
           ) : (
             <>
+              {memos.length < total && (
+                <div className="py-3 text-center">
+                  <span className="text-xs text-gray-400">
+                    {isFetchingOlder ? 'Loading older memos...' : 'Scroll up to load older'}
+                  </span>
+                </div>
+              )}
+              {memos.length >= total && memos.length > PAGE_SIZE && (
+                <div className="py-3 text-center">
+                  <span className="text-xs text-gray-400">No older memos</span>
+                </div>
+              )}
+
               <div>
-                {filteredMemos.map((memo, index) => {
-                  const prev = index > 0 ? filteredMemos[index - 1] : null;
+                {mobileFilteredMemos.map((memo, index) => {
+                  const prev = index > 0 ? mobileFilteredMemos[index - 1] : null;
                   const currentBucket = getTimelineDateBucket(memo.createdAt);
                   const previousBucket = prev ? getTimelineDateBucket(prev.createdAt) : null;
                   const itemPath = createItemDetailUrl({ basePath: '/memos', itemId: memo.id, currentFilters: searchParams });
@@ -281,19 +355,6 @@ export default function MemosList() {
                   );
                 })}
               </div>
-
-              {memos.length < total && (
-                <div className="pt-4 text-center">
-                  <button
-                    type="button"
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    className="inline-flex text-sm text-gray-500 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {loadingMore ? 'Loading...' : 'Load more'}
-                  </button>
-                </div>
-              )}
             </>
           )}
         </div>
