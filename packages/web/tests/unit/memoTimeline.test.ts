@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   formatTimelineTime,
   getTimelineDateBucket,
@@ -39,7 +39,22 @@ describe('memoTimeline utilities', () => {
     expect(shouldShowGapTimestamp('2026-02-14T10:00:00', '2026-02-14T11:00:00')).toBe(true);
   });
 
-  it('formats timeline time as HH:mm', () => {
-    expect(formatTimelineTime('2026-02-14T07:03:00')).toBe('07:03');
+  describe('formatTimelineTime', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-02-14T12:00:00'));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('formats same-day time as HH:mm', () => {
+      expect(formatTimelineTime('2026-02-14T07:03:00')).toBe('07:03');
+    });
+
+    it('formats different-day time with date prefix', () => {
+      expect(formatTimelineTime('2026-02-13T15:30:00')).toBe('2026/2/13 15:30');
+    });
   });
 });
