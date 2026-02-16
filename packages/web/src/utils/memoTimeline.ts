@@ -1,4 +1,4 @@
-type TimelineDateBucket = 'Today' | 'Yesterday' | 'This Week' | 'Earlier';
+type TimelineDateBucket = 'Today' | 'Yesterday' | 'This Week' | 'This Month' | 'Earlier';
 
 const HOUR_IN_MS = 60 * 60 * 1000;
 
@@ -24,6 +24,9 @@ export function getTimelineDateBucket(iso: string, now: Date = new Date()): Time
 
   const weekStart = startOfWeekMonday(now).getTime();
   if (targetDay >= weekStart) return 'This Week';
+
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  if (targetDay >= monthStart) return 'This Month';
 
   return 'Earlier';
 }
