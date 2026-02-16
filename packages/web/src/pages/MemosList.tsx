@@ -262,11 +262,7 @@ export default function MemosList() {
       </div>
 
       <div className="sm:hidden mx-auto flex h-[calc(100dvh-4rem)] max-w-4xl flex-col overflow-hidden bg-white">
-        <div
-          ref={scrollContainerRef}
-          onScroll={handleScroll}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-2"
-        >
+        <div className="shrink-0 px-4 pt-2">
           <div className="flex items-center gap-2 mb-4">
             <SearchInput
               value={filters.searchQuery}
@@ -288,7 +284,13 @@ export default function MemosList() {
           <div className="text-sm text-gray-500 mb-2">
             {total} {total === 1 ? 'memo' : 'memos'}
           </div>
+        </div>
 
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pb-2"
+        >
           {mobileFilteredMemos.length === 0 ? (
             <EmptyState
               message={bookmarkFilter ? 'No bookmarked memos' : 'No memos yet'}
