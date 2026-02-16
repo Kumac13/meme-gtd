@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   formatTimelineTime,
   getTimelineDateBucket,
@@ -21,9 +21,17 @@ describe('memoTimeline utilities', () => {
     expect(getTimelineDateBucket('2026-02-12T09:30:00', now)).toBe('This Week');
   });
 
-  it('returns Earlier for dates older than this week', () => {
+  it('returns This Month for dates in the same month but before this week', () => {
+    // 2026-02-14 is Saturday; week starts Monday 2026-02-09
     const now = new Date('2026-02-14T12:00:00');
-    expect(getTimelineDateBucket('2026-02-01T09:30:00', now)).toBe('Earlier');
+    expect(getTimelineDateBucket('2026-02-01T09:30:00', now)).toBe('This Month');
+    expect(getTimelineDateBucket('2026-02-08T23:59:59', now)).toBe('This Month');
+  });
+
+  it('returns Earlier for dates older than this month', () => {
+    const now = new Date('2026-02-14T12:00:00');
+    expect(getTimelineDateBucket('2026-01-31T23:59:59', now)).toBe('Earlier');
+    expect(getTimelineDateBucket('2025-12-25T09:00:00', now)).toBe('Earlier');
   });
 
   it('shows timestamp only when gap is one hour or more', () => {
@@ -31,7 +39,22 @@ describe('memoTimeline utilities', () => {
     expect(shouldShowGapTimestamp('2026-02-14T10:00:00', '2026-02-14T11:00:00')).toBe(true);
   });
 
-  it('formats timeline time as HH:mm', () => {
-    expect(formatTimelineTime('2026-02-14T07:03:00')).toBe('07:03');
+  describe('formatTimelineTime', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-02-14T12:00:00'));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('formats same-day time as HH:mm', () => {
+      expect(formatTimelineTime('2026-02-14T07:03:00')).toBe('07:03');
+    });
+
+    it('formats different-day time with date prefix', () => {
+      expect(formatTimelineTime('2026-02-13T15:30:00')).toBe('2026/2/13 15:30');
+    });
   });
 });

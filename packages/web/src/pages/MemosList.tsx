@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import ItemList from '../components/ItemList';
@@ -50,9 +50,16 @@ export default function MemosList() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [isFetchingOlder, setIsFetchingOlder] = useState(false);
   const [newMemoBody, setNewMemoBody] = useState('');
   const [creatingMemo, setCreatingMemo] = useState(false);
+  const [initialScrollDone, setInitialScrollDone] = useState(false);
+
+  // Mobile scroll management refs
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const previousScrollHeightRef = useRef(0);
+  const touchStartYRef = useRef(0);
+  const [pullDistance, setPullDistance] = useState(0);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -90,12 +97,26 @@ export default function MemosList() {
     fetchMemos();
   }, [filters.searchQuery, currentPage]);
 
+  // Mobile: scroll to bottom after initial load so newest memos are visible
+  useEffect(() => {
+    if (!loading && memos.length > 0 && !initialScrollDone && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+      setInitialScrollDone(true);
+    }
+  }, [loading, memos.length, initialScrollDone]);
+
   const filteredMemos = useMemo(() => {
     return memos.filter((memo) => {
       if (bookmarkFilter && !memo.isBookmarked) return false;
       return true;
     });
   }, [memos, bookmarkFilter]);
+
+  // Reversed order for mobile: oldest at top, newest at bottom (chat-like)
+  const mobileFilteredMemos = useMemo(
+    () => [...filteredMemos].reverse(),
+    [filteredMemos]
+  );
 
   const handleBookmarkFilterChange = (newBookmarked: boolean) => {
     const params = updateBookmarkedParam(searchParams, newBookmarked);
@@ -114,11 +135,16 @@ export default function MemosList() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [searchParams, setSearchParams]);
 
-  const handleLoadMore = useCallback(async () => {
-    if (loadingMore || memos.length >= total) return;
+  const fetchOlder = useCallback(async () => {
+    if (isFetchingOlder || memos.length >= total) return;
 
     try {
-      setLoadingMore(true);
+      setIsFetchingOlder(true);
+
+      // Record scroll height before loading for position preservation
+      if (scrollContainerRef.current) {
+        previousScrollHeightRef.current = scrollContainerRef.current.scrollHeight;
+      }
 
       const labelParam = filters.parsedQuery.labels?.join(',');
       const searchParam = filters.parsedQuery.freeText;
@@ -136,13 +162,77 @@ export default function MemosList() {
       setError(err instanceof Error ? err.message : 'Failed to load more memos');
       console.error('Error loading more memos:', err);
     } finally {
-      setLoadingMore(false);
+      setIsFetchingOlder(false);
     }
-  }, [filters.parsedQuery.freeText, filters.parsedQuery.labels, loadingMore, memos.length, total]);
+  }, [filters.parsedQuery.freeText, filters.parsedQuery.labels, isFetchingOlder, memos.length, total]);
+
+  // Preserve scroll position after older memos are prepended (in reversed view)
+  useEffect(() => {
+    if (!isFetchingOlder && previousScrollHeightRef.current > 0 && scrollContainerRef.current) {
+      const diff = scrollContainerRef.current.scrollHeight - previousScrollHeightRef.current;
+      scrollContainerRef.current.scrollTop += diff;
+      previousScrollHeightRef.current = 0;
+    }
+  }, [isFetchingOlder, memos.length]);
+
+  // Pull-to-load: touch gesture to load older memos when at scroll top
+  const hasMoreOlder = memos.length < total;
+  const PULL_THRESHOLD = 60;
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (container.scrollTop <= 0 && hasMoreOlder && !isFetchingOlder) {
+        touchStartYRef.current = e.touches[0].screenY;
+      } else {
+        touchStartYRef.current = 0;
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!touchStartYRef.current) return;
+      // Only activate when already at the top
+      if (container.scrollTop > 0) {
+        touchStartYRef.current = 0;
+        setPullDistance(0);
+        return;
+      }
+      const dy = e.touches[0].screenY - touchStartYRef.current;
+      if (dy > 0) {
+        // Apply resistance: visual distance is less than actual pull
+        setPullDistance(Math.min(dy * 0.4, PULL_THRESHOLD * 1.5));
+      }
+    };
+
+    const onTouchEnd = () => {
+      if (pullDistance >= PULL_THRESHOLD && hasMoreOlder && !isFetchingOlder) {
+        fetchOlder();
+      }
+      touchStartYRef.current = 0;
+      setPullDistance(0);
+    };
+
+    container.addEventListener('touchstart', onTouchStart, { passive: true });
+    container.addEventListener('touchmove', onTouchMove, { passive: true });
+    container.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      container.removeEventListener('touchstart', onTouchStart);
+      container.removeEventListener('touchmove', onTouchMove);
+      container.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [fetchOlder, hasMoreOlder, isFetchingOlder, pullDistance]);
 
   const handleCreateMemo = useCallback(async () => {
     const bodyMd = newMemoBody.trim();
     if (!bodyMd || creatingMemo) return;
+
+    // Check if user is near bottom before creating (for conditional auto-scroll)
+    const container = scrollContainerRef.current;
+    const wasNearBottom = container
+      ? (container.scrollHeight - (container.scrollTop + container.clientHeight)) <= 80
+      : true;
 
     try {
       setCreatingMemo(true);
@@ -150,6 +240,15 @@ export default function MemosList() {
       setMemos((prev) => [created as Memo, ...prev]);
       setTotal((prev) => prev + 1);
       setNewMemoBody('');
+
+      // Auto-scroll to bottom only if user was already near the bottom
+      if (wasNearBottom) {
+        requestAnimationFrame(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+          }
+        });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create memo');
       console.error('Error creating memo:', err);
@@ -174,38 +273,10 @@ export default function MemosList() {
 
   return (
     <div className="relative">
-      <div className="hidden sm:flex items-center gap-2 mb-4">
-        <SearchInput
-          value={filters.searchQuery}
-          onChange={(value) => {
-            const params = updateSearchParam(searchParams, value);
-            params.delete('page');
-            setSearchParams(params);
-          }}
-          placeholder="Search memos"
-          itemType="memo"
-        />
-        <Link
-          to="/memos/new"
-          className="hidden sm:inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 whitespace-nowrap"
-        >
-          New Memo
-        </Link>
-      </div>
-
-      <div className="hidden sm:block">
-        <FilterBar
-          bookmarkFilter={bookmarkFilter}
-          onBookmarkFilterChange={handleBookmarkFilterChange}
-        />
-      </div>
-
-      <div className="hidden sm:block text-sm text-gray-500 mb-2">
-        {total} {total === 1 ? 'memo' : 'memos'}
-      </div>
+      {/* Desktop: intentionally empty — search/filter/count moved into the max-w-4xl container below */}
 
       <div className="sm:hidden mx-auto flex h-[calc(100dvh-4rem)] max-w-4xl flex-col overflow-hidden bg-white">
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-2">
+        <div className="shrink-0 px-4 pt-2">
           <div className="flex items-center gap-2 mb-4">
             <SearchInput
               value={filters.searchQuery}
@@ -227,17 +298,38 @@ export default function MemosList() {
           <div className="text-sm text-gray-500 mb-2">
             {total} {total === 1 ? 'memo' : 'memos'}
           </div>
+        </div>
 
-          {filteredMemos.length === 0 ? (
+        <div
+          ref={scrollContainerRef}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pb-2"
+        >
+          {mobileFilteredMemos.length === 0 ? (
             <EmptyState
               message={bookmarkFilter ? 'No bookmarked memos' : 'No memos yet'}
               submessage={!bookmarkFilter ? 'Create your first memo to get started' : undefined}
             />
           ) : (
             <>
+              {/* Pull-to-load indicator */}
+              <div
+                className="text-center overflow-hidden transition-all duration-150"
+                style={{ height: pullDistance > 0 ? `${pullDistance}px` : undefined }}
+              >
+                {isFetchingOlder ? (
+                  <span className="text-xs text-gray-400 leading-8">Loading older memos...</span>
+                ) : hasMoreOlder && pullDistance > 0 ? (
+                  <span className="text-xs text-gray-400 leading-8">
+                    {pullDistance >= PULL_THRESHOLD ? 'Release to load' : 'Pull down to load older'}
+                  </span>
+                ) : !hasMoreOlder && memos.length > PAGE_SIZE ? (
+                  <span className="text-xs text-gray-400 py-3 block">No older memos</span>
+                ) : null}
+              </div>
+
               <div>
-                {filteredMemos.map((memo, index) => {
-                  const prev = index > 0 ? filteredMemos[index - 1] : null;
+                {mobileFilteredMemos.map((memo, index) => {
+                  const prev = index > 0 ? mobileFilteredMemos[index - 1] : null;
                   const currentBucket = getTimelineDateBucket(memo.createdAt);
                   const previousBucket = prev ? getTimelineDateBucket(prev.createdAt) : null;
                   const itemPath = createItemDetailUrl({ basePath: '/memos', itemId: memo.id, currentFilters: searchParams });
@@ -281,19 +373,6 @@ export default function MemosList() {
                   );
                 })}
               </div>
-
-              {memos.length < total && (
-                <div className="pt-4 text-center">
-                  <button
-                    type="button"
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    className="inline-flex text-sm text-gray-500 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {loadingMore ? 'Loading...' : 'Load more'}
-                  </button>
-                </div>
-              )}
             </>
           )}
         </div>
@@ -310,6 +389,34 @@ export default function MemosList() {
       </div>
 
       <div className="hidden sm:block max-w-4xl mx-auto bg-transparent px-4 py-2">
+        <div className="flex items-center gap-2 mb-4">
+          <SearchInput
+            value={filters.searchQuery}
+            onChange={(value) => {
+              const params = updateSearchParam(searchParams, value);
+              params.delete('page');
+              setSearchParams(params);
+            }}
+            placeholder="Search memos"
+            itemType="memo"
+          />
+          <Link
+            to="/memos/new"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 whitespace-nowrap"
+          >
+            New Memo
+          </Link>
+        </div>
+
+        <FilterBar
+          bookmarkFilter={bookmarkFilter}
+          onBookmarkFilterChange={handleBookmarkFilterChange}
+        />
+
+        <div className="text-sm text-gray-500 mb-2">
+          {total} {total === 1 ? 'memo' : 'memos'}
+        </div>
+
         {filteredMemos.length === 0 ? (
           <EmptyState
             message={bookmarkFilter ? 'No bookmarked memos' : 'No memos yet'}
