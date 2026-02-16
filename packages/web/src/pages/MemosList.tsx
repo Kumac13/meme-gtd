@@ -58,7 +58,7 @@ export default function MemosList() {
   // Mobile scroll management refs
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const previousScrollHeightRef = useRef(0);
-  const topHitCountRef = useRef(0);
+  const topSentinelRef = useRef<HTMLDivElement>(null);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -174,22 +174,25 @@ export default function MemosList() {
     }
   }, [isFetchingOlder, memos.length]);
 
-  // Require the user to "pull" at the top: scrollTop must stay at 0 for
-  // several consecutive scroll events before triggering a load.
-  const PULL_HITS_REQUIRED = 3;
-  const handleScroll = useCallback(() => {
+  // IntersectionObserver: load older memos when sentinel element becomes visible
+  const hasMoreOlder = memos.length < total;
+  useEffect(() => {
+    const sentinel = topSentinelRef.current;
     const container = scrollContainerRef.current;
-    if (!container || isFetchingOlder || memos.length >= total) return;
-    if (container.scrollTop === 0) {
-      topHitCountRef.current += 1;
-      if (topHitCountRef.current >= PULL_HITS_REQUIRED) {
-        topHitCountRef.current = 0;
-        fetchOlder();
-      }
-    } else {
-      topHitCountRef.current = 0;
-    }
-  }, [fetchOlder, isFetchingOlder, memos.length, total]);
+    if (!sentinel || !container) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isFetchingOlder && hasMoreOlder) {
+          fetchOlder();
+        }
+      },
+      { root: container, threshold: 0.1 }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [fetchOlder, isFetchingOlder, hasMoreOlder]);
 
   const handleCreateMemo = useCallback(async () => {
     const bodyMd = newMemoBody.trim();
@@ -297,7 +300,6 @@ export default function MemosList() {
 
         <div
           ref={scrollContainerRef}
-          onScroll={handleScroll}
           className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pb-2"
         >
           {mobileFilteredMemos.length === 0 ? (
@@ -307,18 +309,16 @@ export default function MemosList() {
             />
           ) : (
             <>
-              {memos.length < total && (
-                <div className="py-3 text-center">
+              {/* Sentinel element observed by IntersectionObserver to trigger loading */}
+              <div ref={topSentinelRef} className="py-3 text-center">
+                {hasMoreOlder ? (
                   <span className="text-xs text-gray-400">
                     {isFetchingOlder ? 'Loading older memos...' : 'Scroll up to load older'}
                   </span>
-                </div>
-              )}
-              {memos.length >= total && memos.length > PAGE_SIZE && (
-                <div className="py-3 text-center">
+                ) : memos.length > PAGE_SIZE ? (
                   <span className="text-xs text-gray-400">No older memos</span>
-                </div>
-              )}
+                ) : null}
+              </div>
 
               <div>
                 {mobileFilteredMemos.map((memo, index) => {
