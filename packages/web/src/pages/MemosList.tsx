@@ -58,7 +58,8 @@ export default function MemosList() {
   // Mobile scroll management refs
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const previousScrollHeightRef = useRef(0);
-  const topSentinelRef = useRef<HTMLDivElement>(null);
+  const touchStartYRef = useRef(0);
+  const [pullDistance, setPullDistance] = useState(0);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -174,25 +175,54 @@ export default function MemosList() {
     }
   }, [isFetchingOlder, memos.length]);
 
-  // IntersectionObserver: load older memos when sentinel element becomes visible
+  // Pull-to-load: touch gesture to load older memos when at scroll top
   const hasMoreOlder = memos.length < total;
+  const PULL_THRESHOLD = 60;
+
   useEffect(() => {
-    const sentinel = topSentinelRef.current;
     const container = scrollContainerRef.current;
-    if (!sentinel || !container) return;
+    if (!container) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !isFetchingOlder && hasMoreOlder) {
-          fetchOlder();
-        }
-      },
-      { root: container, threshold: 0.1 }
-    );
+    const onTouchStart = (e: TouchEvent) => {
+      if (container.scrollTop <= 0 && hasMoreOlder && !isFetchingOlder) {
+        touchStartYRef.current = e.touches[0].screenY;
+      } else {
+        touchStartYRef.current = 0;
+      }
+    };
 
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [fetchOlder, isFetchingOlder, hasMoreOlder]);
+    const onTouchMove = (e: TouchEvent) => {
+      if (!touchStartYRef.current) return;
+      // Only activate when already at the top
+      if (container.scrollTop > 0) {
+        touchStartYRef.current = 0;
+        setPullDistance(0);
+        return;
+      }
+      const dy = e.touches[0].screenY - touchStartYRef.current;
+      if (dy > 0) {
+        // Apply resistance: visual distance is less than actual pull
+        setPullDistance(Math.min(dy * 0.4, PULL_THRESHOLD * 1.5));
+      }
+    };
+
+    const onTouchEnd = () => {
+      if (pullDistance >= PULL_THRESHOLD && hasMoreOlder && !isFetchingOlder) {
+        fetchOlder();
+      }
+      touchStartYRef.current = 0;
+      setPullDistance(0);
+    };
+
+    container.addEventListener('touchstart', onTouchStart, { passive: true });
+    container.addEventListener('touchmove', onTouchMove, { passive: true });
+    container.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      container.removeEventListener('touchstart', onTouchStart);
+      container.removeEventListener('touchmove', onTouchMove);
+      container.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [fetchOlder, hasMoreOlder, isFetchingOlder, pullDistance]);
 
   const handleCreateMemo = useCallback(async () => {
     const bodyMd = newMemoBody.trim();
@@ -309,14 +339,19 @@ export default function MemosList() {
             />
           ) : (
             <>
-              {/* Sentinel element observed by IntersectionObserver to trigger loading */}
-              <div ref={topSentinelRef} className="py-3 text-center">
-                {hasMoreOlder ? (
-                  <span className="text-xs text-gray-400">
-                    {isFetchingOlder ? 'Loading older memos...' : 'Scroll up to load older'}
+              {/* Pull-to-load indicator */}
+              <div
+                className="text-center overflow-hidden transition-all duration-150"
+                style={{ height: pullDistance > 0 ? `${pullDistance}px` : undefined }}
+              >
+                {isFetchingOlder ? (
+                  <span className="text-xs text-gray-400 leading-8">Loading older memos...</span>
+                ) : hasMoreOlder && pullDistance > 0 ? (
+                  <span className="text-xs text-gray-400 leading-8">
+                    {pullDistance >= PULL_THRESHOLD ? 'Release to load' : 'Pull down to load older'}
                   </span>
-                ) : memos.length > PAGE_SIZE ? (
-                  <span className="text-xs text-gray-400">No older memos</span>
+                ) : !hasMoreOlder && memos.length > PAGE_SIZE ? (
+                  <span className="text-xs text-gray-400 py-3 block">No older memos</span>
                 ) : null}
               </div>
 
