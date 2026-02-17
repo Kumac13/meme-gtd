@@ -33,6 +33,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         cleanupOutdatedCaches: true,
         sourcemap: false,
+        // Allow larger files (mermaid is ~2.4MB)
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB
       },
     }),
   ],
@@ -48,6 +50,20 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        // Force mermaid to be in a single chunk to avoid dynamic import issues
+        manualChunks: (id) => {
+          if (id.includes('mermaid')) {
+            return 'mermaid';
+          }
+        },
+      },
+    },
+  },
+  optimizeDeps: {
+    // Pre-bundle mermaid to avoid runtime dynamic imports
+    include: ['mermaid'],
   },
   test: {
     globals: true,
