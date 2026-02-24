@@ -433,7 +433,7 @@ export default function MemoDetail() {
         />
       </div>
 
-      <div className="hidden sm:block max-w-4xl mx-auto bg-transparent px-4 py-2">
+      <div className="hidden sm:block">
         <ItemDetail
           item={memo}
           itemType="memo"
