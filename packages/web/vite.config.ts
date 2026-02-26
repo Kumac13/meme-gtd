@@ -52,10 +52,13 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        // Force mermaid to be in a single chunk to avoid dynamic import issues
+        // Force mermaid and syntax highlighter into separate chunks
         manualChunks: (id) => {
           if (id.includes('mermaid')) {
             return 'mermaid';
+          }
+          if (id.includes('react-syntax-highlighter') || id.includes('refractor') || id.includes('prismjs')) {
+            return 'syntax-highlighter';
           }
         },
       },
