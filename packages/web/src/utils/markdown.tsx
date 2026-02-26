@@ -10,8 +10,52 @@ import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import type { Components } from 'react-markdown';
 import type { Element } from 'hast';
+import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import jsLang from 'react-syntax-highlighter/dist/esm/languages/prism/javascript';
+import tsLang from 'react-syntax-highlighter/dist/esm/languages/prism/typescript';
+import jsxLang from 'react-syntax-highlighter/dist/esm/languages/prism/jsx';
+import tsxLang from 'react-syntax-highlighter/dist/esm/languages/prism/tsx';
+import sqlLang from 'react-syntax-highlighter/dist/esm/languages/prism/sql';
+import mdLang from 'react-syntax-highlighter/dist/esm/languages/prism/markdown';
+import bashLang from 'react-syntax-highlighter/dist/esm/languages/prism/bash';
+import jsonLang from 'react-syntax-highlighter/dist/esm/languages/prism/json';
+import pythonLang from 'react-syntax-highlighter/dist/esm/languages/prism/python';
+import cssLang from 'react-syntax-highlighter/dist/esm/languages/prism/css';
 import { MermaidDiagram } from '../components/MermaidDiagram';
 import { remarkFlattenListParagraphs } from './remarkFlattenListParagraphs';
+
+// Register languages for light Prism build (order matters for dependencies)
+SyntaxHighlighter.registerLanguage('javascript', jsLang);
+SyntaxHighlighter.registerLanguage('typescript', tsLang);
+SyntaxHighlighter.registerLanguage('jsx', jsxLang);
+SyntaxHighlighter.registerLanguage('tsx', tsxLang);
+SyntaxHighlighter.registerLanguage('sql', sqlLang);
+SyntaxHighlighter.registerLanguage('markdown', mdLang);
+SyntaxHighlighter.registerLanguage('bash', bashLang);
+SyntaxHighlighter.registerLanguage('json', jsonLang);
+SyntaxHighlighter.registerLanguage('python', pythonLang);
+SyntaxHighlighter.registerLanguage('css', cssLang);
+
+// Map fenced code block language aliases to registered names
+const LANGUAGE_MAP: Record<string, string> = {
+  js: 'javascript',
+  javascript: 'javascript',
+  ts: 'typescript',
+  typescript: 'typescript',
+  jsx: 'jsx',
+  tsx: 'tsx',
+  sql: 'sql',
+  md: 'markdown',
+  markdown: 'markdown',
+  bash: 'bash',
+  sh: 'bash',
+  shell: 'bash',
+  json: 'json',
+  python: 'python',
+  py: 'python',
+  css: 'css',
+};
 
 /**
  * Recursively extract plain text from React children
@@ -57,6 +101,44 @@ function CheckIcon() {
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
     </svg>
+  );
+}
+
+/**
+ * Syntax highlighted code block with copy button
+ * Used when the fenced code block has a recognized language identifier
+ */
+function SyntaxHighlightedBlock({ language, code }: { language: string; code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(code.replace(/\n$/, ''));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+    }
+  };
+
+  return (
+    <div className="relative mb-4">
+      <button
+        onClick={handleCopy}
+        className="absolute top-2 right-2 p-1.5 rounded bg-gray-700/80 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors z-10"
+        title={copied ? 'Copied!' : 'Copy code'}
+        type="button"
+      >
+        {copied ? <CheckIcon /> : <ClipboardIcon />}
+      </button>
+      <SyntaxHighlighter
+        language={language}
+        style={oneDark}
+        customStyle={{ margin: 0, borderRadius: '0.5rem', fontSize: '0.875rem', paddingRight: '3rem' }}
+      >
+        {code.replace(/\n$/, '')}
+      </SyntaxHighlighter>
+    </div>
   );
 }
 
@@ -226,17 +308,30 @@ const defaultComponents: Components = {
   // Horizontal rule
   hr: () => <hr className="my-6 border-gray-300" />,
 
-  // Pre element wrapper for fenced code blocks with copy button and Mermaid support
+  // Pre element wrapper for fenced code blocks with copy button, Mermaid support, and syntax highlighting
   pre: ({ children, node }) => {
-    // Check if this is a Mermaid code block
     const codeChild = node?.children?.[0] as Element | undefined;
     if (codeChild?.type === 'element' && codeChild?.tagName === 'code') {
       const className = codeChild.properties?.className;
-      if (Array.isArray(className) && className.some((c) => c === 'language-mermaid')) {
-        // Extract text content from code element
+      const classNames = Array.isArray(className) ? className : [];
+
+      // Check for Mermaid diagram
+      if (classNames.some((c) => c === 'language-mermaid')) {
         const textNode = codeChild.children?.[0];
         if (textNode?.type === 'text') {
           return <MermaidDiagram chart={textNode.value} />;
+        }
+      }
+
+      // Check for syntax highlighting
+      const langClass = classNames.find((c) => typeof c === 'string' && c.startsWith('language-'));
+      if (langClass) {
+        const langKey = (langClass as string).replace('language-', '');
+        const canonicalLang = LANGUAGE_MAP[langKey];
+        if (canonicalLang) {
+          const textNode = codeChild.children?.[0];
+          const code = textNode?.type === 'text' ? textNode.value : '';
+          return <SyntaxHighlightedBlock language={canonicalLang} code={code} />;
         }
       }
     }
