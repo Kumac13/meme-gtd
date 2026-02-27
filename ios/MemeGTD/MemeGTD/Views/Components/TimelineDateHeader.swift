@@ -14,6 +14,7 @@ struct TimelineDateHeader: View {
                 .frame(height: 1)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.top, 8)
+        .padding(.bottom, 2)
     }
 }

@@ -47,7 +47,11 @@ class MemoListViewModel: ObservableObject {
     }
 
     func loadOlderMemos() async {
-        guard hasMore, !isLoadingMore else { return }
+        print("[MemoList] loadOlderMemos called: hasMore=\(hasMore), isLoadingMore=\(isLoadingMore), memos.count=\(memos.count), total=\(total)")
+        guard hasMore, !isLoadingMore else {
+            print("[MemoList] loadOlderMemos skipped")
+            return
+        }
         isLoadingMore = true
 
         do {
