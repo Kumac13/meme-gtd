@@ -47,7 +47,7 @@ struct MemoDetailView: View {
 
                                 ThreadItem(
                                     bodyMd: item.bodyMd,
-                                    labels: item.labels,
+                                    labels: nil,
                                     onDelete: {
                                         if item.isOriginal {
                                             showDeleteConfirm = true
@@ -117,9 +117,8 @@ struct MemoDetailView: View {
             }
 
             ToolbarItem(placement: .principal) {
-                Text("#\(memoId)")
+                Text("Memo")
                     .font(.headline)
-                    .foregroundColor(.textSecondary)
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {

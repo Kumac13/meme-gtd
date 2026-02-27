@@ -10,13 +10,11 @@ struct ThreadItem: View {
     var onCopy: (() -> Void)?
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: 4) {
             MemoBody(bodyMd: bodyMd, labels: labels)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            Spacer(minLength: 0)
-
-            // Three-dot menu (right edge, matching comment icon position in list)
+            // Three-dot menu
             Menu {
                 if let onCopy = onCopy {
                     Button(action: onCopy) {
@@ -37,10 +35,9 @@ struct ThreadItem: View {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 13))
                     .foregroundColor(.textSecondary)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 28, height: 20)
                     .contentShape(Rectangle())
             }
-            .padding(.top, 2)
         }
         .padding(.vertical, 10)
         .padding(.horizontal, 16)
