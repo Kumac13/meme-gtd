@@ -28,12 +28,12 @@ struct MemoDetailView: View {
                                 showGapTimestamp: false,
                                 gapTimestampText: "",
                                 isOriginalMemo: true,
+                                onDelete: {
+                                    showDeleteConfirm = true
+                                },
                                 onCopy: {
                                     UIPasteboard.general.string = memo.bodyMd
                                     HapticManager.notification(.success)
-                                },
-                                onDelete: {
-                                    showDeleteConfirm = true
                                 }
                             )
 
@@ -74,12 +74,12 @@ struct MemoDetailView: View {
                                     createdAt: comment.createdAt,
                                     showGapTimestamp: showGap,
                                     gapTimestampText: TimelineHelpers.formatTimelineTime(iso: comment.createdAt),
+                                    onDelete: {
+                                        Task { await viewModel.deleteComment(comment.id) }
+                                    },
                                     onCopy: {
                                         UIPasteboard.general.string = comment.bodyMd
                                         HapticManager.notification(.success)
-                                    },
-                                    onDelete: {
-                                        Task { await viewModel.deleteComment(comment.id) }
                                     }
                                 )
 
