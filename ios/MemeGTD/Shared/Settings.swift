@@ -24,7 +24,7 @@ class Settings {
     }
 
     // Default API URL for initial setup
-    static let defaultApiUrl = "http://localhost:3000"
+    static let defaultApiUrl = "http://localhost:3001"
 
     // Get API URL with fallback to default
     var effectiveApiUrl: String {

@@ -4,7 +4,8 @@ import SwiftUI
 struct MemeGTDApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .preferredColorScheme(.light)
         }
     }
 }
