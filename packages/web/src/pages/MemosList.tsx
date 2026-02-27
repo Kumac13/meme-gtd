@@ -78,7 +78,7 @@ export default function MemosList() {
         const offset = (currentPage - 1) * PAGE_SIZE;
 
         const response = await MemosService.listMemos(
-          undefined,
+          bookmarkFilter ? 'true' : undefined,
           labelParam,
           searchParam,
           PAGE_SIZE,
@@ -95,7 +95,7 @@ export default function MemosList() {
     }
 
     fetchMemos();
-  }, [filters.searchQuery, currentPage]);
+  }, [filters.searchQuery, currentPage, bookmarkFilter]);
 
   // Mobile: scroll to bottom after initial load so newest memos are visible
   useEffect(() => {
@@ -149,7 +149,7 @@ export default function MemosList() {
       const labelParam = filters.parsedQuery.labels?.join(',');
       const searchParam = filters.parsedQuery.freeText;
       const response = await MemosService.listMemos(
-        undefined,
+        bookmarkFilter ? 'true' : undefined,
         labelParam,
         searchParam,
         PAGE_SIZE,
@@ -164,7 +164,7 @@ export default function MemosList() {
     } finally {
       setIsFetchingOlder(false);
     }
-  }, [filters.parsedQuery.freeText, filters.parsedQuery.labels, isFetchingOlder, memos.length, total]);
+  }, [bookmarkFilter, filters.parsedQuery.freeText, filters.parsedQuery.labels, isFetchingOlder, memos.length, total]);
 
   // Preserve scroll position after older memos are prepended (in reversed view)
   useEffect(() => {
