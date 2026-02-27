@@ -10,7 +10,7 @@ struct MemoTimelineItem: View {
             // Memo body + labels (takes remaining space, pushes comment to right edge)
             VStack(alignment: .leading, spacing: 0) {
                 // Body text (markdown)
-                MarkdownBody(memo.bodyMd, fontSize: 13)
+                MarkdownBody(memo.bodyMd, fontSize: 14)
 
                 // Labels
                 if let labels = memo.labels, !labels.isEmpty {
