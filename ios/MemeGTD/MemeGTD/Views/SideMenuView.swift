@@ -52,7 +52,7 @@ struct SideMenuView: View {
                     .frame(width: 44, height: 44)
             }
             .padding(.horizontal, 16)
-            .padding(.bottom, 40)
+            .padding(.bottom, 10)
         }
         .frame(maxHeight: .infinity)
         .background(Color(.systemBackground))
@@ -89,8 +89,7 @@ private struct MenuRow: View {
     }
 
     private var foregroundColor: Color {
-        if disabled { return .textSecondary.opacity(0.5) }
         if isSelected { return .accent }
-        return .textPrimary
+        return .textSecondary.opacity(0.5)
     }
 }

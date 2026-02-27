@@ -15,132 +15,118 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        ZStack {
-            Color.appBackground
-                .ignoresSafeArea()
-
-            VStack(spacing: 24) {
-                // Header
-                VStack(spacing: 8) {
-                    Text("Meme GTD")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundColor(.textPrimary)
-
-                    Text("Settings")
-                        .font(.subheadline)
-                        .foregroundColor(.textSecondary)
-                }
-                .padding(.top, 20)
-
-                // Settings Card
-                VStack(alignment: .leading, spacing: 16) {
+        ScrollView {
+            VStack(spacing: 0) {
+                // API Configuration section
+                VStack(alignment: .leading, spacing: 12) {
                     Text("API Configuration")
-                        .font(.headline)
-                        .foregroundColor(.textPrimary)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.textSecondary)
+                        .textCase(.uppercase)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("API URL")
-                            .font(.subheadline)
-                            .foregroundColor(.textSecondary)
+                        Text("Server URL")
+                            .font(.system(size: 15))
+                            .foregroundColor(.textPrimary)
 
                         TextField("http://localhost:3001", text: $apiUrl)
-                            .textFieldStyle(CustomTextFieldStyle())
+                            .font(.system(size: 14))
+                            .padding(12)
+                            .background(Color(.tertiarySystemFill))
+                            .cornerRadius(10)
                             .autocapitalization(.none)
                             .autocorrectionDisabled()
                             .keyboardType(.URL)
+                            .tint(.accent)
                     }
 
                     // Connection status
                     if connectionStatus != .unknown {
-                        HStack {
+                        HStack(spacing: 6) {
                             Image(systemName: connectionStatus == .success ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundColor(connectionStatus == .success ? .accent : .red)
+                                .font(.system(size: 13))
                             Text(connectionStatus == .success ? "Connected" : "Connection failed")
-                                .font(.subheadline)
-                                .foregroundColor(connectionStatus == .success ? .accent : .red)
+                                .font(.system(size: 13))
                         }
+                        .foregroundColor(connectionStatus == .success ? .accent : .red)
                     }
 
                     // Buttons
-                    HStack(spacing: 12) {
+                    HStack(spacing: 10) {
                         Button(action: testConnection) {
-                            HStack {
+                            HStack(spacing: 6) {
                                 if isTestingConnection {
                                     ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .accent))
-                                        .scaleEffect(0.8)
+                                        .scaleEffect(0.7)
+                                        .tint(.accent)
                                 } else {
                                     Image(systemName: "network")
+                                        .font(.system(size: 13))
                                 }
                                 Text("Test")
+                                    .font(.system(size: 14, weight: .medium))
                             }
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Color.surface)
+                            .padding(.vertical, 10)
+                            .background(Color(.tertiarySystemFill))
                             .foregroundColor(.accent)
-                            .cornerRadius(8)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.accent, lineWidth: 1)
-                            )
+                            .cornerRadius(10)
                         }
                         .disabled(isTestingConnection)
 
                         Button(action: saveSettings) {
-                            HStack {
+                            HStack(spacing: 6) {
                                 Image(systemName: isSaved ? "checkmark" : "square.and.arrow.down")
+                                    .font(.system(size: 13))
                                 Text(isSaved ? "Saved" : "Save")
+                                    .font(.system(size: 14, weight: .medium))
                             }
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
+                            .padding(.vertical, 10)
                             .background(Color.accent)
                             .foregroundColor(.white)
-                            .cornerRadius(8)
+                            .cornerRadius(10)
                         }
                     }
                 }
-                .padding(20)
-                .background(Color.surface)
-                .cornerRadius(12)
-                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 2)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
 
-                // Instructions
+                Divider().padding(.leading, 16)
+
+                // How to use section
                 VStack(alignment: .leading, spacing: 12) {
                     Text("How to use")
-                        .font(.headline)
-                        .foregroundColor(.textPrimary)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.textSecondary)
+                        .textCase(.uppercase)
 
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         InstructionRow(number: "1", text: "Enter your API URL (e.g., Tailscale IP)")
                         InstructionRow(number: "2", text: "Tap Save to store the settings")
                         InstructionRow(number: "3", text: "Open Safari and navigate to an article")
                         InstructionRow(number: "4", text: "Tap Share and select \"Meme GTD\"")
                     }
                 }
-                .padding(20)
-                .background(Color.surface)
-                .cornerRadius(12)
-                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 2)
-                .padding(.horizontal, 20)
-
-                Spacer()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
             }
         }
+        .scrollDismissesKeyboard(.immediately)
+        .background(Color(.systemBackground))
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: {
-                    HapticManager.impact(.light)
-                    onMenuTap()
-                }) {
+                Button(action: onMenuTap) {
                     Image(systemName: "line.3.horizontal")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundColor(.textPrimary)
                 }
             }
+            ToolbarItem(placement: .principal) {
+                Text("Settings")
+                    .font(.headline)
+            }
         }
-        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
     }
 
