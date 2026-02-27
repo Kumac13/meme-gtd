@@ -14,41 +14,45 @@ struct FloatingComposer: View {
     }
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 0) {
+        ZStack(alignment: .bottomTrailing) {
+            // Text field
             TextField(placeholder, text: $text, axis: .vertical)
                 .lineLimit(1...5)
                 .textFieldStyle(.plain)
                 .font(.system(size: 14))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 11)
+                .padding(.leading, 16)
+                .padding(.trailing, 46)
+                .padding(.top, 13)
+                .padding(.bottom, 10)
                 .focused($isFocused)
                 .disabled(disabled || submitting)
                 .onSubmit {
-                    if canSubmit {
-                        onSubmit()
-                    }
+                    if canSubmit { onSubmit() }
                 }
 
+            // Send button
             Button(action: {
-                if canSubmit {
-                    onSubmit()
-                }
+                if canSubmit { onSubmit() }
             }) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 26))
-                    .foregroundColor(canSubmit ? .accent : Color(.systemGray4))
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 28, height: 28)
+                    .background(canSubmit ? Color.accent : Color(.systemGray4))
+                    .clipShape(Circle())
             }
             .disabled(!canSubmit)
-            .padding(.trailing, 6)
-            .padding(.bottom, 6)
+            .padding(.trailing, 8)
+            .padding(.bottom, 7)
         }
+        // Independent surface: background + rounded corners + shadow
         .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: 22))
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(.systemGray4), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(Color(.separator).opacity(0.4), lineWidth: 0.5)
         )
-        .shadow(color: .black.opacity(0.04), radius: 2, y: 1)
-        .padding(.horizontal, 12)
+        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
+        .shadow(color: .black.opacity(0.04), radius: 2, x: 0, y: 1)
     }
 }

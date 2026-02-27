@@ -14,7 +14,7 @@ struct MemoListView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Content layer
+            // Layer 1: Scrollable content
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -58,6 +58,7 @@ struct MemoListView: View {
                                 Text(TimelineHelpers.formatTimelineTime(iso: memo.createdAt))
                                     .font(.system(size: 11))
                                     .foregroundColor(Color(.systemGray))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.horizontal, 16)
                                     .padding(.bottom, 2)
                             }
@@ -73,8 +74,9 @@ struct MemoListView: View {
                             .padding(.horizontal, 16)
                         }
 
-                        // Bottom spacer for floating composer
-                        Color.clear.frame(height: 80)
+                        // Bottom inset: input bar height + safe area + extra margin
+                        // This ensures the last memo doesn't hide behind the floating input
+                        Color.clear.frame(height: 90)
                             .id("bottom")
                     }
                 }
@@ -96,10 +98,10 @@ struct MemoListView: View {
                 }
             }
 
-            // Overlay layer: bottom bar
+            // Layer 2: Floating input bar (overlay, NOT inside ScrollView)
+            // The wrapper is transparent — only the FloatingComposer has its own surface
             VStack(spacing: 0) {
                 if isSearchExpanded {
-                    // Search overlay
                     SearchOverlay(
                         searchQuery: $viewModel.searchQuery,
                         bookmarkFilter: $viewModel.bookmarkFilter,
@@ -111,9 +113,8 @@ struct MemoListView: View {
                         }
                     )
                 } else {
-                    // Search + Composer row
-                    HStack(alignment: .bottom, spacing: 8) {
-                        // Search button
+                    HStack(alignment: .bottom, spacing: 10) {
+                        // Search icon button
                         Button(action: {
                             HapticManager.impact(.light)
                             withAnimation(.easeOut(duration: 0.2)) {
@@ -121,18 +122,19 @@ struct MemoListView: View {
                             }
                         }) {
                             Image(systemName: "magnifyingglass")
-                                .font(.system(size: 16))
-                                .foregroundColor(.textSecondary)
-                                .frame(width: 36, height: 36)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(Color(.systemGray))
+                                .frame(width: 34, height: 34)
                                 .background(Color(.systemBackground))
                                 .clipShape(Circle())
                                 .overlay(
                                     Circle()
-                                        .stroke(Color(.systemGray4), lineWidth: 1)
+                                        .stroke(Color(.separator).opacity(0.4), lineWidth: 0.5)
                                 )
+                                .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 1)
                         }
 
-                        // Composer
+                        // Floating composer — has its own surface (bg + shadow + rounded)
                         FloatingComposer(
                             text: $viewModel.newMemoBody,
                             placeholder: "Write a memo...",
@@ -143,14 +145,11 @@ struct MemoListView: View {
                             }
                         )
                     }
-                    .padding(.leading, 12)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 10)
                 }
             }
-            .background(
-                Color(.systemBackground)
-                    .shadow(color: .black.opacity(0.06), radius: 4, y: -2)
-            )
+            // No background on the wrapper — transparent so content scrolls behind
         }
         .background(Color(.systemBackground))
         .toolbar {
@@ -201,7 +200,6 @@ private struct SearchOverlay: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            // Search field
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(Color(.systemGray))
@@ -228,7 +226,6 @@ private struct SearchOverlay: View {
             .background(Color(.systemGray6))
             .cornerRadius(10)
 
-            // Bookmark filter
             Button(action: {
                 HapticManager.impact(.light)
                 bookmarkFilter.toggle()
@@ -239,15 +236,18 @@ private struct SearchOverlay: View {
                     .foregroundColor(bookmarkFilter ? .accent : Color(.systemGray))
             }
 
-            // Close
             Button(action: onDismiss) {
                 Text("Cancel")
                     .font(.system(size: 15))
                     .foregroundColor(.accent)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 16)
         .padding(.vertical, 10)
+        .background(
+            Color(.systemBackground)
+                .shadow(color: .black.opacity(0.06), radius: 4, y: -2)
+        )
         .onAppear { isFocused = true }
     }
 }
