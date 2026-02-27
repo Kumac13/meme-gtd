@@ -12,7 +12,6 @@ struct MemoListView: View {
     @StateObject private var viewModel = MemoListViewModel()
     @State private var barMode: BottomBarMode = .compose
 
-    // Memos displayed in reversed order (newest at bottom, like chat)
     private var reversedMemos: [Memo] {
         viewModel.memos.reversed()
     }
@@ -23,7 +22,6 @@ struct MemoListView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        // "No older memos" indicator
                         if !viewModel.hasMore && !viewModel.memos.isEmpty {
                             Text("No older memos")
                                 .font(.caption)
@@ -32,7 +30,6 @@ struct MemoListView: View {
                                 .padding(.vertical, 12)
                         }
 
-                        // Timeline content
                         ForEach(Array(reversedMemos.enumerated()), id: \.element.id) { index, memo in
                             let previousMemo = index > 0 ? reversedMemos[index - 1] : nil
 
@@ -55,8 +52,8 @@ struct MemoListView: View {
                                     .foregroundColor(Color(.systemGray))
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.horizontal, 16)
-                                    .padding(.top, 8)
-                                    .padding(.bottom, 2)
+                                    .padding(.top, 4)
+                                    .padding(.bottom, -2)
                             }
 
                             Button(action: {
@@ -69,17 +66,27 @@ struct MemoListView: View {
                             .padding(.horizontal, 16)
                         }
 
-                        // Bottom inset for floating bar
                         Color.clear.frame(height: 90)
                             .id("bottom")
                     }
                 }
-                .scrollDismissesKeyboard(.interactively)
+                .scrollDismissesKeyboard(.immediately)
+                .onTapGesture {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
                 .refreshable {
-                    if viewModel.hasMore {
-                        await viewModel.loadOlderMemos()
-                    } else {
-                        await viewModel.loadMemos()
+                    // .refreshable cancels its Task when the user lifts their finger,
+                    // which cancels URLSession requests. Use a detached continuation
+                    // to keep the network call alive.
+                    await withCheckedContinuation { continuation in
+                        Task { @MainActor in
+                            if viewModel.hasMore {
+                                await viewModel.loadOlderMemos()
+                            } else {
+                                await viewModel.loadMemos()
+                            }
+                            continuation.resume()
+                        }
                     }
                 }
                 .onAppear {
@@ -94,9 +101,16 @@ struct MemoListView: View {
                         }
                     }
                 }
+                .onChange(of: viewModel.memos.count) { _ in
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        withAnimation {
+                            proxy.scrollTo("bottom", anchor: .bottom)
+                        }
+                    }
+                }
             }
 
-            // Layer 2: Floating bottom bar (switches between compose / search)
+            // Layer 2: Floating bottom bar
             BottomBar(
                 mode: $barMode,
                 memoText: $viewModel.newMemoBody,
@@ -119,21 +133,17 @@ struct MemoListView: View {
                         .foregroundColor(.textPrimary)
                 }
             }
-
             ToolbarItem(placement: .principal) {
                 Text("Memos")
                     .font(.headline)
             }
-
             ToolbarItem(placement: .navigationBarTrailing) {
-                if viewModel.bookmarkFilter {
-                    Button(action: {
-                        HapticManager.impact(.light)
-                        viewModel.toggleBookmarkFilter()
-                    }) {
-                        Image(systemName: "bookmark.fill")
-                            .foregroundColor(.accent)
-                    }
+                Button(action: {
+                    HapticManager.impact(.light)
+                    viewModel.toggleBookmarkFilter()
+                }) {
+                    Image(systemName: viewModel.bookmarkFilter ? "bookmark.fill" : "bookmark")
+                        .foregroundColor(viewModel.bookmarkFilter ? .accent : .textSecondary)
                 }
             }
         }
@@ -147,7 +157,7 @@ struct MemoListView: View {
     }
 }
 
-// MARK: - Bottom Bar (compose/search switch)
+// MARK: - Bottom Bar with animated expand/collapse
 
 private struct BottomBar: View {
     @Binding var mode: BottomBarMode
@@ -162,62 +172,78 @@ private struct BottomBar: View {
     @FocusState private var memoFocused: Bool
     @FocusState private var searchFocused: Bool
 
+    private var isCompose: Bool { mode == .compose }
+
     private var canSubmitMemo: Bool {
         !memoText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isLoading && !isCreating
     }
 
-    // Shared pill style
     private let pillRadius: CGFloat = 22
-    private let pillStroke: CGFloat = 0.5
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 10) {
-            switch mode {
-            case .compose:
-                // Search icon (collapsed)
-                iconButton(systemName: "magnifyingglass") {
+            // Left: search icon (compose mode) OR search pill (search mode)
+            if isCompose {
+                // Collapsed search icon
+                circleButton(systemName: "magnifyingglass") {
                     HapticManager.impact(.light)
-                    withAnimation(.easeInOut(duration: 0.25)) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                         mode = .search
                     }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                         searchFocused = true
                     }
                 }
-
-                // Memo input (expanded)
-                composePill
-
-            case .search:
-                // Search input (expanded)
+                .transition(.scale.combined(with: .opacity))
+            } else {
+                // Expanded search pill
                 searchPill
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.5, anchor: .leading).combined(with: .opacity),
+                        removal: .scale(scale: 0.5, anchor: .leading).combined(with: .opacity)
+                    ))
+            }
 
-                // New memo icon (collapsed)
-                iconButton(systemName: "square.and.pencil") {
+            // Right: compose pill (compose mode) OR new-memo icon (search mode)
+            if isCompose {
+                // Expanded compose pill
+                composePill
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.5, anchor: .trailing).combined(with: .opacity),
+                        removal: .scale(scale: 0.5, anchor: .trailing).combined(with: .opacity)
+                    ))
+            } else {
+                // Collapsed new-memo icon (accent colored)
+                composeButton {
                     HapticManager.impact(.light)
-                    withAnimation(.easeInOut(duration: 0.25)) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                         mode = .compose
                     }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                         memoFocused = true
                     }
                 }
+                .transition(.scale.combined(with: .opacity))
             }
         }
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: mode)
     }
 
     // MARK: - Compose pill
 
     private var composePill: some View {
-        ZStack(alignment: .bottomTrailing) {
+        HStack(alignment: .center, spacing: 0) {
             TextField("Write a memo...", text: $memoText, axis: .vertical)
                 .lineLimit(1...5)
                 .textFieldStyle(.plain)
                 .font(.system(size: 14))
+                .tint(Color.accent)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
                 .padding(.leading, 16)
-                .padding(.trailing, 46)
-                .padding(.top, 13)
-                .padding(.bottom, 10)
+                .padding(.trailing, 8)
+                .padding(.top, 18)
+                .padding(.bottom, 16)
                 .focused($memoFocused)
                 .disabled(isLoading || isCreating)
                 .onSubmit {
@@ -228,17 +254,16 @@ private struct BottomBar: View {
                 if canSubmitMemo { onCreateMemo() }
             }) {
                 Image(systemName: "arrow.up")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundColor(.white)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 32, height: 32)
                     .background(canSubmitMemo ? Color.accent : Color(.systemGray4))
                     .clipShape(Circle())
             }
             .disabled(!canSubmitMemo)
-            .padding(.trailing, 8)
-            .padding(.bottom, 7)
+            .padding(.trailing, 10)
         }
-        .modifier(PillSurface(radius: pillRadius, strokeWidth: pillStroke))
+        .modifier(PillSurface(radius: pillRadius))
     }
 
     // MARK: - Search pill
@@ -252,6 +277,9 @@ private struct BottomBar: View {
             TextField("Search memos...", text: $searchText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 14))
+                .tint(Color.accent)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
                 .focused($searchFocused)
                 .onSubmit { onSearch() }
 
@@ -265,48 +293,45 @@ private struct BottomBar: View {
                         .foregroundColor(Color(.systemGray))
                 }
             }
-
-            // Bookmark filter toggle
-            Button(action: {
-                HapticManager.impact(.light)
-                bookmarkFilter.toggle()
-                onSearch()
-            }) {
-                Image(systemName: bookmarkFilter ? "bookmark.fill" : "bookmark")
-                    .font(.system(size: 14))
-                    .foregroundColor(bookmarkFilter ? .accent : Color(.systemGray))
-            }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .modifier(PillSurface(radius: pillRadius, strokeWidth: pillStroke))
+        .padding(.vertical, 16)
+        .frame(minHeight: 52)
+        .modifier(PillSurface(radius: pillRadius))
     }
 
-    // MARK: - Icon button
+    // MARK: - Collapsed search icon button
 
-    private func iconButton(systemName: String, action: @escaping () -> Void) -> some View {
+    private func circleButton(systemName: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: 17, weight: .medium))
                 .foregroundColor(Color(.systemGray))
-                .frame(width: 44, height: 44)
-                .background(Color(.systemBackground))
+                .frame(width: 52, height: 52)
+        }
+        .modifier(PillSurface(radius: 26))
+    }
+
+    // MARK: - Accent-colored compose button
+
+    private func composeButton(action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: "doc.text")
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 52, height: 52)
+                .background(Color.accent)
                 .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(Color(.separator).opacity(0.4), lineWidth: 0.5)
-                )
-                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
-                .shadow(color: .black.opacity(0.04), radius: 2, x: 0, y: 1)
+                .shadow(color: Color.accent.opacity(0.3), radius: 6, x: 0, y: 2)
+                .shadow(color: .black.opacity(0.06), radius: 2, x: 0, y: 1)
         }
     }
 }
 
-// MARK: - Shared pill surface modifier
+// MARK: - Shared pill surface
 
 private struct PillSurface: ViewModifier {
     let radius: CGFloat
-    let strokeWidth: CGFloat
 
     func body(content: Content) -> some View {
         content
@@ -314,7 +339,7 @@ private struct PillSurface: ViewModifier {
             .clipShape(RoundedRectangle(cornerRadius: radius))
             .overlay(
                 RoundedRectangle(cornerRadius: radius)
-                    .stroke(Color(.separator).opacity(0.4), lineWidth: strokeWidth)
+                    .stroke(Color(.separator).opacity(0.4), lineWidth: 0.5)
             )
             .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
             .shadow(color: .black.opacity(0.04), radius: 2, x: 0, y: 1)

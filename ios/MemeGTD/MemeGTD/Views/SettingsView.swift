@@ -44,7 +44,7 @@ struct SettingsView: View {
                             .font(.subheadline)
                             .foregroundColor(.textSecondary)
 
-                        TextField("http://localhost:3000", text: $apiUrl)
+                        TextField("http://localhost:3001", text: $apiUrl)
                             .textFieldStyle(CustomTextFieldStyle())
                             .autocapitalization(.none)
                             .autocorrectionDisabled()

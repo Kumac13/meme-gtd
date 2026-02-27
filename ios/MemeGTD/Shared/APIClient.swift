@@ -1,4 +1,7 @@
 import Foundation
+import os
+
+private let logger = Logger(subsystem: "name.kumac.MemeGTD", category: "APIClient")
 
 enum APIError: Error, LocalizedError {
     case noConfiguration
@@ -87,6 +90,7 @@ class APIClient {
 
     private func buildURL(path: String, queryItems: [URLQueryItem]? = nil) throws -> URL {
         let baseUrl = Settings.shared.effectiveApiUrl
+        logger.info("buildURL: baseUrl=\(baseUrl), path=\(path)")
         guard var components = URLComponents(string: "\(baseUrl)\(path)") else {
             throw APIError.invalidURL
         }
@@ -100,11 +104,13 @@ class APIClient {
     }
 
     private func execute<T: Decodable>(_ request: URLRequest) async throws -> T {
+        logger.info("execute: \(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "nil")")
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.serverError(0, "Invalid response")
             }
+            logger.info("execute: status=\(httpResponse.statusCode)")
             guard (200...299).contains(httpResponse.statusCode) else {
                 let message = String(data: data, encoding: .utf8)
                 throw APIError.serverError(httpResponse.statusCode, message)
@@ -112,11 +118,13 @@ class APIClient {
             do {
                 return try JSONDecoder().decode(T.self, from: data)
             } catch {
+                logger.error("decode error: \(error.localizedDescription)")
                 throw APIError.decodingError(error)
             }
         } catch let error as APIError {
             throw error
         } catch {
+            logger.error("network error: \(error.localizedDescription)")
             throw APIError.networkError(error)
         }
     }

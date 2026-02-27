@@ -1,5 +1,8 @@
 import Combine
+import os
 import SwiftUI
+
+private let logger = Logger(subsystem: "name.kumac.MemeGTD", category: "MemoList")
 
 @MainActor
 class MemoListViewModel: ObservableObject {
@@ -18,6 +21,7 @@ class MemoListViewModel: ObservableObject {
     var hasMore: Bool { memos.count < total }
 
     func loadMemos() async {
+        logger.info("loadMemos called")
         isLoading = true
         error = nil
 
@@ -39,17 +43,19 @@ class MemoListViewModel: ObservableObject {
             )
             memos = response.data
             total = response.total
+            logger.info("loadMemos done: count=\(response.data.count), total=\(response.total)")
         } catch {
             self.error = error.localizedDescription
+            logger.error("loadMemos error: \(error.localizedDescription)")
         }
 
         isLoading = false
     }
 
     func loadOlderMemos() async {
-        print("[MemoList] loadOlderMemos called: hasMore=\(hasMore), isLoadingMore=\(isLoadingMore), memos.count=\(memos.count), total=\(total)")
+        logger.info("loadOlderMemos: hasMore=\(self.hasMore), isLoadingMore=\(self.isLoadingMore), count=\(self.memos.count), total=\(self.total)")
         guard hasMore, !isLoadingMore else {
-            print("[MemoList] loadOlderMemos skipped")
+            logger.info("loadOlderMemos skipped")
             return
         }
         isLoadingMore = true
@@ -72,8 +78,12 @@ class MemoListViewModel: ObservableObject {
             )
             memos.append(contentsOf: response.data)
             total = response.total
+            logger.info("loadOlderMemos done: count=\(self.memos.count), total=\(self.total)")
+        } catch is CancellationError {
+            logger.info("loadOlderMemos cancelled")
         } catch {
             self.error = error.localizedDescription
+            logger.error("loadOlderMemos error: \(error.localizedDescription)")
         }
 
         isLoadingMore = false

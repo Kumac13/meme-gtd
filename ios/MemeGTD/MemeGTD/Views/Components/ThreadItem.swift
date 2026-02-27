@@ -24,17 +24,8 @@ struct ThreadItem: View {
             // Content
             VStack(alignment: .leading, spacing: 8) {
                 // Markdown body
-                if let attributed = try? AttributedString(markdown: bodyMd, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
-                    Text(attributed)
-                        .font(.system(size: 16))
-                        .foregroundColor(.textPrimary)
-                        .textSelection(.enabled)
-                } else {
-                    Text(bodyMd)
-                        .font(.system(size: 16))
-                        .foregroundColor(.textPrimary)
-                        .textSelection(.enabled)
-                }
+                MarkdownBody(bodyMd, fontSize: 16, color: .textPrimary)
+                    .textSelection(.enabled)
 
                 // Timestamp
                 Text(TimelineHelpers.formatTimelineTime(iso: createdAt))

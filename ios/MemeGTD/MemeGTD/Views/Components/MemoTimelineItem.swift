@@ -7,25 +7,10 @@ struct MemoTimelineItem: View {
         // HStack: memo content (flex-1) + comment count (right side)
         // Matches Web UI: <div className="flex items-start gap-2.5">
         HStack(alignment: .top, spacing: 10) {
-            // Memo body + labels (takes remaining space)
+            // Memo body + labels (takes remaining space, pushes comment to right edge)
             VStack(alignment: .leading, spacing: 0) {
-                // Body text
-                if let attributed = try? AttributedString(
-                    markdown: memo.bodyMd,
-                    options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-                ) {
-                    Text(attributed)
-                        .font(.system(size: 13))
-                        .lineSpacing(4)
-                        .foregroundColor(Color(.label).opacity(0.75))
-                        .multilineTextAlignment(.leading)
-                } else {
-                    Text(memo.bodyMd)
-                        .font(.system(size: 13))
-                        .lineSpacing(4)
-                        .foregroundColor(Color(.label).opacity(0.75))
-                        .multilineTextAlignment(.leading)
-                }
+                // Body text (markdown)
+                MarkdownBody(memo.bodyMd, fontSize: 13)
 
                 // Labels
                 if let labels = memo.labels, !labels.isEmpty {
@@ -43,17 +28,16 @@ struct MemoTimelineItem: View {
                     .padding(.top, 6)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Comment count (right side, top-aligned with memo text)
+            Spacer(minLength: 0)
+
+            // Comment count (right edge, top-aligned with memo text)
             if let count = memo.commentCount, count > 0 {
-                HStack(spacing: 3) {
-                    Image(systemName: "bubble.right")
-                        .font(.system(size: 11))
-                    Text("\(count)")
-                        .font(.system(size: 11))
-                }
-                .foregroundColor(.textSecondary)
-                .padding(.top, 2)
+                Image(systemName: "bubble.right")
+                    .font(.system(size: 11))
+                    .foregroundColor(.textSecondary)
+                    .padding(.top, 2)
             }
         }
         .padding(.vertical, 10)
