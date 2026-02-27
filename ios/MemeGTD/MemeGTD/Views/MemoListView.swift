@@ -60,6 +60,7 @@ struct MemoListView: View {
                                     .foregroundColor(Color(.systemGray))
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.horizontal, 16)
+                                    .padding(.top, 8)
                                     .padding(.bottom, 2)
                             }
 
