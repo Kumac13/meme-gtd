@@ -1,26 +1,52 @@
 # iOS MemeGTD
 
-Safari Share Extension for saving articles to meme-gtd.
+Native iOS app for meme-gtd. Includes a memo timeline, thread detail view, and a Safari Share Extension for saving articles.
 
 ## Requirements
 
-- Xcode 15.0+
-- iOS 16.0+
+- Xcode 16.0+
+- iOS 26.0+
 - Tailscale (for API connection)
 
 ## Project Structure
 
 ```
 ios/MemeGTD/
-├── MemeGTD/          # Host app (settings screen)
-├── ShareExtension/   # Safari Share Extension
-└── Shared/           # Shared code between targets
+├── MemeGTD/
+│   ├── Models/             # Data models (Memo, Comment, Label, Project)
+│   ├── ViewModels/         # MemoListViewModel, MemoDetailViewModel
+│   ├── Views/
+│   │   ├── Components/     # Reusable UI (FloatingComposer, ThreadItem, MarkdownBody, etc.)
+│   │   ├── RootView.swift  # Root container with slide-out side menu
+│   │   ├── MemoListView.swift
+│   │   ├── MemoDetailView.swift
+│   │   ├── SettingsView.swift
+│   │   └── SideMenuView.swift
+│   └── Utilities/          # TimelineHelpers, HapticManager, LabelColorHelper
+├── ShareExtension/         # Safari Share Extension
+└── Shared/                 # Shared code (APIClient, Settings, Colors)
 ```
+
+## Features
+
+- **Memo timeline**: Chat-like chronological view with date buckets and timestamps
+- **Thread detail**: Memo body + comment thread, info modal for labels/projects
+- **Side menu**: Claude-style slide-out drawer with rounded content panel
+- **Search**: Free text and `label:xxx` prefix search
+- **Bookmark filter**: Toggle to show only bookmarked memos
+- **Markdown rendering**: Headings, bold, italic, code blocks, links, lists
+- **Safari Share Extension**: Save articles directly from Safari
 
 ## Build
 
 ```bash
+cd ios/MemeGTD
+
+# Simulator
 xcodebuild -scheme MemeGTD -destination 'platform=iOS Simulator,name=iPhone 17' build
+
+# Device
+xcodebuild -scheme MemeGTD -destination 'platform=iOS,id=<DEVICE_ID>' build
 ```
 
 ## Install on iPhone
@@ -39,7 +65,7 @@ USB cable required.
    - **Do this for both MemeGTD and ShareExtension targets**
 4. Press Cmd+R to build and run
 
-### 3. Enable Developer Mode (iOS 16+)
+### 3. Enable Developer Mode
 
 After first build attempt:
 
@@ -58,16 +84,39 @@ Build and run from Xcode again. The app should now install and launch.
 
 ## Usage
 
-1. Open host app and configure API URL (e.g., `http://100.x.x.x:3000`)
-2. In Safari, tap Share button
-3. Select "MemeGTD" from share sheet
-4. Article will be extracted and saved
+1. Open the app and configure API URL in Settings (gear icon in side menu)
+2. Browse memos in the timeline view
+3. Tap a memo to view its thread and add comments
+4. Use the search bar with `label:book` syntax to filter by labels
+5. In Safari, tap Share → "MemeGTD" to save articles
+
+## Deploy (Claude Code)
+
+Not enrolled in Apple Developer Program, so apps signed with a free developer certificate **expire after 7 days**. Periodic rebuild and reinstall is required.
+
+The deploy process is automated via the Claude Code skill (`ios-deploy`).
+
+```
+# Just ask Claude Code:
+> deploy the ios app
+```
+
+What the skill does:
+1. Build for Simulator and Device in **parallel**
+2. After both builds succeed, install on Simulator and Device in **parallel**
+3. Auto-launch the app on Simulator
+
+Prerequisites:
+- iPhone connected to Mac via USB
+- Xcode signing configured for both targets (first time only)
+- Device ID set in `.claude/skills/ios-deploy/SKILL.md`
 
 ## Notes
 
-- **Without Apple Developer Program**: App expires after 7 days, rebuild required
+- **7-day rule**: Free developer certificate expires after 7 days. Rebuild and reinstall required
 - **Tailscale**: Must be connected on iPhone for API access
 - **Share Extension Memory Limit**: 120MB
+- **Dark mode**: Not supported (forced light mode)
 
 ## Update JavaScript Bundle
 
@@ -86,7 +135,7 @@ Settings → General → VPN & Device Management → Developer App → Trust
 
 ### "API URL is not configured"
 
-Open the main MemeGTD app and set your API URL.
+Open the app → side menu → gear icon → set your API URL.
 
 ### "Network error"
 
