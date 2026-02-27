@@ -47,13 +47,7 @@ struct MemoListView: View {
                             )
 
                             if showTimestamp {
-                                Text(TimelineHelpers.formatTimelineTime(iso: memo.createdAt))
-                                    .font(.system(size: 11))
-                                    .foregroundColor(Color(.systemGray))
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.horizontal, 16)
-                                    .padding(.top, 4)
-                                    .padding(.bottom, -2)
+                                TimelineTimestamp(text: TimelineHelpers.formatTimelineTime(iso: memo.createdAt))
                             }
 
                             Button(action: {
@@ -328,20 +322,3 @@ private struct BottomBar: View {
     }
 }
 
-// MARK: - Shared pill surface
-
-private struct PillSurface: ViewModifier {
-    let radius: CGFloat
-
-    func body(content: Content) -> some View {
-        content
-            .background(Color(.systemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: radius))
-            .overlay(
-                RoundedRectangle(cornerRadius: radius)
-                    .stroke(Color(.separator).opacity(0.4), lineWidth: 0.5)
-            )
-            .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
-            .shadow(color: .black.opacity(0.04), radius: 2, x: 0, y: 1)
-    }
-}

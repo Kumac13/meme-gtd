@@ -14,8 +14,7 @@ struct FloatingComposer: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            // Text field
+        HStack(alignment: .center, spacing: 0) {
             TextField(placeholder, text: $text, axis: .vertical)
                 .lineLimit(1...5)
                 .textFieldStyle(.plain)
@@ -24,38 +23,28 @@ struct FloatingComposer: View {
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .padding(.leading, 16)
-                .padding(.trailing, 46)
-                .padding(.top, 13)
-                .padding(.bottom, 10)
+                .padding(.trailing, 8)
+                .padding(.top, 18)
+                .padding(.bottom, 16)
                 .focused($isFocused)
                 .disabled(disabled || submitting)
                 .onSubmit {
                     if canSubmit { onSubmit() }
                 }
 
-            // Send button
             Button(action: {
                 if canSubmit { onSubmit() }
             }) {
                 Image(systemName: "arrow.up")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundColor(.white)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 32, height: 32)
                     .background(canSubmit ? Color.accent : Color(.systemGray4))
                     .clipShape(Circle())
             }
             .disabled(!canSubmit)
-            .padding(.trailing, 8)
-            .padding(.bottom, 7)
+            .padding(.trailing, 10)
         }
-        // Independent surface: background + rounded corners + shadow
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 22))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22)
-                .stroke(Color(.separator).opacity(0.4), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
-        .shadow(color: .black.opacity(0.04), radius: 2, x: 0, y: 1)
+        .modifier(PillSurface(radius: 22))
     }
 }

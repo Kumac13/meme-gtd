@@ -1,41 +1,23 @@
 import SwiftUI
 
+/// Thread item matching MemoTimelineItem layout. Uses shared MemoBody.
+/// Timestamps and date bucket headers are rendered externally in MemoDetailView.
 struct ThreadItem: View {
     let bodyMd: String
-    let createdAt: String
-    let showGapTimestamp: Bool
-    let gapTimestampText: String
-    var isOriginalMemo: Bool = false
+    var labels: [String]?
     var onEdit: (() -> Void)?
     var onDelete: (() -> Void)?
     var onCopy: (() -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Gap timestamp
-            if showGapTimestamp {
-                Text(gapTimestampText)
-                    .font(.caption2)
-                    .foregroundColor(.textSecondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-            }
+        HStack(alignment: .top, spacing: 10) {
+            MemoBody(bodyMd: bodyMd, labels: labels)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Content
-            VStack(alignment: .leading, spacing: 8) {
-                // Markdown body
-                MarkdownBody(bodyMd, fontSize: 16, color: .textPrimary)
-                    .textSelection(.enabled)
+            Spacer(minLength: 0)
 
-                // Timestamp
-                Text(TimelineHelpers.formatTimelineTime(iso: createdAt))
-                    .font(.caption2)
-                    .foregroundColor(.textSecondary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contextMenu {
+            // Three-dot menu (right edge, matching comment icon position in list)
+            Menu {
                 if let onCopy = onCopy {
                     Button(action: onCopy) {
                         Label("Copy", systemImage: "doc.on.doc")
@@ -51,7 +33,17 @@ struct ThreadItem: View {
                         Label("Delete", systemImage: "trash")
                     }
                 }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 13))
+                    .foregroundColor(.textSecondary)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
             }
+            .padding(.top, 2)
         }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
