@@ -69,9 +69,6 @@ struct MemoDetailView: View {
                     }
                 }
                 .scrollDismissesKeyboard(.immediately)
-                .onTapGesture {
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                }
                 .onChange(of: viewModel.comments.count) { _ in
                     withAnimation {
                         proxy.scrollTo("threadBottom", anchor: .bottom)

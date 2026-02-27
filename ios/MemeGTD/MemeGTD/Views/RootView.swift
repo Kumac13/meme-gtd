@@ -73,6 +73,7 @@ struct RootView: View {
     }
 
     private func openMenu() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         HapticManager.impact(.light)
         isMenuOpen = true
     }

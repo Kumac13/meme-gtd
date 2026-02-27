@@ -65,9 +65,6 @@ struct MemoListView: View {
                     }
                 }
                 .scrollDismissesKeyboard(.immediately)
-                .onTapGesture {
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                }
                 .refreshable {
                     // .refreshable cancels its Task when the user lifts their finger,
                     // which cancels URLSession requests. Use a detached continuation
