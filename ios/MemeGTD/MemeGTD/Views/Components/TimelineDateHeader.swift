@@ -5,18 +5,12 @@ struct TimelineDateHeader: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Rectangle()
-                .fill(Color.border.opacity(0.5))
-                .frame(height: 1)
-
             Text(bucket.rawValue)
-                .font(.caption)
-                .fontWeight(.medium)
+                .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.textSecondary)
-                .layoutPriority(1)
 
             Rectangle()
-                .fill(Color.border.opacity(0.5))
+                .fill(Color(.systemGray4).opacity(0.5))
                 .frame(height: 1)
         }
         .padding(.horizontal, 16)
