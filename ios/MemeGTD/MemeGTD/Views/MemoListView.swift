@@ -18,21 +18,13 @@ struct MemoListView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        // Load more indicator
-                        if viewModel.hasMore {
-                            Button(action: {
-                                Task { await viewModel.loadOlderMemos() }
-                            }) {
-                                if viewModel.isLoadingMore {
-                                    ProgressView()
-                                        .padding()
-                                } else {
-                                    Text("Load older memos")
-                                        .font(.caption)
-                                        .foregroundColor(.textSecondary)
-                                        .padding()
-                                }
-                            }
+                        // "No older memos" indicator
+                        if !viewModel.hasMore && !viewModel.memos.isEmpty {
+                            Text("No older memos")
+                                .font(.caption)
+                                .foregroundColor(Color(.systemGray))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
                         }
 
                         // Timeline content
@@ -83,7 +75,12 @@ struct MemoListView: View {
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .refreshable {
-                    await viewModel.loadMemos()
+                    // Pull-to-refresh at top of reversed list = load older memos
+                    if viewModel.hasMore {
+                        await viewModel.loadOlderMemos()
+                    } else {
+                        await viewModel.loadMemos()
+                    }
                 }
                 .onAppear {
                     if viewModel.memos.isEmpty {
