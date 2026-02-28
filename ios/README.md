@@ -111,6 +111,52 @@ Prerequisites:
 - Xcode signing configured for both targets (first time only)
 - Device ID set in `.claude/skills/ios-deploy/SKILL.md`
 
+## Design System
+
+### Liquid Glass (iOS 26)
+
+All floating UI elements use iOS 26 Liquid Glass depth effects. The design is built on two primitives:
+
+#### `PillSurface` (ViewModifier)
+
+The single source of truth for floating element appearance. Apply to any view with `.modifier(PillSurface(radius:))`.
+
+- Uses `.glassEffect(.regular)` — provides backdrop blur, edge highlights, and depth automatically
+- No manual background color, border stroke, or shadow needed
+- Already applied to: `FloatingComposer`, `BottomBar` pills, info circle button
+
+When adding new floating elements (e.g., Task action buttons, Project cards), use `PillSurface` to maintain visual consistency.
+
+#### `safeAreaBar` + `scrollEdgeEffectStyle` (layout pattern)
+
+Bottom bars are placed inside `.safeAreaBar(edge: .bottom)` instead of `ZStack` overlays. This enables:
+
+- Automatic safe area inset management (no manual spacer height)
+- Progressive blur where scrolling content meets the bar (scroll edge effect)
+- Proper backdrop blur of underlying content
+
+When creating a new list view (e.g., TaskListView, ProjectListView), follow this pattern:
+
+```swift
+ScrollView {
+    LazyVStack(spacing: 0) {
+        // ... content ...
+        Color.clear.frame(height: 1).id("bottom")
+    }
+}
+.scrollEdgeEffectStyle(.soft, for: .bottom)
+.safeAreaBar(edge: .bottom) {
+    // bottom bar content here
+    YourBottomBar()
+        .padding(.horizontal, 16)
+        .padding(.bottom, 10)
+}
+```
+
+### Side Menu
+
+Claude-style slide-out drawer with cream background (`#F5F0E8`) and content opacity fade. Implemented in `SideMenuView.swift` and `RootView.swift`.
+
 ## Notes
 
 - **7-day rule**: Free developer certificate expires after 7 days. Rebuild and reinstall required
