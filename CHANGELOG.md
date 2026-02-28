@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.21.0 - 2026-02-28
+
+### New Features
+
+- **iOS Liquid Glass**: Replace opaque PillSurface with `.glassEffect(.regular)` for iOS 26 Liquid Glass appearance on all floating UI elements
+- **iOS Depth Effects**: Replace ZStack bottom bar layout with `.safeAreaBar` + `.scrollEdgeEffectStyle(.soft)` for progressive scroll blur in MemoListView and MemoDetailView
+- **iOS Side Menu Redesign**: Cream background with dedicated menu colors and content opacity fade
+
+### Documentation
+
+- Add Design System section to `ios/README.md` documenting PillSurface, safeAreaBar pattern, and side menu design
+
 ## 0.20.2 - 2026-02-14
 
 ### Bug Fixes
