@@ -17,105 +17,102 @@ struct MemoListView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Layer 1: Scrollable content
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        if !viewModel.hasMore && !viewModel.memos.isEmpty {
-                            Text("No older memos")
-                                .font(.caption)
-                                .foregroundColor(Color(.systemGray))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                        }
-
-                        ForEach(Array(reversedMemos.enumerated()), id: \.element.id) { index, memo in
-                            let previousMemo = index > 0 ? reversedMemos[index - 1] : nil
-
-                            let currentBucket = TimelineHelpers.getTimelineDateBucket(iso: memo.createdAt)
-                            let previousBucket = previousMemo.map { TimelineHelpers.getTimelineDateBucket(iso: $0.createdAt) }
-                            let bucketChanged = previousBucket == nil || currentBucket != previousBucket
-
-                            if bucketChanged {
-                                TimelineDateHeader(bucket: currentBucket)
-                            }
-
-                            let showTimestamp = bucketChanged || TimelineHelpers.shouldShowGapTimestamp(
-                                previousIso: previousMemo?.createdAt,
-                                currentIso: memo.createdAt
-                            )
-
-                            if showTimestamp {
-                                TimelineTimestamp(text: TimelineHelpers.formatTimelineTime(iso: memo.createdAt))
-                            }
-
-                            Button(action: {
-                                HapticManager.selection()
-                                navigationPath.append(memo.id)
-                            }) {
-                                MemoTimelineItem(memo: memo)
-                            }
-                            .buttonStyle(.plain)
-                            .padding(.horizontal, 16)
-                        }
-
-                        Color.clear.frame(height: 90)
-                            .id("bottom")
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    if !viewModel.hasMore && !viewModel.memos.isEmpty {
+                        Text("No older memos")
+                            .font(.caption)
+                            .foregroundColor(Color(.systemGray))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
                     }
-                }
-                .scrollDismissesKeyboard(.immediately)
-                .refreshable {
-                    // .refreshable cancels its Task when the user lifts their finger,
-                    // which cancels URLSession requests. Use a detached continuation
-                    // to keep the network call alive.
-                    await withCheckedContinuation { continuation in
-                        Task { @MainActor in
-                            if viewModel.hasMore {
-                                await viewModel.loadOlderMemos()
-                            } else {
-                                await viewModel.loadMemos()
-                            }
-                            continuation.resume()
+
+                    ForEach(Array(reversedMemos.enumerated()), id: \.element.id) { index, memo in
+                        let previousMemo = index > 0 ? reversedMemos[index - 1] : nil
+
+                        let currentBucket = TimelineHelpers.getTimelineDateBucket(iso: memo.createdAt)
+                        let previousBucket = previousMemo.map { TimelineHelpers.getTimelineDateBucket(iso: $0.createdAt) }
+                        let bucketChanged = previousBucket == nil || currentBucket != previousBucket
+
+                        if bucketChanged {
+                            TimelineDateHeader(bucket: currentBucket)
                         }
+
+                        let showTimestamp = bucketChanged || TimelineHelpers.shouldShowGapTimestamp(
+                            previousIso: previousMemo?.createdAt,
+                            currentIso: memo.createdAt
+                        )
+
+                        if showTimestamp {
+                            TimelineTimestamp(text: TimelineHelpers.formatTimelineTime(iso: memo.createdAt))
+                        }
+
+                        Button(action: {
+                            HapticManager.selection()
+                            navigationPath.append(memo.id)
+                        }) {
+                            MemoTimelineItem(memo: memo)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 16)
                     }
+
+                    Color.clear.frame(height: 1)
+                        .id("bottom")
                 }
-                .onAppear {
-                    if viewModel.memos.isEmpty {
-                        Task {
+            }
+            .scrollDismissesKeyboard(.immediately)
+            .scrollEdgeEffectStyle(.soft, for: .bottom)
+            .refreshable {
+                // .refreshable cancels its Task when the user lifts their finger,
+                // which cancels URLSession requests. Use a detached continuation
+                // to keep the network call alive.
+                await withCheckedContinuation { continuation in
+                    Task { @MainActor in
+                        if viewModel.hasMore {
+                            await viewModel.loadOlderMemos()
+                        } else {
                             await viewModel.loadMemos()
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                withAnimation {
-                                    proxy.scrollTo("bottom", anchor: .bottom)
-                                }
-                            }
                         }
+                        continuation.resume()
                     }
                 }
-                .onChange(of: viewModel.memos.count) { _ in
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                        withAnimation {
-                            proxy.scrollTo("bottom", anchor: .bottom)
+            }
+            .onAppear {
+                if viewModel.memos.isEmpty {
+                    Task {
+                        await viewModel.loadMemos()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation {
+                                proxy.scrollTo("bottom", anchor: .bottom)
+                            }
                         }
                     }
                 }
             }
-
-            // Layer 2: Floating bottom bar
-            BottomBar(
-                mode: $barMode,
-                memoText: $viewModel.newMemoBody,
-                searchText: $viewModel.searchQuery,
-                bookmarkFilter: $viewModel.bookmarkFilter,
-                isLoading: viewModel.isLoading,
-                isCreating: viewModel.isCreating,
-                onCreateMemo: { Task { await viewModel.createMemo() } },
-                onSearch: { viewModel.search() }
-            )
-            .padding(.horizontal, 16)
-            .padding(.bottom, 10)
+            .onChange(of: viewModel.memos.count) { _ in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    withAnimation {
+                        proxy.scrollTo("bottom", anchor: .bottom)
+                    }
+                }
+            }
+            .safeAreaBar(edge: .bottom) {
+                BottomBar(
+                    mode: $barMode,
+                    memoText: $viewModel.newMemoBody,
+                    searchText: $viewModel.searchQuery,
+                    bookmarkFilter: $viewModel.bookmarkFilter,
+                    isLoading: viewModel.isLoading,
+                    isCreating: viewModel.isCreating,
+                    onCreateMemo: { Task { await viewModel.createMemo() } },
+                    onSearch: { viewModel.search() }
+                )
+                .padding(.horizontal, 16)
+                .padding(.bottom, 10)
+            }
         }
-        .background(Color(.systemBackground))
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: onMenuTap) {

@@ -17,94 +17,88 @@ struct MemoDetailView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Content layer
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        if let memo = viewModel.memo {
-                            let allItems = buildTimelineItems(memo: memo, comments: viewModel.comments)
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    if let memo = viewModel.memo {
+                        let allItems = buildTimelineItems(memo: memo, comments: viewModel.comments)
 
-                            ForEach(Array(allItems.enumerated()), id: \.element.id) { index, item in
-                                let previousItem = index > 0 ? allItems[index - 1] : nil
+                        ForEach(Array(allItems.enumerated()), id: \.element.id) { index, item in
+                            let previousItem = index > 0 ? allItems[index - 1] : nil
 
-                                let currentBucket = TimelineHelpers.getTimelineDateBucket(iso: item.createdAt)
-                                let previousBucket = previousItem.map { TimelineHelpers.getTimelineDateBucket(iso: $0.createdAt) }
-                                let bucketChanged = previousBucket == nil || currentBucket != previousBucket
+                            let currentBucket = TimelineHelpers.getTimelineDateBucket(iso: item.createdAt)
+                            let previousBucket = previousItem.map { TimelineHelpers.getTimelineDateBucket(iso: $0.createdAt) }
+                            let bucketChanged = previousBucket == nil || currentBucket != previousBucket
 
-                                if bucketChanged {
-                                    TimelineDateHeader(bucket: currentBucket)
-                                }
-
-                                let showTimestamp = bucketChanged || TimelineHelpers.shouldShowGapTimestamp(
-                                    previousIso: previousItem?.createdAt,
-                                    currentIso: item.createdAt
-                                )
-
-                                if showTimestamp {
-                                    TimelineTimestamp(text: TimelineHelpers.formatTimelineTime(iso: item.createdAt))
-                                }
-
-                                ThreadItem(
-                                    bodyMd: item.bodyMd,
-                                    labels: nil,
-                                    onDelete: {
-                                        if item.isOriginal {
-                                            showDeleteConfirm = true
-                                        } else {
-                                            Task { await viewModel.deleteComment(item.commentId!) }
-                                        }
-                                    },
-                                    onCopy: {
-                                        UIPasteboard.general.string = item.bodyMd
-                                        HapticManager.notification(.success)
-                                    }
-                                )
+                            if bucketChanged {
+                                TimelineDateHeader(bucket: currentBucket)
                             }
+
+                            let showTimestamp = bucketChanged || TimelineHelpers.shouldShowGapTimestamp(
+                                previousIso: previousItem?.createdAt,
+                                currentIso: item.createdAt
+                            )
+
+                            if showTimestamp {
+                                TimelineTimestamp(text: TimelineHelpers.formatTimelineTime(iso: item.createdAt))
+                            }
+
+                            ThreadItem(
+                                bodyMd: item.bodyMd,
+                                labels: nil,
+                                onDelete: {
+                                    if item.isOriginal {
+                                        showDeleteConfirm = true
+                                    } else {
+                                        Task { await viewModel.deleteComment(item.commentId!) }
+                                    }
+                                },
+                                onCopy: {
+                                    UIPasteboard.general.string = item.bodyMd
+                                    HapticManager.notification(.success)
+                                }
+                            )
                         }
+                    }
 
-                        // Bottom spacer for composer
-                        Color.clear.frame(height: 90)
-                            .id("threadBottom")
-                    }
-                }
-                .scrollDismissesKeyboard(.immediately)
-                .onChange(of: viewModel.comments.count) { _ in
-                    withAnimation {
-                        proxy.scrollTo("threadBottom", anchor: .bottom)
-                    }
+                    Color.clear.frame(height: 1)
+                        .id("threadBottom")
                 }
             }
-
-            // Overlay layer: info icon + reply composer
-            HStack(alignment: .bottom, spacing: 10) {
-                // Info circle button (same style as list's search icon)
-                Button(action: {
-                    HapticManager.impact(.light)
-                    showInfoSheet = true
-                }) {
-                    Image(systemName: "info.circle")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(Color(.systemGray))
-                        .frame(width: 52, height: 52)
+            .scrollDismissesKeyboard(.immediately)
+            .scrollEdgeEffectStyle(.soft, for: .bottom)
+            .onChange(of: viewModel.comments.count) { _ in
+                withAnimation {
+                    proxy.scrollTo("threadBottom", anchor: .bottom)
                 }
-                .modifier(PillSurface(radius: 26))
-
-                // Reply composer
-                FloatingComposer(
-                    text: $viewModel.replyBody,
-                    placeholder: "Add a comment...",
-                    disabled: viewModel.isLoading,
-                    submitting: viewModel.isSubmittingReply,
-                    onSubmit: {
-                        Task { await viewModel.addComment() }
-                    }
-                )
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 10)
+            .safeAreaBar(edge: .bottom) {
+                HStack(alignment: .bottom, spacing: 10) {
+                    Button(action: {
+                        HapticManager.impact(.light)
+                        showInfoSheet = true
+                    }) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundColor(Color(.systemGray))
+                            .frame(width: 52, height: 52)
+                    }
+                    .modifier(PillSurface(radius: 26))
+
+                    FloatingComposer(
+                        text: $viewModel.replyBody,
+                        placeholder: "Add a comment...",
+                        disabled: viewModel.isLoading,
+                        submitting: viewModel.isSubmittingReply,
+                        onSubmit: {
+                            Task { await viewModel.addComment() }
+                        }
+                    )
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 10)
+            }
         }
-        .background(Color(.systemBackground))
         .enableSwipeBack()
         .navigationBarBackButtonHidden(true)
         .toolbar {
