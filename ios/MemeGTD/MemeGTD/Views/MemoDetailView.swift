@@ -9,6 +9,8 @@ struct MemoDetailView: View {
     @State private var showDeleteConfirm: Bool = false
     @State private var showInfoSheet: Bool = false
     @State private var showCopiedFeedback: Bool = false
+    @State private var editingMemo: Bool = false
+    @State private var editingCommentId: Int? = nil
 
     init(memoId: Int, onMenuTap: @escaping () -> Void) {
         self.memoId = memoId
@@ -46,6 +48,16 @@ struct MemoDetailView: View {
                             ThreadItem(
                                 bodyMd: item.bodyMd,
                                 labels: nil,
+                                onEdit: {
+                                    viewModel.replyBody = item.bodyMd
+                                    if item.isOriginal {
+                                        editingMemo = true
+                                        editingCommentId = nil
+                                    } else {
+                                        editingMemo = false
+                                        editingCommentId = item.commentId
+                                    }
+                                },
                                 onDelete: {
                                     if item.isOriginal {
                                         showDeleteConfirm = true
@@ -87,11 +99,31 @@ struct MemoDetailView: View {
 
                     FloatingComposer(
                         text: $viewModel.replyBody,
-                        placeholder: "Add a comment...",
+                        placeholder: (editingMemo || editingCommentId != nil) ? "Edit..." : "Add a comment...",
                         disabled: viewModel.isLoading,
                         submitting: viewModel.isSubmittingReply,
+                        notice: editingMemo ? "Editing this memo" : editingCommentId != nil ? "Editing this comment" : nil,
+                        onDismissNotice: {
+                            editingMemo = false
+                            editingCommentId = nil
+                            viewModel.replyBody = ""
+                        },
                         onSubmit: {
-                            Task { await viewModel.addComment() }
+                            if editingMemo {
+                                Task {
+                                    await viewModel.updateMemo(bodyMd: viewModel.replyBody)
+                                    editingMemo = false
+                                    viewModel.replyBody = ""
+                                }
+                            } else if let commentId = editingCommentId {
+                                Task {
+                                    await viewModel.updateComment(commentId, bodyMd: viewModel.replyBody)
+                                    editingCommentId = nil
+                                    viewModel.replyBody = ""
+                                }
+                            } else {
+                                Task { await viewModel.addComment() }
+                            }
                         }
                     )
                 }
