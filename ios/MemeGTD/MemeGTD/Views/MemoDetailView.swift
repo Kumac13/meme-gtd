@@ -79,6 +79,32 @@ struct MemoDetailView: View {
             }
             .scrollDismissesKeyboard(.immediately)
             .scrollEdgeEffectStyle(.soft, for: .bottom)
+            .refreshable {
+                await withCheckedContinuation { continuation in
+                    Task { @MainActor in
+                        // 1. トリガー到達ハプティクス
+                        HapticManager.impact(.medium)
+
+                        // データを裏で取得（UIには反映しない）
+                        let start = Date()
+                        let result = await viewModel.fetchMemo()
+
+                        // 最低1秒スピナー表示
+                        let elapsed = Date().timeIntervalSince(start)
+                        let remaining = 0.75 - elapsed
+                        if remaining > 0 {
+                            try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+                        }
+
+                        // 2. データをUIに反映 + 完了ハプティクス
+                        if let (memo, comments) = result {
+                            viewModel.applyMemo(memo, comments: comments)
+                        }
+                        HapticManager.notification(.success)
+                        continuation.resume()
+                    }
+                }
+            }
             .onChange(of: viewModel.comments.count) { _ in
                 withAnimation {
                     proxy.scrollTo("threadBottom", anchor: .bottom)

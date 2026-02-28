@@ -92,6 +92,45 @@ class MemoListViewModel: ObservableObject {
         isLoading = false
     }
 
+    // MARK: - Fetch without UI update (for pull-to-refresh)
+
+    func fetchMemos() async -> MemoListResponse? {
+        do {
+            return try await APIClient.shared.get(
+                path: "/api/memos",
+                queryItems: buildQueryItems(offset: 0)
+            )
+        } catch {
+            self.error = error.localizedDescription
+            return nil
+        }
+    }
+
+    func fetchOlderMemos() async -> MemoListResponse? {
+        guard hasMore, !isLoadingMore else { return nil }
+        do {
+            return try await APIClient.shared.get(
+                path: "/api/memos",
+                queryItems: buildQueryItems(offset: memos.count)
+            )
+        } catch is CancellationError {
+            return nil
+        } catch {
+            self.error = error.localizedDescription
+            return nil
+        }
+    }
+
+    func applyMemos(_ response: MemoListResponse) {
+        memos = response.data
+        total = response.total
+    }
+
+    func applyOlderMemos(_ response: MemoListResponse) {
+        memos.append(contentsOf: response.data)
+        total = response.total
+    }
+
     func loadOlderMemos() async {
         logger.info("loadOlderMemos: hasMore=\(self.hasMore), isLoadingMore=\(self.isLoadingMore), count=\(self.memos.count), total=\(self.total)")
         guard hasMore, !isLoadingMore else {

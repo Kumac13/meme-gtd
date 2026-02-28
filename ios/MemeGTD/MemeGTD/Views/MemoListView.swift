@@ -70,11 +70,35 @@ struct MemoListView: View {
                 // to keep the network call alive.
                 await withCheckedContinuation { continuation in
                     Task { @MainActor in
-                        if viewModel.hasMore {
-                            await viewModel.loadOlderMemos()
+                        // 1. トリガー到達ハプティクス
+                        HapticManager.impact(.medium)
+
+                        // データを裏で取得（UIには反映しない）
+                        let start = Date()
+                        let hasMore = viewModel.hasMore
+                        let response: MemoListResponse?
+                        if hasMore {
+                            response = await viewModel.fetchOlderMemos()
                         } else {
-                            await viewModel.loadMemos()
+                            response = await viewModel.fetchMemos()
                         }
+
+                        // 最低1秒スピナー表示
+                        let elapsed = Date().timeIntervalSince(start)
+                        let remaining = 0.75 - elapsed
+                        if remaining > 0 {
+                            try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+                        }
+
+                        // 2. データをUIに反映 + 完了ハプティクス
+                        if let response = response {
+                            if hasMore {
+                                viewModel.applyOlderMemos(response)
+                            } else {
+                                viewModel.applyMemos(response)
+                            }
+                        }
+                        HapticManager.notification(.success)
                         continuation.resume()
                     }
                 }
@@ -91,13 +115,6 @@ struct MemoListView: View {
                     }
                 }
             }
-            .onChange(of: viewModel.memos.count) { _ in
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    withAnimation {
-                        proxy.scrollTo("bottom", anchor: .bottom)
-                    }
-                }
-            }
             .safeAreaBar(edge: .bottom) {
                 BottomBar(
                     mode: $barMode,
@@ -106,7 +123,16 @@ struct MemoListView: View {
                     bookmarkFilter: $viewModel.bookmarkFilter,
                     isLoading: viewModel.isLoading,
                     isCreating: viewModel.isCreating,
-                    onCreateMemo: { Task { await viewModel.createMemo() } },
+                    onCreateMemo: {
+                        Task {
+                            await viewModel.createMemo()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                withAnimation {
+                                    proxy.scrollTo("bottom", anchor: .bottom)
+                                }
+                            }
+                        }
+                    },
                     onSearch: { viewModel.search() }
                 )
                 .padding(.horizontal, 16)
