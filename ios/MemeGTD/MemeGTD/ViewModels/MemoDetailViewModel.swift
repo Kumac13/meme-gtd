@@ -124,6 +124,23 @@ class MemoDetailViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Update Memo
+
+    func updateMemo(bodyMd: String) async {
+        do {
+            let request = UpdateMemoRequest(bodyMd: bodyMd, isBookmarked: nil)
+            let updated: Memo = try await APIClient.shared.patch(
+                path: "/api/memos/\(memoId)",
+                body: request
+            )
+            memo = updated
+            HapticManager.notification(.success)
+        } catch {
+            self.error = error.localizedDescription
+            HapticManager.notification(.error)
+        }
+    }
+
     func deleteComment(_ commentId: Int) async {
         do {
             try await APIClient.shared.delete(

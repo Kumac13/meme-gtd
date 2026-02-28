@@ -5,6 +5,8 @@ struct FloatingComposer: View {
     let placeholder: String
     var disabled: Bool = false
     var submitting: Bool = false
+    var notice: String? = nil
+    var onDismissNotice: (() -> Void)? = nil
     let onSubmit: () -> Void
 
     @FocusState private var isFocused: Bool
@@ -14,36 +16,62 @@ struct FloatingComposer: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 0) {
-            TextField(placeholder, text: $text, axis: .vertical)
-                .lineLimit(1...5)
-                .textFieldStyle(.plain)
-                .font(.system(size: 14))
-                .tint(Color.accent)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .padding(.leading, 16)
-                .padding(.trailing, 8)
-                .padding(.top, 18)
-                .padding(.bottom, 16)
-                .focused($isFocused)
-                .disabled(disabled || submitting)
-                .onSubmit {
-                    if canSubmit { onSubmit() }
+        VStack(spacing: 0) {
+            if let notice = notice {
+                HStack(spacing: 6) {
+                    Text(notice)
+                        .font(.system(size: 13))
+                        .foregroundColor(.accentDark)
+                    Spacer()
+                    if let onDismiss = onDismissNotice {
+                        Button(action: onDismiss) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.accentDark)
+                                .frame(width: 24, height: 24)
+                                .contentShape(Rectangle())
+                        }
+                    }
                 }
-
-            Button(action: {
-                if canSubmit { onSubmit() }
-            }) {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 32, height: 32)
-                    .background(canSubmit ? Color.accent : Color(.systemGray4))
-                    .clipShape(Circle())
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.accent.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .padding(.horizontal, 10)
+                .padding(.top, 10)
             }
-            .disabled(!canSubmit)
-            .padding(.trailing, 10)
+
+            HStack(alignment: .center, spacing: 0) {
+                TextField(placeholder, text: $text, axis: .vertical)
+                    .lineLimit(1...5)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 14))
+                    .tint(Color.accent)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .padding(.leading, 16)
+                    .padding(.trailing, 8)
+                    .padding(.top, notice != nil ? 14 : 18)
+                    .padding(.bottom, 16)
+                    .focused($isFocused)
+                    .disabled(disabled || submitting)
+                    .onSubmit {
+                        if canSubmit { onSubmit() }
+                    }
+
+                Button(action: {
+                    if canSubmit { onSubmit() }
+                }) {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 32, height: 32)
+                        .background(canSubmit ? Color.accent : Color(.systemGray4))
+                        .clipShape(Circle())
+                }
+                .disabled(!canSubmit)
+                .padding(.trailing, 10)
+            }
         }
         .modifier(PillSurface(radius: 22))
     }
