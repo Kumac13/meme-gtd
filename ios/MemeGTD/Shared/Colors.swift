@@ -43,4 +43,9 @@ extension Color {
 
     // Border
     static let border = Color(hex: "#d1d5db")        // gray-300
+
+    // Menu
+    static let menuBackground = Color(hex: "#FCFBF9")  // barely-there warm tint
+    static let menuText = Color(hex: "#8E8E93")         // muted gray (iOS systemGray)
+    static let menuTextMuted = Color(hex: "#AEAEB2")    // lighter gray (iOS systemGray3)
 }

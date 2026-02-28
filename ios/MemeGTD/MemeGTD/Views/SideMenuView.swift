@@ -48,14 +48,14 @@ struct SideMenuView: View {
             }) {
                 Image(systemName: "gearshape")
                     .font(.system(size: 20))
-                    .foregroundColor(.textSecondary)
+                    .foregroundColor(.menuText)
                     .frame(width: 44, height: 44)
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 10)
         }
         .frame(maxHeight: .infinity)
-        .background(Color(.systemBackground))
+        .background(Color.menuBackground)
     }
 }
 
@@ -90,6 +90,6 @@ private struct MenuRow: View {
 
     private var foregroundColor: Color {
         if isSelected { return .accent }
-        return .textSecondary.opacity(0.5)
+        return .menuTextMuted
     }
 }

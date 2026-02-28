@@ -43,8 +43,10 @@ struct RootView: View {
                     )
                 }
             }
+            .opacity(isMenuOpen ? 0.6 : 1.0)
             .overlay {
-                Color.black.opacity(isMenuOpen ? 0.2 : 0)
+                Color.clear
+                    .contentShape(Rectangle())
                     .ignoresSafeArea()
                     .allowsHitTesting(isMenuOpen)
                     .onTapGesture { closeMenu() }
@@ -70,6 +72,7 @@ struct RootView: View {
             .animation(.spring(response: 0.32, dampingFraction: 0.88), value: isMenuOpen)
             .ignoresSafeArea()
         }
+        .background(Color.menuBackground)
     }
 
     private func openMenu() {
