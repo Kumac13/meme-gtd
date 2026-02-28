@@ -156,7 +156,7 @@ export default function EditableContent({
   };
 
   return (
-    <div className="bg-white border border-soft rounded-lg shadow-depth py-1 px-4">
+    <div className="bg-white border border-gray-200 rounded-lg py-1 px-4">
       <div className="flex items-center justify-between py-1 border-b border-gray-200">
         <div className="text-xs text-gray-500">
           <span title={updatedAt}>{formatRelativeTime(updatedAt)}</span>
@@ -174,7 +174,7 @@ export default function EditableContent({
               </svg>
             </button>
             {isMenuOpen && (
-              <div className="absolute right-0 mt-1 w-32 bg-white border border-soft rounded-lg shadow-dropdown z-10">
+              <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
                 <button
                   onClick={() => {
                     handleStartEdit();
@@ -218,7 +218,7 @@ export default function EditableContent({
                 onChange={(e) => setEditingTitle(e.target.value)}
                 onKeyDown={handleKeyDown}
                 aria-keyshortcuts="Control+Enter"
-                className="w-full px-3 py-2 border border-soft-md rounded-lg shadow-inset-input focus:outline-none focus:shadow-focus-depth focus:border-transparent transition-shadow"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-500"
                 placeholder="Task title"
               />
             </div>

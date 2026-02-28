@@ -131,7 +131,7 @@ export function TaskDetailPanel({ taskId, onClose, onTaskUpdated }: TaskDetailPa
       />
 
       {/* Panel: full width on mobile, right half on desktop */}
-      <div className="fixed top-0 right-0 bottom-0 w-full sm:w-1/2 bg-white shadow-panel border-l border-soft z-50 flex flex-col overflow-hidden rounded-t-xl sm:rounded-none">
+      <div className="fixed top-0 right-0 bottom-0 w-full sm:w-1/2 bg-white shadow-xl border-l border-gray-200 z-50 flex flex-col overflow-hidden rounded-t-xl sm:rounded-none">
         {/* Header with title, #ID link and close button */}
         <div className="flex items-center justify-between p-3 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center gap-2 min-w-0 flex-1">

@@ -270,7 +270,7 @@ interface ActivityListProps {
 export function ActivityList({ activities }: ActivityListProps) {
   if (activities.length === 0) {
     return (
-      <div className="bg-white border border-soft rounded-lg shadow-depth p-8 text-center text-gray-500">
+      <div className="bg-white border border-gray-200 rounded-lg p-8 text-center text-gray-500">
         No activities found
       </div>
     );
@@ -280,7 +280,7 @@ export function ActivityList({ activities }: ActivityListProps) {
   const dateKeys = activities.map((a) => getDateKey(a.occurredAt));
 
   return (
-    <div className="bg-white border border-soft rounded-lg shadow-depth pt-4 pb-4">
+    <div className="bg-white border border-gray-200 rounded-lg pt-4 pb-4">
       {activities.map((activity, index) => {
         const currentDateKey = dateKeys[index];
         const prevDateKey = index > 0 ? dateKeys[index - 1] : null;

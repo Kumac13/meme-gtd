@@ -187,7 +187,7 @@ export function ProjectsSection({ itemId, itemType: _ }: ProjectsSectionProps) {
       {isDropdownOpen && (
         <div
           ref={dropdownRef}
-          className="absolute top-full right-0 mt-2 w-80 bg-white border border-soft rounded-lg shadow-dropdown z-50 flex flex-col"
+          className="absolute top-full right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 flex flex-col"
           style={{ maxHeight: '400px' }}
         >
           {/* Search */}
@@ -197,7 +197,7 @@ export function ProjectsSection({ itemId, itemType: _ }: ProjectsSectionProps) {
               placeholder="Filter projects"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2 border border-soft-md rounded-lg text-sm shadow-inset-input focus:outline-none focus:shadow-focus-depth focus:border-transparent transition-shadow"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
             />
           </div>
 

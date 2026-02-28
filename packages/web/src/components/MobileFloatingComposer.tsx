@@ -43,7 +43,7 @@ export default function MobileFloatingComposer({
       style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))' }}
     >
       <div className="mx-auto max-w-4xl">
-        <div className="relative rounded-xl border border-soft bg-white shadow-floating">
+        <div className="relative rounded-xl border border-gray-200 bg-white shadow-sm">
           <textarea
             ref={textareaRef}
             value={value}
