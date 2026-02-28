@@ -46,6 +46,26 @@ class MemoDetailViewModel: ObservableObject {
         isLoading = false
     }
 
+    // MARK: - Fetch without UI update (for pull-to-refresh)
+
+    func fetchMemo() async -> (Memo, [Comment])? {
+        do {
+            let memo: Memo = try await APIClient.shared.get(path: "/api/memos/\(memoId)")
+            let commentList: [Comment] = try await APIClient.shared.get(
+                path: "/api/memos/\(memoId)/comments"
+            )
+            return (memo, commentList)
+        } catch {
+            self.error = error.localizedDescription
+            return nil
+        }
+    }
+
+    func applyMemo(_ memo: Memo, comments: [Comment]) {
+        self.memo = memo
+        self.comments = comments
+    }
+
     private func loadProjects() async {
         do {
             associatedProjects = try await APIClient.shared.get(path: "/api/issues/\(memoId)/projects")
