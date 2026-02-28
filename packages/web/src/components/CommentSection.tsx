@@ -151,7 +151,7 @@ export default function CommentSection({
       )}
 
       {/* New Comment Form */}
-      <form onSubmit={handleSubmitNewComment} className="bg-white border border-gray-200 rounded-lg p-4">
+      <form onSubmit={handleSubmitNewComment} className="bg-white border border-soft rounded-lg shadow-depth p-4">
         <MarkdownTextarea
           textareaRef={textareaRef}
           value={newCommentBody}

@@ -38,10 +38,10 @@ export default function FilterBar({
       {showBookmarkFilter && onBookmarkFilterChange && (
         <button
           onClick={() => onBookmarkFilterChange(!bookmarkFilter)}
-          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+          className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
             bookmarkFilter
-              ? 'bg-github-green-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-github-green-600 text-white shadow-raised'
+              : 'bg-gray-100/80 text-gray-700 shadow-inner-highlight hover:bg-gray-200/80'
           }`}
         >
           Bookmarked
@@ -55,10 +55,10 @@ export default function FilterBar({
             <button
               key={status}
               onClick={() => onStatusFilterChange(status)}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
                 statusFilter === status
-                  ? 'bg-github-green-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-github-green-600 text-white shadow-raised'
+                  : 'bg-gray-100/80 text-gray-700 shadow-inner-highlight hover:bg-gray-200/80'
               }`}
             >
               {status === 'all' ? 'All' : statusLabels[status] || status}

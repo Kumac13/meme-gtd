@@ -99,9 +99,9 @@ export function MarkdownTextarea({
   useAutoGrow(resolvedRef, value, mode);
 
   return (
-    <div className="border border-gray-300 rounded-md overflow-hidden">
+    <div className="border border-soft-md rounded-lg overflow-hidden shadow-inset-input">
       {/* Tab header */}
-      <div className="flex border-b border-gray-300 bg-gray-50">
+      <div className="flex border-b border-soft-md bg-gray-50/80">
         <button
           type="button"
           onClick={() => setMode('write')}

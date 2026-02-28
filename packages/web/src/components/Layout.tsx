@@ -12,7 +12,7 @@ export default function Layout() {
 
   return (
     <div className={isMemosRoute ? "min-h-screen bg-white sm:bg-gray-50" : "min-h-screen bg-gray-50"}>
-      <header className={isMemosRoute ? "bg-white shadow border-b border-gray-200 sm:border-b-0" : "bg-white shadow"}>
+      <header className={isMemosRoute ? "bg-white shadow-header border-b border-soft sm:border-b-0" : "bg-white shadow-header"}>
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex w-full sm:w-auto">

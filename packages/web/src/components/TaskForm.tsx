@@ -431,7 +431,7 @@ export default function TaskForm({
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={handleKeyDown}
           aria-keyshortcuts="Control+Enter"
-          className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 ${validationError ? 'border-red-300' : 'border-gray-300'
+          className={`w-full px-3 py-2 border rounded-lg shadow-inset-input focus:outline-none focus:shadow-focus-depth focus:border-transparent transition-shadow ${validationError ? 'border-red-300' : 'border-soft-md'
             }`}
           placeholder="Enter task title..."
           required
@@ -473,7 +473,7 @@ export default function TaskForm({
             id="status"
             value={status}
             onChange={(e) => setStatus(e.target.value as TaskStatus)}
-            className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 appearance-none bg-white bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3d%22http%3a%2f%2fwww.w3.org%2f2000%2fsvg%22%20viewBox%3d%220%200%2020%2020%22%20fill%3d%22%236b7280%22%3e%3cpath%20fill-rule%3d%22evenodd%22%20d%3d%22M5.23%207.21a.75.75%200%20011.06.02L10%2011.168l3.71-3.938a.75.75%200%20111.08%201.04l-4.25%204.5a.75.75%200%2001-1.08%200l-4.25-4.5a.75.75%200%2001.02-1.06z%22%20clip-rule%3d%22evenodd%22%2f%3e%3c%2fsvg%3e')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
+            className="w-full px-3 py-2 pr-8 border border-soft-md rounded-lg shadow-inset-input focus:outline-none focus:shadow-focus-depth focus:border-transparent appearance-none bg-white bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3d%22http%3a%2f%2fwww.w3.org%2f2000%2fsvg%22%20viewBox%3d%220%200%2020%2020%22%20fill%3d%22%236b7280%22%3e%3cpath%20fill-rule%3d%22evenodd%22%20d%3d%22M5.23%207.21a.75.75%200%20011.06.02L10%2011.168l3.71-3.938a.75.75%200%20111.08%201.04l-4.25%204.5a.75.75%200%2001-1.08%200l-4.25-4.5a.75.75%200%2001.02-1.06z%22%20clip-rule%3d%22evenodd%22%2f%3e%3c%2fsvg%3e')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat transition-shadow"
           >
             <option value="inbox">Inbox</option>
             <option value="open">Open</option>
@@ -493,13 +493,13 @@ export default function TaskForm({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Kind
           </label>
-          <div className="flex rounded-md border border-gray-300 overflow-hidden">
+          <div className="flex rounded-lg border border-soft-md overflow-hidden shadow-inset-input">
             <button
               type="button"
               onClick={() => setTaskKind('action')}
-              className={`flex-1 px-3 py-2 text-sm ${
+              className={`flex-1 px-3 py-2 text-sm transition-all ${
                 taskKind === 'action'
-                  ? 'bg-github-green-600 text-white'
+                  ? 'bg-github-green-600 text-white shadow-raised'
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
@@ -508,9 +508,9 @@ export default function TaskForm({
             <button
               type="button"
               onClick={() => setTaskKind('event')}
-              className={`flex-1 px-3 py-2 text-sm border-l border-gray-300 ${
+              className={`flex-1 px-3 py-2 text-sm border-l border-soft-md transition-all ${
                 taskKind === 'event'
-                  ? 'bg-github-green-600 text-white'
+                  ? 'bg-github-green-600 text-white shadow-raised'
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
@@ -634,7 +634,7 @@ export default function TaskForm({
 
           {/* Accordion Content */}
           {isProjectOpen && (
-            <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col" style={{ maxHeight: '300px' }}>
+            <div className="mt-2 bg-white border border-soft rounded-lg shadow-dropdown flex flex-col" style={{ maxHeight: '300px' }}>
               {/* Search */}
               <div className="p-3 border-b border-gray-200">
                 <input
@@ -642,7 +642,7 @@ export default function TaskForm({
                   placeholder="Filter projects..."
                   value={searchProjectQuery}
                   onChange={(e) => setSearchProjectQuery(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
+                  className="w-full px-3 py-2 border border-soft-md rounded-lg text-sm shadow-inset-input focus:outline-none focus:shadow-focus-depth focus:border-transparent transition-shadow"
                 />
               </div>
 
@@ -776,7 +776,7 @@ export default function TaskForm({
 
           {/* Accordion Content */}
           {isLabelOpen && (
-            <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col" style={{ maxHeight: '300px' }}>
+            <div className="mt-2 bg-white border border-soft rounded-lg shadow-dropdown flex flex-col" style={{ maxHeight: '300px' }}>
               {/* Search */}
               <div className="p-3 border-b border-gray-200">
                 <input
@@ -784,7 +784,7 @@ export default function TaskForm({
                   placeholder="Filter labels..."
                   value={searchLabelQuery}
                   onChange={(e) => setSearchLabelQuery(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
+                  className="w-full px-3 py-2 border border-soft-md rounded-lg text-sm shadow-inset-input focus:outline-none focus:shadow-focus-depth focus:border-transparent transition-shadow"
                 />
               </div>
 
@@ -952,14 +952,14 @@ export default function TaskForm({
         <button
           type="button"
           onClick={handleCancel}
-          className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500"
+          className="px-4 py-2 border border-soft-md rounded-lg shadow-inner-highlight text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 transition-shadow"
           disabled={submitting}
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 border border-transparent rounded-lg shadow-raised text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-shadow"
           disabled={submitting}
           title={`Save (${getShortcutHint()})`}
         >

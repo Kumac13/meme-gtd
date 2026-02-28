@@ -36,8 +36,8 @@ export default function KanbanCard({ item, onItemClick }: KanbanCardProps) {
       style={style}
       {...attributes}
       className={`
-        bg-white p-3 rounded border border-gray-200
-        hover:shadow-md transition-shadow cursor-pointer
+        bg-white p-3 rounded-lg border border-soft
+        shadow-depth hover:shadow-card-hover transition-shadow cursor-pointer
         ${isDragging ? 'opacity-50' : ''}
       `}
     >

@@ -66,19 +66,19 @@ export default function SearchInput({
   return (
     <div className="flex-1 relative">
       <div className="relative">
-        <IoSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+        <IoSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400/60 w-5 h-5" />
         <input
           type="text"
           value={localValue}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-github-green-600 focus:border-transparent"
+          className="w-full pl-10 pr-10 py-2 border border-soft-md rounded-lg shadow-inset-input focus:outline-none focus:shadow-focus-depth focus:border-transparent transition-shadow"
         />
         {localValue && (
           <button
             onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400/60 hover:text-gray-600"
             aria-label="Clear search"
           >
             <IoClose className="w-5 h-5" />

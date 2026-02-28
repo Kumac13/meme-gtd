@@ -112,7 +112,7 @@ export default function ItemList({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
+    <div className="bg-white border border-soft rounded-lg divide-y divide-gray-100 shadow-depth">
       {items.map((item) => {
         let itemPath: string;
         let itemType: "memo" | "task" | "project" | "article";
@@ -323,7 +323,7 @@ export default function ItemList({
                             className="fixed inset-0 z-10"
                             onClick={() => setMenuOpenId(null)}
                           />
-                          <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-20">
+                          <div className="absolute right-0 mt-1 w-32 bg-white border border-soft rounded-lg shadow-dropdown z-20">
                             <button
                               onClick={(e) => handleDelete(e, item.id)}
                               disabled={deleting === item.id}
