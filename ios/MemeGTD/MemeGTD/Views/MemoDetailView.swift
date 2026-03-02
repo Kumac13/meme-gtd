@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MemoDetailView: View {
     let memoId: Int
+    let initialBody: String?
     let onMenuTap: () -> Void
 
     @StateObject private var viewModel: MemoDetailViewModel
@@ -12,8 +13,9 @@ struct MemoDetailView: View {
     @State private var editingMemo: Bool = false
     @State private var editingCommentId: Int? = nil
 
-    init(memoId: Int, onMenuTap: @escaping () -> Void) {
+    init(memoId: Int, initialBody: String? = nil, onMenuTap: @escaping () -> Void) {
         self.memoId = memoId
+        self.initialBody = initialBody
         self.onMenuTap = onMenuTap
         self._viewModel = StateObject(wrappedValue: MemoDetailViewModel(memoId: memoId))
     }
@@ -169,8 +171,10 @@ struct MemoDetailView: View {
             }
 
             ToolbarItem(placement: .principal) {
-                Text("Memo")
+                Text(memoTitlePreview)
                     .font(.headline)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -212,6 +216,22 @@ struct MemoDetailView: View {
         .task {
             await viewModel.loadMemo()
         }
+    }
+
+    // MARK: - Title preview
+
+    private var memoTitlePreview: String {
+        let body = viewModel.memo?.bodyMd ?? initialBody
+        guard let body else { return "Memo" }
+        guard let firstLine = body
+            .components(separatedBy: "\n")
+            .first(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty })
+        else { return "Memo" }
+        // Strip markdown heading prefix (e.g. "## Title" -> "Title")
+        let stripped = firstLine.replacingOccurrences(
+            of: #"^#{1,6}\s+"#, with: "", options: .regularExpression
+        )
+        return stripped.isEmpty ? "Memo" : stripped
     }
 
     // MARK: - Build unified timeline items

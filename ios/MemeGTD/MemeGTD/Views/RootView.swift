@@ -1,5 +1,10 @@
 import SwiftUI
 
+struct MemoRoute: Hashable {
+    let memoId: Int
+    let initialBody: String
+}
+
 struct RootView: View {
     @State private var selectedTab: AppTab = .memos
     @State private var isMenuOpen: Bool = false
@@ -36,9 +41,10 @@ struct RootView: View {
                         SettingsView(onMenuTap: { openMenu() })
                     }
                 }
-                .navigationDestination(for: Int.self) { memoId in
+                .navigationDestination(for: MemoRoute.self) { route in
                     MemoDetailView(
-                        memoId: memoId,
+                        memoId: route.memoId,
+                        initialBody: route.initialBody,
                         onMenuTap: { openMenu() }
                     )
                 }
