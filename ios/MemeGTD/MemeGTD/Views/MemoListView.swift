@@ -227,7 +227,7 @@ private struct BottomBar: View {
                         removal: .scale(scale: 0.5, anchor: .trailing).combined(with: .opacity)
                     ))
             } else {
-                // Collapsed new-memo icon (accent colored)
+                // Collapsed new-memo icon
                 composeButton {
                     HapticManager.impact(.light)
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
@@ -326,19 +326,16 @@ private struct BottomBar: View {
         .modifier(PillSurface(radius: 26))
     }
 
-    // MARK: - Accent-colored compose button
+    // MARK: - Compose button (neutral style to avoid confusion with send button)
 
     private func composeButton(action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: "doc.text")
-                .font(.system(size: 19, weight: .semibold))
-                .foregroundColor(.white)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundColor(Color(.systemGray))
                 .frame(width: 52, height: 52)
-                .background(Color.accent)
-                .clipShape(Circle())
-                .shadow(color: Color.accent.opacity(0.3), radius: 6, x: 0, y: 2)
-                .shadow(color: .black.opacity(0.06), radius: 2, x: 0, y: 1)
         }
+        .modifier(PillSurface(radius: 26))
     }
 }
 
