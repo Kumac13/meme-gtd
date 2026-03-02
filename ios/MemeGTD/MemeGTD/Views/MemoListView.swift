@@ -50,7 +50,7 @@ struct MemoListView: View {
 
                         Button(action: {
                             HapticManager.selection()
-                            navigationPath.append(memo.id)
+                            navigationPath.append(MemoRoute(memoId: memo.id, initialBody: memo.bodyMd))
                         }) {
                             MemoTimelineItem(memo: memo)
                         }
