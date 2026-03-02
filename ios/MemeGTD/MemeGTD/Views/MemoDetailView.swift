@@ -169,8 +169,10 @@ struct MemoDetailView: View {
             }
 
             ToolbarItem(placement: .principal) {
-                Text("Memo")
+                Text(memoTitlePreview)
                     .font(.headline)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -212,6 +214,21 @@ struct MemoDetailView: View {
         .task {
             await viewModel.loadMemo()
         }
+    }
+
+    // MARK: - Title preview
+
+    private var memoTitlePreview: String {
+        guard let memo = viewModel.memo else { return "Memo" }
+        guard let firstLine = memo.bodyMd
+            .components(separatedBy: "\n")
+            .first(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty })
+        else { return "Memo" }
+        // Strip markdown heading prefix (e.g. "## Title" -> "Title")
+        let stripped = firstLine.replacingOccurrences(
+            of: #"^#{1,6}\s+"#, with: "", options: .regularExpression
+        )
+        return stripped.isEmpty ? "Memo" : stripped
     }
 
     // MARK: - Build unified timeline items
