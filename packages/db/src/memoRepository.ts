@@ -24,8 +24,6 @@ export interface ListMemoFilters {
   offset?: number;  // Pagination offset
   order?: 'asc' | 'desc';
   isBookmarked?: boolean;
-  createdFrom?: string;  // Filter memos where created_at >= this date (YYYY-MM-DD)
-  createdTo?: string;    // Filter memos where created_at <= this date (YYYY-MM-DD)
 }
 
 // Build WHERE conditions for memos (shared by listMemos and countMemos)
@@ -60,19 +58,6 @@ const buildMemoConditions = (filters: ListMemoFilters): { conditions: string[]; 
   if (searchTerm) {
     conditions.push('body_md LIKE @search');
     params.search = `%${searchTerm}%`;
-  }
-
-  // Date range filters
-  if (filters.createdFrom && filters.createdTo) {
-    conditions.push('DATE(created_at) >= @createdFrom AND DATE(created_at) <= @createdTo');
-    params.createdFrom = filters.createdFrom;
-    params.createdTo = filters.createdTo;
-  } else if (filters.createdFrom) {
-    conditions.push('DATE(created_at) >= @createdFrom');
-    params.createdFrom = filters.createdFrom;
-  } else if (filters.createdTo) {
-    conditions.push('DATE(created_at) <= @createdTo');
-    params.createdTo = filters.createdTo;
   }
 
   return { conditions, params };
@@ -188,19 +173,6 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
     params.isBookmarked = filters.isBookmarked ? 1 : 0;
   }
 
-  // Date range filters
-  if (filters.createdFrom && filters.createdTo) {
-    conditions.push('DATE(created_at) >= @createdFrom AND DATE(created_at) <= @createdTo');
-    params.createdFrom = filters.createdFrom;
-    params.createdTo = filters.createdTo;
-  } else if (filters.createdFrom) {
-    conditions.push('DATE(created_at) >= @createdFrom');
-    params.createdFrom = filters.createdFrom;
-  } else if (filters.createdTo) {
-    conditions.push('DATE(created_at) <= @createdTo');
-    params.createdTo = filters.createdTo;
-  }
-
   let orderBy = 'created_at DESC';
   if (filters.order === 'asc') {
     orderBy = 'created_at ASC';
@@ -244,17 +216,6 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
     }
     if (filters.isBookmarked !== undefined) {
       searchConditions.push('i.is_bookmarked = @isBookmarked');
-    }
-    if (filters.createdFrom && filters.createdTo) {
-      searchConditions.push('DATE(i.created_at) >= @createdFrom AND DATE(i.created_at) <= @createdTo');
-      params.createdFrom = filters.createdFrom;
-      params.createdTo = filters.createdTo;
-    } else if (filters.createdFrom) {
-      searchConditions.push('DATE(i.created_at) >= @createdFrom');
-      params.createdFrom = filters.createdFrom;
-    } else if (filters.createdTo) {
-      searchConditions.push('DATE(i.created_at) <= @createdTo');
-      params.createdTo = filters.createdTo;
     }
     sql = `
       SELECT i.*,

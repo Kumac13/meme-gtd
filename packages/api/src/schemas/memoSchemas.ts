@@ -93,8 +93,6 @@ export const MemoQuerySchema = z.object({
   bookmarked: z.enum(['true', 'false']).optional().describe('Filter by bookmark status'),
   label: z.string().optional().describe('Filter by label name(s). Supports comma-separated values for OR logic (e.g., idea,meeting-notes)'),
   search: z.string().optional().describe('Search memos by body content using free-text partial matching'),
-  createdFrom: z.string().date().optional().describe('Filter memos created on or after this date (YYYY-MM-DD)'),
-  createdTo: z.string().date().optional().describe('Filter memos created on or before this date (YYYY-MM-DD)'),
   limit: z.coerce.number().int().min(1).max(1000).optional().describe('Maximum number of memos to return (default: 100, max: 1000)'),
   offset: z.coerce.number().int().min(0).optional().describe('Number of memos to skip (default: 0)'),
 });

@@ -41,8 +41,6 @@ export async function listMemosHandler(
       bookmarked?: string;
       label?: string;
       search?: string;
-      createdFrom?: string;
-      createdTo?: string;
       limit?: number;
       offset?: number;
     };
@@ -50,7 +48,7 @@ export async function listMemosHandler(
   reply: FastifyReply
 ) {
   const memoService = new MemoService({ db: request.server.db });
-  const { bookmarked, label, search, createdFrom, createdTo, limit, offset } = request.query;
+  const { bookmarked, label, search, limit, offset } = request.query;
 
   const actualLimit = limit ?? DEFAULT_LIMIT;
   const actualOffset = offset ?? DEFAULT_OFFSET;
@@ -67,12 +65,6 @@ export async function listMemosHandler(
   }
   if (search) {
     filters.search = search;
-  }
-  if (createdFrom) {
-    filters.createdFrom = createdFrom;
-  }
-  if (createdTo) {
-    filters.createdTo = createdTo;
   }
 
   try {
