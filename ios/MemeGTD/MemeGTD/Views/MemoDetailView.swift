@@ -193,7 +193,7 @@ struct MemoDetailView: View {
                 viewModel: viewModel,
                 showCopiedFeedback: $showCopiedFeedback
             )
-            .presentationDetents([.medium])
+            .presentationDetents([.medium, .large])
         }
         .alert("Delete Memo", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
@@ -283,6 +283,7 @@ private struct MemoInfoSheet: View {
 
     @State private var showLabelPicker = false
     @State private var showProjectPicker = false
+    @State private var showLinkPicker = false
     @State private var selectedLabelNames: Set<String> = []
     @State private var selectedProjectIds: Set<Int> = []
 
@@ -385,6 +386,51 @@ private struct MemoInfoSheet: View {
 
                 Divider().padding(.leading, 16)
 
+                // Links
+                Button(action: { showLinkPicker = true }) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack {
+                            Text("Links")
+                                .font(.system(size: 15))
+                                .foregroundColor(.textPrimary)
+                            Spacer()
+                            Text("Edit")
+                                .font(.system(size: 15))
+                                .foregroundColor(.accent)
+                        }
+
+                        if !viewModel.issueLinks.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                ForEach(viewModel.issueLinks) { link in
+                                    HStack(spacing: 6) {
+                                        Image(systemName: link.linkType.iconName)
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundColor(.textPrimary)
+                                            .frame(width: 12)
+
+                                        issueTypeBadge(link.targetIssue.type)
+
+                                        Text(link.targetIssue.title)
+                                            .font(.system(size: 13))
+                                            .foregroundColor(.textPrimary)
+                                            .lineLimit(1)
+                                    }
+                                }
+                            }
+                            .padding(.top, 6)
+                        } else {
+                            Text("None")
+                                .font(.system(size: 13))
+                                .foregroundColor(.accentDark)
+                                .padding(.top, 4)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                }
+
+                Divider().padding(.leading, 16)
+
                 // Copy All Contents
                 Button(action: {
                     viewModel.copyAllContents()
@@ -411,6 +457,13 @@ private struct MemoInfoSheet: View {
             Spacer()
         }
         .background(Color(.systemBackground))
+        .sheet(isPresented: $showLinkPicker) {
+            LinkPickerModal(
+                viewModel: viewModel,
+                onDismiss: { showLinkPicker = false }
+            )
+            .presentationDetents([.medium, .large])
+        }
         .sheet(isPresented: $showLabelPicker) {
             LabelPickerModal(
                 allLabels: viewModel.allLabels,
@@ -434,6 +487,37 @@ private struct MemoInfoSheet: View {
                 }
             )
             .presentationDetents([.medium, .large])
+        }
+    }
+
+    // MARK: - Issue type badge (same as LinkPickerModal)
+
+    private static let badgeWidth: CGFloat = 56
+
+    @ViewBuilder
+    private func issueTypeBadge(_ type: String) -> some View {
+        let label = type.capitalized
+        let (bg, fg) = issueTypeColors(type)
+        Text(label)
+            .font(.system(size: 12, weight: .medium))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .frame(width: Self.badgeWidth)
+            .background(bg)
+            .foregroundColor(fg)
+            .clipShape(Capsule())
+    }
+
+    private func issueTypeColors(_ type: String) -> (Color, Color) {
+        switch type {
+        case "task":
+            return (Color(hex: "#1a7f37"), Color.white)
+        case "memo":
+            return (Color(hex: "#dafbe1"), Color(hex: "#1a7f37"))
+        case "article":
+            return (Color(hex: "#b4e6be"), Color(hex: "#0d5821"))
+        default:
+            return (Color.accent.opacity(0.15), Color.accentDark)
         }
     }
 }
