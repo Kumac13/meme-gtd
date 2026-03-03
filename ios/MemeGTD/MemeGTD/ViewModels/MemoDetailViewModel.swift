@@ -16,6 +16,21 @@ class MemoDetailViewModel: ObservableObject {
     @Published var allProjects: [Project] = []
     @Published var allLabels: [IssueLabel] = []
 
+    // Links
+    @Published var issueLinks: [IssueLink] = []
+
+    var linkedPickerItems: [IssuePickerItem] {
+        issueLinks.map {
+            IssuePickerItem(
+                id: $0.targetIssue.id,
+                type: $0.targetIssue.type,
+                title: $0.targetIssue.title,
+                status: $0.targetIssue.status,
+                updatedAt: $0.createdAt
+            )
+        }
+    }
+
     let memoId: Int
 
     init(memoId: Int) {
@@ -38,10 +53,11 @@ class MemoDetailViewModel: ObservableObject {
             self.error = error.localizedDescription
         }
 
-        // Load projects & labels in parallel
+        // Load projects, labels & links in parallel
         async let projectsResult: () = loadProjects()
         async let labelsResult: () = loadAllLabels()
-        _ = await (projectsResult, labelsResult)
+        async let linksResult: () = loadLinks()
+        _ = await (projectsResult, labelsResult, linksResult)
 
         isLoading = false
     }
@@ -81,6 +97,117 @@ class MemoDetailViewModel: ObservableObject {
         } catch {
             // Non-critical
         }
+    }
+
+    // MARK: - Links
+
+    private func loadLinks() async {
+        do {
+            issueLinks = try await APIClient.shared.get(path: "/api/issues/\(memoId)/links")
+        } catch {
+            // Non-critical
+        }
+    }
+
+    func createIssueLink(targetIssueId: Int, linkType: LinkType) async {
+        do {
+            let request = CreateLinkRequest(
+                sourceIssueId: memoId,
+                targetIssueId: targetIssueId,
+                linkType: linkType
+            )
+            let _: CreateLinkResponse = try await APIClient.shared.post(
+                path: "/api/links",
+                body: request
+            )
+            await loadLinks()
+            HapticManager.notification(.success)
+        } catch {
+            self.error = error.localizedDescription
+            HapticManager.notification(.error)
+        }
+    }
+
+    func deleteIssueLink(_ linkId: Int) async {
+        do {
+            try await APIClient.shared.delete(path: "/api/links/\(linkId)")
+            issueLinks.removeAll { $0.id == linkId }
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func searchIssues(query: String) async -> [IssuePickerItem] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        var results: [IssuePickerItem] = []
+
+        await withTaskGroup(of: [IssuePickerItem].self) { group in
+            // Build query items: include search param only when non-empty
+            let searchQuery: [URLQueryItem] = trimmed.isEmpty ? [] : [
+                URLQueryItem(name: "search", value: trimmed),
+            ]
+
+            // Search tasks
+            group.addTask {
+                do {
+                    let response: SearchTasksResponse = try await APIClient.shared.get(
+                        path: "/api/tasks",
+                        queryItems: searchQuery
+                    )
+                    return response.data.map {
+                        IssuePickerItem(id: $0.id, type: "task", title: $0.title, status: $0.status, updatedAt: $0.updatedAt)
+                    }
+                } catch {
+                    return []
+                }
+            }
+
+            // Search memos
+            group.addTask {
+                do {
+                    let response: MemoListResponse = try await APIClient.shared.get(
+                        path: "/api/memos",
+                        queryItems: searchQuery
+                    )
+                    return response.data.map {
+                        let firstLine = $0.bodyMd.components(separatedBy: "\n")
+                            .first(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }) ?? $0.bodyMd
+                        let title = String(firstLine.prefix(50))
+                        return IssuePickerItem(id: $0.id, type: "memo", title: title, status: nil, updatedAt: $0.updatedAt)
+                    }
+                } catch {
+                    return []
+                }
+            }
+
+            // Search articles
+            group.addTask {
+                do {
+                    let response: SearchArticlesResponse = try await APIClient.shared.get(
+                        path: "/api/articles",
+                        queryItems: searchQuery
+                    )
+                    return response.data.map {
+                        let title = $0.title.count > 50 ? String($0.title.prefix(50)) + "..." : $0.title
+                        return IssuePickerItem(id: $0.id, type: "article", title: title, status: nil, updatedAt: $0.updatedAt)
+                    }
+                } catch {
+                    return []
+                }
+            }
+
+            for await items in group {
+                results.append(contentsOf: items)
+            }
+        }
+
+        // Exclude self, sort by updatedAt desc, limit to 10
+        return results
+            .filter { $0.id != memoId }
+            .sorted { $0.updatedAt > $1.updatedAt }
+            .prefix(10)
+            .map { $0 }
     }
 
     // MARK: - Bookmark
