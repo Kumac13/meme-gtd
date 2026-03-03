@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.24.0 - 2026-03-03
+
+### New Features
+
+- **iOS Search/Filter Modal**: Replace inline search pill with bottom-up sheet modal containing search text input, label filtering with tappable capsules, and date range filtering (from/to)
+- **Active Filter Chips**: Show horizontally scrollable filter chips above the memo list when filters are active, with individual removal via x button
+- **Memo Date Filtering API**: Add `createdFrom` and `createdTo` query parameters to `GET /api/memos` for filtering memos by creation date range (YYYY-MM-DD format)
+
 ## 0.21.0 - 2026-02-28
 
 ### New Features

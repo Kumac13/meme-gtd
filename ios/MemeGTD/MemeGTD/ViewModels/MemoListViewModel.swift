@@ -4,6 +4,13 @@ import SwiftUI
 
 private let logger = Logger(subsystem: "name.kumac.MemeGTD", category: "MemoList")
 
+private let dateFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "yyyy-MM-dd"
+    f.locale = Locale(identifier: "en_US_POSIX")
+    return f
+}()
+
 @MainActor
 class MemoListViewModel: ObservableObject {
     @Published var memos: [Memo] = []
@@ -13,41 +20,15 @@ class MemoListViewModel: ObservableObject {
     @Published var error: String?
     @Published var newMemoBody: String = ""
     @Published var isCreating: Bool = false
-    @Published var searchQuery: String = ""
     @Published var bookmarkFilter: Bool = false
+    @Published var filterState = SearchFilterState()
+    @Published var allLabels: [IssueLabel] = []
 
     private let pageSize = 20
 
     var hasMore: Bool { memos.count < total }
 
-    // MARK: - Query parsing (matches Web UI queryParser.ts)
-
-    private struct ParsedQuery {
-        var labels: [String] = []
-        var freeText: String = ""
-    }
-
-    private func parseSearchQuery(_ query: String) -> ParsedQuery {
-        var result = ParsedQuery()
-        let trimmed = query.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return result }
-
-        var freeTextParts: [String] = []
-
-        for token in trimmed.components(separatedBy: .whitespaces) {
-            let lower = token.lowercased()
-            if lower.hasPrefix("label:") {
-                let value = String(token.dropFirst(6))
-                let labels = value.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-                result.labels.append(contentsOf: labels)
-            } else if !token.isEmpty {
-                freeTextParts.append(token)
-            }
-        }
-
-        result.freeText = freeTextParts.joined(separator: " ")
-        return result
-    }
+    // MARK: - Query building
 
     private func buildQueryItems(offset: Int) -> [URLQueryItem] {
         var queryItems: [URLQueryItem] = [
@@ -57,14 +38,18 @@ class MemoListViewModel: ObservableObject {
         if bookmarkFilter {
             queryItems.append(URLQueryItem(name: "bookmarked", value: "true"))
         }
-        if !searchQuery.isEmpty {
-            let parsed = parseSearchQuery(searchQuery)
-            if !parsed.labels.isEmpty {
-                queryItems.append(URLQueryItem(name: "label", value: parsed.labels.joined(separator: ",")))
-            }
-            if !parsed.freeText.isEmpty {
-                queryItems.append(URLQueryItem(name: "search", value: parsed.freeText))
-            }
+        if !filterState.selectedLabels.isEmpty {
+            queryItems.append(URLQueryItem(name: "label", value: filterState.selectedLabels.sorted().joined(separator: ",")))
+        }
+        let searchText = filterState.searchText.trimmingCharacters(in: .whitespaces)
+        if !searchText.isEmpty {
+            queryItems.append(URLQueryItem(name: "search", value: searchText))
+        }
+        if let dateFrom = filterState.dateFrom {
+            queryItems.append(URLQueryItem(name: "createdFrom", value: dateFormatter.string(from: dateFrom)))
+        }
+        if let dateTo = filterState.dateTo {
+            queryItems.append(URLQueryItem(name: "createdTo", value: dateFormatter.string(from: dateTo)))
         }
         return queryItems
     }
@@ -196,7 +181,41 @@ class MemoListViewModel: ObservableObject {
         Task { await loadMemos() }
     }
 
-    func search() {
+    // MARK: - Filter operations
+
+    func applyFilters(_ newState: SearchFilterState) {
+        filterState = newState
         Task { await loadMemos() }
+    }
+
+    func removeSearchFilter() {
+        filterState.searchText = ""
+        Task { await loadMemos() }
+    }
+
+    func removeLabelFilter(_ label: String) {
+        filterState.selectedLabels.remove(label)
+        Task { await loadMemos() }
+    }
+
+    func removeDateFromFilter() {
+        filterState.dateFrom = nil
+        Task { await loadMemos() }
+    }
+
+    func removeDateToFilter() {
+        filterState.dateTo = nil
+        Task { await loadMemos() }
+    }
+
+    // MARK: - Labels
+
+    func loadLabels() async {
+        do {
+            allLabels = try await APIClient.shared.get(path: "/api/labels")
+        } catch {
+            // Non-critical
+            logger.error("loadLabels error: \(error.localizedDescription)")
+        }
     }
 }

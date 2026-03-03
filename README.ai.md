@@ -196,7 +196,7 @@ mgtd project create/list/view
 
 | エンドポイント | 説明 |
 |---------------|------|
-| `GET/POST /api/memos` | メモ一覧・作成 |
+| `GET/POST /api/memos` | メモ一覧・作成（`bookmarked`, `label`, `search`, `createdFrom`, `createdTo`, `limit`, `offset`でフィルタ） |
 | `GET/PATCH/DELETE /api/memos/{id}` | メモ詳細・更新・削除 |
 | `POST /api/memos/{id}/promote` | メモ→タスク昇格 |
 | `GET/POST /api/tasks` | タスク一覧・作成 |

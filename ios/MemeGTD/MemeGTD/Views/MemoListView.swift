@@ -1,16 +1,11 @@
 import SwiftUI
 
-enum BottomBarMode {
-    case compose
-    case search
-}
-
 struct MemoListView: View {
     let onMenuTap: () -> Void
     @Binding var navigationPath: NavigationPath
 
     @StateObject private var viewModel = MemoListViewModel()
-    @State private var barMode: BottomBarMode = .compose
+    @State private var showSearchFilter = false
 
     private var reversedMemos: [Memo] {
         viewModel.memos.reversed()
@@ -20,6 +15,11 @@ struct MemoListView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
+                    // Active filter chips
+                    if viewModel.filterState.hasActiveFilters {
+                        activeFilterChips
+                    }
+
                     if !viewModel.hasMore && !viewModel.memos.isEmpty {
                         Text("No older memos")
                             .font(.caption)
@@ -70,10 +70,8 @@ struct MemoListView: View {
                 // to keep the network call alive.
                 await withCheckedContinuation { continuation in
                     Task { @MainActor in
-                        // 1. トリガー到達ハプティクス
                         HapticManager.impact(.medium)
 
-                        // データを裏で取得（UIには反映しない）
                         let start = Date()
                         let hasMore = viewModel.hasMore
                         let response: MemoListResponse?
@@ -83,14 +81,12 @@ struct MemoListView: View {
                             response = await viewModel.fetchMemos()
                         }
 
-                        // 最低1秒スピナー表示
                         let elapsed = Date().timeIntervalSince(start)
                         let remaining = 0.75 - elapsed
                         if remaining > 0 {
                             try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
                         }
 
-                        // 2. データをUIに反映 + 完了ハプティクス
                         if let response = response {
                             if hasMore {
                                 viewModel.applyOlderMemos(response)
@@ -106,7 +102,9 @@ struct MemoListView: View {
             .onAppear {
                 if viewModel.memos.isEmpty {
                     Task {
-                        await viewModel.loadMemos()
+                        async let memosLoad: () = viewModel.loadMemos()
+                        async let labelsLoad: () = viewModel.loadLabels()
+                        _ = await (memosLoad, labelsLoad)
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                             withAnimation {
                                 proxy.scrollTo("bottom", anchor: .bottom)
@@ -117,12 +115,10 @@ struct MemoListView: View {
             }
             .safeAreaBar(edge: .bottom) {
                 BottomBar(
-                    mode: $barMode,
                     memoText: $viewModel.newMemoBody,
-                    searchText: $viewModel.searchQuery,
-                    bookmarkFilter: $viewModel.bookmarkFilter,
                     isLoading: viewModel.isLoading,
                     isCreating: viewModel.isCreating,
+                    hasActiveFilters: viewModel.filterState.hasActiveFilters,
                     onCreateMemo: {
                         Task {
                             await viewModel.createMemo()
@@ -133,7 +129,10 @@ struct MemoListView: View {
                             }
                         }
                     },
-                    onSearch: { viewModel.search() }
+                    onSearchTap: {
+                        HapticManager.impact(.light)
+                        showSearchFilter = true
+                    }
                 )
                 .padding(.horizontal, 16)
                 .padding(.bottom, 10)
@@ -168,25 +167,110 @@ struct MemoListView: View {
                     .foregroundColor(.textSecondary)
             }
         }
+        .sheet(isPresented: $showSearchFilter) {
+            SearchFilterModal(
+                config: SearchFilterConfig(showLabels: true, showDateFilter: true),
+                allLabels: viewModel.allLabels,
+                currentState: viewModel.filterState,
+                onDismiss: { showSearchFilter = false },
+                onApply: { newState in
+                    viewModel.applyFilters(newState)
+                    showSearchFilter = false
+                }
+            )
+            .presentationDetents([.medium, .large])
+        }
+    }
+
+    // MARK: - Active filter chips
+
+    private var activeFilterChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                let searchText = viewModel.filterState.searchText.trimmingCharacters(in: .whitespaces)
+                if !searchText.isEmpty {
+                    filterChip(
+                        label: searchText,
+                        icon: "magnifyingglass",
+                        onRemove: { viewModel.removeSearchFilter() }
+                    )
+                }
+
+                ForEach(viewModel.filterState.selectedLabels.sorted(), id: \.self) { label in
+                    filterChip(
+                        label: label,
+                        bgColor: LabelColorHelper.bgColor(for: label),
+                        fgColor: LabelColorHelper.textColor(for: label),
+                        onRemove: { viewModel.removeLabelFilter(label) }
+                    )
+                }
+
+                if let dateFrom = viewModel.filterState.dateFrom {
+                    filterChip(
+                        label: "From: \(dateFrom.formatted(.dateTime.month(.abbreviated).day()))",
+                        icon: "calendar",
+                        onRemove: { viewModel.removeDateFromFilter() }
+                    )
+                }
+
+                if let dateTo = viewModel.filterState.dateTo {
+                    filterChip(
+                        label: "To: \(dateTo.formatted(.dateTime.month(.abbreviated).day()))",
+                        icon: "calendar",
+                        onRemove: { viewModel.removeDateToFilter() }
+                    )
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+        }
+    }
+
+    private func filterChip(
+        label: String,
+        icon: String? = nil,
+        bgColor: Color = Color(.systemGray5),
+        fgColor: Color = .textPrimary,
+        onRemove: @escaping () -> Void
+    ) -> some View {
+        HStack(spacing: 4) {
+            if let icon = icon {
+                Image(systemName: icon)
+                    .font(.system(size: 10))
+            }
+
+            Text(label)
+                .font(.system(size: 12, weight: .medium))
+                .lineLimit(1)
+
+            Button(action: {
+                HapticManager.impact(.light)
+                onRemove()
+            }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 8, weight: .bold))
+                    .padding(2)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(bgColor)
+        .foregroundColor(fgColor)
+        .clipShape(Capsule())
     }
 }
 
-// MARK: - Bottom Bar with animated expand/collapse
+// MARK: - Bottom Bar (simplified: always compose pill + search icon)
 
 private struct BottomBar: View {
-    @Binding var mode: BottomBarMode
     @Binding var memoText: String
-    @Binding var searchText: String
-    @Binding var bookmarkFilter: Bool
     let isLoading: Bool
     let isCreating: Bool
+    let hasActiveFilters: Bool
     let onCreateMemo: () -> Void
-    let onSearch: () -> Void
+    let onSearchTap: () -> Void
 
     @FocusState private var memoFocused: Bool
-    @FocusState private var searchFocused: Bool
-
-    private var isCompose: Bool { mode == .compose }
 
     private var canSubmitMemo: Bool {
         !memoText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isLoading && !isCreating
@@ -196,51 +280,33 @@ private struct BottomBar: View {
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 10) {
-            // Left: search icon (compose mode) OR search pill (search mode)
-            if isCompose {
-                // Collapsed search icon
-                circleButton(systemName: "magnifyingglass") {
-                    HapticManager.impact(.light)
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                        mode = .search
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                        searchFocused = true
-                    }
-                }
-                .transition(.scale.combined(with: .opacity))
-            } else {
-                // Expanded search pill
-                searchPill
-                    .transition(.asymmetric(
-                        insertion: .scale(scale: 0.5, anchor: .leading).combined(with: .opacity),
-                        removal: .scale(scale: 0.5, anchor: .leading).combined(with: .opacity)
-                    ))
-            }
+            // Search icon button (with badge dot when filters active)
+            searchButton
 
-            // Right: compose pill (compose mode) OR new-memo icon (search mode)
-            if isCompose {
-                // Expanded compose pill
-                composePill
-                    .transition(.asymmetric(
-                        insertion: .scale(scale: 0.5, anchor: .trailing).combined(with: .opacity),
-                        removal: .scale(scale: 0.5, anchor: .trailing).combined(with: .opacity)
-                    ))
-            } else {
-                // Collapsed new-memo icon
-                composeButton {
-                    HapticManager.impact(.light)
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                        mode = .compose
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                        memoFocused = true
-                    }
+            // Compose pill (always visible)
+            composePill
+        }
+    }
+
+    // MARK: - Search button with badge
+
+    private var searchButton: some View {
+        Button(action: onSearchTap) {
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundColor(hasActiveFilters ? .accent : Color(.systemGray))
+                    .frame(width: 52, height: 52)
+
+                if hasActiveFilters {
+                    Circle()
+                        .fill(Color.accent)
+                        .frame(width: 8, height: 8)
+                        .offset(x: -12, y: 14)
                 }
-                .transition(.scale.combined(with: .opacity))
             }
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: mode)
+        .modifier(PillSurface(radius: 26))
     }
 
     // MARK: - Compose pill
@@ -279,63 +345,4 @@ private struct BottomBar: View {
         }
         .modifier(PillSurface(radius: pillRadius))
     }
-
-    // MARK: - Search pill
-
-    private var searchPill: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 13))
-                .foregroundColor(Color(.systemGray))
-
-            TextField("Search memos...", text: $searchText)
-                .textFieldStyle(.plain)
-                .font(.system(size: 14))
-                .tint(Color.accent)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .focused($searchFocused)
-                .onSubmit { onSearch() }
-
-            if !searchText.isEmpty {
-                Button(action: {
-                    searchText = ""
-                    onSearch()
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(Color(.systemGray))
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 16)
-        .frame(minHeight: 52)
-        .modifier(PillSurface(radius: pillRadius))
-    }
-
-    // MARK: - Collapsed search icon button
-
-    private func circleButton(systemName: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 17, weight: .medium))
-                .foregroundColor(Color(.systemGray))
-                .frame(width: 52, height: 52)
-        }
-        .modifier(PillSurface(radius: 26))
-    }
-
-    // MARK: - Compose button (neutral style to avoid confusion with send button)
-
-    private func composeButton(action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: "doc.text")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundColor(Color(.systemGray))
-                .frame(width: 52, height: 52)
-        }
-        .modifier(PillSurface(radius: 26))
-    }
 }
-
