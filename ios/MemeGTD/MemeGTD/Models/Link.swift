@@ -10,10 +10,10 @@ enum LinkType: String, CaseIterable, Codable {
 
     var displayLabel: String {
         switch self {
-        case .parent: return "Parent"
-        case .child: return "Child"
-        case .relates: return "Relates"
-        case .derivedFrom: return "Derived From"
+        case .parent: return "Parent of"
+        case .child: return "Child of"
+        case .relates: return "Related to"
+        case .derivedFrom: return "Derived from"
         }
     }
 

@@ -231,19 +231,21 @@ struct LinkPickerModal: View {
                 }
             } else {
                 Menu {
-                    ForEach(LinkType.allCases, id: \.self) { type in
-                        Button(action: {
-                            HapticManager.impact(.light)
-                            processingIds.insert(item.id)
-                            Task {
-                                await viewModel.createIssueLink(
-                                    targetIssueId: item.id,
-                                    linkType: type
-                                )
-                                processingIds.remove(item.id)
+                    Section("Memo is:") {
+                        ForEach(LinkType.allCases, id: \.self) { type in
+                            Button(action: {
+                                HapticManager.impact(.light)
+                                processingIds.insert(item.id)
+                                Task {
+                                    await viewModel.createIssueLink(
+                                        targetIssueId: item.id,
+                                        linkType: type
+                                    )
+                                    processingIds.remove(item.id)
+                                }
+                            }) {
+                                Label(type.displayLabel, systemImage: type.iconName)
                             }
-                        }) {
-                            Label(type.displayLabel, systemImage: type.iconName)
                         }
                     }
                 } label: {
