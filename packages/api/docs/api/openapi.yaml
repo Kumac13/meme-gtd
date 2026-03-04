@@ -3643,11 +3643,23 @@ paths:
                       type: string
                       format: date-time
                       description: Creation timestamp
+                    memoCount:
+                      type: integer
+                      description: Number of non-deleted memos with this label
+                    taskCount:
+                      type: integer
+                      description: Number of non-deleted tasks with this label
+                    articleCount:
+                      type: integer
+                      description: Number of non-deleted articles with this label
                   required:
                     - id
                     - name
                     - description
                     - createdAt
+                    - memoCount
+                    - taskCount
+                    - articleCount
                   additionalProperties: false
         "400":
           description: Default Response
@@ -3742,11 +3754,15 @@ paths:
                     type: string
                     format: date-time
                     description: Creation timestamp
+                  issueCount:
+                    type: integer
+                    description: Number of non-deleted issues with this label
                 required:
                   - id
                   - name
                   - description
                   - createdAt
+                  - issueCount
                 additionalProperties: false
         "400":
           description: Default Response

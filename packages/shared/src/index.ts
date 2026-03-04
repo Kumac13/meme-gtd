@@ -122,6 +122,9 @@ export interface Label {
   name: string;
   description: string | null;
   createdAt: string;
+  memoCount: number;
+  taskCount: number;
+  articleCount: number;
 }
 
 export interface Link {

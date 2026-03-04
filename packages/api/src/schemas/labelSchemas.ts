@@ -18,6 +18,9 @@ export const LabelSchema = z.object({
   name: z.string().describe('Label name'),
   description: z.string().nullable().describe('Label description (null if not set)'),
   createdAt: z.string().datetime().describe('Creation timestamp'),
+  memoCount: z.number().int().describe('Number of non-deleted memos with this label'),
+  taskCount: z.number().int().describe('Number of non-deleted tasks with this label'),
+  articleCount: z.number().int().describe('Number of non-deleted articles with this label'),
 });
 
 export type Label = z.infer<typeof LabelSchema>;

@@ -5,6 +5,9 @@ struct IssueLabel: Codable, Identifiable {
     let name: String
     let description: String?
     let createdAt: String
+    let memoCount: Int
+    let taskCount: Int
+    let articleCount: Int
 }
 
 struct AssignLabelRequest: Codable {

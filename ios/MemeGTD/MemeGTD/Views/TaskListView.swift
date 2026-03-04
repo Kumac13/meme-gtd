@@ -7,7 +7,6 @@ struct TaskListView: View {
     @State private var showStatusPicker: Bool = false
     @State private var showLabelPicker: Bool = false
     @State private var selectedLabelNames: Set<String> = []
-    @State private var labelSearchText: String = ""
     @FocusState private var searchFocused: Bool
 
     var body: some View {
@@ -69,7 +68,6 @@ struct TaskListView: View {
                     isActive: !viewModel.labelFilters.isEmpty
                 ) {
                     selectedLabelNames = viewModel.labelFilters
-                    labelSearchText = ""
                     showLabelPicker = true
                 }
 
@@ -96,8 +94,14 @@ struct TaskListView: View {
         .sheet(isPresented: $showLabelPicker, onDismiss: {
             viewModel.setLabelFilters(selectedLabelNames)
         }) {
-            labelPickerSheet
-                .presentationDetents([.medium, .large])
+            LabelPickerModal(
+                allLabels: viewModel.allLabels,
+                selectedNames: $selectedLabelNames,
+                onDismiss: { showLabelPicker = false },
+                showClear: true,
+                countFor: { $0.taskCount }
+            )
+            .presentationDetents([.medium, .large])
         }
         .overlay {
             if viewModel.isLoading && viewModel.tasks.isEmpty {
@@ -210,92 +214,6 @@ struct TaskListView: View {
                         Divider().padding(.leading, 16)
                     }
                 }
-            }
-        }
-        .background(Color(.systemBackground))
-    }
-
-    // MARK: - Label Picker Sheet
-
-    private var filteredLabels: [IssueLabel] {
-        if labelSearchText.isEmpty { return viewModel.allLabels }
-        let query = labelSearchText.lowercased()
-        return viewModel.allLabels.filter { $0.name.lowercased().contains(query) }
-    }
-
-    private var labelPickerSheet: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button(action: { showLabelPicker = false }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundColor(Color(.tertiaryLabel))
-                }
-                Spacer()
-                Text("Labels")
-                    .font(.system(size: 17, weight: .semibold))
-                Spacer()
-                Button(action: {
-                    HapticManager.impact(.light)
-                    selectedLabelNames.removeAll()
-                }) {
-                    Text("Clear")
-                        .font(.system(size: 16))
-                        .foregroundColor(selectedLabelNames.isEmpty ? Color(.systemGray3) : .accent)
-                }
-                .disabled(selectedLabelNames.isEmpty)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-
-            Divider()
-
-            ZStack(alignment: .bottom) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(filteredLabels) { label in
-                            let isSelected = selectedLabelNames.contains(label.name)
-                            Button(action: {
-                                HapticManager.impact(.light)
-                                if isSelected {
-                                    selectedLabelNames.remove(label.name)
-                                } else {
-                                    selectedLabelNames.insert(label.name)
-                                }
-                            }) {
-                                HStack {
-                                    Text(label.name)
-                                        .font(.system(size: 13, weight: .medium))
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 5)
-                                        .background(LabelColorHelper.bgColor(for: label.name))
-                                        .foregroundColor(LabelColorHelper.textColor(for: label.name))
-                                        .clipShape(Capsule())
-
-                                    Spacer()
-
-                                    if isSelected {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .font(.system(size: 22))
-                                            .foregroundColor(.accent)
-                                    } else {
-                                        Image(systemName: "plus.circle")
-                                            .font(.system(size: 22))
-                                            .foregroundColor(Color(.systemGray3))
-                                    }
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                            }
-                            Divider().padding(.leading, 16)
-                        }
-
-                        Color.clear.frame(height: 70)
-                    }
-                }
-
-                PickerSearchBar(text: $labelSearchText, placeholder: "Search")
             }
         }
         .background(Color(.systemBackground))
