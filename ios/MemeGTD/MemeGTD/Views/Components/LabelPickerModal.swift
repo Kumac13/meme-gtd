@@ -4,7 +4,7 @@ struct LabelPickerModal: View {
     let allLabels: [IssueLabel]
     @Binding var selectedNames: Set<String>
     let onDismiss: () -> Void
-    let onConfirm: (Set<String>) -> Void
+    var showClear: Bool = false
 
     @State private var searchText = ""
 
@@ -16,11 +16,36 @@ struct LabelPickerModal: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            PickerModalHeader(
-                title: "Labels",
-                onDismiss: onDismiss,
-                onConfirm: { onConfirm(selectedNames) }
-            )
+            HStack {
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 28))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundColor(Color(.tertiaryLabel))
+                }
+                Spacer()
+                Text("Labels")
+                    .font(.system(size: 17, weight: .semibold))
+                Spacer()
+                if showClear {
+                    Button(action: {
+                        HapticManager.impact(.light)
+                        selectedNames.removeAll()
+                    }) {
+                        Text("Clear")
+                            .font(.system(size: 16))
+                            .foregroundColor(selectedNames.isEmpty ? Color(.systemGray3) : .accent)
+                    }
+                    .disabled(selectedNames.isEmpty)
+                } else {
+                    // Invisible spacer to keep title centered
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 28))
+                        .hidden()
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
 
             Divider()
 
@@ -29,7 +54,43 @@ struct LabelPickerModal: View {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(filteredLabels) { label in
                             let isSelected = selectedNames.contains(label.name)
-                            labelRow(label, isSelected: isSelected)
+                            Button(action: {
+                                HapticManager.impact(.light)
+                                if isSelected {
+                                    selectedNames.remove(label.name)
+                                } else {
+                                    selectedNames.insert(label.name)
+                                }
+                            }) {
+                                HStack {
+                                    Text(label.name)
+                                        .font(.system(size: 13, weight: .medium))
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 5)
+                                        .background(LabelColorHelper.bgColor(for: label.name))
+                                        .foregroundColor(LabelColorHelper.textColor(for: label.name))
+                                        .clipShape(Capsule())
+
+                                    Spacer()
+
+                                    Text("\(label.issueCount)")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(Color(.secondaryLabel))
+                                        .padding(.trailing, 4)
+
+                                    if isSelected {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.system(size: 22))
+                                            .foregroundColor(.accent)
+                                    } else {
+                                        Image(systemName: "plus.circle")
+                                            .font(.system(size: 22))
+                                            .foregroundColor(Color(.systemGray3))
+                                    }
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                            }
                             Divider().padding(.leading, 16)
                         }
 
@@ -42,41 +103,4 @@ struct LabelPickerModal: View {
         }
         .background(Color(.systemBackground))
     }
-
-    private func labelRow(_ label: IssueLabel, isSelected: Bool) -> some View {
-        HStack {
-            // Color-coded capsule (matches Web UI LabelBadge)
-            Text(label.name)
-                .font(.system(size: 13, weight: .medium))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(LabelColorHelper.bgColor(for: label.name))
-                .foregroundColor(LabelColorHelper.textColor(for: label.name))
-                .clipShape(Capsule())
-
-            Spacer()
-
-            Button(action: {
-                HapticManager.impact(.light)
-                if isSelected {
-                    selectedNames.remove(label.name)
-                } else {
-                    selectedNames.insert(label.name)
-                }
-            }) {
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundColor(.accent)
-                } else {
-                    Image(systemName: "plus.circle")
-                        .font(.system(size: 22))
-                        .foregroundColor(Color(.systemGray3))
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-    }
-
 }

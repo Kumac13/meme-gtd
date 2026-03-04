@@ -465,13 +465,12 @@ private struct MemoInfoSheet: View {
             LabelPickerModal(
                 allLabels: viewModel.allLabels,
                 selectedNames: $selectedLabelNames,
-                onDismiss: { showLabelPicker = false },
-                onConfirm: { names in
-                    viewModel.confirmLabels(names)
-                    showLabelPicker = false
-                }
+                onDismiss: { showLabelPicker = false }
             )
             .presentationDetents([.medium, .large])
+        }
+        .onChange(of: selectedLabelNames) { _, newValue in
+            viewModel.confirmLabels(newValue)
         }
         .sheet(isPresented: $showProjectPicker) {
             ProjectPickerModal(
