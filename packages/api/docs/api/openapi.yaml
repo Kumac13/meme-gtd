@@ -3643,11 +3643,15 @@ paths:
                       type: string
                       format: date-time
                       description: Creation timestamp
+                    issueCount:
+                      type: integer
+                      description: Number of non-deleted issues with this label
                   required:
                     - id
                     - name
                     - description
                     - createdAt
+                    - issueCount
                   additionalProperties: false
         "400":
           description: Default Response
@@ -3742,11 +3746,15 @@ paths:
                     type: string
                     format: date-time
                     description: Creation timestamp
+                  issueCount:
+                    type: integer
+                    description: Number of non-deleted issues with this label
                 required:
                   - id
                   - name
                   - description
                   - createdAt
+                  - issueCount
                 additionalProperties: false
         "400":
           description: Default Response

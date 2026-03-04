@@ -122,6 +122,7 @@ export interface Label {
   name: string;
   description: string | null;
   createdAt: string;
+  issueCount: number;
 }
 
 export interface Link {

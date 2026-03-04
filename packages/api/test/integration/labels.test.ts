@@ -288,6 +288,101 @@ describe('Label Operations', () => {
     assert.ok(error.message.includes('Label'));
   });
 
+  it('should return issueCount: 0 for labels with no issues', async () => {
+    // Create a label
+    await app.inject({
+      method: 'POST',
+      url: '/api/labels',
+      payload: { name: 'urgent' },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/labels',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const labels = JSON.parse(response.body);
+    assert.strictEqual(labels.length, 1);
+    assert.strictEqual(labels[0].issueCount, 0);
+  });
+
+  it('should return issueCount: 1 after assigning a label to an issue', async () => {
+    // Create a label
+    const labelResponse = await app.inject({
+      method: 'POST',
+      url: '/api/labels',
+      payload: { name: 'urgent' },
+    });
+    const label = JSON.parse(labelResponse.body);
+
+    // Create a task
+    const taskResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Test Task' }),
+    });
+    const task = JSON.parse(taskResponse.body);
+
+    // Assign label to task
+    await app.inject({
+      method: 'POST',
+      url: `/api/issues/${task.id}/labels`,
+      payload: { labelId: label.id },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/labels',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const labels = JSON.parse(response.body);
+    assert.strictEqual(labels.length, 1);
+    assert.strictEqual(labels[0].issueCount, 1);
+  });
+
+  it('should return issueCount: 0 after removing label from issue', async () => {
+    // Create a label
+    const labelResponse = await app.inject({
+      method: 'POST',
+      url: '/api/labels',
+      payload: { name: 'urgent' },
+    });
+    const label = JSON.parse(labelResponse.body);
+
+    // Create a task
+    const taskResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Test Task' }),
+    });
+    const task = JSON.parse(taskResponse.body);
+
+    // Assign label to task
+    await app.inject({
+      method: 'POST',
+      url: `/api/issues/${task.id}/labels`,
+      payload: { labelId: label.id },
+    });
+
+    // Remove label from task
+    await app.inject({
+      method: 'DELETE',
+      url: `/api/issues/${task.id}/labels/${label.id}`,
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/labels',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const labels = JSON.parse(response.body);
+    assert.strictEqual(labels.length, 1);
+    assert.strictEqual(labels[0].issueCount, 0);
+  });
+
   it('should only remove specified label when issue has multiple labels', async () => {
     // Create two labels
     const label1Response = await app.inject({
