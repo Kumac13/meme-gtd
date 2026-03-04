@@ -465,7 +465,8 @@ private struct MemoInfoSheet: View {
             LabelPickerModal(
                 allLabels: viewModel.allLabels,
                 selectedNames: $selectedLabelNames,
-                onDismiss: { showLabelPicker = false }
+                onDismiss: { showLabelPicker = false },
+                countFor: { $0.memoCount }
             )
             .presentationDetents([.medium, .large])
         }

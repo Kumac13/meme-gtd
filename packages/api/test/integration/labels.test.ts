@@ -2,7 +2,7 @@ import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
 import type { FastifyInstance } from 'fastify';
 import { createTestServer } from '../helpers/testServer.js';
-import { createTaskFixture } from '../helpers/fixtures.js';
+import { createTaskFixture, createMemoFixture } from '../helpers/fixtures.js';
 
 describe('Label Operations', () => {
   let app: FastifyInstance;
@@ -288,7 +288,7 @@ describe('Label Operations', () => {
     assert.ok(error.message.includes('Label'));
   });
 
-  it('should return issueCount: 0 for labels with no issues', async () => {
+  it('should return counts: 0 for labels with no issues', async () => {
     // Create a label
     await app.inject({
       method: 'POST',
@@ -304,10 +304,12 @@ describe('Label Operations', () => {
     assert.strictEqual(response.statusCode, 200);
     const labels = JSON.parse(response.body);
     assert.strictEqual(labels.length, 1);
-    assert.strictEqual(labels[0].issueCount, 0);
+    assert.strictEqual(labels[0].memoCount, 0);
+    assert.strictEqual(labels[0].taskCount, 0);
+    assert.strictEqual(labels[0].articleCount, 0);
   });
 
-  it('should return issueCount: 1 after assigning a label to an issue', async () => {
+  it('should return per-type counts after assigning labels', async () => {
     // Create a label
     const labelResponse = await app.inject({
       method: 'POST',
@@ -324,10 +326,23 @@ describe('Label Operations', () => {
     });
     const task = JSON.parse(taskResponse.body);
 
-    // Assign label to task
+    // Create a memo
+    const memoResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Test Memo' }),
+    });
+    const memo = JSON.parse(memoResponse.body);
+
+    // Assign label to both
     await app.inject({
       method: 'POST',
       url: `/api/issues/${task.id}/labels`,
+      payload: { labelId: label.id },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/api/issues/${memo.id}/labels`,
       payload: { labelId: label.id },
     });
 
@@ -339,10 +354,12 @@ describe('Label Operations', () => {
     assert.strictEqual(response.statusCode, 200);
     const labels = JSON.parse(response.body);
     assert.strictEqual(labels.length, 1);
-    assert.strictEqual(labels[0].issueCount, 1);
+    assert.strictEqual(labels[0].memoCount, 1);
+    assert.strictEqual(labels[0].taskCount, 1);
+    assert.strictEqual(labels[0].articleCount, 0);
   });
 
-  it('should return issueCount: 0 after removing label from issue', async () => {
+  it('should return taskCount: 0 after removing label from task', async () => {
     // Create a label
     const labelResponse = await app.inject({
       method: 'POST',
@@ -380,7 +397,7 @@ describe('Label Operations', () => {
     assert.strictEqual(response.statusCode, 200);
     const labels = JSON.parse(response.body);
     assert.strictEqual(labels.length, 1);
-    assert.strictEqual(labels[0].issueCount, 0);
+    assert.strictEqual(labels[0].taskCount, 0);
   });
 
   it('should only remove specified label when issue has multiple labels', async () => {

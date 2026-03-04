@@ -5,6 +5,7 @@ struct LabelPickerModal: View {
     @Binding var selectedNames: Set<String>
     let onDismiss: () -> Void
     var showClear: Bool = false
+    var countFor: (IssueLabel) -> Int
 
     @State private var searchText = ""
 
@@ -73,7 +74,7 @@ struct LabelPickerModal: View {
 
                                     Spacer()
 
-                                    Text("\(label.issueCount)")
+                                    Text("\(countFor(label))")
                                         .font(.system(size: 13))
                                         .foregroundColor(Color(.secondaryLabel))
                                         .padding(.trailing, 4)

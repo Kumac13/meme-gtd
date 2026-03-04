@@ -98,7 +98,8 @@ struct TaskListView: View {
                 allLabels: viewModel.allLabels,
                 selectedNames: $selectedLabelNames,
                 onDismiss: { showLabelPicker = false },
-                showClear: true
+                showClear: true,
+                countFor: { $0.taskCount }
             )
             .presentationDetents([.medium, .large])
         }

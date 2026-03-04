@@ -167,7 +167,8 @@ struct MemoListView: View {
                 allLabels: viewModel.allLabels,
                 selectedNames: $selectedLabelNames,
                 onDismiss: { showLabelPicker = false },
-                showClear: true
+                showClear: true,
+                countFor: { $0.memoCount }
             )
             .presentationDetents([.medium, .large])
         }

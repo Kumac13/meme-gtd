@@ -122,7 +122,9 @@ export interface Label {
   name: string;
   description: string | null;
   createdAt: string;
-  issueCount: number;
+  memoCount: number;
+  taskCount: number;
+  articleCount: number;
 }
 
 export interface Link {

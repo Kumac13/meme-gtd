@@ -8,7 +8,10 @@ import { nowIso, Label } from 'meme-gtd-shared';
  */
 export const listAllLabels = (db: Database.Database): Label[] => {
   const stmt = db.prepare(`
-    SELECT l.*, COUNT(il.issue_id) as issue_count
+    SELECT l.*,
+      COUNT(CASE WHEN i.type = 'memo' THEN 1 END) as memo_count,
+      COUNT(CASE WHEN i.type = 'task' THEN 1 END) as task_count,
+      COUNT(CASE WHEN i.type = 'article' THEN 1 END) as article_count
     FROM labels l
     LEFT JOIN issue_labels il ON l.id = il.label_id
     LEFT JOIN issues i ON il.issue_id = i.id AND i.is_deleted = 0
@@ -20,7 +23,9 @@ export const listAllLabels = (db: Database.Database): Label[] => {
     name: string;
     description: string | null;
     created_at: string;
-    issue_count: number;
+    memo_count: number;
+    task_count: number;
+    article_count: number;
   }>;
 
   return rows.map((row) => ({
@@ -28,7 +33,9 @@ export const listAllLabels = (db: Database.Database): Label[] => {
     name: row.name,
     description: row.description,
     createdAt: row.created_at,
-    issueCount: row.issue_count,
+    memoCount: row.memo_count,
+    taskCount: row.task_count,
+    articleCount: row.article_count,
   }));
 };
 
@@ -41,7 +48,10 @@ export const listAllLabels = (db: Database.Database): Label[] => {
  */
 export const getLabel = (db: Database.Database, id: number): Label => {
   const stmt = db.prepare(`
-    SELECT l.*, COUNT(il.issue_id) as issue_count
+    SELECT l.*,
+      COUNT(CASE WHEN i.type = 'memo' THEN 1 END) as memo_count,
+      COUNT(CASE WHEN i.type = 'task' THEN 1 END) as task_count,
+      COUNT(CASE WHEN i.type = 'article' THEN 1 END) as article_count
     FROM labels l
     LEFT JOIN issue_labels il ON l.id = il.label_id
     LEFT JOIN issues i ON il.issue_id = i.id AND i.is_deleted = 0
@@ -54,7 +64,9 @@ export const getLabel = (db: Database.Database, id: number): Label => {
         name: string;
         description: string | null;
         created_at: string;
-        issue_count: number;
+        memo_count: number;
+        task_count: number;
+        article_count: number;
       }
     | undefined;
 
@@ -67,7 +79,9 @@ export const getLabel = (db: Database.Database, id: number): Label => {
     name: row.name,
     description: row.description,
     createdAt: row.created_at,
-    issueCount: row.issue_count,
+    memoCount: row.memo_count,
+    taskCount: row.task_count,
+    articleCount: row.article_count,
   };
 };
 
@@ -82,7 +96,10 @@ export const getLabelByName = (
   name: string
 ): Label | null => {
   const stmt = db.prepare(`
-    SELECT l.*, COUNT(il.issue_id) as issue_count
+    SELECT l.*,
+      COUNT(CASE WHEN i.type = 'memo' THEN 1 END) as memo_count,
+      COUNT(CASE WHEN i.type = 'task' THEN 1 END) as task_count,
+      COUNT(CASE WHEN i.type = 'article' THEN 1 END) as article_count
     FROM labels l
     LEFT JOIN issue_labels il ON l.id = il.label_id
     LEFT JOIN issues i ON il.issue_id = i.id AND i.is_deleted = 0
@@ -95,7 +112,9 @@ export const getLabelByName = (
         name: string;
         description: string | null;
         created_at: string;
-        issue_count: number;
+        memo_count: number;
+        task_count: number;
+        article_count: number;
       }
     | undefined;
 
@@ -108,7 +127,9 @@ export const getLabelByName = (
     name: row.name,
     description: row.description,
     createdAt: row.created_at,
-    issueCount: row.issue_count,
+    memoCount: row.memo_count,
+    taskCount: row.task_count,
+    articleCount: row.article_count,
   };
 };
 
