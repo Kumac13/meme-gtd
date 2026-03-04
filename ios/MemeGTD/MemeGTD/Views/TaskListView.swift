@@ -1,0 +1,348 @@
+import SwiftUI
+
+struct TaskListView: View {
+    let onMenuTap: () -> Void
+
+    @StateObject private var viewModel = TaskListViewModel()
+    @State private var showStatusPicker: Bool = false
+    @State private var showLabelPicker: Bool = false
+    @State private var selectedLabelNames: Set<String> = []
+    @State private var labelSearchText: String = ""
+    @FocusState private var searchFocused: Bool
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(viewModel.tasks) { task in
+                    TaskCell(task: task)
+                        .padding(.horizontal, 16)
+
+                    Divider()
+                        .padding(.horizontal, 16)
+                }
+
+                if viewModel.hasMore {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .onAppear {
+                            Task { await viewModel.loadOlderTasks() }
+                        }
+                }
+            }
+        }
+        .scrollDismissesKeyboard(.immediately)
+        .scrollEdgeEffectStyle(.soft, for: .bottom)
+        .refreshable {
+            await withCheckedContinuation { continuation in
+                Task { @MainActor in
+                    HapticManager.impact(.medium)
+
+                    let start = Date()
+                    let response = await viewModel.fetchTasks()
+
+                    let elapsed = Date().timeIntervalSince(start)
+                    let remaining = 0.75 - elapsed
+                    if remaining > 0 {
+                        try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+                    }
+
+                    if let response = response {
+                        viewModel.applyTasks(response)
+                    }
+                    HapticManager.notification(.success)
+                    continuation.resume()
+                }
+            }
+        }
+        .safeAreaInset(edge: .top) {
+            HStack(spacing: 8) {
+                filterPill(
+                    label: viewModel.statusFilter.displayLabel,
+                    isActive: true
+                ) {
+                    showStatusPicker = true
+                }
+
+                filterPill(
+                    label: labelFilterDisplayLabel,
+                    isActive: !viewModel.labelFilters.isEmpty
+                ) {
+                    selectedLabelNames = viewModel.labelFilters
+                    labelSearchText = ""
+                    showLabelPicker = true
+                }
+
+                bookmarkPill
+
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+        }
+        .safeAreaBar(edge: .bottom) {
+            taskBottomBar
+                .padding(.horizontal, 16)
+                .padding(.bottom, 10)
+        }
+        .toolbar {
+            AppToolbar(title: "Tasks", onMenuTap: onMenuTap)
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showStatusPicker) {
+            statusPickerSheet
+                .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showLabelPicker, onDismiss: {
+            viewModel.setLabelFilters(selectedLabelNames)
+        }) {
+            labelPickerSheet
+                .presentationDetents([.medium, .large])
+        }
+        .overlay {
+            if viewModel.isLoading && viewModel.tasks.isEmpty {
+                ProgressView("Loading tasks...")
+                    .foregroundColor(.textSecondary)
+            }
+        }
+        .task {
+            await viewModel.loadLabels()
+            if viewModel.tasks.isEmpty {
+                await viewModel.loadTasks()
+            }
+        }
+    }
+
+    // MARK: - Bookmark Pill
+
+    private var bookmarkPill: some View {
+        Button(action: {
+            HapticManager.impact(.light)
+            viewModel.toggleBookmarkFilter()
+        }) {
+            Text(viewModel.bookmarkFilter ? "Bookmarked" : "Bookmark")
+                .font(.system(size: 13))
+                .foregroundColor(viewModel.bookmarkFilter ? .accent : .textSecondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+        }
+        .modifier(PillSurface(radius: 16))
+    }
+
+    // MARK: - Filter Pill
+
+    private var labelFilterDisplayLabel: String {
+        let count = viewModel.labelFilters.count
+        if count == 0 { return "Label" }
+        if count == 1 { return viewModel.labelFilters.first! }
+        return "\(count) Labels"
+    }
+
+    private func filterPill(label: String, isActive: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: {
+            HapticManager.impact(.light)
+            action()
+        }) {
+            HStack(spacing: 3) {
+                Text(label)
+                    .font(.system(size: 13))
+                    .foregroundColor(isActive ? .textPrimary : .textSecondary)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundColor(.textSecondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+        }
+        .modifier(PillSurface(radius: 16))
+    }
+
+    // MARK: - Status Picker Sheet
+
+    private var statusPickerSheet: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button(action: { showStatusPicker = false }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 28))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundColor(Color(.tertiaryLabel))
+                }
+                Spacer()
+                Text("Status")
+                    .font(.system(size: 17, weight: .semibold))
+                Spacer()
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 28))
+                    .hidden()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(TaskStatusFilter.allCases, id: \.self) { status in
+                        Button(action: {
+                            HapticManager.selection()
+                            viewModel.setStatusFilter(status)
+                            showStatusPicker = false
+                        }) {
+                            HStack {
+                                Text(status.displayLabel)
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.textPrimary)
+                                Spacer()
+                                if viewModel.statusFilter == status {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 22))
+                                        .foregroundColor(.accent)
+                                } else {
+                                    Image(systemName: "plus.circle")
+                                        .font(.system(size: 22))
+                                        .foregroundColor(Color(.systemGray3))
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                        }
+                        Divider().padding(.leading, 16)
+                    }
+                }
+            }
+        }
+        .background(Color(.systemBackground))
+    }
+
+    // MARK: - Label Picker Sheet
+
+    private var filteredLabels: [IssueLabel] {
+        if labelSearchText.isEmpty { return viewModel.allLabels }
+        let query = labelSearchText.lowercased()
+        return viewModel.allLabels.filter { $0.name.lowercased().contains(query) }
+    }
+
+    private var labelPickerSheet: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button(action: { showLabelPicker = false }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 28))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundColor(Color(.tertiaryLabel))
+                }
+                Spacer()
+                Text("Labels")
+                    .font(.system(size: 17, weight: .semibold))
+                Spacer()
+                Button(action: {
+                    HapticManager.impact(.light)
+                    selectedLabelNames.removeAll()
+                }) {
+                    Text("Clear")
+                        .font(.system(size: 16))
+                        .foregroundColor(selectedLabelNames.isEmpty ? Color(.systemGray3) : .accent)
+                }
+                .disabled(selectedLabelNames.isEmpty)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            Divider()
+
+            ZStack(alignment: .bottom) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(filteredLabels) { label in
+                            let isSelected = selectedLabelNames.contains(label.name)
+                            Button(action: {
+                                HapticManager.impact(.light)
+                                if isSelected {
+                                    selectedLabelNames.remove(label.name)
+                                } else {
+                                    selectedLabelNames.insert(label.name)
+                                }
+                            }) {
+                                HStack {
+                                    Text(label.name)
+                                        .font(.system(size: 13, weight: .medium))
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 5)
+                                        .background(LabelColorHelper.bgColor(for: label.name))
+                                        .foregroundColor(LabelColorHelper.textColor(for: label.name))
+                                        .clipShape(Capsule())
+
+                                    Spacer()
+
+                                    if isSelected {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.system(size: 22))
+                                            .foregroundColor(.accent)
+                                    } else {
+                                        Image(systemName: "plus.circle")
+                                            .font(.system(size: 22))
+                                            .foregroundColor(Color(.systemGray3))
+                                    }
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                            }
+                            Divider().padding(.leading, 16)
+                        }
+
+                        Color.clear.frame(height: 70)
+                    }
+                }
+
+                PickerSearchBar(text: $labelSearchText, placeholder: "Search")
+            }
+        }
+        .background(Color(.systemBackground))
+    }
+
+    // MARK: - Bottom Bar
+
+    private var taskBottomBar: some View {
+        HStack(alignment: .bottom, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 13))
+                    .foregroundColor(Color(.systemGray))
+
+                TextField("Search tasks...", text: $viewModel.searchQuery)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 14))
+                    .tint(Color.accent)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .focused($searchFocused)
+                    .onSubmit { viewModel.search() }
+
+                if !viewModel.searchQuery.isEmpty {
+                    Button(action: {
+                        viewModel.searchQuery = ""
+                        viewModel.search()
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(Color(.systemGray))
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
+            .frame(minHeight: 52)
+            .modifier(PillSurface(radius: 22))
+
+            Button(action: {}) {
+                Image(systemName: "plus")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 52, height: 52)
+                    .background(Color.accent)
+                    .clipShape(Circle())
+            }
+        }
+    }
+}

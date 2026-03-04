@@ -37,6 +37,8 @@ struct RootView: View {
                             onMenuTap: { openMenu() },
                             navigationPath: $navigationPath
                         )
+                    case .tasks:
+                        TaskListView(onMenuTap: { openMenu() })
                     case .settings:
                         SettingsView(onMenuTap: { openMenu() })
                     }
