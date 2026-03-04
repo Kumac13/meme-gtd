@@ -73,6 +73,8 @@ struct TaskListView: View {
                     showLabelPicker = true
                 }
 
+                bookmarkPill
+
                 Spacer()
             }
             .padding(.horizontal, 16)
@@ -84,26 +86,7 @@ struct TaskListView: View {
                 .padding(.bottom, 10)
         }
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: onMenuTap) {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.textPrimary)
-                }
-            }
-            ToolbarItem(placement: .principal) {
-                Text("Tasks")
-                    .font(.headline)
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    HapticManager.impact(.light)
-                    viewModel.toggleBookmarkFilter()
-                }) {
-                    Image(systemName: viewModel.bookmarkFilter ? "bookmark.fill" : "bookmark")
-                        .foregroundColor(viewModel.bookmarkFilter ? .accent : .textSecondary)
-                }
-            }
+            AppToolbar(title: "Tasks", onMenuTap: onMenuTap)
         }
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showStatusPicker) {
@@ -128,6 +111,22 @@ struct TaskListView: View {
                 await viewModel.loadTasks()
             }
         }
+    }
+
+    // MARK: - Bookmark Pill
+
+    private var bookmarkPill: some View {
+        Button(action: {
+            HapticManager.impact(.light)
+            viewModel.toggleBookmarkFilter()
+        }) {
+            Text(viewModel.bookmarkFilter ? "Bookmarked" : "Bookmark")
+                .font(.system(size: 13))
+                .foregroundColor(viewModel.bookmarkFilter ? .accent : .textSecondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+        }
+        .modifier(PillSurface(radius: 16))
     }
 
     // MARK: - Filter Pill

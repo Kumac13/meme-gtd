@@ -15,6 +15,8 @@ class MemoListViewModel: ObservableObject {
     @Published var isCreating: Bool = false
     @Published var searchQuery: String = ""
     @Published var bookmarkFilter: Bool = false
+    @Published var labelFilters: Set<String> = []
+    @Published var allLabels: [IssueLabel] = []
 
     private let pageSize = 20
 
@@ -57,15 +59,22 @@ class MemoListViewModel: ObservableObject {
         if bookmarkFilter {
             queryItems.append(URLQueryItem(name: "bookmarked", value: "true"))
         }
+
+        // Combine pill-based label filters with search query label: syntax
+        var allLabelFilters = Array(labelFilters)
+
         if !searchQuery.isEmpty {
             let parsed = parseSearchQuery(searchQuery)
-            if !parsed.labels.isEmpty {
-                queryItems.append(URLQueryItem(name: "label", value: parsed.labels.joined(separator: ",")))
-            }
+            allLabelFilters.append(contentsOf: parsed.labels)
             if !parsed.freeText.isEmpty {
                 queryItems.append(URLQueryItem(name: "search", value: parsed.freeText))
             }
         }
+
+        if !allLabelFilters.isEmpty {
+            queryItems.append(URLQueryItem(name: "label", value: allLabelFilters.joined(separator: ",")))
+        }
+
         return queryItems
     }
 
@@ -191,8 +200,25 @@ class MemoListViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Load labels for filter picker
+
+    func loadLabels() async {
+        do {
+            allLabels = try await APIClient.shared.get(path: "/api/labels")
+        } catch {
+            logger.error("loadLabels error: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - Filter actions
+
     func toggleBookmarkFilter() {
         bookmarkFilter.toggle()
+        Task { await loadMemos() }
+    }
+
+    func setLabelFilters(_ labels: Set<String>) {
+        labelFilters = labels
         Task { await loadMemos() }
     }
 

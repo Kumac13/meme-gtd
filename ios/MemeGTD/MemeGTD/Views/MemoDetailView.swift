@@ -162,30 +162,7 @@ struct MemoDetailView: View {
         .enableSwipeBack()
         .navigationBarBackButtonHidden(true)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: onMenuTap) {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.textPrimary)
-                }
-            }
-
-            ToolbarItem(placement: .principal) {
-                Text(memoTitlePreview)
-                    .font(.headline)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    Task { await viewModel.toggleBookmark() }
-                }) {
-                    Image(systemName: viewModel.memo?.isBookmarked == true ? "bookmark.fill" : "bookmark")
-                        .foregroundColor(viewModel.memo?.isBookmarked == true ? .accent : .textSecondary)
-                }
-                .disabled(viewModel.isBookmarking)
-            }
+            AppToolbar(title: memoTitlePreview, onMenuTap: onMenuTap, titleLineLimit: 1)
         }
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showInfoSheet) {
@@ -193,7 +170,7 @@ struct MemoDetailView: View {
                 viewModel: viewModel,
                 showCopiedFeedback: $showCopiedFeedback
             )
-            .presentationDetents([.medium, .large])
+            .presentationDetents([.fraction(0.6), .large])
         }
         .alert("Delete Memo", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
@@ -306,6 +283,26 @@ private struct MemoInfoSheet: View {
 
             // Rows
             VStack(spacing: 0) {
+                // Bookmark
+                Button(action: {
+                    Task { await viewModel.toggleBookmark() }
+                }) {
+                    HStack {
+                        Text("Bookmark")
+                            .font(.system(size: 15))
+                            .foregroundColor(.textPrimary)
+                        Spacer()
+                        Image(systemName: viewModel.memo?.isBookmarked == true ? "bookmark.fill" : "bookmark")
+                            .font(.system(size: 18))
+                            .foregroundColor(viewModel.memo?.isBookmarked == true ? .accent : .textSecondary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                }
+                .disabled(viewModel.isBookmarking)
+
+                Divider().padding(.leading, 16)
+
                 // Labels
                 Button(action: {
                     selectedLabelNames = Set(viewModel.memo?.labels ?? [])
