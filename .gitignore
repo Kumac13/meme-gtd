@@ -45,3 +45,6 @@ test-data/
 # Xcode user data
 *.xcuserstate
 xcuserdata/
+
+# pnpm
+.pnpm-approved-builds.json
