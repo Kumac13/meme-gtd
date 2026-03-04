@@ -1,6 +1,9 @@
 import Foundation
 
-enum TaskStatus: String, Codable, CaseIterable {
+/// Filter option for task status. Includes `.all` for showing all statuses.
+/// The API-compatible raw values are used for query building; `.all` is UI-only.
+enum TaskStatusFilter: String, CaseIterable {
+    case all
     case inbox
     case open
     case next
@@ -12,6 +15,7 @@ enum TaskStatus: String, Codable, CaseIterable {
 
     var displayLabel: String {
         switch self {
+        case .all: return "All"
         case .inbox: return "Inbox"
         case .open: return "Open"
         case .next: return "Next"
@@ -22,6 +26,11 @@ enum TaskStatus: String, Codable, CaseIterable {
         case .canceled: return "Canceled"
         }
     }
+
+    /// The API query value. Returns nil for `.all` (omit status param).
+    var apiValue: String? {
+        self == .all ? nil : rawValue
+    }
 }
 
 struct TaskItem: Codable, Identifiable {
@@ -29,7 +38,7 @@ struct TaskItem: Codable, Identifiable {
     let type: String
     let title: String
     let bodyMd: String
-    let status: TaskStatus
+    let status: String
     let taskKind: String
     let scheduledStart: String?
     let scheduledEnd: String?
@@ -51,8 +60,6 @@ struct TaskItem: Codable, Identifiable {
     let projectIds: [Int]?
     let linkIds: [Int]?
 
-    var resolvedCommentCount: Int { commentCount ?? 0 }
-
     // Exclude meta from decoding (not needed for list display)
     private enum CodingKeys: String, CodingKey {
         case id, type, title, bodyMd, status, taskKind
@@ -69,8 +76,4 @@ struct TaskListResponse: Codable {
     let total: Int
     let limit: Int
     let offset: Int
-}
-
-struct CreateTaskRequest: Codable {
-    let title: String
 }

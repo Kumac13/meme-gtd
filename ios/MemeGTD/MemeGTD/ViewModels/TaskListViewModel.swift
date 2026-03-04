@@ -13,17 +13,13 @@ class TaskListViewModel: ObservableObject {
     @Published var error: String?
 
     // Filters
-    @Published var statusFilter: TaskStatus? = .next
-    @Published var labelFilter: String? = nil
+    @Published var statusFilter: TaskStatusFilter = .next
+    @Published var labelFilters: Set<String> = []
     @Published var bookmarkFilter: Bool = false
     @Published var searchQuery: String = ""
 
     // Labels for picker
     @Published var allLabels: [IssueLabel] = []
-
-    // Task creation
-    @Published var newTaskTitle: String = ""
-    @Published var isCreating: Bool = false
 
     private let pageSize = 20
 
@@ -36,11 +32,11 @@ class TaskListViewModel: ObservableObject {
             URLQueryItem(name: "limit", value: String(pageSize)),
             URLQueryItem(name: "offset", value: String(offset)),
         ]
-        if let status = statusFilter {
-            items.append(URLQueryItem(name: "status", value: status.rawValue))
+        if let apiValue = statusFilter.apiValue {
+            items.append(URLQueryItem(name: "status", value: apiValue))
         }
-        if let label = labelFilter, !label.isEmpty {
-            items.append(URLQueryItem(name: "label", value: label))
+        if !labelFilters.isEmpty {
+            items.append(URLQueryItem(name: "label", value: labelFilters.joined(separator: ",")))
         }
         if bookmarkFilter {
             items.append(URLQueryItem(name: "bookmarked", value: "true"))
@@ -149,45 +145,15 @@ class TaskListViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Create task
-
-    func createTask() async {
-        let title = newTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !title.isEmpty else { return }
-
-        isCreating = true
-
-        do {
-            let request = CreateTaskRequest(title: title)
-            let task: TaskItem = try await APIClient.shared.post(
-                path: "/api/tasks",
-                body: request
-            )
-            // New task defaults to "inbox" status.
-            // If current filter matches or is nil (all), insert at top.
-            if statusFilter == nil || statusFilter == task.status {
-                tasks.insert(task, at: 0)
-                total += 1
-            }
-            newTaskTitle = ""
-            HapticManager.notification(.success)
-        } catch {
-            self.error = error.localizedDescription
-            HapticManager.notification(.error)
-        }
-
-        isCreating = false
-    }
-
     // MARK: - Filter actions
 
-    func setStatusFilter(_ status: TaskStatus?) {
+    func setStatusFilter(_ status: TaskStatusFilter) {
         statusFilter = status
         Task { await loadTasks() }
     }
 
-    func setLabelFilter(_ label: String?) {
-        labelFilter = label
+    func setLabelFilters(_ labels: Set<String>) {
+        labelFilters = labels
         Task { await loadTasks() }
     }
 

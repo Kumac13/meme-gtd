@@ -4,85 +4,61 @@ struct TaskCell: View {
     let task: TaskItem
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // Layer 1: Title + Labels
-            HStack(alignment: .center, spacing: 6) {
-                Text(task.title)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.textPrimary)
-                    .lineLimit(2)
+        VStack(alignment: .leading, spacing: 0) {
+            // Title
+            Text(task.title)
+                .font(.system(size: 14))
+                .foregroundColor(.textPrimary)
+                .lineLimit(2)
+
+            // #id time | bookmark | labels — spacing で視覚的にグループ分け
+            HStack(spacing: 6) {
+                Text("#\(task.id)")
+                    .font(.system(size: 11))
+                    .foregroundColor(.textSecondary)
+
+                Text(formatCompactTime(task.createdAt))
+                    .font(.system(size: 11))
+                    .foregroundColor(.textSecondary)
 
                 if !task.labels.isEmpty {
-                    ForEach(task.labels.prefix(3), id: \.self) { label in
-                        Text(label)
-                            .font(.system(size: 10, weight: .medium))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(LabelColorHelper.bgColor(for: label))
-                            .foregroundColor(LabelColorHelper.textColor(for: label))
-                            .clipShape(Capsule())
-                    }
-                    if task.labels.count > 3 {
-                        Text("+\(task.labels.count - 3)")
-                            .font(.system(size: 10, weight: .medium))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(.systemGray5))
-                            .foregroundColor(.textSecondary)
-                            .clipShape(Capsule())
-                    }
-                }
-            }
-
-            // Layer 2: Bookmark + Comment count
-            if task.isBookmarked || task.resolvedCommentCount > 0 {
-                HStack(spacing: 8) {
-                    if task.isBookmarked {
-                        Image(systemName: "bookmark.fill")
-                            .font(.system(size: 11))
-                            .foregroundColor(.accent)
-                    }
-
-                    if task.resolvedCommentCount > 0 {
-                        HStack(spacing: 2) {
-                            Image(systemName: "bubble.right")
-                                .font(.system(size: 11))
-                            Text("\(task.resolvedCommentCount)")
-                                .font(.system(size: 11))
+                    HStack(spacing: 3) {
+                        ForEach(task.labels.prefix(3), id: \.self) { label in
+                            Text(label)
+                                .font(.system(size: 10, weight: .medium))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.accent.opacity(0.12))
+                                .foregroundColor(.accent)
+                                .cornerRadius(4)
                         }
-                        .foregroundColor(.textSecondary)
                     }
                 }
             }
-
-            // Layer 3: #id + scheduled date + relative time
-            HStack(spacing: 8) {
-                Text("#\(task.id)")
-                    .font(.system(size: 12))
-                    .foregroundColor(.textSecondary)
-
-                if let scheduledOn = task.scheduledOn {
-                    Text("Scheduled: \(scheduledOn)")
-                        .font(.system(size: 12))
-                        .foregroundColor(.textSecondary)
-                }
-
-                Text(formatRelativeTime(task.createdAt))
-                    .font(.system(size: 12))
-                    .foregroundColor(.textSecondary)
-            }
+            .padding(.top, 6)
         }
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - Relative time formatting
+    // MARK: - Compact relative time (e.g. "5m", "3h", "2d", "1mo")
 
-    private func formatRelativeTime(_ iso: String) -> String {
+    private func formatCompactTime(_ iso: String) -> String {
         guard let date = parseISO(iso) else { return "" }
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .short
-        return formatter.localizedString(for: date, relativeTo: Date())
+        let seconds = Int(Date().timeIntervalSince(date))
+        if seconds < 60 { return "now" }
+        let minutes = seconds / 60
+        if minutes < 60 { return "\(minutes)m" }
+        let hours = minutes / 60
+        if hours < 24 { return "\(hours)h" }
+        let days = hours / 24
+        if days < 7 { return "\(days)d" }
+        let weeks = days / 7
+        if weeks < 5 { return "\(weeks)w" }
+        let months = days / 30
+        if months < 12 { return "\(months)mo" }
+        let years = days / 365
+        return "\(years)y"
     }
 
     private func parseISO(_ iso: String) -> Date? {
