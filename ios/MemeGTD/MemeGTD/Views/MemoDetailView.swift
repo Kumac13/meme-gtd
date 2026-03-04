@@ -49,7 +49,7 @@ struct MemoDetailView: View {
 
                             ThreadItem(
                                 bodyMd: item.bodyMd,
-                                labels: item.labels,
+                                labels: nil,
                                 onEdit: {
                                     viewModel.replyBody = item.bodyMd
                                     if item.isOriginal {
