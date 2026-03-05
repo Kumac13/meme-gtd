@@ -3,44 +3,33 @@ import SwiftUI
 struct TaskTitleSection: View {
     let title: String
     let status: String
-    var onEdit: (() -> Void)?
+    var onStatusTap: (() -> Void)?
 
     var body: some View {
-        HStack(alignment: .top, spacing: 4) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(title)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.textPrimary)
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.textPrimary)
 
-                // Status pill
-                Text(statusDisplayLabel(status))
-                    .font(.system(size: 12, weight: .medium))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(statusColor(status).opacity(0.15))
-                    .foregroundColor(statusColor(status))
-                    .clipShape(Capsule())
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            // Three-dot menu (Edit only)
-            if let onEdit = onEdit {
-                Menu {
-                    Button(action: onEdit) {
-                        Label("Edit", systemImage: "pencil")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 13))
-                        .foregroundColor(.textSecondary)
-                        .frame(width: 28, height: 20)
-                        .contentShape(Rectangle())
+            // Status pill (tappable)
+            Button(action: { onStatusTap?() }) {
+                HStack(spacing: 4) {
+                    Text(statusDisplayLabel(status))
+                        .font(.system(size: 12, weight: .medium))
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 8, weight: .semibold))
                 }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(statusColor(status).opacity(0.15))
+                .foregroundColor(statusColor(status))
+                .clipShape(Capsule())
             }
+            .disabled(onStatusTap == nil)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 10)
         .padding(.horizontal, 16)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Status helpers

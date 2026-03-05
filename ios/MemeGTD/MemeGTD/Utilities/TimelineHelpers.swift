@@ -75,21 +75,19 @@ struct TimelineHelpers {
         guard let date = parseDate(iso) else { return "" }
         let now = Date()
         let interval = now.timeIntervalSince(date)
+        let seconds = Int(interval)
+        let minutes = seconds / 60
+        let hours = minutes / 60
+        let days = hours / 24
+        let months = days / 30
+        let years = days / 365
 
-        if interval < 60 { return "just now" }
-        if interval < 3600 { return "\(Int(interval / 60))m ago" }
-        if interval < 86400 { return "\(Int(interval / 3600))h ago" }
-        if interval < 604800 { return "\(Int(interval / 86400))d ago" }
-
-        let calendar = Calendar.current
-        let month = calendar.component(.month, from: date)
-        let day = calendar.component(.day, from: date)
-        let year = calendar.component(.year, from: date)
-        let nowYear = calendar.component(.year, from: now)
-        if year == nowYear {
-            return "\(month)/\(day)"
-        }
-        return "\(year)/\(month)/\(day)"
+        if seconds < 60 { return "just now" }
+        if minutes < 60 { return "\(minutes) minute\(minutes > 1 ? "s" : "") ago" }
+        if hours < 24 { return "\(hours) hour\(hours > 1 ? "s" : "") ago" }
+        if days < 30 { return "\(days) day\(days > 1 ? "s" : "") ago" }
+        if months < 12 { return "\(months) month\(months > 1 ? "s" : "") ago" }
+        return "\(years) year\(years > 1 ? "s" : "") ago"
     }
 
     // MARK: - Date parsing

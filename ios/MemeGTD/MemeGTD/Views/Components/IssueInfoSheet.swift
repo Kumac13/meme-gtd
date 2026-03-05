@@ -3,6 +3,7 @@ import SwiftUI
 struct IssueInfoSheet<VM: IssueDetailProvider>: View {
     @ObservedObject var viewModel: VM
     @Binding var showCopiedFeedback: Bool
+    var onEditTitle: (() -> Void)?
     var onDelete: (() -> Void)?
     var labelCountKeyPath: KeyPath<IssueLabel, Int> = \.memoCount
     @Environment(\.dismiss) private var dismiss
@@ -32,6 +33,28 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
 
             // Rows
             VStack(spacing: 0) {
+                // Edit Title (Task only)
+                if let onEditTitle = onEditTitle {
+                    Button(action: {
+                        dismiss()
+                        onEditTitle()
+                    }) {
+                        HStack {
+                            Text("Title")
+                                .font(.system(size: 15))
+                                .foregroundColor(.textPrimary)
+                            Spacer()
+                            Text("Edit")
+                                .font(.system(size: 15))
+                                .foregroundColor(.accent)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                    }
+
+                    Divider().padding(.leading, 16)
+                }
+
                 // Bookmark
                 Button(action: {
                     Task { await viewModel.toggleBookmark() }

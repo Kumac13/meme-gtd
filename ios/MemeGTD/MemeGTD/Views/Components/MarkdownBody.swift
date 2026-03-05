@@ -36,7 +36,7 @@ struct MarkdownBody: View {
         case .codeBlock(let lang, let code):
             codeBlockView(language: lang, code: code)
         case .mermaidBlock(let code):
-            MermaidView(code: code)
+            MermaidContainerView(code: code)
         case .blockquote(let content):
             blockquoteView(content: content)
         case .listItem(let content, let indent):
@@ -292,18 +292,24 @@ private func parseBlocks(_ markdown: String) -> [MarkdownBlock] {
 
 private struct MermaidView: UIViewRepresentable {
     let code: String
+    let onHeightChange: (CGFloat) -> Void
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
+        let handler = context.coordinator
+        config.userContentController.add(handler, name: "heightChanged")
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.isOpaque = false
         webView.backgroundColor = .clear
         webView.scrollView.isScrollEnabled = false
-        webView.navigationDelegate = context.coordinator
+        webView.navigationDelegate = handler
         return webView
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
+        guard !context.coordinator.hasLoaded else { return }
+        context.coordinator.hasLoaded = true
+
         let escapedCode = code
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "`", with: "\\`")
@@ -323,9 +329,12 @@ private struct MermaidView: UIViewRepresentable {
             import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
             mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
             const element = document.querySelector('.mermaid');
-            const { svg } = await mermaid.render('diagram', `\(escapedCode)`);
-            element.innerHTML = svg;
-            // Notify native side of content height
+            try {
+                const { svg } = await mermaid.render('diagram', `\(escapedCode)`);
+                element.innerHTML = svg;
+            } catch (e) {
+                element.innerHTML = '<pre style="color:red">' + e.message + '</pre>';
+            }
             const height = document.body.scrollHeight;
             window.webkit.messageHandlers.heightChanged.postMessage(height);
         </script>
@@ -340,14 +349,34 @@ private struct MermaidView: UIViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator()
+        Coordinator(onHeightChange: onHeightChange)
     }
 
-    class Coordinator: NSObject, WKNavigationDelegate {
+    class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+        var hasLoaded = false
+        let onHeightChange: (CGFloat) -> Void
+
+        init(onHeightChange: @escaping (CGFloat) -> Void) {
+            self.onHeightChange = onHeightChange
+        }
+
+        func userContentController(
+            _ userContentController: WKUserContentController,
+            didReceive message: WKScriptMessage
+        ) {
+            if let height = message.body as? CGFloat, height > 0 {
+                DispatchQueue.main.async {
+                    self.onHeightChange(height)
+                }
+            }
+        }
+
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             webView.evaluateJavaScript("document.body.scrollHeight") { result, _ in
                 if let height = result as? CGFloat, height > 0 {
-                    webView.invalidateIntrinsicContentSize()
+                    DispatchQueue.main.async {
+                        self.onHeightChange(height)
+                    }
                 }
             }
         }
@@ -359,10 +388,12 @@ private struct MermaidContainerView: View {
     @State private var height: CGFloat = 200
 
     var body: some View {
-        MermaidView(code: code)
-            .frame(height: height)
-            .frame(maxWidth: .infinity)
-            .background(Color(.systemGray6))
-            .cornerRadius(8)
+        MermaidView(code: code) { newHeight in
+            height = newHeight
+        }
+        .frame(height: height)
+        .frame(maxWidth: .infinity)
+        .background(Color(.systemGray6))
+        .cornerRadius(8)
     }
 }

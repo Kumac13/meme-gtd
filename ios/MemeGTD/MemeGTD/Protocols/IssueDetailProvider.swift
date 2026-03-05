@@ -3,6 +3,7 @@ import Foundation
 @MainActor
 protocol IssueDetailProvider: ObservableObject {
     var issueId: Int { get }
+    var issueTypeLabel: String { get }
 
     // Links
     var issueLinks: [IssueLink] { get }

@@ -4,6 +4,7 @@ import SwiftUI
 @MainActor
 class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
     var issueId: Int { memoId }
+    var issueTypeLabel: String { "memo" }
     var isBookmarked: Bool { memo?.isBookmarked ?? false }
     var issueLabels: [String] { memo?.labels ?? [] }
     @Published var memo: Memo?

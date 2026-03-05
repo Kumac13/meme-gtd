@@ -231,7 +231,7 @@ struct LinkPickerModal<VM: IssueDetailProvider>: View {
                 }
             } else {
                 Menu {
-                    Section("This issue is:") {
+                    Section("This \(viewModel.issueTypeLabel) is:") {
                         ForEach(LinkType.allCases, id: \.self) { type in
                             Button(action: {
                                 HapticManager.impact(.light)

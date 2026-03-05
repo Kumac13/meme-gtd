@@ -33,6 +33,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
 
     // IssueDetailProvider
     var issueId: Int { taskId }
+    var issueTypeLabel: String { "task" }
     var isBookmarked: Bool { task?.isBookmarked ?? false }
     var issueLabels: [String] { task?.labels ?? [] }
 
