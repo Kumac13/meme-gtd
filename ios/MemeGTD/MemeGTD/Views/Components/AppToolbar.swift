@@ -86,9 +86,7 @@ struct AppToolbar<Trailing: View>: ToolbarContent {
                             HapticManager.impact(.light)
                             config.searchQuery.wrappedValue = ""
                             config.onSearch()
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                                config.isSearching.wrappedValue = false
-                            }
+                            config.isSearching.wrappedValue = false
                         }) {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 14))
@@ -123,9 +121,7 @@ struct AppToolbar<Trailing: View>: ToolbarContent {
                         trailing()
                         Button(action: {
                             HapticManager.impact(.light)
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                                config.isSearching.wrappedValue = true
-                            }
+                            config.isSearching.wrappedValue = true
                         }) {
                             Image(systemName: "magnifyingglass")
                                 .font(.system(size: 17, weight: .medium))
