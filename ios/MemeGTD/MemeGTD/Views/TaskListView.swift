@@ -5,9 +5,9 @@ struct TaskListView: View {
 
     @StateObject private var viewModel = TaskListViewModel()
     @State private var showStatusPicker: Bool = false
+    @State private var isSearching: Bool = false
     @State private var showLabelPicker: Bool = false
     @State private var selectedLabelNames: Set<String> = []
-    @FocusState private var searchFocused: Bool
 
     var body: some View {
         ScrollView {
@@ -79,14 +79,38 @@ struct TaskListView: View {
             .padding(.vertical, 8)
         }
         .safeAreaBar(edge: .bottom) {
-            taskBottomBar
-                .padding(.horizontal, 16)
-                .padding(.bottom, 10)
+            HStack {
+                Spacer()
+                Button(action: {}) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 52, height: 52)
+                        .background(Color.accent)
+                        .clipShape(Circle())
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 10)
+            .opacity(isSearching ? 0 : 1)
+            .allowsHitTesting(!isSearching)
         }
         .toolbar {
-            AppToolbar(title: "Tasks", onMenuTap: onMenuTap)
+            AppToolbar(
+                title: "Tasks",
+                onMenuTap: onMenuTap,
+                isSearching: $isSearching,
+                searchQuery: $viewModel.searchQuery,
+                searchPlaceholder: "Search tasks...",
+                onSearch: { viewModel.search() }
+            )
         }
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: isSearching) { _, newValue in
+            if !newValue {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
+        }
         .sheet(isPresented: $showStatusPicker) {
             statusPickerSheet
                 .presentationDetents([.medium])
@@ -219,48 +243,4 @@ struct TaskListView: View {
         .background(Color(.systemBackground))
     }
 
-    // MARK: - Bottom Bar
-
-    private var taskBottomBar: some View {
-        HStack(alignment: .bottom, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 13))
-                    .foregroundColor(Color(.systemGray))
-
-                TextField("Search tasks...", text: $viewModel.searchQuery)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 14))
-                    .tint(Color.accent)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .focused($searchFocused)
-                    .onSubmit { viewModel.search() }
-
-                if !viewModel.searchQuery.isEmpty {
-                    Button(action: {
-                        viewModel.searchQuery = ""
-                        viewModel.search()
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(Color(.systemGray))
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
-            .frame(minHeight: 52)
-            .modifier(PillSurface(radius: 22))
-
-            Button(action: {}) {
-                Image(systemName: "plus")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(width: 52, height: 52)
-                    .background(Color.accent)
-                    .clipShape(Circle())
-            }
-        }
-    }
 }

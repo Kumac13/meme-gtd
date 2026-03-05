@@ -113,48 +113,35 @@ struct MemoDetailView: View {
                 }
             }
             .safeAreaBar(edge: .bottom) {
-                HStack(alignment: .bottom, spacing: 10) {
-                    Button(action: {
-                        HapticManager.impact(.light)
-                        showInfoSheet = true
-                    }) {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundColor(Color(.systemGray))
-                            .frame(width: 52, height: 52)
-                    }
-                    .modifier(PillSurface(radius: 26))
-
-                    FloatingComposer(
-                        text: $viewModel.replyBody,
-                        placeholder: (editingMemo || editingCommentId != nil) ? "Edit..." : "Add a comment...",
-                        disabled: viewModel.isLoading,
-                        submitting: viewModel.isSubmittingReply,
-                        notice: editingMemo ? "Editing this memo" : editingCommentId != nil ? "Editing this comment" : nil,
-                        onDismissNotice: {
-                            editingMemo = false
-                            editingCommentId = nil
-                            viewModel.replyBody = ""
-                        },
-                        onSubmit: {
-                            if editingMemo {
-                                Task {
-                                    await viewModel.updateMemo(bodyMd: viewModel.replyBody)
-                                    editingMemo = false
-                                    viewModel.replyBody = ""
-                                }
-                            } else if let commentId = editingCommentId {
-                                Task {
-                                    await viewModel.updateComment(commentId, bodyMd: viewModel.replyBody)
-                                    editingCommentId = nil
-                                    viewModel.replyBody = ""
-                                }
-                            } else {
-                                Task { await viewModel.addComment() }
+                FloatingComposer(
+                    text: $viewModel.replyBody,
+                    placeholder: (editingMemo || editingCommentId != nil) ? "Edit..." : "Add a comment...",
+                    disabled: viewModel.isLoading,
+                    submitting: viewModel.isSubmittingReply,
+                    notice: editingMemo ? "Editing this memo" : editingCommentId != nil ? "Editing this comment" : nil,
+                    onDismissNotice: {
+                        editingMemo = false
+                        editingCommentId = nil
+                        viewModel.replyBody = ""
+                    },
+                    onSubmit: {
+                        if editingMemo {
+                            Task {
+                                await viewModel.updateMemo(bodyMd: viewModel.replyBody)
+                                editingMemo = false
+                                viewModel.replyBody = ""
                             }
+                        } else if let commentId = editingCommentId {
+                            Task {
+                                await viewModel.updateComment(commentId, bodyMd: viewModel.replyBody)
+                                editingCommentId = nil
+                                viewModel.replyBody = ""
+                            }
+                        } else {
+                            Task { await viewModel.addComment() }
                         }
-                    )
-                }
+                    }
+                )
                 .padding(.horizontal, 16)
                 .padding(.bottom, 10)
             }
@@ -162,7 +149,16 @@ struct MemoDetailView: View {
         .enableSwipeBack()
         .navigationBarBackButtonHidden(true)
         .toolbar {
-            AppToolbar(title: memoTitlePreview, onMenuTap: onMenuTap, titleLineLimit: 1)
+            AppToolbar(title: memoTitlePreview, onMenuTap: onMenuTap, titleLineLimit: 1) {
+                Button(action: {
+                    HapticManager.impact(.light)
+                    showInfoSheet = true
+                }) {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(.textPrimary)
+                }
+            }
         }
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showInfoSheet) {
