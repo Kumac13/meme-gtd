@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.26.0 - 2026-03-05
+
+### Improvements
+
+- **iOS Toolbar Search**: Move search from bottom bar to navigation toolbar with animated expand/collapse (GitHub iOS style)
+- **iOS MemoDetail**: Move info button from bottom bar to toolbar as ellipsis icon, making FloatingComposer full-width
+- **iOS Input Areas**: ComposePill and FAB button now use full width without competing with search controls
+- **AutoFocusTextField**: New UIViewRepresentable component for reliable keyboard focus in toolbar context
+
 ## 0.21.0 - 2026-02-28
 
 ### New Features
