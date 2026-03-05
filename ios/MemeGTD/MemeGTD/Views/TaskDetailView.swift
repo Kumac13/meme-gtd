@@ -51,8 +51,9 @@ struct TaskDetailView: View {
                             VStack(alignment: .leading, spacing: 0) {
                                 // Timestamp
                                 HStack(spacing: 4) {
-                                    Text(TimelineHelpers.relativeTimeString(iso: task.createdAt))
-                                    if task.updatedAt != task.createdAt {
+                                    let isEdited = task.updatedAt != task.createdAt
+                                    Text(TimelineHelpers.relativeTimeString(iso: isEdited ? task.updatedAt : task.createdAt))
+                                    if isEdited {
                                         Text("(edited)")
                                     }
                                 }
@@ -114,19 +115,18 @@ struct TaskDetailView: View {
                             areaCard {
                                 VStack(alignment: .leading, spacing: 0) {
                                     // Timestamp inside the area
-                                    if shouldShowTimestamp(at: index, comments: viewModel.comments) {
-                                        HStack(spacing: 4) {
-                                            Text(TimelineHelpers.relativeTimeString(iso: comment.createdAt))
-                                            if comment.updatedAt != comment.createdAt {
-                                                Text("(edited)")
-                                            }
+                                    HStack(spacing: 4) {
+                                        let isEdited = comment.updatedAt != comment.createdAt
+                                        Text(TimelineHelpers.relativeTimeString(iso: isEdited ? comment.updatedAt : comment.createdAt))
+                                        if isEdited {
+                                            Text("(edited)")
                                         }
-                                        .font(.system(size: 11))
-                                        .foregroundColor(Color(.systemGray))
-                                        .padding(.horizontal, 16)
-                                        .padding(.top, 8)
-                                        .padding(.bottom, -2)
                                     }
+                                    .font(.system(size: 11))
+                                    .foregroundColor(Color(.systemGray))
+                                    .padding(.horizontal, 16)
+                                    .padding(.top, 8)
+                                    .padding(.bottom, -2)
 
                                     ThreadItem(
                                         bodyMd: comment.bodyMd,
@@ -324,16 +324,6 @@ struct TaskDetailView: View {
             .frame(width: 2, height: 12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.leading, 24)
-    }
-
-    // MARK: - Comment timestamp logic
-
-    private func shouldShowTimestamp(at index: Int, comments: [Comment]) -> Bool {
-        if index == 0 { return true }
-        return TimelineHelpers.shouldShowGapTimestamp(
-            previousIso: comments[index - 1].createdAt,
-            currentIso: comments[index].createdAt
-        )
     }
 
     // MARK: - Status Picker Sheet
