@@ -148,7 +148,7 @@ struct TaskDetailView: View {
                         }
                     }
 
-                    Color.clear.frame(height: 1)
+                    Color.clear.frame(height: 24)
                         .id("threadBottom")
                 }
             }

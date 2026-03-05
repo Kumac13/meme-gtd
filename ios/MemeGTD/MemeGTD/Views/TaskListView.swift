@@ -15,6 +15,7 @@ struct TaskListView: View {
             LazyVStack(spacing: 0) {
                 ForEach(viewModel.tasks) { task in
                     Button(action: {
+                        HapticManager.selection()
                         navigationPath.append(
                             TaskRoute(taskId: task.id, initialTitle: task.title)
                         )

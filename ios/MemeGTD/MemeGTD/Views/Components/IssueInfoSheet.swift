@@ -33,6 +33,26 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
 
             // Rows
             VStack(spacing: 0) {
+                // Bookmark
+                Button(action: {
+                    Task { await viewModel.toggleBookmark() }
+                }) {
+                    HStack {
+                        Text("Bookmark")
+                            .font(.system(size: 15))
+                            .foregroundColor(.textPrimary)
+                        Spacer()
+                        Image(systemName: viewModel.isBookmarked ? "bookmark.fill" : "bookmark")
+                            .font(.system(size: 18))
+                            .foregroundColor(viewModel.isBookmarked ? .accent : .textSecondary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                }
+                .disabled(viewModel.isBookmarking)
+
+                Divider().padding(.leading, 16)
+
                 // Edit Title (Task only)
                 if let onEditTitle = onEditTitle {
                     Button(action: {
@@ -54,26 +74,6 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
 
                     Divider().padding(.leading, 16)
                 }
-
-                // Bookmark
-                Button(action: {
-                    Task { await viewModel.toggleBookmark() }
-                }) {
-                    HStack {
-                        Text("Bookmark")
-                            .font(.system(size: 15))
-                            .foregroundColor(.textPrimary)
-                        Spacer()
-                        Image(systemName: viewModel.isBookmarked ? "bookmark.fill" : "bookmark")
-                            .font(.system(size: 18))
-                            .foregroundColor(viewModel.isBookmarked ? .accent : .textSecondary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                }
-                .disabled(viewModel.isBookmarking)
-
-                Divider().padding(.leading, 16)
 
                 // Labels
                 Button(action: {
