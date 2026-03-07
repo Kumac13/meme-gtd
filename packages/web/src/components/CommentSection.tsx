@@ -155,9 +155,9 @@ export default function CommentSection({
         <p className="text-gray-500">Loading...</p>
       ) : (
         <div className="relative">
-          {/* Continuous vertical line */}
+          {/* Continuous vertical line – start from the center of the first activity icon */}
           {(timelineEntries.length > 0) && (
-            <div className="absolute left-[31px] top-0 bottom-0 w-0.5 bg-gray-300" />
+            <div className="absolute left-[31px] top-3 bottom-0 w-0.5 bg-gray-300" />
           )}
 
           {/* Entries + form stacked with spacing */}

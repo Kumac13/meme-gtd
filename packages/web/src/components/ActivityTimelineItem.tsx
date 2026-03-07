@@ -71,7 +71,7 @@ export function ActivityTimelineItem({ activity }: ActivityTimelineItemProps) {
   const { eventType, payload } = activity;
 
   return (
-    <div className="flex items-center text-xs text-gray-500 py-0.5">
+    <div className="flex items-center gap-2 text-xs text-gray-500 py-0.5">
       <span className="flex items-center gap-1.5 min-w-0">
         {renderDescription(eventType, payload)}
       </span>
