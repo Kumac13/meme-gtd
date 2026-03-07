@@ -10,6 +10,24 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
     @Published var replyBody: String = ""
     @Published var isSubmittingReply: Bool = false
     @Published var isBookmarking: Bool = false
+    @Published var activityLogs: [ActivityLogEntry] = []
+
+    // Activity event types to display in timeline
+    private static let displayedEventTypes: Set<String> = [
+        "label.assigned", "label.removed",
+        "link.created", "link.deleted",
+        "task.status_changed",
+        "project.item_added", "project.item_removed",
+    ]
+
+    var timelineEntries: [TimelineEntry] {
+        let commentEntries = comments.map { TimelineEntry.comment($0) }
+        let activityEntries = activityLogs
+            .filter { Self.displayedEventTypes.contains($0.eventType) }
+            .map { TimelineEntry.activity($0) }
+        return (commentEntries + activityEntries)
+            .sorted { $0.timestamp < $1.timestamp }
+    }
 
     // Projects & Labels
     @Published var associatedProjects: [Project] = []
@@ -59,33 +77,39 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
             self.error = error.localizedDescription
         }
 
-        // Load projects, labels & links in parallel
+        // Load projects, labels, links & activity in parallel
         async let projectsResult: () = loadProjects()
         async let labelsResult: () = loadAllLabels()
         async let linksResult: () = loadLinks()
-        _ = await (projectsResult, labelsResult, linksResult)
+        async let activityResult: () = loadActivityLog()
+        _ = await (projectsResult, labelsResult, linksResult, activityResult)
 
         isLoading = false
     }
 
     // MARK: - Fetch without UI update (for pull-to-refresh)
 
-    func fetchTask() async -> (TaskItem, [Comment])? {
+    func fetchTask() async -> (TaskItem, [Comment], [ActivityLogEntry])? {
         do {
             let task: TaskItem = try await APIClient.shared.get(path: "/api/tasks/\(taskId)")
             let commentList: [Comment] = try await APIClient.shared.get(
                 path: "/api/tasks/\(taskId)/comments"
             )
-            return (task, commentList)
+            let activities: [ActivityLogEntry] = try await APIClient.shared.get(
+                path: "/api/activity-log/issues/\(taskId)",
+                queryItems: [URLQueryItem(name: "order", value: "asc")]
+            )
+            return (task, commentList, activities)
         } catch {
             self.error = error.localizedDescription
             return nil
         }
     }
 
-    func applyTask(_ task: TaskItem, comments: [Comment]) {
+    func applyTask(_ task: TaskItem, comments: [Comment], activities: [ActivityLogEntry]) {
         self.task = task
         self.comments = comments
+        self.activityLogs = activities
     }
 
     private func loadProjects() async {
@@ -100,6 +124,19 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
     private func loadAllLabels() async {
         do {
             allLabels = try await APIClient.shared.get(path: "/api/labels")
+        } catch {
+            // Non-critical
+        }
+    }
+
+    // MARK: - Activity Log
+
+    private func loadActivityLog() async {
+        do {
+            activityLogs = try await APIClient.shared.get(
+                path: "/api/activity-log/issues/\(taskId)",
+                queryItems: [URLQueryItem(name: "order", value: "asc")]
+            )
         } catch {
             // Non-critical
         }
