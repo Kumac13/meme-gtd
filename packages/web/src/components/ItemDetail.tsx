@@ -4,6 +4,7 @@ import { MemosService } from '../api/services/MemosService';
 import { TasksService } from '../api/services/TasksService';
 import { ArticlesService } from '../api/services/ArticlesService';
 import { CommentsService } from '../api/services/CommentsService';
+import { ActivityLogService } from '../api/services/ActivityLogService';
 import EditableContent from './EditableContent';
 import CommentSection, { type Comment } from './CommentSection';
 import LinkSection from './LinkSection';
@@ -11,6 +12,8 @@ import { ProjectsSection } from './ProjectsSection';
 import { LabelsSection } from './LabelsSection';
 import { ScheduleSection } from './ScheduleSection';
 import { StatusSelector } from './StatusSelector';
+import { type ActivityLogEntry } from '../utils/activityLogHelpers';
+import { isDisplayedActivity } from './ActivityTimelineItem';
 
 const TASK_STATUS_OPTIONS = [
   { value: 'inbox', label: 'Inbox' },
@@ -93,9 +96,10 @@ export default function ItemDetail({
   onBeforeNavigate,
   onCommentsLoaded,
 }: ItemDetailProps) {
-  // Comments state management
+  // Comments & activities state management
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(true);
+  const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
 
   // Store callback in ref to avoid dependency issues
   const onCommentsLoadedRef = useRef(onCommentsLoaded);
@@ -111,13 +115,18 @@ export default function ItemDetail({
     const fetchComments = async () => {
       try {
         setCommentsLoading(true);
-        const response =
+        const [commentsResponse, activitiesResponse] = await Promise.all([
           itemType === 'memo'
-            ? await CommentsService.listMemoComments(String(item.id))
-            : await CommentsService.listTaskComments(String(item.id));
-        setComments(response);
+            ? CommentsService.listMemoComments(String(item.id))
+            : CommentsService.listTaskComments(String(item.id)),
+          ActivityLogService.getIssueActivityLog(item.id, 100, 'asc')
+            .then((res) => res.filter(isDisplayedActivity))
+            .catch(() => [] as ActivityLogEntry[]),
+        ]);
+        setComments(commentsResponse);
+        setActivities(activitiesResponse);
         // Use ref to call callback without causing re-renders
-        onCommentsLoadedRef.current?.(response);
+        onCommentsLoadedRef.current?.(commentsResponse);
       } catch (error) {
         console.error('Error fetching comments:', error);
       } finally {
@@ -272,6 +281,7 @@ export default function ItemDetail({
               onAddComment={handleAddComment}
               onUpdateComment={handleUpdateComment}
               onDeleteComment={handleDeleteComment}
+              activities={activities}
             />
           )}
         </div>

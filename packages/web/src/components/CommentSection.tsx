@@ -1,9 +1,11 @@
-import { useState, useRef, DragEvent, ClipboardEvent } from 'react';
+import { useState, useRef, useMemo, DragEvent, ClipboardEvent } from 'react';
 import EditableContent from './EditableContent';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
 import { useImageUpload } from '../hooks/useImageUpload';
 import { MarkdownTextarea } from './MarkdownTextarea';
+import { ActivityTimelineItem, getActivityIcon } from './ActivityTimelineItem';
+import { type ActivityLogEntry } from '../utils/activityLogHelpers';
 
 export interface Comment {
   id: number;
@@ -13,12 +15,17 @@ export interface Comment {
   updatedAt: string;
 }
 
+type TimelineEntry =
+  | { type: 'comment'; comment: Comment }
+  | { type: 'activity'; activity: ActivityLogEntry };
+
 interface CommentSectionProps {
   comments: Comment[];
   loading: boolean;
   onAddComment: (bodyMd: string) => Promise<void>;
   onUpdateComment: (commentId: number, bodyMd: string) => Promise<void>;
   onDeleteComment: (commentId: number) => Promise<void>;
+  activities?: ActivityLogEntry[];
 }
 
 export default function CommentSection({
@@ -27,6 +34,7 @@ export default function CommentSection({
   onAddComment,
   onUpdateComment,
   onDeleteComment,
+  activities = [],
 }: CommentSectionProps) {
   const [newCommentBody, setNewCommentBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -126,32 +134,63 @@ export default function CommentSection({
     }
   };
 
+  const timelineEntries = useMemo<TimelineEntry[]>(() => {
+    const commentEntries: TimelineEntry[] = comments.map((c) => ({ type: 'comment', comment: c }));
+    const activityEntries: TimelineEntry[] = activities.map((a) => ({ type: 'activity', activity: a }));
+    return [...commentEntries, ...activityEntries].sort((a, b) => {
+      const timeA = a.type === 'comment' ? a.comment.createdAt : a.activity.occurredAt;
+      const timeB = b.type === 'comment' ? b.comment.createdAt : b.activity.occurredAt;
+      return timeA.localeCompare(timeB);
+    });
+  }, [comments, activities]);
+
   return (
     <div className="mt-8">
       <h2 className="text-xl font-bold text-gray-900 mb-4">
         Comments ({comments.length})
       </h2>
 
-      {/* Comments List */}
+      {/* Timeline: continuous vertical line behind entries, cards cover it with bg-white */}
       {loading ? (
-        <p className="text-gray-500">Loading comments...</p>
+        <p className="text-gray-500">Loading...</p>
       ) : (
-        <div className="space-y-4 mb-6">
-          {comments.map((comment) => (
-            <EditableContent
-              key={comment.id}
-              content={comment.bodyMd}
-              createdAt={comment.createdAt}
-              updatedAt={comment.updatedAt}
-              onSave={(newBody) => onUpdateComment(comment.id, newBody)}
-              onDelete={() => onDeleteComment(comment.id)}
-            />
-          ))}
-        </div>
-      )}
+        <div className="relative">
+          {/* Continuous vertical line */}
+          {(timelineEntries.length > 0) && (
+            <div className="absolute left-[31px] top-0 bottom-0 w-0.5 bg-gray-300" />
+          )}
 
-      {/* New Comment Form */}
-      <form onSubmit={handleSubmitNewComment} className="bg-white border border-gray-200 rounded-lg p-4">
+          {/* Entries + form stacked with spacing */}
+          <div className="relative flex flex-col gap-3">
+            {timelineEntries.map((entry) => {
+              const key = entry.type === 'comment' ? `comment-${entry.comment.id}` : `activity-${entry.activity.id}`;
+
+              if (entry.type === 'comment') {
+                return (
+                  <EditableContent
+                    key={key}
+                    content={entry.comment.bodyMd}
+                    createdAt={entry.comment.createdAt}
+                    updatedAt={entry.comment.updatedAt}
+                    onSave={(newBody) => onUpdateComment(entry.comment.id, newBody)}
+                    onDelete={() => onDeleteComment(entry.comment.id)}
+                  />
+                );
+              }
+
+              // Activity: icon with white circle bg sits ON the line
+              return (
+                <div key={key} className="flex items-center gap-2 py-0.5 pl-5 pr-4">
+                  <span className="relative z-10 flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-400">
+                    {getActivityIcon(entry.activity.eventType)}
+                  </span>
+                  <ActivityTimelineItem activity={entry.activity} />
+                </div>
+              );
+            })}
+
+            {/* New Comment Form */}
+            <form onSubmit={handleSubmitNewComment} className="relative bg-white border border-gray-200 rounded-lg p-4">
         <MarkdownTextarea
           textareaRef={textareaRef}
           value={newCommentBody}
@@ -178,7 +217,10 @@ export default function CommentSection({
             {submitting ? 'Commenting...' : 'Comment'}
           </button>
         </div>
-      </form>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
