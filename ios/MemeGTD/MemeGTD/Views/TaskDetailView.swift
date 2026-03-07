@@ -106,44 +106,47 @@ struct TaskDetailView: View {
                             }
                         }
 
-                        // === Each Comment = independent Area, connected by lines ===
-                        ForEach(Array(viewModel.comments.enumerated()), id: \.element.id) { index, comment in
-                            // Connector line before each comment
+                        // === Timeline: Comments + Activities interleaved ===
+                        ForEach(viewModel.timelineEntries) { entry in
                             sectionConnector
 
-                            // Each comment is its own glass area
-                            areaCard {
-                                VStack(alignment: .leading, spacing: 0) {
-                                    // Timestamp inside the area
-                                    HStack(spacing: 4) {
-                                        let isEdited = comment.updatedAt != comment.createdAt
-                                        Text(TimelineHelpers.relativeTimeString(iso: isEdited ? comment.updatedAt : comment.createdAt))
-                                        if isEdited {
-                                            Text("(edited)")
+                            switch entry {
+                            case .comment(let comment):
+                                areaCard {
+                                    VStack(alignment: .leading, spacing: 0) {
+                                        HStack(spacing: 4) {
+                                            let isEdited = comment.updatedAt != comment.createdAt
+                                            Text(TimelineHelpers.relativeTimeString(iso: isEdited ? comment.updatedAt : comment.createdAt))
+                                            if isEdited {
+                                                Text("(edited)")
+                                            }
                                         }
-                                    }
-                                    .font(.system(size: 11))
-                                    .foregroundColor(Color(.systemGray))
-                                    .padding(.horizontal, 16)
-                                    .padding(.top, 8)
-                                    .padding(.bottom, -2)
+                                        .font(.system(size: 11))
+                                        .foregroundColor(Color(.systemGray))
+                                        .padding(.horizontal, 16)
+                                        .padding(.top, 8)
+                                        .padding(.bottom, -2)
 
-                                    ThreadItem(
-                                        bodyMd: comment.bodyMd,
-                                        labels: nil,
-                                        onEdit: {
-                                            viewModel.replyBody = comment.bodyMd
-                                            editingMode = .comment(comment.id)
-                                        },
-                                        onDelete: {
-                                            Task { await viewModel.deleteComment(comment.id) }
-                                        },
-                                        onCopy: {
-                                            UIPasteboard.general.string = comment.bodyMd
-                                            HapticManager.notification(.success)
-                                        }
-                                    )
+                                        ThreadItem(
+                                            bodyMd: comment.bodyMd,
+                                            labels: nil,
+                                            onEdit: {
+                                                viewModel.replyBody = comment.bodyMd
+                                                editingMode = .comment(comment.id)
+                                            },
+                                            onDelete: {
+                                                Task { await viewModel.deleteComment(comment.id) }
+                                            },
+                                            onCopy: {
+                                                UIPasteboard.general.string = comment.bodyMd
+                                                HapticManager.notification(.success)
+                                            }
+                                        )
+                                    }
                                 }
+
+                            case .activity(let activity):
+                                ActivityItemView(activity: activity)
                             }
                         }
                     }
@@ -170,15 +173,15 @@ struct TaskDetailView: View {
                             try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
                         }
 
-                        if let (task, comments) = result {
-                            viewModel.applyTask(task, comments: comments)
+                        if let (task, comments, activities) = result {
+                            viewModel.applyTask(task, comments: comments, activities: activities)
                         }
                         HapticManager.notification(.success)
                         continuation.resume()
                     }
                 }
             }
-            .onChange(of: viewModel.comments.count) { _ in
+            .onChange(of: viewModel.timelineEntries.count) { _ in
                 withAnimation {
                     proxy.scrollTo("threadBottom", anchor: .bottom)
                 }
