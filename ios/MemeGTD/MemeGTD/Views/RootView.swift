@@ -5,6 +5,11 @@ struct MemoRoute: Hashable {
     let initialBody: String
 }
 
+struct TaskRoute: Hashable {
+    let taskId: Int
+    let initialTitle: String
+}
+
 struct RootView: View {
     @State private var selectedTab: AppTab = .memos
     @State private var isMenuOpen: Bool = false
@@ -38,7 +43,10 @@ struct RootView: View {
                             navigationPath: $navigationPath
                         )
                     case .tasks:
-                        TaskListView(onMenuTap: { openMenu() })
+                        TaskListView(
+                            onMenuTap: { openMenu() },
+                            navigationPath: $navigationPath
+                        )
                     case .settings:
                         SettingsView(onMenuTap: { openMenu() })
                     }
@@ -47,6 +55,13 @@ struct RootView: View {
                     MemoDetailView(
                         memoId: route.memoId,
                         initialBody: route.initialBody,
+                        onMenuTap: { openMenu() }
+                    )
+                }
+                .navigationDestination(for: TaskRoute.self) { route in
+                    TaskDetailView(
+                        taskId: route.taskId,
+                        initialTitle: route.initialTitle,
                         onMenuTap: { openMenu() }
                     )
                 }

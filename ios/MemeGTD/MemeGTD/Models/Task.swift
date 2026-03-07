@@ -71,6 +71,23 @@ struct TaskItem: Codable, Identifiable {
     }
 }
 
+struct UpdateTaskRequest: Codable {
+    let title: String?
+    let bodyMd: String?
+    let status: String?
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(title, forKey: .title)
+        try container.encodeIfPresent(bodyMd, forKey: .bodyMd)
+        try container.encodeIfPresent(status, forKey: .status)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case title, bodyMd, status
+    }
+}
+
 struct TaskListResponse: Codable {
     let data: [TaskItem]
     let total: Int

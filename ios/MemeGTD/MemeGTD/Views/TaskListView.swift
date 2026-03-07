@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TaskListView: View {
     let onMenuTap: () -> Void
+    @Binding var navigationPath: NavigationPath
 
     @StateObject private var viewModel = TaskListViewModel()
     @State private var showStatusPicker: Bool = false
@@ -13,8 +14,15 @@ struct TaskListView: View {
         ScrollView {
             LazyVStack(spacing: 0) {
                 ForEach(viewModel.tasks) { task in
-                    TaskCell(task: task)
-                        .padding(.horizontal, 16)
+                    Button(action: {
+                        navigationPath.append(
+                            TaskRoute(taskId: task.id, initialTitle: task.title)
+                        )
+                    }) {
+                        TaskCell(task: task)
+                            .padding(.horizontal, 16)
+                    }
+                    .buttonStyle(.plain)
 
                     Divider()
                         .padding(.horizontal, 16)

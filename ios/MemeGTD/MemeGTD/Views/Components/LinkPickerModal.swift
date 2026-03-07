@@ -1,7 +1,7 @@
 import SwiftUI
 
-struct LinkPickerModal: View {
-    @ObservedObject var viewModel: MemoDetailViewModel
+struct LinkPickerModal<VM: IssueDetailProvider>: View {
+    @ObservedObject var viewModel: VM
     let onDismiss: () -> Void
 
     @State private var searchText = ""
@@ -112,7 +112,7 @@ struct LinkPickerModal: View {
 
     // MARK: - Issue type badge (same Capsule shape, fixed width, green family)
 
-    private static let badgeWidth: CGFloat = 56
+    private var badgeWidth: CGFloat { 56 }
 
     @ViewBuilder
     private func issueTypeBadge(_ type: String) -> some View {
@@ -122,7 +122,7 @@ struct LinkPickerModal: View {
             .font(.system(size: 12, weight: .medium))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .frame(width: Self.badgeWidth)
+            .frame(width: badgeWidth)
             .background(bg)
             .foregroundColor(fg)
             .clipShape(Capsule())
@@ -231,7 +231,7 @@ struct LinkPickerModal: View {
                 }
             } else {
                 Menu {
-                    Section("Memo is:") {
+                    Section("This \(viewModel.issueTypeLabel) is:") {
                         ForEach(LinkType.allCases, id: \.self) { type in
                             Button(action: {
                                 HapticManager.impact(.light)

@@ -1,4 +1,5 @@
 import SwiftUI
+import WebKit
 
 /// A view that renders markdown text with support for headings, code blocks,
 /// blockquotes, lists, inline code, bold, italic, and links.
@@ -34,6 +35,8 @@ struct MarkdownBody: View {
             headingView(level: level, content: content)
         case .codeBlock(let lang, let code):
             codeBlockView(language: lang, code: code)
+        case .mermaidBlock(let code):
+            MermaidContainerView(code: code)
         case .blockquote(let content):
             blockquoteView(content: content)
         case .listItem(let content, let indent):
@@ -166,6 +169,7 @@ private enum MarkdownBlock {
     case text(String)
     case heading(level: Int, content: String)
     case codeBlock(language: String, code: String)
+    case mermaidBlock(code: String)
     case blockquote(String)
     case listItem(content: String, indent: Int)
 }
@@ -207,7 +211,11 @@ private func parseBlocks(_ markdown: String) -> [MarkdownBlock] {
             if codeContent.hasSuffix("\n") {
                 codeContent = String(codeContent.dropLast())
             }
-            blocks.append(.codeBlock(language: codeLanguage, code: codeContent))
+            if codeLanguage.lowercased() == "mermaid" {
+                blocks.append(.mermaidBlock(code: codeContent))
+            } else {
+                blocks.append(.codeBlock(language: codeLanguage, code: codeContent))
+            }
             inCodeBlock = false
             codeLanguage = ""
             codeContent = ""
@@ -267,11 +275,125 @@ private func parseBlocks(_ markdown: String) -> [MarkdownBlock] {
 
     // Handle unclosed code block
     if inCodeBlock && !codeContent.isEmpty {
-        blocks.append(.codeBlock(language: codeLanguage, code: codeContent))
+        if codeLanguage.lowercased() == "mermaid" {
+            blocks.append(.mermaidBlock(code: codeContent))
+        } else {
+            blocks.append(.codeBlock(language: codeLanguage, code: codeContent))
+        }
     }
 
     flushQuote()
     flushText()
 
     return blocks
+}
+
+// MARK: - Mermaid diagram renderer
+
+private struct MermaidView: UIViewRepresentable {
+    let code: String
+    let onHeightChange: (CGFloat) -> Void
+
+    func makeUIView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        let handler = context.coordinator
+        config.userContentController.add(handler, name: "heightChanged")
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.isOpaque = false
+        webView.backgroundColor = .clear
+        webView.scrollView.isScrollEnabled = false
+        webView.navigationDelegate = handler
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        guard !context.coordinator.hasLoaded else { return }
+        context.coordinator.hasLoaded = true
+
+        let escapedCode = code
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "`", with: "\\`")
+            .replacingOccurrences(of: "$", with: "\\$")
+
+        let html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <style>
+            body { margin: 0; padding: 8px; background: transparent; display: flex; justify-content: center; }
+            .mermaid { font-size: 14px; }
+            .mermaid svg { max-width: 100%; height: auto; }
+        </style>
+        <script type="module">
+            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+            mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+            const element = document.querySelector('.mermaid');
+            try {
+                const { svg } = await mermaid.render('diagram', `\(escapedCode)`);
+                element.innerHTML = svg;
+            } catch (e) {
+                element.innerHTML = '<pre style="color:red">' + e.message + '</pre>';
+            }
+            const height = document.body.scrollHeight;
+            window.webkit.messageHandlers.heightChanged.postMessage(height);
+        </script>
+        </head>
+        <body>
+        <div class="mermaid"></div>
+        </body>
+        </html>
+        """
+
+        webView.loadHTMLString(html, baseURL: nil)
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onHeightChange: onHeightChange)
+    }
+
+    class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+        var hasLoaded = false
+        let onHeightChange: (CGFloat) -> Void
+
+        init(onHeightChange: @escaping (CGFloat) -> Void) {
+            self.onHeightChange = onHeightChange
+        }
+
+        func userContentController(
+            _ userContentController: WKUserContentController,
+            didReceive message: WKScriptMessage
+        ) {
+            if let height = message.body as? CGFloat, height > 0 {
+                DispatchQueue.main.async {
+                    self.onHeightChange(height)
+                }
+            }
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            webView.evaluateJavaScript("document.body.scrollHeight") { result, _ in
+                if let height = result as? CGFloat, height > 0 {
+                    DispatchQueue.main.async {
+                        self.onHeightChange(height)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct MermaidContainerView: View {
+    let code: String
+    @State private var height: CGFloat = 200
+
+    var body: some View {
+        MermaidView(code: code) { newHeight in
+            height = newHeight
+        }
+        .frame(height: height)
+        .frame(maxWidth: .infinity)
+        .background(Color(.systemGray6))
+        .cornerRadius(8)
+    }
 }

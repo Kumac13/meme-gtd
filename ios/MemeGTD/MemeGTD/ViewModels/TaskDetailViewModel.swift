@@ -2,12 +2,8 @@ import Combine
 import SwiftUI
 
 @MainActor
-class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
-    var issueId: Int { memoId }
-    var issueTypeLabel: String { "memo" }
-    var isBookmarked: Bool { memo?.isBookmarked ?? false }
-    var issueLabels: [String] { memo?.labels ?? [] }
-    @Published var memo: Memo?
+class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
+    @Published var task: TaskItem?
     @Published var comments: [Comment] = []
     @Published var isLoading: Bool = false
     @Published var error: String?
@@ -35,22 +31,28 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
         }
     }
 
-    let memoId: Int
+    // IssueDetailProvider
+    var issueId: Int { taskId }
+    var issueTypeLabel: String { "task" }
+    var isBookmarked: Bool { task?.isBookmarked ?? false }
+    var issueLabels: [String] { task?.labels ?? [] }
 
-    init(memoId: Int) {
-        self.memoId = memoId
+    let taskId: Int
+
+    init(taskId: Int) {
+        self.taskId = taskId
     }
 
     // MARK: - Load
 
-    func loadMemo() async {
+    func loadTask() async {
         isLoading = true
         error = nil
 
         do {
-            memo = try await APIClient.shared.get(path: "/api/memos/\(memoId)")
+            task = try await APIClient.shared.get(path: "/api/tasks/\(taskId)")
             let commentList: [Comment] = try await APIClient.shared.get(
-                path: "/api/memos/\(memoId)/comments"
+                path: "/api/tasks/\(taskId)/comments"
             )
             comments = commentList
         } catch {
@@ -68,30 +70,30 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     // MARK: - Fetch without UI update (for pull-to-refresh)
 
-    func fetchMemo() async -> (Memo, [Comment])? {
+    func fetchTask() async -> (TaskItem, [Comment])? {
         do {
-            let memo: Memo = try await APIClient.shared.get(path: "/api/memos/\(memoId)")
+            let task: TaskItem = try await APIClient.shared.get(path: "/api/tasks/\(taskId)")
             let commentList: [Comment] = try await APIClient.shared.get(
-                path: "/api/memos/\(memoId)/comments"
+                path: "/api/tasks/\(taskId)/comments"
             )
-            return (memo, commentList)
+            return (task, commentList)
         } catch {
             self.error = error.localizedDescription
             return nil
         }
     }
 
-    func applyMemo(_ memo: Memo, comments: [Comment]) {
-        self.memo = memo
+    func applyTask(_ task: TaskItem, comments: [Comment]) {
+        self.task = task
         self.comments = comments
     }
 
     private func loadProjects() async {
         do {
-            associatedProjects = try await APIClient.shared.get(path: "/api/issues/\(memoId)/projects")
+            associatedProjects = try await APIClient.shared.get(path: "/api/issues/\(taskId)/projects")
             allProjects = try await APIClient.shared.get(path: "/api/projects")
         } catch {
-            // Non-critical, just log
+            // Non-critical
         }
     }
 
@@ -107,7 +109,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     private func loadLinks() async {
         do {
-            issueLinks = try await APIClient.shared.get(path: "/api/issues/\(memoId)/links")
+            issueLinks = try await APIClient.shared.get(path: "/api/issues/\(taskId)/links")
         } catch {
             // Non-critical
         }
@@ -116,7 +118,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
     func createIssueLink(targetIssueId: Int, linkType: LinkType) async {
         do {
             let request = CreateLinkRequest(
-                sourceIssueId: memoId,
+                sourceIssueId: taskId,
                 targetIssueId: targetIssueId,
                 linkType: linkType
             )
@@ -147,7 +149,6 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
         var results: [IssuePickerItem] = []
 
         await withTaskGroup(of: [IssuePickerItem].self) { group in
-            // Build query items: include search param only when non-empty
             let searchQuery: [URLQueryItem] = trimmed.isEmpty ? [] : [
                 URLQueryItem(name: "search", value: trimmed),
             ]
@@ -206,9 +207,8 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
             }
         }
 
-        // Exclude self, sort by updatedAt desc, limit to 10
         return results
-            .filter { $0.id != memoId }
+            .filter { $0.id != taskId }
             .sorted { $0.updatedAt > $1.updatedAt }
             .prefix(10)
             .map { $0 }
@@ -217,15 +217,15 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
     // MARK: - Bookmark
 
     func toggleBookmark() async {
-        guard let currentMemo = memo else { return }
+        guard let currentTask = task else { return }
         isBookmarking = true
 
         do {
-            let path = currentMemo.isBookmarked
-                ? "/api/memos/\(memoId)/unbookmark"
-                : "/api/memos/\(memoId)/bookmark"
-            let updated: Memo = try await APIClient.shared.postReturning(path: path)
-            memo = updated
+            let path = currentTask.isBookmarked
+                ? "/api/tasks/\(taskId)/unbookmark"
+                : "/api/tasks/\(taskId)/bookmark"
+            let updated: TaskItem = try await APIClient.shared.postReturning(path: path)
+            task = updated
             HapticManager.impact(.light)
         } catch {
             self.error = error.localizedDescription
@@ -233,6 +233,23 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
         }
 
         isBookmarking = false
+    }
+
+    // MARK: - Update Task
+
+    func updateTask(title: String? = nil, bodyMd: String? = nil, status: String? = nil) async {
+        do {
+            let request = UpdateTaskRequest(title: title, bodyMd: bodyMd, status: status)
+            let updated: TaskItem = try await APIClient.shared.patch(
+                path: "/api/tasks/\(taskId)",
+                body: request
+            )
+            task = updated
+            HapticManager.notification(.success)
+        } catch {
+            self.error = error.localizedDescription
+            HapticManager.notification(.error)
+        }
     }
 
     // MARK: - Comments
@@ -246,7 +263,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
         do {
             let request = CreateCommentRequest(bodyMd: body)
             let comment: Comment = try await APIClient.shared.post(
-                path: "/api/memos/\(memoId)/comments",
+                path: "/api/tasks/\(taskId)/comments",
                 body: request
             )
             comments.append(comment)
@@ -264,7 +281,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
         do {
             let request = UpdateCommentRequest(bodyMd: bodyMd)
             let updated: Comment = try await APIClient.shared.patch(
-                path: "/api/memos/\(memoId)/comments/\(commentId)",
+                path: "/api/tasks/\(taskId)/comments/\(commentId)",
                 body: request
             )
             if let index = comments.firstIndex(where: { $0.id == commentId }) {
@@ -275,27 +292,10 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
         }
     }
 
-    // MARK: - Update Memo
-
-    func updateMemo(bodyMd: String) async {
-        do {
-            let request = UpdateMemoRequest(bodyMd: bodyMd, isBookmarked: nil)
-            let updated: Memo = try await APIClient.shared.patch(
-                path: "/api/memos/\(memoId)",
-                body: request
-            )
-            memo = updated
-            HapticManager.notification(.success)
-        } catch {
-            self.error = error.localizedDescription
-            HapticManager.notification(.error)
-        }
-    }
-
     func deleteComment(_ commentId: Int) async {
         do {
             try await APIClient.shared.delete(
-                path: "/api/memos/\(memoId)/comments/\(commentId)"
+                path: "/api/tasks/\(taskId)/comments/\(commentId)"
             )
             comments.removeAll { $0.id == commentId }
         } catch {
@@ -303,9 +303,9 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
         }
     }
 
-    func deleteMemo() async -> Bool {
+    func deleteTask() async -> Bool {
         do {
-            try await APIClient.shared.delete(path: "/api/memos/\(memoId)")
+            try await APIClient.shared.delete(path: "/api/tasks/\(taskId)")
             return true
         } catch {
             self.error = error.localizedDescription
@@ -313,7 +313,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
         }
     }
 
-    // MARK: - Projects (confirm-based: apply diff on confirm)
+    // MARK: - Projects
 
     func confirmProjects(_ selectedIds: Set<Int>) {
         let currentIds = Set(associatedProjects.map(\.id))
@@ -325,7 +325,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
                 do {
                     let _: ProjectItem = try await APIClient.shared.post(
                         path: "/api/projects/\(projectId)/items",
-                        body: AddProjectItemRequest(issueId: memoId)
+                        body: AddProjectItemRequest(issueId: taskId)
                     )
                 } catch {
                     self.error = error.localizedDescription
@@ -334,21 +334,20 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
             for projectId in toRemove {
                 do {
                     try await APIClient.shared.delete(
-                        path: "/api/projects/\(projectId)/items/\(memoId)"
+                        path: "/api/projects/\(projectId)/items/\(taskId)"
                     )
                 } catch {
                     self.error = error.localizedDescription
                 }
             }
-            // Reload
             await loadProjects()
         }
     }
 
-    // MARK: - Labels (confirm-based: apply diff on confirm)
+    // MARK: - Labels
 
     func confirmLabels(_ selectedNames: Set<String>) {
-        let currentNames = Set(memo?.labels ?? [])
+        let currentNames = Set(task?.labels ?? [])
         let toAdd = selectedNames.subtracting(currentNames)
         let toRemove = currentNames.subtracting(selectedNames)
 
@@ -357,7 +356,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
                 if let label = allLabels.first(where: { $0.name == name }) {
                     do {
                         let _: AssignLabelResponse = try await APIClient.shared.post(
-                            path: "/api/issues/\(memoId)/labels",
+                            path: "/api/issues/\(taskId)/labels",
                             body: AssignLabelRequest(labelId: label.id)
                         )
                     } catch {
@@ -369,17 +368,17 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
                 if let label = allLabels.first(where: { $0.name == name }) {
                     do {
                         try await APIClient.shared.delete(
-                            path: "/api/issues/\(memoId)/labels/\(label.id)"
+                            path: "/api/issues/\(taskId)/labels/\(label.id)"
                         )
                     } catch {
                         self.error = error.localizedDescription
                     }
                 }
             }
-            // Reload memo to get updated labels
+            // Reload task to get updated labels
             do {
-                let updated: Memo = try await APIClient.shared.get(path: "/api/memos/\(memoId)")
-                memo = updated
+                let updated: TaskItem = try await APIClient.shared.get(path: "/api/tasks/\(taskId)")
+                task = updated
             } catch {
                 self.error = error.localizedDescription
             }
@@ -389,9 +388,12 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
     // MARK: - Copy All Contents
 
     func copyAllContents() {
-        guard let memo = memo else { return }
+        guard let task = task else { return }
 
-        var text = memo.bodyMd
+        var text = "# \(task.title)\n\n"
+        if !task.bodyMd.isEmpty {
+            text += task.bodyMd
+        }
 
         if !comments.isEmpty {
             text += "\n\n## Comments\n"
