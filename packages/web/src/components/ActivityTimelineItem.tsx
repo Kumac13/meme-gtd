@@ -132,7 +132,7 @@ function renderDescription(eventType: string, payload: Record<string, unknown>, 
       if (otherId) {
         const path = `/${issueTypePath(otherType)}/${otherId}`;
         return (
-          <span>linked <Link to={path} className="text-blue-600 hover:underline">#{otherId} {otherTitle || ''}</Link></span>
+          <span>linked <Link to={path} className="text-github-green-600 hover:text-github-green-800 underline">#{otherId}</Link> {otherTitle || ''}</span>
         );
       }
       return <span>linked {otherTitle || ''}</span>;
@@ -146,7 +146,7 @@ function renderDescription(eventType: string, payload: Record<string, unknown>, 
       if (otherId) {
         const path = `/${issueTypePath(otherType)}/${otherId}`;
         return (
-          <span>unlinked <Link to={path} className="text-blue-600 hover:underline">#{otherId} {otherTitle || ''}</Link></span>
+          <span>unlinked <Link to={path} className="text-github-green-600 hover:text-github-green-800 underline">#{otherId}</Link> {otherTitle || ''}</span>
         );
       }
       return <span>unlinked {otherTitle || ''}</span>;

@@ -135,18 +135,31 @@ struct ActivityItemView: View {
 
     @ViewBuilder
     private func issueLink(id: Int, title: String?, type: String?) -> some View {
-        let label = title != nil ? "#\(id) \(title!)" : "#\(id)"
         if type == "memo" {
-            NavigationLink(value: MemoRoute(memoId: id, initialBody: title ?? "")) {
-                Text(label)
-                    .font(.system(size: 12))
-                    .foregroundColor(.accentColor)
+            HStack(spacing: 2) {
+                NavigationLink(value: MemoRoute(memoId: id, initialBody: title ?? "")) {
+                    Text("#\(id)")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color.accentDark)
+                }
+                if let title = title {
+                    Text(title)
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(.systemGray))
+                }
             }
         } else {
-            NavigationLink(value: TaskRoute(taskId: id, initialTitle: title ?? "")) {
-                Text(label)
-                    .font(.system(size: 12))
-                    .foregroundColor(.accentColor)
+            HStack(spacing: 2) {
+                NavigationLink(value: TaskRoute(taskId: id, initialTitle: title ?? "")) {
+                    Text("#\(id)")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color.accentDark)
+                }
+                if let title = title {
+                    Text(title)
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(.systemGray))
+                }
             }
         }
     }
