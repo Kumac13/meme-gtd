@@ -359,8 +359,10 @@ export class ActivityLogger {
         link_id: linkId,
         link_type: linkType,
         source_issue_id: sourceIssueId,
+        source_issue_type: getIssueType(this.db, sourceIssueId),
         source_issue_title: getIssueTitle(this.db, sourceIssueId),
         target_issue_id: targetIssueId,
+        target_issue_type: getIssueType(this.db, targetIssueId),
         target_issue_title: getIssueTitle(this.db, targetIssueId),
       },
     });

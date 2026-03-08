@@ -146,7 +146,7 @@ struct TaskDetailView: View {
                                 }
 
                             case .activity(let activity):
-                                ActivityItemView(activity: activity)
+                                ActivityItemView(activity: activity, issueId: taskId)
                             }
                         }
                     }

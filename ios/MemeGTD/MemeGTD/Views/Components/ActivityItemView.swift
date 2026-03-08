@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ActivityItemView: View {
     let activity: ActivityLogEntry
+    var issueId: Int?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -70,17 +71,33 @@ struct ActivityItemView: View {
                     .foregroundColor(Color(.systemGray))
             }
         case "link.created":
-            let title = p["target_issue_title"]?.stringValue
-            let id = p["target_issue_id"]?.intValue
-            Text("linked \(linkText(id: id, title: title))")
-                .font(.system(size: 12))
-                .foregroundColor(Color(.systemGray))
+            let sourceId = p["source_issue_id"]?.intValue
+            let isSource = issueId != nil && sourceId == issueId
+            let otherId = isSource ? p["target_issue_id"]?.intValue : p["source_issue_id"]?.intValue
+            let otherTitle = isSource ? p["target_issue_title"]?.stringValue : p["source_issue_title"]?.stringValue
+            let otherType = isSource ? p["target_issue_type"]?.stringValue : p["source_issue_type"]?.stringValue
+            HStack(spacing: 2) {
+                Text("linked")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(.systemGray))
+                if let id = otherId {
+                    issueLink(id: id, title: otherTitle, type: otherType)
+                }
+            }
         case "link.deleted":
-            let title = p["target_issue_title"]?.stringValue
-            let id = p["target_issue_id"]?.intValue
-            Text("unlinked \(linkText(id: id, title: title))")
-                .font(.system(size: 12))
-                .foregroundColor(Color(.systemGray))
+            let delSourceId = p["source_issue_id"]?.intValue
+            let delIsSource = issueId != nil && delSourceId == issueId
+            let delOtherId = delIsSource ? p["target_issue_id"]?.intValue : p["source_issue_id"]?.intValue
+            let delOtherTitle = delIsSource ? p["target_issue_title"]?.stringValue : p["source_issue_title"]?.stringValue
+            let delOtherType = delIsSource ? p["target_issue_type"]?.stringValue : p["source_issue_type"]?.stringValue
+            HStack(spacing: 2) {
+                Text("unlinked")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(.systemGray))
+                if let id = delOtherId {
+                    issueLink(id: id, title: delOtherTitle, type: delOtherType)
+                }
+            }
         case "task.status_changed":
             let from = p["from_status"]?.stringValue ?? "?"
             let to = p["to_status"]?.stringValue ?? "?"
@@ -114,6 +131,37 @@ struct ActivityItemView: View {
             .padding(.vertical, 2)
             .background(LabelColorHelper.bgColor(for: name))
             .clipShape(Capsule())
+    }
+
+    @ViewBuilder
+    private func issueLink(id: Int, title: String?, type: String?) -> some View {
+        if type == "memo" {
+            HStack(spacing: 2) {
+                NavigationLink(value: MemoRoute(memoId: id, initialBody: title ?? "")) {
+                    Text("#\(id)")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color.accentDark)
+                }
+                if let title = title {
+                    Text(title)
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(.systemGray))
+                }
+            }
+        } else {
+            HStack(spacing: 2) {
+                NavigationLink(value: TaskRoute(taskId: id, initialTitle: title ?? "")) {
+                    Text("#\(id)")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color.accentDark)
+                }
+                if let title = title {
+                    Text(title)
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(.systemGray))
+                }
+            }
+        }
     }
 
     private func linkText(id: Int?, title: String?) -> String {

@@ -73,7 +73,9 @@ export const listActivityLog = (
   const params: Record<string, unknown> = {};
 
   if (filters.issueId !== undefined) {
-    conditions.push('issue_id = @issueId');
+    conditions.push(
+      "(issue_id = @issueId OR (event_type LIKE 'link.%' AND (json_extract(payload, '$.source_issue_id') = @issueId OR json_extract(payload, '$.target_issue_id') = @issueId)))"
+    );
     params.issueId = filters.issueId;
   }
 
