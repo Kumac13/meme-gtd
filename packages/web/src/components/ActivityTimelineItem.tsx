@@ -1,6 +1,15 @@
+import { Link } from 'react-router-dom';
 import { type ActivityLogEntry } from '../utils/activityLogHelpers';
 import { LabelBadge } from './LabelBadge';
 import { formatRelativeTime } from '../utils/dates';
+
+function issueTypePath(issueType: string | null): string {
+  switch (issueType) {
+    case 'memo': return 'memos';
+    case 'article': return 'articles';
+    default: return 'tasks';
+  }
+}
 
 const DISPLAYED_EVENT_TYPES = new Set([
   'label.assigned',
@@ -116,12 +125,26 @@ function renderDescription(eventType: string, payload: Record<string, unknown>) 
     case 'link.created': {
       const title = str('target_issue_title');
       const id = num('target_issue_id');
-      return <span>linked {id ? `#${id}` : ''} {title || ''}</span>;
+      const type = str('target_issue_type');
+      if (id) {
+        const path = `/${issueTypePath(type)}/${id}`;
+        return (
+          <span>linked <Link to={path} className="text-blue-600 hover:underline">#{id} {title || ''}</Link></span>
+        );
+      }
+      return <span>linked {title || ''}</span>;
     }
     case 'link.deleted': {
       const title = str('target_issue_title');
       const id = num('target_issue_id');
-      return <span>unlinked {id ? `#${id}` : ''} {title || ''}</span>;
+      const type = str('target_issue_type');
+      if (id) {
+        const path = `/${issueTypePath(type)}/${id}`;
+        return (
+          <span>unlinked <Link to={path} className="text-blue-600 hover:underline">#{id} {title || ''}</Link></span>
+        );
+      }
+      return <span>unlinked {title || ''}</span>;
     }
     case 'task.status_changed': {
       const from = str('from_status') || '?';

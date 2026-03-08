@@ -72,15 +72,27 @@ struct ActivityItemView: View {
         case "link.created":
             let title = p["target_issue_title"]?.stringValue
             let id = p["target_issue_id"]?.intValue
-            Text("linked \(linkText(id: id, title: title))")
-                .font(.system(size: 12))
-                .foregroundColor(Color(.systemGray))
+            let type = p["target_issue_type"]?.stringValue
+            HStack(spacing: 2) {
+                Text("linked")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(.systemGray))
+                if let id = id {
+                    issueLink(id: id, title: title, type: type)
+                }
+            }
         case "link.deleted":
             let title = p["target_issue_title"]?.stringValue
             let id = p["target_issue_id"]?.intValue
-            Text("unlinked \(linkText(id: id, title: title))")
-                .font(.system(size: 12))
-                .foregroundColor(Color(.systemGray))
+            let type = p["target_issue_type"]?.stringValue
+            HStack(spacing: 2) {
+                Text("unlinked")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(.systemGray))
+                if let id = id {
+                    issueLink(id: id, title: title, type: type)
+                }
+            }
         case "task.status_changed":
             let from = p["from_status"]?.stringValue ?? "?"
             let to = p["to_status"]?.stringValue ?? "?"
@@ -114,6 +126,24 @@ struct ActivityItemView: View {
             .padding(.vertical, 2)
             .background(LabelColorHelper.bgColor(for: name))
             .clipShape(Capsule())
+    }
+
+    @ViewBuilder
+    private func issueLink(id: Int, title: String?, type: String?) -> some View {
+        let label = title != nil ? "#\(id) \(title!)" : "#\(id)"
+        if type == "memo" {
+            NavigationLink(value: MemoRoute(memoId: id, initialBody: title ?? "")) {
+                Text(label)
+                    .font(.system(size: 12))
+                    .foregroundColor(.accentColor)
+            }
+        } else {
+            NavigationLink(value: TaskRoute(taskId: id, initialTitle: title ?? "")) {
+                Text(label)
+                    .font(.system(size: 12))
+                    .foregroundColor(.accentColor)
+            }
+        }
     }
 
     private func linkText(id: Int?, title: String?) -> String {
