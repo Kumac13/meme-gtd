@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ActivityItemView: View {
     let activity: ActivityLogEntry
+    var issueId: Int?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -70,15 +71,19 @@ struct ActivityItemView: View {
                     .foregroundColor(Color(.systemGray))
             }
         case "link.created":
-            let title = p["target_issue_title"]?.stringValue
-            let id = p["target_issue_id"]?.intValue
-            Text("linked \(linkText(id: id, title: title))")
+            let sourceId = p["source_issue_id"]?.intValue
+            let isSource = issueId != nil && sourceId == issueId
+            let otherId = isSource ? p["target_issue_id"]?.intValue : p["source_issue_id"]?.intValue
+            let otherTitle = isSource ? p["target_issue_title"]?.stringValue : p["source_issue_title"]?.stringValue
+            Text("linked \(linkText(id: otherId, title: otherTitle))")
                 .font(.system(size: 12))
                 .foregroundColor(Color(.systemGray))
         case "link.deleted":
-            let title = p["target_issue_title"]?.stringValue
-            let id = p["target_issue_id"]?.intValue
-            Text("unlinked \(linkText(id: id, title: title))")
+            let sourceId = p["source_issue_id"]?.intValue
+            let isSource = issueId != nil && sourceId == issueId
+            let otherId = isSource ? p["target_issue_id"]?.intValue : p["source_issue_id"]?.intValue
+            let otherTitle = isSource ? p["target_issue_title"]?.stringValue : p["source_issue_title"]?.stringValue
+            Text("unlinked \(linkText(id: otherId, title: otherTitle))")
                 .font(.system(size: 12))
                 .foregroundColor(Color(.systemGray))
         case "task.status_changed":

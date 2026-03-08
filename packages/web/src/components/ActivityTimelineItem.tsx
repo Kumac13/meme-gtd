@@ -65,15 +65,16 @@ export function getActivityIcon(eventType: string) {
 
 interface ActivityTimelineItemProps {
   activity: ActivityLogEntry;
+  issueId?: number;
 }
 
-export function ActivityTimelineItem({ activity }: ActivityTimelineItemProps) {
+export function ActivityTimelineItem({ activity, issueId }: ActivityTimelineItemProps) {
   const { eventType, payload } = activity;
 
   return (
     <div className="flex items-center gap-2 text-xs text-gray-500 py-0.5">
       <span className="flex items-center gap-1.5 min-w-0">
-        {renderDescription(eventType, payload)}
+        {renderDescription(eventType, payload, issueId)}
       </span>
       <span className="ml-auto flex-shrink-0 text-xs text-gray-400">
         {formatRelativeTime(activity.occurredAt)}
@@ -82,7 +83,7 @@ export function ActivityTimelineItem({ activity }: ActivityTimelineItemProps) {
   );
 }
 
-function renderDescription(eventType: string, payload: Record<string, unknown>) {
+function renderDescription(eventType: string, payload: Record<string, unknown>, issueId?: number) {
   const str = (key: string) => {
     const v = payload[key];
     return typeof v === 'string' ? v : null;
@@ -114,14 +115,18 @@ function renderDescription(eventType: string, payload: Record<string, unknown>) 
       );
     }
     case 'link.created': {
-      const title = str('target_issue_title');
-      const id = num('target_issue_id');
-      return <span>linked {id ? `#${id}` : ''} {title || ''}</span>;
+      const sourceId = num('source_issue_id');
+      const isSource = issueId != null && sourceId === issueId;
+      const otherId = isSource ? num('target_issue_id') : num('source_issue_id');
+      const otherTitle = isSource ? str('target_issue_title') : str('source_issue_title');
+      return <span>linked {otherId ? `#${otherId}` : ''} {otherTitle || ''}</span>;
     }
     case 'link.deleted': {
-      const title = str('target_issue_title');
-      const id = num('target_issue_id');
-      return <span>unlinked {id ? `#${id}` : ''} {title || ''}</span>;
+      const sourceId = num('source_issue_id');
+      const isSource = issueId != null && sourceId === issueId;
+      const otherId = isSource ? num('target_issue_id') : num('source_issue_id');
+      const otherTitle = isSource ? str('target_issue_title') : str('source_issue_title');
+      return <span>unlinked {otherId ? `#${otherId}` : ''} {otherTitle || ''}</span>;
     }
     case 'task.status_changed': {
       const from = str('from_status') || '?';

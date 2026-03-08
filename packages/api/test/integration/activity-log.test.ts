@@ -337,6 +337,164 @@ describe('Activity Log API', () => {
     });
   });
 
+  describe('Link activity log events', () => {
+    it('should return link.created events for both source and target issues', async () => {
+      // Create two tasks
+      const task1Res = await app.inject({
+        method: 'POST',
+        url: '/api/tasks',
+        payload: { title: 'Source Task', bodyMd: '' },
+      });
+      const task1 = JSON.parse(task1Res.body);
+
+      const task2Res = await app.inject({
+        method: 'POST',
+        url: '/api/tasks',
+        payload: { title: 'Target Task', bodyMd: '' },
+      });
+      const task2 = JSON.parse(task2Res.body);
+
+      // Create a link between them
+      const linkRes = await app.inject({
+        method: 'POST',
+        url: '/api/links',
+        payload: {
+          sourceIssueId: task1.id,
+          targetIssueId: task2.id,
+          linkType: 'relates',
+        },
+      });
+      assert.strictEqual(linkRes.statusCode, 201);
+
+      // Activity log for source issue should include link.created
+      const sourceLogRes = await app.inject({
+        method: 'GET',
+        url: `/api/activity-log/issues/${task1.id}`,
+      });
+      const sourceLogs = JSON.parse(sourceLogRes.body);
+      const sourceLinkLog = sourceLogs.find(
+        (log: { eventType: string }) => log.eventType === 'link.created'
+      );
+      assert.ok(sourceLinkLog, 'Source issue should have link.created event');
+      assert.strictEqual(sourceLinkLog.payload.source_issue_id, task1.id);
+      assert.strictEqual(sourceLinkLog.payload.target_issue_id, task2.id);
+
+      // Activity log for target issue should also include link.created
+      const targetLogRes = await app.inject({
+        method: 'GET',
+        url: `/api/activity-log/issues/${task2.id}`,
+      });
+      const targetLogs = JSON.parse(targetLogRes.body);
+      const targetLinkLog = targetLogs.find(
+        (log: { eventType: string }) => log.eventType === 'link.created'
+      );
+      assert.ok(targetLinkLog, 'Target issue should have link.created event');
+    });
+
+    it('should return link.deleted events for both source and target issues', async () => {
+      // Create two tasks and a link
+      const task1Res = await app.inject({
+        method: 'POST',
+        url: '/api/tasks',
+        payload: { title: 'Task A', bodyMd: '' },
+      });
+      const task1 = JSON.parse(task1Res.body);
+
+      const task2Res = await app.inject({
+        method: 'POST',
+        url: '/api/tasks',
+        payload: { title: 'Task B', bodyMd: '' },
+      });
+      const task2 = JSON.parse(task2Res.body);
+
+      const linkRes = await app.inject({
+        method: 'POST',
+        url: '/api/links',
+        payload: {
+          sourceIssueId: task1.id,
+          targetIssueId: task2.id,
+          linkType: 'relates',
+        },
+      });
+      const link = JSON.parse(linkRes.body);
+
+      // Delete the link
+      const deleteRes = await app.inject({
+        method: 'DELETE',
+        url: `/api/links/${link.id}`,
+      });
+      assert.strictEqual(deleteRes.statusCode, 204);
+
+      // Both issues should have link.deleted in their activity log
+      const sourceLogRes = await app.inject({
+        method: 'GET',
+        url: `/api/activity-log/issues/${task1.id}`,
+      });
+      const sourceLogs = JSON.parse(sourceLogRes.body);
+      const sourceDeleteLog = sourceLogs.find(
+        (log: { eventType: string }) => log.eventType === 'link.deleted'
+      );
+      assert.ok(sourceDeleteLog, 'Source issue should have link.deleted event');
+
+      const targetLogRes = await app.inject({
+        method: 'GET',
+        url: `/api/activity-log/issues/${task2.id}`,
+      });
+      const targetLogs = JSON.parse(targetLogRes.body);
+      const targetDeleteLog = targetLogs.find(
+        (log: { eventType: string }) => log.eventType === 'link.deleted'
+      );
+      assert.ok(targetDeleteLog, 'Target issue should have link.deleted event');
+    });
+
+    it('link.deleted payload should include issue type fields', async () => {
+      // Create two tasks and a link
+      const task1Res = await app.inject({
+        method: 'POST',
+        url: '/api/tasks',
+        payload: { title: 'Typed Task A', bodyMd: '' },
+      });
+      const task1 = JSON.parse(task1Res.body);
+
+      const task2Res = await app.inject({
+        method: 'POST',
+        url: '/api/tasks',
+        payload: { title: 'Typed Task B', bodyMd: '' },
+      });
+      const task2 = JSON.parse(task2Res.body);
+
+      const linkRes = await app.inject({
+        method: 'POST',
+        url: '/api/links',
+        payload: {
+          sourceIssueId: task1.id,
+          targetIssueId: task2.id,
+          linkType: 'relates',
+        },
+      });
+      const link = JSON.parse(linkRes.body);
+
+      // Delete the link
+      await app.inject({
+        method: 'DELETE',
+        url: `/api/links/${link.id}`,
+      });
+
+      // Check payload has type fields
+      const logRes = await app.inject({
+        method: 'GET',
+        url: `/api/activity-log/issues/${task1.id}`,
+      });
+      const logs = JSON.parse(logRes.body);
+      const deleteLog = logs.find(
+        (log: { eventType: string }) => log.eventType === 'link.deleted'
+      );
+      assert.ok(deleteLog, 'Should have link.deleted event');
+      assert.ok('source_issue_type' in deleteLog.payload, 'Should have source_issue_type');
+      assert.ok('target_issue_type' in deleteLog.payload, 'Should have target_issue_type');
+    });
+  });
+
   describe('Response format validation', () => {
     it('should return activity log entries with correct structure', async () => {
       // Create a task first to potentially have an activity log entry

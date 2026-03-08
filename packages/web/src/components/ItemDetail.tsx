@@ -282,6 +282,7 @@ export default function ItemDetail({
               onUpdateComment={handleUpdateComment}
               onDeleteComment={handleDeleteComment}
               activities={activities}
+              issueId={item.id}
             />
           )}
         </div>

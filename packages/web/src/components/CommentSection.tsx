@@ -26,6 +26,7 @@ interface CommentSectionProps {
   onUpdateComment: (commentId: number, bodyMd: string) => Promise<void>;
   onDeleteComment: (commentId: number) => Promise<void>;
   activities?: ActivityLogEntry[];
+  issueId?: number;
 }
 
 export default function CommentSection({
@@ -35,6 +36,7 @@ export default function CommentSection({
   onUpdateComment,
   onDeleteComment,
   activities = [],
+  issueId,
 }: CommentSectionProps) {
   const [newCommentBody, setNewCommentBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -184,7 +186,7 @@ export default function CommentSection({
                   <span className="relative z-10 flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-400">
                     {getActivityIcon(entry.activity.eventType)}
                   </span>
-                  <ActivityTimelineItem activity={entry.activity} />
+                  <ActivityTimelineItem activity={entry.activity} issueId={issueId} />
                 </div>
               );
             })}
