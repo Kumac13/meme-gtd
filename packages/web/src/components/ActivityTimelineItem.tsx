@@ -74,15 +74,16 @@ export function getActivityIcon(eventType: string) {
 
 interface ActivityTimelineItemProps {
   activity: ActivityLogEntry;
+  issueId?: number;
 }
 
-export function ActivityTimelineItem({ activity }: ActivityTimelineItemProps) {
+export function ActivityTimelineItem({ activity, issueId }: ActivityTimelineItemProps) {
   const { eventType, payload } = activity;
 
   return (
     <div className="flex items-center gap-2 text-xs text-gray-500 py-0.5">
       <span className="flex items-center gap-1.5 min-w-0">
-        {renderDescription(eventType, payload)}
+        {renderDescription(eventType, payload, issueId)}
       </span>
       <span className="ml-auto flex-shrink-0 text-xs text-gray-400">
         {formatRelativeTime(activity.occurredAt)}
@@ -91,7 +92,7 @@ export function ActivityTimelineItem({ activity }: ActivityTimelineItemProps) {
   );
 }
 
-function renderDescription(eventType: string, payload: Record<string, unknown>) {
+function renderDescription(eventType: string, payload: Record<string, unknown>, issueId?: number) {
   const str = (key: string) => {
     const v = payload[key];
     return typeof v === 'string' ? v : null;
@@ -123,28 +124,32 @@ function renderDescription(eventType: string, payload: Record<string, unknown>) 
       );
     }
     case 'link.created': {
-      const title = str('target_issue_title');
-      const id = num('target_issue_id');
-      const type = str('target_issue_type');
-      if (id) {
-        const path = `/${issueTypePath(type)}/${id}`;
+      const sourceId = num('source_issue_id');
+      const isSource = issueId != null && sourceId === issueId;
+      const otherId = isSource ? num('target_issue_id') : num('source_issue_id');
+      const otherTitle = isSource ? str('target_issue_title') : str('source_issue_title');
+      const otherType = isSource ? str('target_issue_type') : str('source_issue_type');
+      if (otherId) {
+        const path = `/${issueTypePath(otherType)}/${otherId}`;
         return (
-          <span>linked <Link to={path} className="text-blue-600 hover:underline">#{id} {title || ''}</Link></span>
+          <span>linked <Link to={path} className="text-blue-600 hover:underline">#{otherId} {otherTitle || ''}</Link></span>
         );
       }
-      return <span>linked {title || ''}</span>;
+      return <span>linked {otherTitle || ''}</span>;
     }
     case 'link.deleted': {
-      const title = str('target_issue_title');
-      const id = num('target_issue_id');
-      const type = str('target_issue_type');
-      if (id) {
-        const path = `/${issueTypePath(type)}/${id}`;
+      const sourceId = num('source_issue_id');
+      const isSource = issueId != null && sourceId === issueId;
+      const otherId = isSource ? num('target_issue_id') : num('source_issue_id');
+      const otherTitle = isSource ? str('target_issue_title') : str('source_issue_title');
+      const otherType = isSource ? str('target_issue_type') : str('source_issue_type');
+      if (otherId) {
+        const path = `/${issueTypePath(otherType)}/${otherId}`;
         return (
-          <span>unlinked <Link to={path} className="text-blue-600 hover:underline">#{id} {title || ''}</Link></span>
+          <span>unlinked <Link to={path} className="text-blue-600 hover:underline">#{otherId} {otherTitle || ''}</Link></span>
         );
       }
-      return <span>unlinked {title || ''}</span>;
+      return <span>unlinked {otherTitle || ''}</span>;
     }
     case 'task.status_changed': {
       const from = str('from_status') || '?';
