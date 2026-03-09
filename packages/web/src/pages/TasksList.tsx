@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
 import { ProjectsService } from '../api/services/ProjectsService';
 import ItemList from '../components/ItemList';
-import FilterBar from '../components/FilterBar';
+import StatusDropdown from '../components/StatusDropdown';
 import SearchInput from '../components/SearchInput';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
@@ -40,6 +40,7 @@ interface Project {
 }
 
 const statusLabels: Record<string, string> = {
+  all: 'All',
   inbox: 'Inbox',
   open: 'Open',
   next: 'Next',
@@ -49,6 +50,8 @@ const statusLabels: Record<string, string> = {
   done: 'Done',
   canceled: 'Canceled',
 };
+
+const statusOptions = ['all', 'inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled'];
 
 const PAGE_SIZE = 20;
 
@@ -278,22 +281,23 @@ export default function TasksList() {
         </Link>
       </div>
 
-      <FilterBar
-        showStatusFilter
-        statusFilter={statusFilter}
-        bookmarkFilter={bookmarkFilter}
-        onStatusFilterChange={handleStatusFilterChange}
-        onBookmarkFilterChange={handleBookmarkFilterChange}
-      />
+      {/* Filters row: Status, Project, Bookmark */}
+      <div className="mb-4 flex flex-wrap gap-2 items-center" ref={dropdownRef}>
+        {/* Status dropdown */}
+        <StatusDropdown
+          value={statusFilter}
+          options={statusOptions}
+          labels={statusLabels}
+          onChange={handleStatusFilterChange}
+        />
 
-      {/* Project filter dropdown */}
-      {projects.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2" ref={dropdownRef}>
+        {/* Project filter dropdown */}
+        {projects.length > 0 && (
           <div className="relative">
             <button
               onClick={() => setShowProjectDropdown(!showProjectDropdown)}
               className={`px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 ${
-                selectedProjectIds.size > 0
+                selectedProjectIds.size > 0 || selectedNoneProject
                   ? 'bg-github-green-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
@@ -306,7 +310,7 @@ export default function TasksList() {
 
             {showProjectDropdown && (
               <div className="absolute top-full left-0 mt-1 min-w-[280px] max-w-[400px] bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
-                {selectedProjectIds.size > 0 && (
+                {(selectedProjectIds.size > 0 || selectedNoneProject) && (
                   <button
                     onClick={handleClearProjects}
                     className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 border-b border-gray-100"
@@ -346,8 +350,20 @@ export default function TasksList() {
               </div>
             )}
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Bookmark filter */}
+        <button
+          onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}
+          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+            bookmarkFilter
+              ? 'bg-github-green-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Bookmarked
+        </button>
+      </div>
 
       {filteredTasks.length === 0 ? (
         <EmptyState
