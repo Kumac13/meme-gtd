@@ -16,6 +16,7 @@ class TaskListViewModel: ObservableObject {
     @Published var statusFilter: TaskStatusFilter = .next
     @Published var labelFilters: Set<String> = []
     @Published var projectFilters: Set<Int> = []
+    @Published var includeNoProject: Bool = false
     @Published var bookmarkFilter: Bool = false
     @Published var searchQuery: String = ""
 
@@ -42,8 +43,11 @@ class TaskListViewModel: ObservableObject {
         if !labelFilters.isEmpty {
             items.append(URLQueryItem(name: "label", value: labelFilters.joined(separator: ",")))
         }
-        if !projectFilters.isEmpty {
-            items.append(URLQueryItem(name: "projectId", value: projectFilters.map(String.init).joined(separator: ",")))
+        if !projectFilters.isEmpty || includeNoProject {
+            var parts: [String] = []
+            if includeNoProject { parts.append("none") }
+            parts.append(contentsOf: projectFilters.map(String.init))
+            items.append(URLQueryItem(name: "projectId", value: parts.joined(separator: ",")))
         }
         if bookmarkFilter {
             items.append(URLQueryItem(name: "bookmarked", value: "true"))
@@ -174,8 +178,9 @@ class TaskListViewModel: ObservableObject {
         Task { await loadTasks() }
     }
 
-    func setProjectFilters(_ projectIds: Set<Int>) {
+    func setProjectFilters(_ projectIds: Set<Int>, includeNone: Bool) {
         projectFilters = projectIds
+        includeNoProject = includeNone
         Task { await loadTasks() }
     }
 

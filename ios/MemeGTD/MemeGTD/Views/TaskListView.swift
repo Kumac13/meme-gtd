@@ -11,6 +11,7 @@ struct TaskListView: View {
     @State private var selectedLabelNames: Set<String> = []
     @State private var showProjectPicker: Bool = false
     @State private var selectedProjectIds: Set<Int> = []
+    @State private var selectedNoProject: Bool = false
 
     var body: some View {
         ScrollView {
@@ -84,9 +85,10 @@ struct TaskListView: View {
 
                 filterPill(
                     label: projectFilterDisplayLabel,
-                    isActive: !viewModel.projectFilters.isEmpty
+                    isActive: !viewModel.projectFilters.isEmpty || viewModel.includeNoProject
                 ) {
                     selectedProjectIds = viewModel.projectFilters
+                    selectedNoProject = viewModel.includeNoProject
                     showProjectPicker = true
                 }
 
@@ -147,16 +149,14 @@ struct TaskListView: View {
             .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showProjectPicker, onDismiss: {
-            viewModel.setProjectFilters(selectedProjectIds)
+            viewModel.setProjectFilters(selectedProjectIds, includeNone: selectedNoProject)
         }) {
             ProjectPickerModal(
                 allProjects: viewModel.allProjects,
                 selectedIds: $selectedProjectIds,
                 onDismiss: { showProjectPicker = false },
-                onConfirm: { ids in
-                    selectedProjectIds = ids
-                    showProjectPicker = false
-                }
+                showClear: true,
+                includeNoProject: $selectedNoProject
             )
             .presentationDetents([.medium, .large])
         }
@@ -201,15 +201,8 @@ struct TaskListView: View {
     }
 
     private var projectFilterDisplayLabel: String {
-        let count = viewModel.projectFilters.count
+        let count = viewModel.projectFilters.count + (viewModel.includeNoProject ? 1 : 0)
         if count == 0 { return "Project" }
-        if count == 1 {
-            let id = viewModel.projectFilters.first!
-            if let project = viewModel.allProjects.first(where: { $0.id == id }) {
-                return project.name
-            }
-            return "Project"
-        }
         return "\(count) Projects"
     }
 
