@@ -58,6 +58,7 @@ export interface ListTaskFilters {
   scheduledFrom?: string;  // Filter tasks where scheduled_on >= this date (YYYY-MM-DD)
   scheduledTo?: string;    // Filter tasks where scheduled_on <= this date (YYYY-MM-DD)
   projectIds?: number[];   // Filter tasks that belong to any of these projects (OR logic)
+  includeNoProject?: boolean;  // When true, include tasks not assigned to any project
 }
 
 const taskRowToTask = (row: any): Task => ({
@@ -225,14 +226,29 @@ const buildTaskConditions = (filters: ListTaskFilters): { conditions: string[]; 
   }
 
   // Project filter
-  if (filters.projectIds && filters.projectIds.length > 0) {
-    const projectPlaceholders = filters.projectIds.map((_, i) => `@projectId${i}`).join(', ');
+  const hasProjectIds = filters.projectIds && filters.projectIds.length > 0;
+  const hasNoProject = filters.includeNoProject;
+
+  if (hasProjectIds && hasNoProject) {
+    const projectPlaceholders = filters.projectIds!.map((_, i) => `@projectId${i}`).join(', ');
+    conditions.push(
+      `(id IN(SELECT issue_id FROM project_items WHERE project_id IN(${projectPlaceholders})) OR id NOT IN(SELECT issue_id FROM project_items))`
+    );
+    filters.projectIds!.forEach((projectId, i) => {
+      params[`projectId${i}`] = projectId;
+    });
+  } else if (hasProjectIds) {
+    const projectPlaceholders = filters.projectIds!.map((_, i) => `@projectId${i}`).join(', ');
     conditions.push(
       `id IN(SELECT issue_id FROM project_items WHERE project_id IN(${projectPlaceholders}))`
     );
-    filters.projectIds.forEach((projectId, i) => {
+    filters.projectIds!.forEach((projectId, i) => {
       params[`projectId${i}`] = projectId;
     });
+  } else if (hasNoProject) {
+    conditions.push(
+      `id NOT IN(SELECT issue_id FROM project_items)`
+    );
   }
 
   // Search filter (LIKE for title)
@@ -291,14 +307,29 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
   }
 
   // Project filter
-  if (filters.projectIds && filters.projectIds.length > 0) {
-    const projectPlaceholders = filters.projectIds.map((_, i) => `@projectId${i}`).join(', ');
+  const hasProjectIdsInList = filters.projectIds && filters.projectIds.length > 0;
+  const hasNoProjectInList = filters.includeNoProject;
+
+  if (hasProjectIdsInList && hasNoProjectInList) {
+    const projectPlaceholders = filters.projectIds!.map((_, i) => `@projectId${i}`).join(', ');
+    conditions.push(
+      `(id IN(SELECT issue_id FROM project_items WHERE project_id IN(${projectPlaceholders})) OR id NOT IN(SELECT issue_id FROM project_items))`
+    );
+    filters.projectIds!.forEach((projectId, i) => {
+      params[`projectId${i}`] = projectId;
+    });
+  } else if (hasProjectIdsInList) {
+    const projectPlaceholders = filters.projectIds!.map((_, i) => `@projectId${i}`).join(', ');
     conditions.push(
       `id IN(SELECT issue_id FROM project_items WHERE project_id IN(${projectPlaceholders}))`
     );
-    filters.projectIds.forEach((projectId, i) => {
+    filters.projectIds!.forEach((projectId, i) => {
       params[`projectId${i}`] = projectId;
     });
+  } else if (hasNoProjectInList) {
+    conditions.push(
+      `id NOT IN(SELECT issue_id FROM project_items)`
+    );
   }
 
   // Date range filters for calendar view

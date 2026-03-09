@@ -462,6 +462,146 @@ describe('Task CRUD Operations', () => {
     assert.ok(ids.includes(task2.id), 'should include task from project B');
     assert.ok(!ids.includes(task3.id), 'should not include task from no project');
   });
+
+  it('should filter tasks with no project (GET /api/tasks?projectId=none)', async () => {
+    // Create two tasks
+    const res1 = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task in project' }),
+    });
+    const task1 = JSON.parse(res1.body);
+
+    const res2 = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task with no project' }),
+    });
+    const task2 = JSON.parse(res2.body);
+
+    // Create a project and add task1 only
+    const projRes = await app.inject({
+      method: 'POST',
+      url: '/api/projects',
+      payload: { name: 'Some Project', viewMeta: { viewType: 'board', columns: ['To Do', 'Done'] } },
+    });
+    const project = JSON.parse(projRes.body);
+
+    await app.inject({
+      method: 'POST',
+      url: `/api/projects/${project.id}/items`,
+      payload: { issueId: task1.id },
+    });
+
+    // Filter by projectId=none
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/tasks?projectId=none',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    const ids = result.data.map((t: any) => t.id);
+    assert.ok(ids.includes(task2.id), 'should include task with no project');
+    assert.ok(!ids.includes(task1.id), 'should not include task in a project');
+  });
+
+  it('should filter tasks with no project combined with projectId (GET /api/tasks?projectId=none,{id})', async () => {
+    // Create three tasks
+    const res1 = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task in project A' }),
+    });
+    const task1 = JSON.parse(res1.body);
+
+    const res2 = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task in project B' }),
+    });
+    const task2 = JSON.parse(res2.body);
+
+    const res3 = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Unassigned task' }),
+    });
+    const task3 = JSON.parse(res3.body);
+
+    // Create two projects
+    const projResA = await app.inject({
+      method: 'POST',
+      url: '/api/projects',
+      payload: { name: 'Project A', viewMeta: { viewType: 'board', columns: ['To Do', 'Done'] } },
+    });
+    const projectA = JSON.parse(projResA.body);
+
+    const projResB = await app.inject({
+      method: 'POST',
+      url: '/api/projects',
+      payload: { name: 'Project B', viewMeta: { viewType: 'board', columns: ['To Do', 'Done'] } },
+    });
+    const projectB = JSON.parse(projResB.body);
+
+    await app.inject({
+      method: 'POST',
+      url: `/api/projects/${projectA.id}/items`,
+      payload: { issueId: task1.id },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/api/projects/${projectB.id}/items`,
+      payload: { issueId: task2.id },
+    });
+
+    // Filter by none + project A
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/tasks?projectId=none,${projectA.id}`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    const ids = result.data.map((t: any) => t.id);
+    assert.ok(ids.includes(task1.id), 'should include task from project A');
+    assert.ok(ids.includes(task3.id), 'should include unassigned task');
+    assert.ok(!ids.includes(task2.id), 'should not include task from project B');
+  });
+
+  it('should return empty when projectId=none but all tasks belong to projects', async () => {
+    // Create a task and assign it to a project
+    const res1 = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task in project' }),
+    });
+    const task1 = JSON.parse(res1.body);
+
+    const projRes = await app.inject({
+      method: 'POST',
+      url: '/api/projects',
+      payload: { name: 'My Project', viewMeta: { viewType: 'board', columns: ['To Do', 'Done'] } },
+    });
+    const project = JSON.parse(projRes.body);
+
+    await app.inject({
+      method: 'POST',
+      url: `/api/projects/${project.id}/items`,
+      payload: { issueId: task1.id },
+    });
+
+    // Filter by projectId=none
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/tasks?projectId=none',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.data.length, 0, 'should return no tasks');
+    assert.strictEqual(result.total, 0);
+  });
 });
 
 describe('Task Status Transition Operations', () => {

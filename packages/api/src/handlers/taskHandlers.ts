@@ -101,7 +101,17 @@ export async function listTasksHandler(
     filters.labels = label.split(',').map(l => l.trim()).filter(Boolean);
   }
   if (projectId) {
-    filters.projectIds = projectId.split(',').map((id: string) => parseInt(id.trim(), 10)).filter((id: number) => !isNaN(id));
+    const parts = projectId.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.includes('none')) {
+      filters.includeNoProject = true;
+    }
+    const numericIds = parts
+      .filter(s => s !== 'none')
+      .map(s => parseInt(s, 10))
+      .filter(id => !isNaN(id));
+    if (numericIds.length > 0) {
+      filters.projectIds = numericIds;
+    }
   }
   if (search) {
     filters.search = search;

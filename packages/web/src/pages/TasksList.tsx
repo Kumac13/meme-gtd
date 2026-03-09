@@ -63,8 +63,16 @@ export default function TasksList() {
   const selectedProjectIds = useMemo(() => {
     if (!projectIdParam) return new Set<number>();
     return new Set(
-      projectIdParam.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id))
+      projectIdParam.split(',')
+        .map(id => id.trim())
+        .filter(id => id !== 'none')
+        .map(id => parseInt(id, 10))
+        .filter(id => !isNaN(id))
     );
+  }, [projectIdParam]);
+
+  const selectedNoneProject = useMemo(() => {
+    return projectIdParam.split(',').map(s => s.trim()).includes('none');
   }, [projectIdParam]);
 
   // Pagination state from URL
@@ -125,9 +133,12 @@ export default function TasksList() {
         const offset = (currentPage - 1) * PAGE_SIZE;
 
         // Build projectId parameter
-        const projectIdFilter = selectedProjectIds.size > 0
-          ? Array.from(selectedProjectIds).join(',')
-          : undefined;
+        const projectIdFilter = (() => {
+          const parts: string[] = [];
+          if (selectedNoneProject) parts.push('none');
+          if (selectedProjectIds.size > 0) parts.push(...Array.from(selectedProjectIds).map(String));
+          return parts.length > 0 ? parts.join(',') : undefined;
+        })();
 
         const response = await TasksService.listTasks(
           effectiveStatus as 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled' | undefined,
@@ -180,10 +191,27 @@ export default function TasksList() {
     } else {
       newIds.add(projectId);
     }
-    if (newIds.size === 0) {
+    const parts: string[] = [];
+    if (selectedNoneProject) parts.push('none');
+    parts.push(...Array.from(newIds).map(String));
+    if (parts.length === 0) {
       params.delete('projectId');
     } else {
-      params.set('projectId', Array.from(newIds).join(','));
+      params.set('projectId', parts.join(','));
+    }
+    params.delete('page');
+    setSearchParams(params);
+  };
+
+  const handleNoneProjectToggle = () => {
+    const params = new URLSearchParams(searchParams);
+    const parts: string[] = [];
+    if (!selectedNoneProject) parts.push('none');
+    if (selectedProjectIds.size > 0) parts.push(...Array.from(selectedProjectIds).map(String));
+    if (parts.length === 0) {
+      params.delete('projectId');
+    } else {
+      params.set('projectId', parts.join(','));
     }
     params.delete('page');
     setSearchParams(params);
@@ -215,9 +243,11 @@ export default function TasksList() {
   };
 
   const projectFilterLabel = useMemo(() => {
-    if (selectedProjectIds.size === 0) return 'Project';
-    return `${selectedProjectIds.size} Projects`;
-  }, [selectedProjectIds]);
+    const count = selectedProjectIds.size + (selectedNoneProject ? 1 : 0);
+    if (count === 0) return 'Project';
+    if (count === 1 && selectedNoneProject) return 'No Project';
+    return `${count} Projects`;
+  }, [selectedProjectIds, selectedNoneProject]);
 
   if (initialLoading) {
     return <LoadingState message="Loading tasks..." />;
@@ -284,6 +314,19 @@ export default function TasksList() {
                     Clear
                   </button>
                 )}
+                <button
+                  onClick={handleNoneProjectToggle}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill={selectedNoneProject ? 'currentColor' : 'none'}>
+                    {selectedNoneProject ? (
+                      <path className="text-github-green-600" fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    ) : (
+                      <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-gray-300" />
+                    )}
+                  </svg>
+                  <span className="text-gray-500 italic truncate">No Project</span>
+                </button>
                 {projects.map(project => (
                   <button
                     key={project.id}

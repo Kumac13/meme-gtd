@@ -1496,7 +1496,9 @@ paths:
           in: query
           name: projectId
           required: false
-          description: Filter by project ID(s). Supports comma-separated values for OR logic (e.g., 1,2,3)
+          description: >-
+            Filter by project ID(s). Supports comma-separated values for OR logic (e.g., 1,2,3).
+            Use "none" to filter tasks not assigned to any project. Can be combined: "none,1".
         - schema:
             type: string
           in: query
