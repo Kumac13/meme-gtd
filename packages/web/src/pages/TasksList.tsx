@@ -217,13 +217,8 @@ export default function TasksList() {
 
   const projectFilterLabel = useMemo(() => {
     if (selectedProjectIds.size === 0) return 'Project';
-    if (selectedProjectIds.size === 1) {
-      const id = Array.from(selectedProjectIds)[0];
-      const project = projects.find(p => p.id === id);
-      return project?.name || 'Project';
-    }
     return `${selectedProjectIds.size} Projects`;
-  }, [selectedProjectIds, projects]);
+  }, [selectedProjectIds]);
 
   if (loading) {
     return <LoadingState message="Loading tasks..." />;
@@ -281,7 +276,7 @@ export default function TasksList() {
             </button>
 
             {showProjectDropdown && (
-              <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
+              <div className="absolute top-full left-0 mt-1 min-w-[280px] max-w-[400px] bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
                 {selectedProjectIds.size > 0 && (
                   <button
                     onClick={handleClearProjects}
@@ -294,14 +289,16 @@ export default function TasksList() {
                   <button
                     key={project.id}
                     onClick={() => handleProjectToggle(project.id)}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
                   >
-                    <span className="text-gray-700">{project.name}</span>
-                    {selectedProjectIds.has(project.id) && (
-                      <svg className="w-4 h-4 text-github-green-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill={selectedProjectIds.has(project.id) ? 'currentColor' : 'none'}>
+                      {selectedProjectIds.has(project.id) ? (
+                        <path className="text-github-green-600" fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      ) : (
+                        <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-gray-300" />
+                      )}
+                    </svg>
+                    <span className="text-gray-700 truncate">{project.name}</span>
                   </button>
                 ))}
               </div>
