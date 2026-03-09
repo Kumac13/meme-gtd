@@ -275,7 +275,8 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                 onConfirm: { ids in
                     viewModel.confirmProjects(ids)
                     showProjectPicker = false
-                }
+                },
+                includeNoProject: .constant(false)
             )
             .presentationDetents([.medium, .large])
         }

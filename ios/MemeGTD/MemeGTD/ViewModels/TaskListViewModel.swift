@@ -15,11 +15,16 @@ class TaskListViewModel: ObservableObject {
     // Filters
     @Published var statusFilter: TaskStatusFilter = .next
     @Published var labelFilters: Set<String> = []
+    @Published var projectFilters: Set<Int> = []
+    @Published var includeNoProject: Bool = false
     @Published var bookmarkFilter: Bool = false
     @Published var searchQuery: String = ""
 
     // Labels for picker
     @Published var allLabels: [IssueLabel] = []
+
+    // Projects for picker
+    @Published var allProjects: [Project] = []
 
     private let pageSize = 20
 
@@ -37,6 +42,12 @@ class TaskListViewModel: ObservableObject {
         }
         if !labelFilters.isEmpty {
             items.append(URLQueryItem(name: "label", value: labelFilters.joined(separator: ",")))
+        }
+        if !projectFilters.isEmpty || includeNoProject {
+            var parts: [String] = []
+            if includeNoProject { parts.append("none") }
+            parts.append(contentsOf: projectFilters.map(String.init))
+            items.append(URLQueryItem(name: "projectId", value: parts.joined(separator: ",")))
         }
         if bookmarkFilter {
             items.append(URLQueryItem(name: "bookmarked", value: "true"))
@@ -145,6 +156,16 @@ class TaskListViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Load projects for filter picker
+
+    func loadProjects() async {
+        do {
+            allProjects = try await APIClient.shared.get(path: "/api/projects")
+        } catch {
+            logger.error("loadProjects error: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Filter actions
 
     func setStatusFilter(_ status: TaskStatusFilter) {
@@ -154,6 +175,12 @@ class TaskListViewModel: ObservableObject {
 
     func setLabelFilters(_ labels: Set<String>) {
         labelFilters = labels
+        Task { await loadTasks() }
+    }
+
+    func setProjectFilters(_ projectIds: Set<Int>, includeNone: Bool) {
+        projectFilters = projectIds
+        includeNoProject = includeNone
         Task { await loadTasks() }
     }
 
