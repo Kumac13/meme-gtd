@@ -27,7 +27,7 @@ export default function StatusDropdown({ value, options, labels, onChange }: Sta
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 bg-github-green-600 text-white"
+        className="px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 bg-gray-100 text-gray-700 hover:bg-gray-200"
       >
         {displayLabel}
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,11 +45,11 @@ export default function StatusDropdown({ value, options, labels, onChange }: Sta
                 setOpen(false);
               }}
               className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${
-                value === status ? 'font-semibold text-github-green-700 bg-gray-50' : 'text-gray-700'
+                value === status ? 'font-semibold text-gray-900 bg-gray-50' : 'text-gray-700'
               }`}
             >
               {value === status && (
-                <svg className="w-4 h-4 shrink-0 text-github-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 shrink-0 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               )}
