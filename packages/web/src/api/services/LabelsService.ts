@@ -29,6 +29,18 @@ export class LabelsService {
          * Creation timestamp
          */
         createdAt: string;
+        /**
+         * Number of non-deleted memos with this label
+         */
+        memoCount: number;
+        /**
+         * Number of non-deleted tasks with this label
+         */
+        taskCount: number;
+        /**
+         * Number of non-deleted articles with this label
+         */
+        articleCount: number;
     }>> {
         return __request(OpenAPI, {
             method: 'GET',
@@ -74,6 +86,18 @@ export class LabelsService {
          * Creation timestamp
          */
         createdAt: string;
+        /**
+         * Number of non-deleted memos with this label
+         */
+        memoCount: number;
+        /**
+         * Number of non-deleted tasks with this label
+         */
+        taskCount: number;
+        /**
+         * Number of non-deleted articles with this label
+         */
+        articleCount: number;
     }> {
         return __request(OpenAPI, {
             method: 'POST',

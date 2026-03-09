@@ -71,6 +71,7 @@ export async function listTasksHandler(
       status?: string;
       bookmarked?: string;
       label?: string;
+      projectId?: string;
       search?: string;
       scheduledFrom?: string;
       scheduledTo?: string;
@@ -81,7 +82,7 @@ export async function listTasksHandler(
   reply: FastifyReply
 ) {
   const taskService = new TaskService({ db: request.server.db });
-  const { status, bookmarked, label, search, scheduledFrom, scheduledTo, limit, offset } = request.query;
+  const { status, bookmarked, label, projectId, search, scheduledFrom, scheduledTo, limit, offset } = request.query;
 
   const actualLimit = limit ?? DEFAULT_LIMIT;
   const actualOffset = offset ?? DEFAULT_OFFSET;
@@ -98,6 +99,9 @@ export async function listTasksHandler(
   }
   if (label) {
     filters.labels = label.split(',').map(l => l.trim()).filter(Boolean);
+  }
+  if (projectId) {
+    filters.projectIds = projectId.split(',').map((id: string) => parseInt(id.trim(), 10)).filter((id: number) => !isNaN(id));
   }
   if (search) {
     filters.search = search;

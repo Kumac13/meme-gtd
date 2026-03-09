@@ -141,6 +141,7 @@ export const TaskQuerySchema = z.object({
   status: TaskStatusSchema.optional().describe('Filter by task status'),
   bookmarked: z.enum(['true', 'false']).optional().describe('Filter by bookmark status'),
   label: z.string().optional().describe('Filter by label name(s). Supports comma-separated values for OR logic (e.g., bug,enhancement)'),
+  projectId: z.string().optional().describe('Filter by project ID(s). Supports comma-separated values for OR logic (e.g., 1,2,3)'),
   search: z.string().optional().describe('Search tasks by title using free-text partial matching'),
   scheduledFrom: z.string().date().optional().describe('Filter tasks where scheduled_on >= this date (YYYY-MM-DD)'),
   scheduledTo: z.string().date().optional().describe('Filter tasks where scheduled_on <= this date (YYYY-MM-DD)'),
