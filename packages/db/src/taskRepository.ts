@@ -57,6 +57,7 @@ export interface ListTaskFilters {
   isBookmarked?: boolean;
   scheduledFrom?: string;  // Filter tasks where scheduled_on >= this date (YYYY-MM-DD)
   scheduledTo?: string;    // Filter tasks where scheduled_on <= this date (YYYY-MM-DD)
+  projectIds?: number[];   // Filter tasks that belong to any of these projects (OR logic)
 }
 
 const taskRowToTask = (row: any): Task => ({
@@ -223,6 +224,17 @@ const buildTaskConditions = (filters: ListTaskFilters): { conditions: string[]; 
     params.scheduledTo = filters.scheduledTo;
   }
 
+  // Project filter
+  if (filters.projectIds && filters.projectIds.length > 0) {
+    const projectPlaceholders = filters.projectIds.map((_, i) => `@projectId${i}`).join(', ');
+    conditions.push(
+      `id IN(SELECT issue_id FROM project_items WHERE project_id IN(${projectPlaceholders}))`
+    );
+    filters.projectIds.forEach((projectId, i) => {
+      params[`projectId${i}`] = projectId;
+    });
+  }
+
   // Search filter (LIKE for title)
   if (filters.search) {
     conditions.push('title LIKE @search');
@@ -276,6 +288,17 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
   if (filters.isBookmarked !== undefined) {
     conditions.push('is_bookmarked = @isBookmarked');
     params.isBookmarked = filters.isBookmarked ? 1 : 0;
+  }
+
+  // Project filter
+  if (filters.projectIds && filters.projectIds.length > 0) {
+    const projectPlaceholders = filters.projectIds.map((_, i) => `@projectId${i}`).join(', ');
+    conditions.push(
+      `id IN(SELECT issue_id FROM project_items WHERE project_id IN(${projectPlaceholders}))`
+    );
+    filters.projectIds.forEach((projectId, i) => {
+      params[`projectId${i}`] = projectId;
+    });
   }
 
   // Date range filters for calendar view

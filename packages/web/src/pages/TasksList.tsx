@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
+import { ProjectsService } from '../api/services/ProjectsService';
 import ItemList from '../components/ItemList';
 import FilterBar from '../components/FilterBar';
 import SearchInput from '../components/SearchInput';
@@ -32,6 +33,12 @@ interface Task {
   updatedAt: string;
 }
 
+interface Project {
+  id: number;
+  name: string;
+  status: string;
+}
+
 const statusLabels: Record<string, string> = {
   inbox: 'Inbox',
   open: 'Open',
@@ -51,6 +58,15 @@ export default function TasksList() {
   const statusFilter = validateStatus(searchParams.get('status'));
   const bookmarkFilter = validateBookmarked(searchParams.get('bookmarked'));
 
+  // Project filter from URL
+  const projectIdParam = searchParams.get('projectId') || '';
+  const selectedProjectIds = useMemo(() => {
+    if (!projectIdParam) return new Set<number>();
+    return new Set(
+      projectIdParam.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id))
+    );
+  }, [projectIdParam]);
+
   // Pagination state from URL
   const currentPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
 
@@ -61,8 +77,29 @@ export default function TasksList() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  // Load projects for filter dropdown
+  useEffect(() => {
+    ProjectsService.listProjects().then(data => {
+      setProjects(data.map(p => ({ id: p.id, name: p.name, status: p.status })));
+    }).catch(console.error);
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowProjectDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     async function fetchTasks() {
@@ -88,10 +125,16 @@ export default function TasksList() {
         // Calculate offset for pagination
         const offset = (currentPage - 1) * PAGE_SIZE;
 
+        // Build projectId parameter
+        const projectIdFilter = selectedProjectIds.size > 0
+          ? Array.from(selectedProjectIds).join(',')
+          : undefined;
+
         const response = await TasksService.listTasks(
           effectiveStatus as 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled' | undefined,
           undefined,
           labelParam,
+          projectIdFilter,
           searchParam,
           undefined,
           undefined,
@@ -109,7 +152,7 @@ export default function TasksList() {
     }
 
     fetchTasks();
-  }, [statusFilter, filters.searchQuery, currentPage]);
+  }, [statusFilter, filters.searchQuery, currentPage, projectIdParam]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -130,6 +173,31 @@ export default function TasksList() {
     setSearchParams(params);
   };
 
+  const handleProjectToggle = (projectId: number) => {
+    const params = new URLSearchParams(searchParams);
+    const newIds = new Set(selectedProjectIds);
+    if (newIds.has(projectId)) {
+      newIds.delete(projectId);
+    } else {
+      newIds.add(projectId);
+    }
+    if (newIds.size === 0) {
+      params.delete('projectId');
+    } else {
+      params.set('projectId', Array.from(newIds).join(','));
+    }
+    params.delete('page');
+    setSearchParams(params);
+  };
+
+  const handleClearProjects = () => {
+    const params = new URLSearchParams(searchParams);
+    params.delete('projectId');
+    params.delete('page');
+    setSearchParams(params);
+    setShowProjectDropdown(false);
+  };
+
   const handlePageChange = useCallback((page: number) => {
     const params = new URLSearchParams(searchParams);
     if (page === 1) {
@@ -146,6 +214,16 @@ export default function TasksList() {
     setTasks(tasks.filter((task) => task.id !== id));
     setTotal(prev => prev - 1);
   };
+
+  const projectFilterLabel = useMemo(() => {
+    if (selectedProjectIds.size === 0) return 'Project';
+    if (selectedProjectIds.size === 1) {
+      const id = Array.from(selectedProjectIds)[0];
+      const project = projects.find(p => p.id === id);
+      return project?.name || 'Project';
+    }
+    return `${selectedProjectIds.size} Projects`;
+  }, [selectedProjectIds, projects]);
 
   if (loading) {
     return <LoadingState message="Loading tasks..." />;
@@ -183,6 +261,54 @@ export default function TasksList() {
         onStatusFilterChange={handleStatusFilterChange}
         onBookmarkFilterChange={handleBookmarkFilterChange}
       />
+
+      {/* Project filter dropdown */}
+      {projects.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2" ref={dropdownRef}>
+          <div className="relative">
+            <button
+              onClick={() => setShowProjectDropdown(!showProjectDropdown)}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 ${
+                selectedProjectIds.size > 0
+                  ? 'bg-github-green-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {projectFilterLabel}
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {showProjectDropdown && (
+              <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
+                {selectedProjectIds.size > 0 && (
+                  <button
+                    onClick={handleClearProjects}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 border-b border-gray-100"
+                  >
+                    Clear
+                  </button>
+                )}
+                {projects.map(project => (
+                  <button
+                    key={project.id}
+                    onClick={() => handleProjectToggle(project.id)}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between"
+                  >
+                    <span className="text-gray-700">{project.name}</span>
+                    {selectedProjectIds.has(project.id) && (
+                      <svg className="w-4 h-4 text-github-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {filteredTasks.length === 0 ? (
         <EmptyState

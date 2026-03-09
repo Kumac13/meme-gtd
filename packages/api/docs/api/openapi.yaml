@@ -1494,6 +1494,12 @@ paths:
         - schema:
             type: string
           in: query
+          name: projectId
+          required: false
+          description: Filter by project ID(s). Supports comma-separated values for OR logic (e.g., 1,2,3)
+        - schema:
+            type: string
+          in: query
           name: search
           required: false
           description: Search tasks by title using free-text partial matching
@@ -3754,15 +3760,23 @@ paths:
                     type: string
                     format: date-time
                     description: Creation timestamp
-                  issueCount:
+                  memoCount:
                     type: integer
-                    description: Number of non-deleted issues with this label
+                    description: Number of non-deleted memos with this label
+                  taskCount:
+                    type: integer
+                    description: Number of non-deleted tasks with this label
+                  articleCount:
+                    type: integer
+                    description: Number of non-deleted articles with this label
                 required:
                   - id
                   - name
                   - description
                   - createdAt
-                  - issueCount
+                  - memoCount
+                  - taskCount
+                  - articleCount
                 additionalProperties: false
         "400":
           description: Default Response

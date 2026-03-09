@@ -170,6 +170,7 @@ export class TasksService {
      * @param status Filter by task status
      * @param bookmarked Filter by bookmark status
      * @param label Filter by label name(s). Supports comma-separated values for OR logic (e.g., bug,enhancement)
+     * @param projectId Filter by project ID(s). Supports comma-separated values for OR logic (e.g., 1,2,3)
      * @param search Search tasks by title using free-text partial matching
      * @param scheduledFrom Filter tasks where scheduled_on >= this date (YYYY-MM-DD)
      * @param scheduledTo Filter tasks where scheduled_on <= this date (YYYY-MM-DD)
@@ -182,6 +183,7 @@ export class TasksService {
         status?: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled',
         bookmarked?: 'true' | 'false',
         label?: string,
+        projectId?: string,
         search?: string,
         scheduledFrom?: string,
         scheduledTo?: string,
@@ -317,6 +319,7 @@ export class TasksService {
                 'status': status,
                 'bookmarked': bookmarked,
                 'label': label,
+                'projectId': projectId,
                 'search': search,
                 'scheduledFrom': scheduledFrom,
                 'scheduledTo': scheduledTo,
