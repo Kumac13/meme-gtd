@@ -75,7 +75,7 @@ export default function TasksList() {
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
@@ -104,7 +104,6 @@ export default function TasksList() {
   useEffect(() => {
     async function fetchTasks() {
       try {
-        setLoading(true);
         setError(null);
 
         // Build label parameter from parsed query
@@ -147,7 +146,7 @@ export default function TasksList() {
         setError(err instanceof Error ? err.message : 'Failed to load tasks');
         console.error('Error fetching tasks:', err);
       } finally {
-        setLoading(false);
+        setInitialLoading(false);
       }
     }
 
@@ -220,7 +219,7 @@ export default function TasksList() {
     return `${selectedProjectIds.size} Projects`;
   }, [selectedProjectIds]);
 
-  if (loading) {
+  if (initialLoading) {
     return <LoadingState message="Loading tasks..." />;
   }
 
