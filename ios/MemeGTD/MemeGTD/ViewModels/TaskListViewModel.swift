@@ -15,15 +15,11 @@ class TaskListViewModel: ObservableObject {
     // Filters
     @Published var statusFilter: TaskStatusFilter = .next
     @Published var labelFilters: Set<String> = []
-    @Published var projectFilters: Set<Int> = []
     @Published var bookmarkFilter: Bool = false
     @Published var searchQuery: String = ""
 
     // Labels for picker
     @Published var allLabels: [IssueLabel] = []
-
-    // Projects for picker
-    @Published var allProjects: [Project] = []
 
     private let pageSize = 20
 
@@ -41,9 +37,6 @@ class TaskListViewModel: ObservableObject {
         }
         if !labelFilters.isEmpty {
             items.append(URLQueryItem(name: "label", value: labelFilters.joined(separator: ",")))
-        }
-        if !projectFilters.isEmpty {
-            items.append(URLQueryItem(name: "projectId", value: projectFilters.map(String.init).joined(separator: ",")))
         }
         if bookmarkFilter {
             items.append(URLQueryItem(name: "bookmarked", value: "true"))
@@ -152,16 +145,6 @@ class TaskListViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Load projects for filter picker
-
-    func loadProjects() async {
-        do {
-            allProjects = try await APIClient.shared.get(path: "/api/projects")
-        } catch {
-            logger.error("loadProjects error: \(error.localizedDescription)")
-        }
-    }
-
     // MARK: - Filter actions
 
     func setStatusFilter(_ status: TaskStatusFilter) {
@@ -171,11 +154,6 @@ class TaskListViewModel: ObservableObject {
 
     func setLabelFilters(_ labels: Set<String>) {
         labelFilters = labels
-        Task { await loadTasks() }
-    }
-
-    func setProjectFilters(_ projectIds: Set<Int>) {
-        projectFilters = projectIds
         Task { await loadTasks() }
     }
 

@@ -9,8 +9,6 @@ struct TaskListView: View {
     @State private var isSearching: Bool = false
     @State private var showLabelPicker: Bool = false
     @State private var selectedLabelNames: Set<String> = []
-    @State private var showProjectPicker: Bool = false
-    @State private var selectedProjectIds: Set<Int> = []
 
     var body: some View {
         ScrollView {
@@ -82,14 +80,6 @@ struct TaskListView: View {
                     showLabelPicker = true
                 }
 
-                filterPill(
-                    label: projectFilterDisplayLabel,
-                    isActive: !viewModel.projectFilters.isEmpty
-                ) {
-                    selectedProjectIds = viewModel.projectFilters
-                    showProjectPicker = true
-                }
-
                 bookmarkPill
 
                 Spacer()
@@ -146,20 +136,6 @@ struct TaskListView: View {
             )
             .presentationDetents([.medium, .large])
         }
-        .sheet(isPresented: $showProjectPicker, onDismiss: {
-            viewModel.setProjectFilters(selectedProjectIds)
-        }) {
-            ProjectPickerModal(
-                allProjects: viewModel.allProjects,
-                selectedIds: $selectedProjectIds,
-                onDismiss: { showProjectPicker = false },
-                onConfirm: { ids in
-                    selectedProjectIds = ids
-                    showProjectPicker = false
-                }
-            )
-            .presentationDetents([.medium, .large])
-        }
         .overlay {
             if viewModel.isLoading && viewModel.tasks.isEmpty {
                 ProgressView("Loading tasks...")
@@ -168,7 +144,6 @@ struct TaskListView: View {
         }
         .task {
             await viewModel.loadLabels()
-            await viewModel.loadProjects()
             if viewModel.tasks.isEmpty {
                 await viewModel.loadTasks()
             }
@@ -198,19 +173,6 @@ struct TaskListView: View {
         if count == 0 { return "Label" }
         if count == 1 { return viewModel.labelFilters.first! }
         return "\(count) Labels"
-    }
-
-    private var projectFilterDisplayLabel: String {
-        let count = viewModel.projectFilters.count
-        if count == 0 { return "Project" }
-        if count == 1 {
-            let id = viewModel.projectFilters.first!
-            if let project = viewModel.allProjects.first(where: { $0.id == id }) {
-                return project.name
-            }
-            return "Project"
-        }
-        return "\(count) Projects"
     }
 
     private func filterPill(label: String, isActive: Bool, action: @escaping () -> Void) -> some View {
