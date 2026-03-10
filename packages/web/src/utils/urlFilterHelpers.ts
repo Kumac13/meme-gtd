@@ -138,3 +138,41 @@ export function updateSearchParam(
 export function getSearchParam(params: URLSearchParams): string {
   return params.get('q') || '';
 }
+
+/**
+ * Parses the 'label' URL parameter into a Set of label names
+ *
+ * @param value - Raw value from URLSearchParams.get('label')
+ * @returns Set of selected label names
+ */
+export function parseLabelParam(value: string | null): Set<string> {
+  if (!value) return new Set<string>();
+  return new Set(
+    value
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  );
+}
+
+/**
+ * Updates the label filter in URLSearchParams
+ *
+ * @param currentParams - Current URLSearchParams object
+ * @param labels - Set of selected label names
+ * @returns New URLSearchParams object with updated label filter
+ */
+export function updateLabelParam(
+  currentParams: URLSearchParams,
+  labels: Set<string>
+): URLSearchParams {
+  const params = new URLSearchParams(currentParams);
+
+  if (labels.size > 0) {
+    params.set('label', Array.from(labels).join(','));
+  } else {
+    params.delete('label');
+  }
+
+  return params;
+}

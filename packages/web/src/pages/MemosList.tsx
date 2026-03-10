@@ -2,14 +2,20 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import ItemList from '../components/ItemList';
-import FilterBar from '../components/FilterBar';
+import LabelFilterDropdown from '../components/LabelFilterDropdown';
 import SearchInput from '../components/SearchInput';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
 import Pagination from '../components/Pagination';
 import { useUrlFilters } from '../hooks/useUrlFilters';
-import { validateBookmarked, updateBookmarkedParam, updateSearchParam } from '../utils/urlFilterHelpers';
+import {
+  validateBookmarked,
+  updateBookmarkedParam,
+  updateSearchParam,
+  parseLabelParam,
+  updateLabelParam,
+} from '../utils/urlFilterHelpers';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { MarkdownRenderer } from '../utils/markdown';
 import MobileFloatingComposer from '../components/MobileFloatingComposer';
@@ -40,6 +46,12 @@ export default function MemosList() {
   const { filters } = useUrlFilters();
   const bookmarkFilter = validateBookmarked(searchParams.get('bookmarked'));
 
+  // Label filter from URL
+  const selectedLabels = useMemo(
+    () => parseLabelParam(searchParams.get('label')),
+    [searchParams]
+  );
+
   // Pagination state from URL
   const currentPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
 
@@ -69,8 +81,10 @@ export default function MemosList() {
         setLoading(true);
         setError(null);
 
-        // Build label parameter from parsed query
-        const labelParam = filters.parsedQuery.labels?.join(',');
+        // Build label parameter from URL
+        const labelParam = selectedLabels.size > 0
+          ? Array.from(selectedLabels).join(',')
+          : undefined;
 
         // Extract free-text search from parsed query
         const searchParam = filters.parsedQuery.freeText;
@@ -95,7 +109,7 @@ export default function MemosList() {
     }
 
     fetchMemos();
-  }, [filters.searchQuery, currentPage, bookmarkFilter]);
+  }, [filters.searchQuery, currentPage, bookmarkFilter, selectedLabels]);
 
   // Mobile: scroll to bottom after initial load so newest memos are visible
   useEffect(() => {
@@ -124,6 +138,24 @@ export default function MemosList() {
     setSearchParams(params);
   };
 
+  const handleLabelToggle = (labelName: string) => {
+    const newLabels = new Set(selectedLabels);
+    if (newLabels.has(labelName)) {
+      newLabels.delete(labelName);
+    } else {
+      newLabels.add(labelName);
+    }
+    const params = updateLabelParam(searchParams, newLabels);
+    params.delete('page');
+    setSearchParams(params);
+  };
+
+  const handleClearLabels = () => {
+    const params = updateLabelParam(searchParams, new Set());
+    params.delete('page');
+    setSearchParams(params);
+  };
+
   const handlePageChange = useCallback((page: number) => {
     const params = new URLSearchParams(searchParams);
     if (page === 1) {
@@ -146,7 +178,9 @@ export default function MemosList() {
         previousScrollHeightRef.current = scrollContainerRef.current.scrollHeight;
       }
 
-      const labelParam = filters.parsedQuery.labels?.join(',');
+      const labelParam = selectedLabels.size > 0
+        ? Array.from(selectedLabels).join(',')
+        : undefined;
       const searchParam = filters.parsedQuery.freeText;
       const response = await MemosService.listMemos(
         bookmarkFilter ? 'true' : undefined,
@@ -164,7 +198,7 @@ export default function MemosList() {
     } finally {
       setIsFetchingOlder(false);
     }
-  }, [bookmarkFilter, filters.parsedQuery.freeText, filters.parsedQuery.labels, isFetchingOlder, memos.length, total]);
+  }, [bookmarkFilter, filters.parsedQuery.freeText, selectedLabels, isFetchingOlder, memos.length, total]);
 
   // Preserve scroll position after older memos are prepended (in reversed view)
   useEffect(() => {
@@ -286,14 +320,27 @@ export default function MemosList() {
                 setSearchParams(params);
               }}
               placeholder="Search memos"
-              itemType="memo"
             />
           </div>
 
-          <FilterBar
-            bookmarkFilter={bookmarkFilter}
-            onBookmarkFilterChange={handleBookmarkFilterChange}
-          />
+          <div className="mb-4 flex flex-wrap gap-2 items-center">
+            <LabelFilterDropdown
+              selectedLabels={selectedLabels}
+              onToggle={handleLabelToggle}
+              onClear={handleClearLabels}
+              countKey="memoCount"
+            />
+            <button
+              onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                bookmarkFilter
+                  ? 'bg-github-green-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Bookmarked
+            </button>
+          </div>
 
           <div className="text-sm text-gray-500 mb-2">
             {total} {total === 1 ? 'memo' : 'memos'}
@@ -398,7 +445,6 @@ export default function MemosList() {
               setSearchParams(params);
             }}
             placeholder="Search memos"
-            itemType="memo"
           />
           <Link
             to="/memos/new"
@@ -408,10 +454,24 @@ export default function MemosList() {
           </Link>
         </div>
 
-        <FilterBar
-          bookmarkFilter={bookmarkFilter}
-          onBookmarkFilterChange={handleBookmarkFilterChange}
-        />
+        <div className="mb-4 flex flex-wrap gap-2 items-center">
+          <LabelFilterDropdown
+            selectedLabels={selectedLabels}
+            onToggle={handleLabelToggle}
+            onClear={handleClearLabels}
+            countKey="memoCount"
+          />
+          <button
+            onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              bookmarkFilter
+                ? 'bg-github-green-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Bookmarked
+          </button>
+        </div>
 
         <div className="text-sm text-gray-500 mb-2">
           {total} {total === 1 ? 'memo' : 'memos'}

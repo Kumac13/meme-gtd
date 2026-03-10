@@ -92,7 +92,6 @@ export const ArticleList: React.FC = () => {
           value={searchQuery}
           onChange={handleSearchChange}
           placeholder="Search articles"
-          itemType="article"
         />
       </div>
 
