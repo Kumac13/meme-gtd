@@ -13,7 +13,7 @@ struct TaskCell: View {
 
             // #id time | bookmark | labels — spacing で視覚的にグループ分け
             HStack(spacing: 6) {
-                Text("#\(task.id)")
+                Text(verbatim: "#\(task.id)")
                     .font(.system(size: 11))
                     .foregroundColor(.textSecondary)
 

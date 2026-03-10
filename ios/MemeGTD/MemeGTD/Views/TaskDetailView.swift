@@ -330,7 +330,7 @@ struct TaskDetailView: View {
     // MARK: - Toolbar title
 
     private var toolbarTitle: String {
-        let title = viewModel.task?.title ?? initialTitle ?? "#\(taskId)"
+        let title = viewModel.task?.title ?? initialTitle ?? "#\(String(taskId))"
         return title
     }
 

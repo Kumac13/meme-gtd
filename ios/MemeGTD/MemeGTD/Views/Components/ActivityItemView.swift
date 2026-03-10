@@ -138,7 +138,7 @@ struct ActivityItemView: View {
         if type == "memo" {
             HStack(spacing: 2) {
                 NavigationLink(value: MemoRoute(memoId: id, initialBody: title ?? "")) {
-                    Text("#\(id)")
+                    Text(verbatim: "#\(id)")
                         .font(.system(size: 12))
                         .foregroundColor(Color.accentDark)
                 }
@@ -151,7 +151,7 @@ struct ActivityItemView: View {
         } else {
             HStack(spacing: 2) {
                 NavigationLink(value: TaskRoute(taskId: id, initialTitle: title ?? "")) {
-                    Text("#\(id)")
+                    Text(verbatim: "#\(id)")
                         .font(.system(size: 12))
                         .foregroundColor(Color.accentDark)
                 }
