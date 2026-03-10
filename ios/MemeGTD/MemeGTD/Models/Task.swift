@@ -94,3 +94,47 @@ struct TaskListResponse: Codable {
     let limit: Int
     let offset: Int
 }
+
+// MARK: - Create Task
+
+struct CreateTaskRequest: Codable {
+    let title: String
+    let bodyMd: String?
+    let status: String?
+    let taskKind: String?
+    let scheduledStart: String?
+    let scheduledEnd: String?
+    let isAllDay: Bool?
+}
+
+enum TaskStatus: String, CaseIterable {
+    case inbox, open, next, waiting, scheduled, someday, done, canceled
+
+    var displayLabel: String {
+        rawValue.capitalized
+    }
+}
+
+enum TaskKind: String, CaseIterable {
+    case action, event
+
+    var displayLabel: String {
+        rawValue.capitalized
+    }
+}
+
+enum CreateTaskMode {
+    /// Full form, default fields
+    case standard
+    /// Full form, pre-populate a relates link to the source task
+    case linkedTo(sourceTaskId: Int)
+    /// Quick child: title-only, inherit parent's projects/labels/status, auto-create child link
+    case quickChild(parentTask: TaskItem, parentProjects: [Project], parentLabels: [String])
+}
+
+struct PendingLink: Identifiable {
+    let id = UUID()
+    let targetIssueId: Int
+    let linkType: LinkType
+    let title: String
+}

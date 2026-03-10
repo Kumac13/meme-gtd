@@ -5,6 +5,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
     @Binding var showCopiedFeedback: Bool
     var onEditTitle: (() -> Void)?
     var onDelete: (() -> Void)?
+    var onNewTask: (() -> Void)?
     var labelCountKeyPath: KeyPath<IssueLabel, Int> = \.memoCount
     @Environment(\.dismiss) private var dismiss
 
@@ -52,6 +53,28 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                 .disabled(viewModel.isBookmarking)
 
                 Divider().padding(.leading, 16)
+
+                // New Task (optional, for tasks)
+                if let onNewTask = onNewTask {
+                    Button(action: {
+                        dismiss()
+                        onNewTask()
+                    }) {
+                        HStack {
+                            Text("New Task")
+                                .font(.system(size: 15))
+                                .foregroundColor(.textPrimary)
+                            Spacer()
+                            Image(systemName: "plus.square")
+                                .font(.system(size: 15))
+                                .foregroundColor(.textSecondary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                    }
+
+                    Divider().padding(.leading, 16)
+                }
 
                 // Edit Title (Task only)
                 if let onEditTitle = onEditTitle {

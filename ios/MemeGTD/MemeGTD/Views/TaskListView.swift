@@ -12,6 +12,7 @@ struct TaskListView: View {
     @State private var showProjectPicker: Bool = false
     @State private var selectedProjectIds: Set<Int> = []
     @State private var selectedNoProject: Bool = false
+    @State private var showCreateTask: Bool = false
 
     var body: some View {
         ScrollView {
@@ -102,7 +103,10 @@ struct TaskListView: View {
         .safeAreaBar(edge: .bottom) {
             HStack {
                 Spacer()
-                Button(action: {}) {
+                Button(action: {
+                    HapticManager.impact(.medium)
+                    showCreateTask = true
+                }) {
                     Image(systemName: "plus")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.white)
@@ -159,6 +163,16 @@ struct TaskListView: View {
                 includeNoProject: $selectedNoProject
             )
             .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showCreateTask) {
+            CreateTaskModal(
+                mode: .standard,
+                onCreated: { _ in
+                    Task { await viewModel.loadTasks() }
+                },
+                onDismiss: { showCreateTask = false }
+            )
+            .presentationDetents([.large])
         }
         .overlay {
             if viewModel.isLoading && viewModel.tasks.isEmpty {
