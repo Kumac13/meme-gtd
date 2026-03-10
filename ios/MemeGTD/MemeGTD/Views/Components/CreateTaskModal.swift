@@ -48,7 +48,10 @@ struct CreateTaskModal: View {
 
     private var header: some View {
         HStack {
-            Button(action: onDismiss) {
+            Button(action: {
+                HapticManager.impact(.light)
+                onDismiss()
+            }) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 28))
                     .symbolRenderingMode(.hierarchical)
@@ -451,7 +454,7 @@ struct CreateTaskModal: View {
     private var statusPickerSheet: some View {
         VStack(spacing: 0) {
             HStack {
-                Button(action: { showStatusPicker = false }) {
+                Button(action: { HapticManager.impact(.light); showStatusPicker = false }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 28))
                         .symbolRenderingMode(.hierarchical)

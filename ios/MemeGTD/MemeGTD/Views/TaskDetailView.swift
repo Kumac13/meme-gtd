@@ -381,7 +381,7 @@ struct TaskDetailView: View {
 
         return VStack(spacing: 0) {
             HStack {
-                Button(action: { showStatusPicker = false }) {
+                Button(action: { HapticManager.impact(.light); showStatusPicker = false }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 28))
                         .symbolRenderingMode(.hierarchical)

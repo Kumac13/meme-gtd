@@ -244,7 +244,7 @@ struct TaskListView: View {
     private var statusPickerSheet: some View {
         VStack(spacing: 0) {
             HStack {
-                Button(action: { showStatusPicker = false }) {
+                Button(action: { HapticManager.impact(.light); showStatusPicker = false }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 28))
                         .symbolRenderingMode(.hierarchical)
