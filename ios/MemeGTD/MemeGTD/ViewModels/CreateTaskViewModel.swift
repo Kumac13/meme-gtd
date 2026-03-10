@@ -3,7 +3,7 @@ import SwiftUI
 
 @MainActor
 class CreateTaskViewModel: ObservableObject {
-    let mode: CreateTaskMode
+    let mode: CreateTaskModeKind
 
     @Published var title: String = ""
     @Published var bodyMd: String = ""
@@ -30,7 +30,7 @@ class CreateTaskViewModel: ObservableObject {
         return f
     }()
 
-    init(mode: CreateTaskMode) {
+    init(mode: CreateTaskModeKind) {
         self.mode = mode
         switch mode {
         case .standard:

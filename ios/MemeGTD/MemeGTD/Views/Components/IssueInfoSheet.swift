@@ -6,6 +6,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
     var onEditTitle: (() -> Void)?
     var onDelete: (() -> Void)?
     var onNewTask: (() -> Void)?
+    var onAddChild: (() -> Void)?
     var labelCountKeyPath: KeyPath<IssueLabel, Int> = \.memoCount
     @Environment(\.dismiss) private var dismiss
 
@@ -66,6 +67,28 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                                 .foregroundColor(.textPrimary)
                             Spacer()
                             Image(systemName: "plus.square")
+                                .font(.system(size: 15))
+                                .foregroundColor(.textSecondary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                    }
+
+                    Divider().padding(.leading, 16)
+                }
+
+                // Add Child (optional, for tasks)
+                if let onAddChild = onAddChild {
+                    Button(action: {
+                        dismiss()
+                        onAddChild()
+                    }) {
+                        HStack {
+                            Text("Add Child")
+                                .font(.system(size: 15))
+                                .foregroundColor(.textPrimary)
+                            Spacer()
+                            Image(systemName: "arrow.turn.down.right")
                                 .font(.system(size: 15))
                                 .foregroundColor(.textSecondary)
                         }

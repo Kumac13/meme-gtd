@@ -123,12 +123,17 @@ enum TaskKind: String, CaseIterable {
     }
 }
 
-enum CreateTaskMode {
+struct CreateTaskMode: Identifiable {
+    let id = UUID()
+    let kind: CreateTaskModeKind
+}
+
+enum CreateTaskModeKind {
     /// Full form, default fields
     case standard
     /// Full form, pre-populate a relates link to the source task
     case linkedTo(sourceTaskId: Int)
-    /// Quick child: title-only, inherit parent's projects/labels/status, auto-create child link
+    /// Full form, inherit parent's projects/labels/status, auto-create child link
     case quickChild(parentTask: TaskItem, parentProjects: [Project], parentLabels: [String])
 }
 

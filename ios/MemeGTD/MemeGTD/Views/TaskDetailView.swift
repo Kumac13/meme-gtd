@@ -12,8 +12,7 @@ struct TaskDetailView: View {
     @State private var showCopiedFeedback: Bool = false
     @State private var showStatusPicker: Bool = false
     @State private var editingMode: EditingMode = .none
-    @State private var showCreateTask: Bool = false
-    @State private var createTaskMode: CreateTaskMode = .standard
+    @State private var createTaskMode: CreateTaskMode? = nil
 
     enum EditingMode: Equatable {
         case none
@@ -255,8 +254,16 @@ struct TaskDetailView: View {
                 },
                 onDelete: { showDeleteConfirm = true },
                 onNewTask: {
-                    createTaskMode = .linkedTo(sourceTaskId: taskId)
-                    showCreateTask = true
+                    createTaskMode = CreateTaskMode(kind: .linkedTo(sourceTaskId: taskId))
+                },
+                onAddChild: {
+                    if let task = viewModel.task {
+                        createTaskMode = CreateTaskMode(kind: .quickChild(
+                            parentTask: task,
+                            parentProjects: viewModel.associatedProjects,
+                            parentLabels: task.labels
+                        ))
+                    }
                 },
                 labelCountKeyPath: \.taskCount
             )
@@ -266,13 +273,13 @@ struct TaskDetailView: View {
             statusPickerSheet
                 .presentationDetents([.medium])
         }
-        .sheet(isPresented: $showCreateTask) {
+        .sheet(item: $createTaskMode) { mode in
             CreateTaskModal(
-                mode: createTaskMode,
+                mode: mode.kind,
                 onCreated: { _ in
                     Task { await viewModel.loadTask() }
                 },
-                onDismiss: { showCreateTask = false }
+                onDismiss: { createTaskMode = nil }
             )
             .presentationDetents([.large])
         }

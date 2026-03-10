@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct CreateTaskModal: View {
-    let mode: CreateTaskMode
+    let mode: CreateTaskModeKind
     let onCreated: (TaskItem) -> Void
     let onDismiss: () -> Void
 
@@ -14,16 +14,16 @@ struct CreateTaskModal: View {
     @State private var selectedLabelNames: Set<String> = []
     @State private var selectedProjectIds: Set<Int> = []
 
-    init(mode: CreateTaskMode, onCreated: @escaping (TaskItem) -> Void, onDismiss: @escaping () -> Void) {
+    init(mode: CreateTaskModeKind, onCreated: @escaping (TaskItem) -> Void, onDismiss: @escaping () -> Void) {
         self.mode = mode
         self.onCreated = onCreated
         self.onDismiss = onDismiss
         self._viewModel = StateObject(wrappedValue: CreateTaskViewModel(mode: mode))
     }
 
-    private var isQuickChild: Bool {
-        if case .quickChild = mode { return true }
-        return false
+    private var headerTitle: String {
+        if case .quickChild = mode { return "Add Child" }
+        return "New Task"
     }
 
     var body: some View {
@@ -33,11 +33,7 @@ struct CreateTaskModal: View {
 
             Divider()
 
-            if isQuickChild {
-                quickChildForm
-            } else {
-                fullForm
-            }
+            fullForm
         }
         .background(Color(.systemBackground))
         .task {
@@ -61,7 +57,7 @@ struct CreateTaskModal: View {
 
             Spacer()
 
-            Text(isQuickChild ? "Add Child" : "New Task")
+            Text(headerTitle)
                 .font(.system(size: 17, weight: .semibold))
 
             Spacer()
@@ -83,28 +79,6 @@ struct CreateTaskModal: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-    }
-
-    // MARK: - Quick Child Form
-
-    private var quickChildForm: some View {
-        VStack(spacing: 0) {
-            HStack {
-                AutoFocusTextField(
-                    placeholder: "Task title...",
-                    text: $viewModel.title,
-                    onSubmit: { submit() }
-                )
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-
-            if let error = viewModel.error {
-                errorBanner(error)
-            }
-
-            Spacer()
-        }
     }
 
     // MARK: - Full Form
