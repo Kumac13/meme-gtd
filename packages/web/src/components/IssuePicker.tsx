@@ -110,7 +110,7 @@ export default function IssuePicker({
     try {
       // Parallel fetch of tasks, memos, and articles
       const [tasksResponse, memosResponse, articles] = await Promise.all([
-        TasksService.listTasks(undefined, undefined, undefined, search || undefined),
+        TasksService.listTasks(undefined, undefined, undefined, undefined, search || undefined),
         MemosService.listMemos(undefined, undefined, search || undefined),
         ArticlesService.listArticles(undefined, undefined, search || undefined),
       ]);
