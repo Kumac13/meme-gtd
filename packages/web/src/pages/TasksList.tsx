@@ -4,6 +4,7 @@ import { TasksService } from '../api/services/TasksService';
 import { ProjectsService } from '../api/services/ProjectsService';
 import ItemList from '../components/ItemList';
 import StatusDropdown from '../components/StatusDropdown';
+import LabelFilterDropdown from '../components/LabelFilterDropdown';
 import SearchInput from '../components/SearchInput';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
@@ -16,6 +17,8 @@ import {
   updateStatusParam,
   updateBookmarkedParam,
   updateSearchParam,
+  parseLabelParam,
+  updateLabelParam,
 } from '../utils/urlFilterHelpers';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
@@ -60,6 +63,12 @@ export default function TasksList() {
   const { filters } = useUrlFilters();
   const statusFilter = validateStatus(searchParams.get('status'));
   const bookmarkFilter = validateBookmarked(searchParams.get('bookmarked'));
+
+  // Label filter from URL
+  const selectedLabels = useMemo(
+    () => parseLabelParam(searchParams.get('label')),
+    [searchParams]
+  );
 
   // Project filter from URL
   const projectIdParam = searchParams.get('projectId') || '';
@@ -117,20 +126,22 @@ export default function TasksList() {
       try {
         setError(null);
 
-        // Build label parameter from parsed query
-        const labelParam = filters.parsedQuery.labels?.join(',');
+        // Build label parameter from URL
+        const labelParam = selectedLabels.size > 0
+          ? Array.from(selectedLabels).join(',')
+          : undefined;
 
-        // Use parsed status from search query if available.
+        // Free-text search from parsed query
+        const searchParam = filters.parsedQuery.freeText;
+
         // If searching (labels or free-text) and on the default "next" view (status param absent),
         // broaden the search to all statuses.
-        const isSearching = !!(filters.parsedQuery.labels?.length || filters.parsedQuery.freeText);
+        const isSearching = !!(selectedLabels.size > 0 || searchParam);
         const isDefaultStatusView = !searchParams.get('status');
 
-        const effectiveStatus = filters.parsedQuery.status ||
-          (isSearching && isDefaultStatusView ? undefined : (statusFilter !== 'all' ? statusFilter : undefined));
-
-        // Extract free-text search from parsed query
-        const searchParam = filters.parsedQuery.freeText;
+        const effectiveStatus = isSearching && isDefaultStatusView
+          ? undefined
+          : (statusFilter !== 'all' ? statusFilter : undefined);
 
         // Calculate offset for pagination
         const offset = (currentPage - 1) * PAGE_SIZE;
@@ -165,7 +176,7 @@ export default function TasksList() {
     }
 
     fetchTasks();
-  }, [statusFilter, filters.searchQuery, currentPage, projectIdParam]);
+  }, [statusFilter, filters.searchQuery, currentPage, projectIdParam, selectedLabels]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -183,6 +194,24 @@ export default function TasksList() {
   const handleBookmarkFilterChange = (newBookmarked: boolean) => {
     const params = updateBookmarkedParam(searchParams, newBookmarked);
     params.delete('page'); // Reset to page 1
+    setSearchParams(params);
+  };
+
+  const handleLabelToggle = (labelName: string) => {
+    const newLabels = new Set(selectedLabels);
+    if (newLabels.has(labelName)) {
+      newLabels.delete(labelName);
+    } else {
+      newLabels.add(labelName);
+    }
+    const params = updateLabelParam(searchParams, newLabels);
+    params.delete('page');
+    setSearchParams(params);
+  };
+
+  const handleClearLabels = () => {
+    const params = updateLabelParam(searchParams, new Set());
+    params.delete('page');
     setSearchParams(params);
   };
 
@@ -281,7 +310,7 @@ export default function TasksList() {
         </Link>
       </div>
 
-      {/* Filters row: Status, Project, Bookmark */}
+      {/* Filters row: Status, Label, Project, Bookmark */}
       <div className="mb-4 flex flex-wrap gap-2 items-center" ref={dropdownRef}>
         {/* Status dropdown */}
         <StatusDropdown
@@ -289,6 +318,13 @@ export default function TasksList() {
           options={statusOptions}
           labels={statusLabels}
           onChange={handleStatusFilterChange}
+        />
+
+        {/* Label filter dropdown */}
+        <LabelFilterDropdown
+          selectedLabels={selectedLabels}
+          onToggle={handleLabelToggle}
+          onClear={handleClearLabels}
         />
 
         {/* Project filter dropdown */}

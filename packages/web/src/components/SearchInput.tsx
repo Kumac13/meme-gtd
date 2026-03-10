@@ -1,53 +1,32 @@
 import { useState, useEffect } from 'react';
 import { IoSearch, IoClose } from 'react-icons/io5';
-import type { IssueType } from 'meme-gtd-shared';
-import { validateSearchQuery, type QueryValidationError } from '../utils/queryParser';
 
 interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  itemType?: IssueType;
 }
 
 /**
- * GitHub-style search input component
- *
- * Supports query syntax:
- * - label:bug → Filter by label
- * - label:bug,enhancement → Multiple labels (OR logic)
- * - status:open → Filter by status
- * - label:bug status:open → Combined filters (AND logic)
+ * Simple search input component for free-text search
  */
 export default function SearchInput({
   value,
   onChange,
   placeholder = 'Search tasks',
-  itemType = 'task',
 }: SearchInputProps) {
   const [localValue, setLocalValue] = useState(value);
-  const [validationError, setValidationError] = useState<QueryValidationError | null>(null);
 
   // Sync local value when prop changes
   useEffect(() => {
     setLocalValue(value);
   }, [value]);
 
-  // Validate query syntax
-  useEffect(() => {
-    const error = validateSearchQuery(localValue, { itemType });
-    setValidationError(error);
-  }, [localValue, itemType]);
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalValue(e.target.value);
   };
 
   const handleSearch = () => {
-    // Block submission only for syntax/status errors, not warnings
-    // if (validationError && validationError.type !== 'warning') {
-    //   return;
-    // }
     onChange(localValue);
   };
 
@@ -85,17 +64,6 @@ export default function SearchInput({
           </button>
         )}
       </div>
-
-      {/* Validation error/warning message */}
-      {validationError && (
-        <div className={`absolute left-0 top-full mt-1 text-sm rounded-md shadow-sm p-2 z-10 ${
-          validationError.type === 'warning'
-            ? 'text-amber-700 bg-amber-50 border border-amber-200'
-            : 'text-red-700 bg-red-50 border border-red-200'
-        }`}>
-          {validationError.message}
-        </div>
-      )}
     </div>
   );
 }
