@@ -50,16 +50,41 @@ struct TaskDetailView: View {
                         // === Body Area (glass, full width) ===
                         areaCard {
                             VStack(alignment: .leading, spacing: 0) {
-                                // Timestamp
-                                HStack(spacing: 4) {
-                                    let isEdited = task.updatedAt != task.createdAt
-                                    Text(TimelineHelpers.relativeTimeString(iso: isEdited ? task.updatedAt : task.createdAt))
-                                    if isEdited {
-                                        Text("(edited)")
+                                // Timestamp + menu
+                                HStack {
+                                    HStack(spacing: 4) {
+                                        let isEdited = task.updatedAt != task.createdAt
+                                        Text(TimelineHelpers.relativeTimeString(iso: isEdited ? task.updatedAt : task.createdAt))
+                                        if isEdited {
+                                            Text("(edited)")
+                                        }
+                                    }
+                                    .font(.system(size: 11))
+                                    .foregroundColor(Color(.systemGray))
+
+                                    Spacer()
+
+                                    Menu {
+                                        Button(action: {
+                                            UIPasteboard.general.string = task.bodyMd
+                                            HapticManager.notification(.success)
+                                        }) {
+                                            Label("Copy", systemImage: "doc.on.doc")
+                                        }
+                                        Button(action: {
+                                            viewModel.replyBody = task.bodyMd.isEmpty ? "" : task.bodyMd
+                                            editingMode = .body
+                                        }) {
+                                            Label("Edit", systemImage: "pencil")
+                                        }
+                                    } label: {
+                                        Image(systemName: "ellipsis")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(.textSecondary)
+                                            .frame(width: 28, height: 20)
+                                            .contentShape(Rectangle())
                                     }
                                 }
-                                .font(.system(size: 11))
-                                .foregroundColor(Color(.systemGray))
                                 .padding(.horizontal, 16)
                                 .padding(.top, 8)
                                 .padding(.bottom, -2)
@@ -68,41 +93,16 @@ struct TaskDetailView: View {
                                     ThreadItem(
                                         bodyMd: task.bodyMd,
                                         labels: nil,
-                                        onEdit: {
-                                            viewModel.replyBody = task.bodyMd
-                                            editingMode = .body
-                                        },
-                                        onDelete: nil,
-                                        onCopy: {
-                                            UIPasteboard.general.string = task.bodyMd
-                                            HapticManager.notification(.success)
-                                        }
+                                        showMenu: false
                                     )
                                 } else {
-                                    HStack(alignment: .top, spacing: 4) {
-                                        Text("No description provided.")
-                                            .font(.system(size: 14))
-                                            .foregroundColor(.textSecondary)
-                                            .italic()
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                                        Menu {
-                                            Button(action: {
-                                                viewModel.replyBody = ""
-                                                editingMode = .body
-                                            }) {
-                                                Label("Edit", systemImage: "pencil")
-                                            }
-                                        } label: {
-                                            Image(systemName: "ellipsis")
-                                                .font(.system(size: 13))
-                                                .foregroundColor(.textSecondary)
-                                                .frame(width: 28, height: 20)
-                                                .contentShape(Rectangle())
-                                        }
-                                    }
-                                    .padding(.vertical, 10)
-                                    .padding(.horizontal, 16)
+                                    Text("No description provided.")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.textSecondary)
+                                        .italic()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 10)
+                                        .padding(.horizontal, 16)
                                 }
                             }
                         }
@@ -115,15 +115,45 @@ struct TaskDetailView: View {
                             case .comment(let comment):
                                 areaCard {
                                     VStack(alignment: .leading, spacing: 0) {
-                                        HStack(spacing: 4) {
-                                            let isEdited = comment.updatedAt != comment.createdAt
-                                            Text(TimelineHelpers.relativeTimeString(iso: isEdited ? comment.updatedAt : comment.createdAt))
-                                            if isEdited {
-                                                Text("(edited)")
+                                        HStack {
+                                            HStack(spacing: 4) {
+                                                let isEdited = comment.updatedAt != comment.createdAt
+                                                Text(TimelineHelpers.relativeTimeString(iso: isEdited ? comment.updatedAt : comment.createdAt))
+                                                if isEdited {
+                                                    Text("(edited)")
+                                                }
+                                            }
+                                            .font(.system(size: 11))
+                                            .foregroundColor(Color(.systemGray))
+
+                                            Spacer()
+
+                                            Menu {
+                                                Button(action: {
+                                                    UIPasteboard.general.string = comment.bodyMd
+                                                    HapticManager.notification(.success)
+                                                }) {
+                                                    Label("Copy", systemImage: "doc.on.doc")
+                                                }
+                                                Button(action: {
+                                                    viewModel.replyBody = comment.bodyMd
+                                                    editingMode = .comment(comment.id)
+                                                }) {
+                                                    Label("Edit", systemImage: "pencil")
+                                                }
+                                                Button(role: .destructive, action: {
+                                                    Task { await viewModel.deleteComment(comment.id) }
+                                                }) {
+                                                    Label("Delete", systemImage: "trash")
+                                                }
+                                            } label: {
+                                                Image(systemName: "ellipsis")
+                                                    .font(.system(size: 13))
+                                                    .foregroundColor(.textSecondary)
+                                                    .frame(width: 28, height: 20)
+                                                    .contentShape(Rectangle())
                                             }
                                         }
-                                        .font(.system(size: 11))
-                                        .foregroundColor(Color(.systemGray))
                                         .padding(.horizontal, 16)
                                         .padding(.top, 8)
                                         .padding(.bottom, -2)
@@ -131,17 +161,7 @@ struct TaskDetailView: View {
                                         ThreadItem(
                                             bodyMd: comment.bodyMd,
                                             labels: nil,
-                                            onEdit: {
-                                                viewModel.replyBody = comment.bodyMd
-                                                editingMode = .comment(comment.id)
-                                            },
-                                            onDelete: {
-                                                Task { await viewModel.deleteComment(comment.id) }
-                                            },
-                                            onCopy: {
-                                                UIPasteboard.general.string = comment.bodyMd
-                                                HapticManager.notification(.success)
-                                            }
+                                            showMenu: false
                                         )
                                     }
                                 }
