@@ -20,7 +20,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Button(action: { dismiss() }) {
+                Button(action: { HapticManager.impact(.light); dismiss() }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 28))
                         .symbolRenderingMode(.hierarchical)

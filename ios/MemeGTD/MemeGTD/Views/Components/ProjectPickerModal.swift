@@ -23,7 +23,7 @@ struct ProjectPickerModal: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Button(action: onDismiss) {
+                Button(action: { HapticManager.impact(.light); onDismiss() }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 28))
                         .symbolRenderingMode(.hierarchical)
