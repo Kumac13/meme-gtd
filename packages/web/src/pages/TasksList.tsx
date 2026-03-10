@@ -325,6 +325,7 @@ export default function TasksList() {
           selectedLabels={selectedLabels}
           onToggle={handleLabelToggle}
           onClear={handleClearLabels}
+          countKey="taskCount"
         />
 
         {/* Project filter dropdown */}

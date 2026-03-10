@@ -328,6 +328,7 @@ export default function MemosList() {
               selectedLabels={selectedLabels}
               onToggle={handleLabelToggle}
               onClear={handleClearLabels}
+              countKey="memoCount"
             />
             <button
               onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}
@@ -458,6 +459,7 @@ export default function MemosList() {
             selectedLabels={selectedLabels}
             onToggle={handleLabelToggle}
             onClear={handleClearLabels}
+            countKey="memoCount"
           />
           <button
             onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}

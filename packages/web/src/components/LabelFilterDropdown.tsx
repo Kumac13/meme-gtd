@@ -5,18 +5,22 @@ import { LabelBadge } from './LabelBadge';
 interface Label {
   id: number;
   name: string;
+  taskCount: number;
+  memoCount: number;
 }
 
 interface LabelFilterDropdownProps {
   selectedLabels: Set<string>;
   onToggle: (labelName: string) => void;
   onClear: () => void;
+  countKey: 'taskCount' | 'memoCount';
 }
 
 export default function LabelFilterDropdown({
   selectedLabels,
   onToggle,
   onClear,
+  countKey,
 }: LabelFilterDropdownProps) {
   const [open, setOpen] = useState(false);
   const [labels, setLabels] = useState<Label[]>([]);
@@ -24,9 +28,9 @@ export default function LabelFilterDropdown({
 
   useEffect(() => {
     LabelsService.listLabels()
-      .then((data) => setLabels(data.map((l) => ({ id: l.id, name: l.name }))))
+      .then((data) => setLabels(data.map((l) => ({ id: l.id, name: l.name, taskCount: l.taskCount, memoCount: l.memoCount })).sort((a, b) => b[countKey] - a[countKey])))
       .catch(console.error);
-  }, []);
+  }, [countKey]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -105,6 +109,7 @@ export default function LabelFilterDropdown({
                   )}
                 </svg>
                 <LabelBadge name={label.name} />
+                <span className="ml-auto text-xs text-gray-400">{label[countKey]}</span>
               </button>
             ))
           )}
