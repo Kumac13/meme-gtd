@@ -6,8 +6,6 @@ private let logger = Logger(subsystem: "name.kumac.MemeGTD", category: "MemoList
 
 @MainActor
 class MemoListViewModel: ObservableObject {
-    @Published var memos: [Memo] = []
-    @Published var total: Int = 0
     @Published var isLoading: Bool = false
     @Published var isLoadingMore: Bool = false
     @Published var error: String?
@@ -18,9 +16,9 @@ class MemoListViewModel: ObservableObject {
     @Published var labelFilters: Set<String> = []
     @Published var allLabels: [IssueLabel] = []
 
-    private let pageSize = 20
+    var store: MemoStore?
 
-    var hasMore: Bool { memos.count < total }
+    private let pageSize = 20
 
     // MARK: - Query parsing (matches Web UI queryParser.ts)
 
@@ -90,8 +88,7 @@ class MemoListViewModel: ObservableObject {
                 path: "/api/memos",
                 queryItems: buildQueryItems(offset: 0)
             )
-            memos = response.data
-            total = response.total
+            store?.setItems(response.data, total: response.total)
             logger.info("loadMemos done: count=\(response.data.count), total=\(response.total)")
         } catch {
             self.error = error.localizedDescription
@@ -116,11 +113,11 @@ class MemoListViewModel: ObservableObject {
     }
 
     func fetchOlderMemos() async -> MemoListResponse? {
-        guard hasMore, !isLoadingMore else { return nil }
+        guard let store, store.hasMore, !isLoadingMore else { return nil }
         do {
             return try await APIClient.shared.get(
                 path: "/api/memos",
-                queryItems: buildQueryItems(offset: memos.count)
+                queryItems: buildQueryItems(offset: store.memos.count)
             )
         } catch is CancellationError {
             return nil
@@ -131,18 +128,17 @@ class MemoListViewModel: ObservableObject {
     }
 
     func applyMemos(_ response: MemoListResponse) {
-        memos = response.data
-        total = response.total
+        store?.setItems(response.data, total: response.total)
     }
 
     func applyOlderMemos(_ response: MemoListResponse) {
-        memos.append(contentsOf: response.data)
-        total = response.total
+        store?.appendItems(response.data, total: response.total)
     }
 
     func loadOlderMemos() async {
-        logger.info("loadOlderMemos: hasMore=\(self.hasMore), isLoadingMore=\(self.isLoadingMore), count=\(self.memos.count), total=\(self.total)")
-        guard hasMore, !isLoadingMore else {
+        guard let store else { return }
+        logger.info("loadOlderMemos: hasMore=\(store.hasMore), isLoadingMore=\(self.isLoadingMore), count=\(store.memos.count), total=\(store.total)")
+        guard store.hasMore, !isLoadingMore else {
             logger.info("loadOlderMemos skipped")
             return
         }
@@ -151,11 +147,10 @@ class MemoListViewModel: ObservableObject {
         do {
             let response: MemoListResponse = try await APIClient.shared.get(
                 path: "/api/memos",
-                queryItems: buildQueryItems(offset: memos.count)
+                queryItems: buildQueryItems(offset: store.memos.count)
             )
-            memos.append(contentsOf: response.data)
-            total = response.total
-            logger.info("loadOlderMemos done: count=\(self.memos.count), total=\(self.total)")
+            store.appendItems(response.data, total: response.total)
+            logger.info("loadOlderMemos done: count=\(store.memos.count), total=\(store.total)")
         } catch is CancellationError {
             logger.info("loadOlderMemos cancelled")
         } catch {
@@ -178,8 +173,7 @@ class MemoListViewModel: ObservableObject {
                 path: "/api/memos",
                 body: request
             )
-            memos.insert(memo, at: 0)
-            total += 1
+            store?.insertItem(memo, at: 0)
             newMemoBody = ""
             HapticManager.notification(.success)
         } catch {
@@ -193,8 +187,7 @@ class MemoListViewModel: ObservableObject {
     func deleteMemo(_ id: Int) async {
         do {
             try await APIClient.shared.delete(path: "/api/memos/\(id)")
-            memos.removeAll { $0.id == id }
-            total -= 1
+            store?.removeItem(id)
         } catch {
             self.error = error.localizedDescription
         }

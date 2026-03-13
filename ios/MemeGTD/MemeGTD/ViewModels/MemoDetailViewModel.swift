@@ -36,6 +36,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
     }
 
     let memoId: Int
+    var memoStore: MemoStore?
 
     init(memoId: Int) {
         self.memoId = memoId
@@ -226,6 +227,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
                 : "/api/memos/\(memoId)/bookmark"
             let updated: Memo = try await APIClient.shared.postReturning(path: path)
             memo = updated
+            memoStore?.updateItem(updated)
             HapticManager.impact(.light)
         } catch {
             self.error = error.localizedDescription
@@ -285,6 +287,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
                 body: request
             )
             memo = updated
+            memoStore?.updateItem(updated)
             HapticManager.notification(.success)
         } catch {
             self.error = error.localizedDescription
@@ -306,6 +309,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
     func deleteMemo() async -> Bool {
         do {
             try await APIClient.shared.delete(path: "/api/memos/\(memoId)")
+            memoStore?.removeItem(memoId)
             return true
         } catch {
             self.error = error.localizedDescription
@@ -380,6 +384,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
             do {
                 let updated: Memo = try await APIClient.shared.get(path: "/api/memos/\(memoId)")
                 memo = updated
+                memoStore?.updateItem(updated)
             } catch {
                 self.error = error.localizedDescription
             }
