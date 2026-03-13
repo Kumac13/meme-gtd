@@ -5,6 +5,7 @@ import SwiftUI
 class MemoStore: ObservableObject {
     @Published var memos: [Memo] = []
     @Published var total: Int = 0
+    @Published var needsReload: Bool = false
 
     var hasMore: Bool { memos.count < total }
 

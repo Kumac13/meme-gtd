@@ -156,6 +156,12 @@ struct MemoListView: View {
             )
         }
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: memoStore.needsReload) { _, needsReload in
+            if needsReload {
+                memoStore.needsReload = false
+                Task { await viewModel.loadMemos() }
+            }
+        }
         .onChange(of: isSearching) { _, newValue in
             if !newValue {
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)

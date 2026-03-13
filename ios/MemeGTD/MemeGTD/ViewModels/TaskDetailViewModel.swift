@@ -267,6 +267,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
             let updated: TaskItem = try await APIClient.shared.postReturning(path: path)
             task = updated
             taskStore?.updateItem(updated)
+            taskStore?.needsReload = true
             HapticManager.impact(.light)
         } catch {
             self.error = error.localizedDescription
@@ -286,7 +287,12 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
                 body: request
             )
             task = updated
-            taskStore?.updateItem(updated)
+            if status != nil {
+                taskStore?.removeItem(taskId)
+                taskStore?.needsReload = true
+            } else {
+                taskStore?.updateItem(updated)
+            }
             await loadActivityLog()
             HapticManager.notification(.success)
         } catch {
@@ -386,6 +392,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
             }
             await loadProjects()
             await self.loadActivityLog()
+            taskStore?.needsReload = true
         }
     }
 
@@ -425,6 +432,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
                 let updated: TaskItem = try await APIClient.shared.get(path: "/api/tasks/\(taskId)")
                 task = updated
                 taskStore?.updateItem(updated)
+                taskStore?.needsReload = true
             } catch {
                 self.error = error.localizedDescription
             }

@@ -132,6 +132,12 @@ struct TaskListView: View {
             )
         }
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: taskStore.needsReload) { _, needsReload in
+            if needsReload {
+                taskStore.needsReload = false
+                Task { await viewModel.loadTasks() }
+            }
+        }
         .onChange(of: isSearching) { _, newValue in
             if !newValue {
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)

@@ -228,6 +228,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
             let updated: Memo = try await APIClient.shared.postReturning(path: path)
             memo = updated
             memoStore?.updateItem(updated)
+            memoStore?.needsReload = true
             HapticManager.impact(.light)
         } catch {
             self.error = error.localizedDescription
@@ -385,6 +386,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
                 let updated: Memo = try await APIClient.shared.get(path: "/api/memos/\(memoId)")
                 memo = updated
                 memoStore?.updateItem(updated)
+                memoStore?.needsReload = true
             } catch {
                 self.error = error.localizedDescription
             }

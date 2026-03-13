@@ -5,6 +5,7 @@ import SwiftUI
 class TaskStore: ObservableObject {
     @Published var tasks: [TaskItem] = []
     @Published var total: Int = 0
+    @Published var needsReload: Bool = false
 
     var hasMore: Bool { tasks.count < total }
 
