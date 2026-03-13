@@ -164,6 +164,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
                 body: request
             )
             await loadLinks()
+            await loadActivityLog()
             HapticManager.notification(.success)
         } catch {
             self.error = error.localizedDescription
@@ -175,6 +176,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
         do {
             try await APIClient.shared.delete(path: "/api/links/\(linkId)")
             issueLinks.removeAll { $0.id == linkId }
+            await loadActivityLog()
         } catch {
             self.error = error.localizedDescription
         }
@@ -282,6 +284,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
                 body: request
             )
             task = updated
+            await loadActivityLog()
             HapticManager.notification(.success)
         } catch {
             self.error = error.localizedDescription
@@ -378,6 +381,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
                 }
             }
             await loadProjects()
+            await self.loadActivityLog()
         }
     }
 
@@ -419,6 +423,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
             } catch {
                 self.error = error.localizedDescription
             }
+            await self.loadActivityLog()
         }
     }
 
