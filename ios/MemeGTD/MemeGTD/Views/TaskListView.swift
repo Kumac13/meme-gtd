@@ -4,6 +4,7 @@ struct TaskListView: View {
     let onMenuTap: () -> Void
     @Binding var navigationPath: NavigationPath
 
+    @EnvironmentObject var taskStore: TaskStore
     @StateObject private var viewModel = TaskListViewModel()
     @State private var showStatusPicker: Bool = false
     @State private var isSearching: Bool = false
@@ -17,7 +18,7 @@ struct TaskListView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                ForEach(viewModel.tasks) { task in
+                ForEach(taskStore.tasks) { task in
                     Button(action: {
                         HapticManager.selection()
                         navigationPath.append(
@@ -33,7 +34,7 @@ struct TaskListView: View {
                         .padding(.horizontal, 16)
                 }
 
-                if viewModel.hasMore {
+                if taskStore.hasMore {
                     ProgressView()
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
@@ -131,6 +132,12 @@ struct TaskListView: View {
             )
         }
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: taskStore.needsReload) { _, needsReload in
+            if needsReload {
+                taskStore.needsReload = false
+                Task { await viewModel.loadTasks() }
+            }
+        }
         .onChange(of: isSearching) { _, newValue in
             if !newValue {
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -175,15 +182,16 @@ struct TaskListView: View {
             .presentationDetents([.large])
         }
         .overlay {
-            if viewModel.isLoading && viewModel.tasks.isEmpty {
+            if viewModel.isLoading && taskStore.tasks.isEmpty {
                 ProgressView("Loading tasks...")
                     .foregroundColor(.textSecondary)
             }
         }
         .task {
+            viewModel.store = taskStore
             await viewModel.loadLabels()
             await viewModel.loadProjects()
-            if viewModel.tasks.isEmpty {
+            if taskStore.tasks.isEmpty {
                 await viewModel.loadTasks()
             }
         }

@@ -5,6 +5,7 @@ struct MemoDetailView: View {
     let initialBody: String?
     let onMenuTap: () -> Void
 
+    @EnvironmentObject var memoStore: MemoStore
     @StateObject private var viewModel: MemoDetailViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirm: Bool = false
@@ -187,6 +188,7 @@ struct MemoDetailView: View {
             }
         }
         .task {
+            viewModel.memoStore = memoStore
             await viewModel.loadMemo()
         }
     }

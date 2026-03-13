@@ -56,6 +56,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
     var issueLabels: [String] { task?.labels ?? [] }
 
     let taskId: Int
+    var taskStore: TaskStore?
 
     init(taskId: Int) {
         self.taskId = taskId
@@ -164,6 +165,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
                 body: request
             )
             await loadLinks()
+            await loadActivityLog()
             HapticManager.notification(.success)
         } catch {
             self.error = error.localizedDescription
@@ -175,6 +177,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
         do {
             try await APIClient.shared.delete(path: "/api/links/\(linkId)")
             issueLinks.removeAll { $0.id == linkId }
+            await loadActivityLog()
         } catch {
             self.error = error.localizedDescription
         }
@@ -263,6 +266,8 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
                 : "/api/tasks/\(taskId)/bookmark"
             let updated: TaskItem = try await APIClient.shared.postReturning(path: path)
             task = updated
+            taskStore?.updateItem(updated)
+            taskStore?.needsReload = true
             HapticManager.impact(.light)
         } catch {
             self.error = error.localizedDescription
@@ -282,6 +287,13 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
                 body: request
             )
             task = updated
+            if status != nil {
+                taskStore?.removeItem(taskId)
+                taskStore?.needsReload = true
+            } else {
+                taskStore?.updateItem(updated)
+            }
+            await loadActivityLog()
             HapticManager.notification(.success)
         } catch {
             self.error = error.localizedDescription
@@ -343,6 +355,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
     func deleteTask() async -> Bool {
         do {
             try await APIClient.shared.delete(path: "/api/tasks/\(taskId)")
+            taskStore?.removeItem(taskId)
             return true
         } catch {
             self.error = error.localizedDescription
@@ -378,6 +391,8 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
                 }
             }
             await loadProjects()
+            await self.loadActivityLog()
+            taskStore?.needsReload = true
         }
     }
 
@@ -416,9 +431,12 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
             do {
                 let updated: TaskItem = try await APIClient.shared.get(path: "/api/tasks/\(taskId)")
                 task = updated
+                taskStore?.updateItem(updated)
+                taskStore?.needsReload = true
             } catch {
                 self.error = error.localizedDescription
             }
+            await self.loadActivityLog()
         }
     }
 

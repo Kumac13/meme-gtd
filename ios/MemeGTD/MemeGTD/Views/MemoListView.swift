@@ -4,20 +4,21 @@ struct MemoListView: View {
     let onMenuTap: () -> Void
     @Binding var navigationPath: NavigationPath
 
+    @EnvironmentObject var memoStore: MemoStore
     @StateObject private var viewModel = MemoListViewModel()
     @State private var isSearching: Bool = false
     @State private var showLabelPicker: Bool = false
     @State private var selectedLabelNames: Set<String> = []
 
     private var reversedMemos: [Memo] {
-        viewModel.memos.reversed()
+        memoStore.memos.reversed()
     }
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    if !viewModel.hasMore && !viewModel.memos.isEmpty {
+                    if !memoStore.hasMore && !memoStore.memos.isEmpty {
                         Text("No older memos")
                             .font(.caption)
                             .foregroundColor(Color(.systemGray))
@@ -67,7 +68,7 @@ struct MemoListView: View {
                         HapticManager.impact(.medium)
 
                         let start = Date()
-                        let hasMore = viewModel.hasMore
+                        let hasMore = memoStore.hasMore
                         let response: MemoListResponse?
                         if hasMore {
                             response = await viewModel.fetchOlderMemos()
@@ -94,8 +95,9 @@ struct MemoListView: View {
                 }
             }
             .task {
+                viewModel.store = memoStore
                 await viewModel.loadLabels()
-                if viewModel.memos.isEmpty {
+                if memoStore.memos.isEmpty {
                     await viewModel.loadMemos()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         withAnimation {
@@ -154,6 +156,12 @@ struct MemoListView: View {
             )
         }
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: memoStore.needsReload) { _, needsReload in
+            if needsReload {
+                memoStore.needsReload = false
+                Task { await viewModel.loadMemos() }
+            }
+        }
         .onChange(of: isSearching) { _, newValue in
             if !newValue {
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -172,7 +180,7 @@ struct MemoListView: View {
             .presentationDetents([.medium, .large])
         }
         .overlay {
-            if viewModel.isLoading && viewModel.memos.isEmpty {
+            if viewModel.isLoading && memoStore.memos.isEmpty {
                 ProgressView("Loading memos...")
                     .foregroundColor(.textSecondary)
             }

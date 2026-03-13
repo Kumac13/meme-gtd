@@ -6,8 +6,6 @@ private let logger = Logger(subsystem: "name.kumac.MemeGTD", category: "TaskList
 
 @MainActor
 class TaskListViewModel: ObservableObject {
-    @Published var tasks: [TaskItem] = []
-    @Published var total: Int = 0
     @Published var isLoading: Bool = false
     @Published var isLoadingMore: Bool = false
     @Published var error: String?
@@ -26,9 +24,9 @@ class TaskListViewModel: ObservableObject {
     // Projects for picker
     @Published var allProjects: [Project] = []
 
-    private let pageSize = 20
+    var store: TaskStore?
 
-    var hasMore: Bool { tasks.count < total }
+    private let pageSize = 20
 
     // MARK: - Query building
 
@@ -70,8 +68,7 @@ class TaskListViewModel: ObservableObject {
                 path: "/api/tasks",
                 queryItems: buildQueryItems(offset: 0)
             )
-            tasks = response.data
-            total = response.total
+            store?.setItems(response.data, total: response.total)
             logger.info("loadTasks done: count=\(response.data.count), total=\(response.total)")
         } catch {
             self.error = error.localizedDescription
@@ -96,11 +93,11 @@ class TaskListViewModel: ObservableObject {
     }
 
     func fetchOlderTasks() async -> TaskListResponse? {
-        guard hasMore, !isLoadingMore else { return nil }
+        guard let store, store.hasMore, !isLoadingMore else { return nil }
         do {
             return try await APIClient.shared.get(
                 path: "/api/tasks",
-                queryItems: buildQueryItems(offset: tasks.count)
+                queryItems: buildQueryItems(offset: store.tasks.count)
             )
         } catch is CancellationError {
             return nil
@@ -111,18 +108,17 @@ class TaskListViewModel: ObservableObject {
     }
 
     func applyTasks(_ response: TaskListResponse) {
-        tasks = response.data
-        total = response.total
+        store?.setItems(response.data, total: response.total)
     }
 
     func applyOlderTasks(_ response: TaskListResponse) {
-        tasks.append(contentsOf: response.data)
-        total = response.total
+        store?.appendItems(response.data, total: response.total)
     }
 
     func loadOlderTasks() async {
-        logger.info("loadOlderTasks: hasMore=\(self.hasMore), isLoadingMore=\(self.isLoadingMore), count=\(self.tasks.count), total=\(self.total)")
-        guard hasMore, !isLoadingMore else {
+        guard let store else { return }
+        logger.info("loadOlderTasks: hasMore=\(store.hasMore), isLoadingMore=\(self.isLoadingMore), count=\(store.tasks.count), total=\(store.total)")
+        guard store.hasMore, !isLoadingMore else {
             logger.info("loadOlderTasks skipped")
             return
         }
@@ -131,11 +127,10 @@ class TaskListViewModel: ObservableObject {
         do {
             let response: TaskListResponse = try await APIClient.shared.get(
                 path: "/api/tasks",
-                queryItems: buildQueryItems(offset: tasks.count)
+                queryItems: buildQueryItems(offset: store.tasks.count)
             )
-            tasks.append(contentsOf: response.data)
-            total = response.total
-            logger.info("loadOlderTasks done: count=\(self.tasks.count), total=\(self.total)")
+            store.appendItems(response.data, total: response.total)
+            logger.info("loadOlderTasks done: count=\(store.tasks.count), total=\(store.total)")
         } catch is CancellationError {
             logger.info("loadOlderTasks cancelled")
         } catch {
