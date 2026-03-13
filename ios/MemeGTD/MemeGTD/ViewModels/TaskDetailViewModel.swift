@@ -56,6 +56,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
     var issueLabels: [String] { task?.labels ?? [] }
 
     let taskId: Int
+    var taskStore: TaskStore?
 
     init(taskId: Int) {
         self.taskId = taskId
@@ -265,6 +266,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
                 : "/api/tasks/\(taskId)/bookmark"
             let updated: TaskItem = try await APIClient.shared.postReturning(path: path)
             task = updated
+            taskStore?.updateItem(updated)
             HapticManager.impact(.light)
         } catch {
             self.error = error.localizedDescription
@@ -284,6 +286,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
                 body: request
             )
             task = updated
+            taskStore?.updateItem(updated)
             await loadActivityLog()
             HapticManager.notification(.success)
         } catch {
@@ -346,6 +349,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
     func deleteTask() async -> Bool {
         do {
             try await APIClient.shared.delete(path: "/api/tasks/\(taskId)")
+            taskStore?.removeItem(taskId)
             return true
         } catch {
             self.error = error.localizedDescription
@@ -420,6 +424,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
             do {
                 let updated: TaskItem = try await APIClient.shared.get(path: "/api/tasks/\(taskId)")
                 task = updated
+                taskStore?.updateItem(updated)
             } catch {
                 self.error = error.localizedDescription
             }

@@ -5,6 +5,7 @@ struct TaskDetailView: View {
     let initialTitle: String?
     let onMenuTap: () -> Void
 
+    @EnvironmentObject var taskStore: TaskStore
     @StateObject private var viewModel: TaskDetailViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirm: Bool = false
@@ -322,6 +323,7 @@ struct TaskDetailView: View {
             }
         }
         .task {
+            viewModel.taskStore = taskStore
             await viewModel.loadTask()
         }
         } // GeometryReader
