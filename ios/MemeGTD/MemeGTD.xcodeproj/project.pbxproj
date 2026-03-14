@@ -130,6 +130,7 @@
 			);
 			name = MemeGTD;
 			packageProductDependencies = (
+				E9F1A0022F04000200000002 /* HighlightSwift */,
 			);
 			productName = MemeGTD;
 			productReference = E9E8D2002EFCD06300AAD867 /* MemeGTD.app */;
@@ -189,6 +190,9 @@
 			productRefGroup = E9E8D2012EFCD06300AAD867 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
+			packageReferences = (
+				E9F1A0012F04000100000001 /* XCRemoteSwiftPackageReference "HighlightSwift" */,
+			);
 			targets = (
 				E9E8D1FF2EFCD06300AAD867 /* MemeGTD */,
 				E9E8D2132EFCD0C200AAD867 /* ShareExtension */,
@@ -517,6 +521,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E9F1A0012F04000100000001 /* XCRemoteSwiftPackageReference "HighlightSwift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/appstefan/HighlightSwift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E9F1A0022F04000200000002 /* HighlightSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E9F1A0012F04000100000001 /* XCRemoteSwiftPackageReference "HighlightSwift" */;
+			productName = HighlightSwift;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = E9E8D1F82EFCD06300AAD867 /* Project object */;
 }

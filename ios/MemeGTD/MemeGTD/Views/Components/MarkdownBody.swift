@@ -1,3 +1,4 @@
+import HighlightSwift
 import SwiftUI
 import WebKit
 
@@ -77,27 +78,7 @@ struct MarkdownBody: View {
     // MARK: - Code block
 
     private func codeBlockView(language: String, code: String) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if !language.isEmpty {
-                Text(language)
-                    .font(.system(size: fontSize - 3, weight: .medium, design: .monospaced))
-                    .foregroundColor(Color(.systemGray))
-                    .padding(.horizontal, 10)
-                    .padding(.top, 8)
-                    .padding(.bottom, 4)
-            }
-
-            Text(code)
-                .font(.system(size: fontSize - 1, design: .monospaced))
-                .foregroundColor(Color(.label).opacity(0.85))
-                .padding(.horizontal, 10)
-                .padding(.vertical, language.isEmpty ? 8 : 4)
-                .padding(.bottom, language.isEmpty ? 0 : 4)
-                .textSelection(.enabled)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.systemGray6))
-        .cornerRadius(8)
+        HighlightedCodeBlockView(language: language, code: code, fontSize: fontSize)
     }
 
     // MARK: - Blockquote
@@ -286,6 +267,68 @@ private func parseBlocks(_ markdown: String) -> [MarkdownBlock] {
     flushText()
 
     return blocks
+}
+
+// MARK: - Highlighted code block
+
+private struct HighlightedCodeBlockView: View {
+    let language: String
+    let code: String
+    let fontSize: CGFloat
+
+    /// Atom One Dark background (#282c34) — matches Web UI's oneDark theme
+    private static let darkBg = Color(red: 0x28/255.0, green: 0x2c/255.0, blue: 0x34/255.0)
+
+    @State private var highlightedCode: AttributedString?
+
+    private var resolvedLanguage: String {
+        let aliases: [String: String] = [
+            "js": "javascript", "ts": "typescript",
+            "py": "python", "sh": "bash", "shell": "bash",
+            "md": "markdown",
+        ]
+        let lang = language.lowercased()
+        return aliases[lang] ?? lang
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if !language.isEmpty {
+                Text(language)
+                    .font(.system(size: fontSize - 3, weight: .medium, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.5))
+                    .padding(.horizontal, 10)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+            }
+
+            if let highlighted = highlightedCode {
+                Text(highlighted)
+                    .font(.system(size: fontSize - 1, design: .monospaced))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, language.isEmpty ? 8 : 4)
+                    .padding(.bottom, language.isEmpty ? 0 : 4)
+                    .textSelection(.enabled)
+            } else {
+                Text(code)
+                    .font(.system(size: fontSize - 1, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.85))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, language.isEmpty ? 8 : 4)
+                    .padding(.bottom, language.isEmpty ? 0 : 4)
+                    .textSelection(.enabled)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Self.darkBg)
+        .cornerRadius(8)
+        .task(id: code) {
+            guard !language.isEmpty else { return }
+            let result = try? await Highlight()
+                .attributedText(code, language: resolvedLanguage, colors: .dark(.atomOne))
+            highlightedCode = result
+        }
+    }
 }
 
 // MARK: - Mermaid diagram renderer
