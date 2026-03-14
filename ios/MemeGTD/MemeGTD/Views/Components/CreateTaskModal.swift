@@ -416,7 +416,7 @@ struct CreateTaskModal: View {
                         .foregroundColor(Color(.systemGray3))
                 }
 
-                if !viewModel.pendingLinks.isEmpty {
+                if !viewModel.pendingLinks.isEmpty || !viewModel.pendingUrlLinks.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach(viewModel.pendingLinks) { link in
                             HStack(spacing: 6) {
@@ -433,6 +433,20 @@ struct CreateTaskModal: View {
                                 Text(link.linkType.displayLabel)
                                     .font(.system(size: 11))
                                     .foregroundColor(.accentDark)
+                            }
+                        }
+
+                        ForEach(viewModel.pendingUrlLinks) { urlLink in
+                            HStack(spacing: 6) {
+                                Image(systemName: "link")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(.textPrimary)
+                                    .frame(width: 12)
+
+                                Text(urlLink.title ?? urlLink.url)
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.textPrimary)
+                                    .lineLimit(1)
                             }
                         }
                     }

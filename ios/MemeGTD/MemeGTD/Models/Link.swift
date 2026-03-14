@@ -113,3 +113,34 @@ struct SearchArticlesResponse: Codable {
     let limit: Int
     let offset: Int
 }
+
+// MARK: - URL Link (GET /api/issues/:id/url-links response item)
+
+struct UrlLink: Identifiable, Codable {
+    let id: Int
+    let issueId: Int
+    let url: String
+    let title: String?
+    let createdAt: String
+}
+
+extension UrlLink {
+    var displayLabel: String {
+        if let title = title, !title.isEmpty { return title }
+        guard let host = URL(string: url)?.host else {
+            return String(url.prefix(30))
+        }
+        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+    }
+
+    var truncatedUrl: String {
+        url.count <= 60 ? url : String(url.prefix(57)) + "..."
+    }
+}
+
+// MARK: - Create URL Link Request (POST /api/issues/:id/url-links)
+
+struct CreateUrlLinkRequest: Codable {
+    let url: String
+    let title: String?
+}

@@ -55,14 +55,20 @@ struct RootView: View {
                     MemoDetailView(
                         memoId: route.memoId,
                         initialBody: route.initialBody,
-                        onMenuTap: { openMenu() }
+                        onMenuTap: { openMenu() },
+                        onNavigateToLinkedIssue: { id, type, title in
+                            navigateToIssue(id: id, type: type, title: title)
+                        }
                     )
                 }
                 .navigationDestination(for: TaskRoute.self) { route in
                     TaskDetailView(
                         taskId: route.taskId,
                         initialTitle: route.initialTitle,
-                        onMenuTap: { openMenu() }
+                        onMenuTap: { openMenu() },
+                        onNavigateToLinkedIssue: { id, type, title in
+                            navigateToIssue(id: id, type: type, title: title)
+                        }
                     )
                 }
             }
@@ -107,5 +113,16 @@ struct RootView: View {
     private func closeMenu() {
         HapticManager.impact(.light)
         isMenuOpen = false
+    }
+
+    private func navigateToIssue(id: Int, type: String, title: String) {
+        switch type {
+        case "task":
+            navigationPath.append(TaskRoute(taskId: id, initialTitle: title))
+        case "memo":
+            navigationPath.append(MemoRoute(memoId: id, initialBody: title))
+        default:
+            break
+        }
     }
 }

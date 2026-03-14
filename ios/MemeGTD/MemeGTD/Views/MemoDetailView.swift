@@ -4,6 +4,7 @@ struct MemoDetailView: View {
     let memoId: Int
     let initialBody: String?
     let onMenuTap: () -> Void
+    var onNavigateToLinkedIssue: ((Int, String, String) -> Void)?
 
     @EnvironmentObject var memoStore: MemoStore
     @StateObject private var viewModel: MemoDetailViewModel
@@ -14,10 +15,11 @@ struct MemoDetailView: View {
     @State private var editingMemo: Bool = false
     @State private var editingCommentId: Int? = nil
 
-    init(memoId: Int, initialBody: String? = nil, onMenuTap: @escaping () -> Void) {
+    init(memoId: Int, initialBody: String? = nil, onMenuTap: @escaping () -> Void, onNavigateToLinkedIssue: ((Int, String, String) -> Void)? = nil) {
         self.memoId = memoId
         self.initialBody = initialBody
         self.onMenuTap = onMenuTap
+        self.onNavigateToLinkedIssue = onNavigateToLinkedIssue
         self._viewModel = StateObject(wrappedValue: MemoDetailViewModel(memoId: memoId))
     }
 
@@ -165,7 +167,10 @@ struct MemoDetailView: View {
         .sheet(isPresented: $showInfoSheet) {
             IssueInfoSheet(
                 viewModel: viewModel,
-                showCopiedFeedback: $showCopiedFeedback
+                showCopiedFeedback: $showCopiedFeedback,
+                onNavigateToIssue: { target in
+                    onNavigateToLinkedIssue?(target.id, target.type, target.title)
+                }
             )
             .presentationDetents([.fraction(0.6), .large])
         }

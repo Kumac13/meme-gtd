@@ -143,3 +143,9 @@ struct PendingLink: Identifiable {
     let linkType: LinkType
     let title: String
 }
+
+struct PendingUrlLink: Identifiable {
+    let id = UUID()
+    let url: String
+    let title: String?
+}
