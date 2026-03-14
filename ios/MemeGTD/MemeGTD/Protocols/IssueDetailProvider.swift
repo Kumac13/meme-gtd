@@ -12,6 +12,11 @@ protocol IssueDetailProvider: ObservableObject {
     func createIssueLink(targetIssueId: Int, linkType: LinkType) async
     func deleteIssueLink(_ linkId: Int) async
 
+    // URL Links
+    var urlLinks: [UrlLink] { get }
+    func createUrlLink(url: String, title: String?) async
+    func deleteUrlLink(_ urlLinkId: Int) async
+
     // Bookmark
     var isBookmarking: Bool { get }
     var isBookmarked: Bool { get }

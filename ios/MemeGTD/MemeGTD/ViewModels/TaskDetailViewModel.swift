@@ -36,6 +36,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
 
     // Links
     @Published var issueLinks: [IssueLink] = []
+    @Published var urlLinks: [UrlLink] = []
 
     var linkedPickerItems: [IssuePickerItem] {
         issueLinks.map {
@@ -82,8 +83,9 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
         async let projectsResult: () = loadProjects()
         async let labelsResult: () = loadAllLabels()
         async let linksResult: () = loadLinks()
+        async let urlLinksResult: () = loadUrlLinks()
         async let activityResult: () = loadActivityLog()
-        _ = await (projectsResult, labelsResult, linksResult, activityResult)
+        _ = await (projectsResult, labelsResult, linksResult, urlLinksResult, activityResult)
 
         isLoading = false
     }
@@ -140,6 +142,40 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
             )
         } catch {
             // Non-critical
+        }
+    }
+
+    // MARK: - URL Links
+
+    private func loadUrlLinks() async {
+        do {
+            urlLinks = try await APIClient.shared.get(path: "/api/issues/\(taskId)/url-links")
+        } catch {
+            // Non-critical
+        }
+    }
+
+    func createUrlLink(url: String, title: String?) async {
+        do {
+            let request = CreateUrlLinkRequest(url: url, title: title)
+            let _: UrlLink = try await APIClient.shared.post(
+                path: "/api/issues/\(taskId)/url-links",
+                body: request
+            )
+            await loadUrlLinks()
+            HapticManager.notification(.success)
+        } catch {
+            self.error = error.localizedDescription
+            HapticManager.notification(.error)
+        }
+    }
+
+    func deleteUrlLink(_ urlLinkId: Int) async {
+        do {
+            try await APIClient.shared.delete(path: "/api/url-links/\(urlLinkId)")
+            urlLinks.removeAll { $0.id == urlLinkId }
+        } catch {
+            self.error = error.localizedDescription
         }
     }
 

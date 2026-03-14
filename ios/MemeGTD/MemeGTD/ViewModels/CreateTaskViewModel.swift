@@ -15,6 +15,7 @@ class CreateTaskViewModel: ObservableObject {
     @Published var selectedLabelNames: Set<String> = []
     @Published var selectedProjectIds: Set<Int> = []
     @Published var pendingLinks: [PendingLink] = []
+    @Published var pendingUrlLinks: [PendingUrlLink] = []
 
     @Published var allLabels: [IssueLabel] = []
     @Published var allProjects: [Project] = []
@@ -150,6 +151,16 @@ class CreateTaskViewModel: ObservableObject {
                         )
                     }
                 }
+
+                // URL Links
+                for urlLink in pendingUrlLinks {
+                    group.addTask {
+                        let _: UrlLink? = try? await APIClient.shared.post(
+                            path: "/api/issues/\(task.id)/url-links",
+                            body: CreateUrlLinkRequest(url: urlLink.url, title: urlLink.title)
+                        )
+                    }
+                }
             }
 
             createdTask = task
@@ -178,6 +189,17 @@ class CreateTaskViewModel: ObservableObject {
             linkType: linkType,
             title: title
         ))
+    }
+
+    // MARK: - Pending URL Links
+
+    func addPendingUrlLink(url: String, title: String?) {
+        guard !pendingUrlLinks.contains(where: { $0.url == url }) else { return }
+        pendingUrlLinks.append(PendingUrlLink(url: url, title: title))
+    }
+
+    func removePendingUrlLink(_ link: PendingUrlLink) {
+        pendingUrlLinks.removeAll { $0.id == link.id }
     }
 
     // MARK: - Search Issues (for link picker)

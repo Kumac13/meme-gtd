@@ -9,6 +9,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
     var onAddChild: (() -> Void)?
     var labelCountKeyPath: KeyPath<IssueLabel, Int> = \.memoCount
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     @State private var showLabelPicker = false
     @State private var showProjectPicker = false
@@ -202,8 +203,8 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                 Divider().padding(.leading, 16)
 
                 // Links
-                Button(action: { showLinkPicker = true }) {
-                    VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Button(action: { showLinkPicker = true }) {
                         HStack {
                             Text("Links")
                                 .font(.system(size: 15))
@@ -213,36 +214,60 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                                 .font(.system(size: 15))
                                 .foregroundColor(.accent)
                         }
+                    }
 
-                        if !viewModel.issueLinks.isEmpty {
-                            VStack(alignment: .leading, spacing: 6) {
-                                ForEach(viewModel.issueLinks) { link in
+                    if !viewModel.issueLinks.isEmpty || !viewModel.urlLinks.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(viewModel.issueLinks) { link in
+                                HStack(spacing: 6) {
+                                    Image(systemName: link.linkType.iconName)
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundColor(.textPrimary)
+                                        .frame(width: 12)
+
+                                    issueTypeBadge(link.targetIssue.type)
+
+                                    Text(link.targetIssue.title)
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.textPrimary)
+                                        .lineLimit(1)
+                                }
+                            }
+
+                            ForEach(viewModel.urlLinks) { urlLink in
+                                Button(action: {
+                                    if let url = URL(string: urlLink.url) {
+                                        openURL(url)
+                                    }
+                                }) {
                                     HStack(spacing: 6) {
-                                        Image(systemName: link.linkType.iconName)
+                                        Image(systemName: "link")
                                             .font(.system(size: 11, weight: .medium))
-                                            .foregroundColor(.textPrimary)
+                                            .foregroundColor(.accent)
                                             .frame(width: 12)
 
-                                        issueTypeBadge(link.targetIssue.type)
-
-                                        Text(link.targetIssue.title)
+                                        Text(urlLink.displayLabel)
                                             .font(.system(size: 13))
-                                            .foregroundColor(.textPrimary)
+                                            .foregroundColor(.accent)
                                             .lineLimit(1)
+
+                                        Image(systemName: "arrow.up.right")
+                                            .font(.system(size: 9, weight: .medium))
+                                            .foregroundColor(.accent)
                                     }
                                 }
                             }
-                            .padding(.top, 6)
-                        } else {
-                            Text("None")
-                                .font(.system(size: 13))
-                                .foregroundColor(.accentDark)
-                                .padding(.top, 4)
                         }
+                        .padding(.top, 6)
+                    } else {
+                        Text("None")
+                            .font(.system(size: 13))
+                            .foregroundColor(.accentDark)
+                            .padding(.top, 4)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
 
                 Divider().padding(.leading, 16)
 
