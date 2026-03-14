@@ -7,6 +7,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
     var onDelete: (() -> Void)?
     var onNewTask: (() -> Void)?
     var onAddChild: (() -> Void)?
+    var onNavigateToIssue: ((TargetIssue) -> Void)?
     var labelCountKeyPath: KeyPath<IssueLabel, Int> = \.memoCount
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -219,18 +220,23 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                     if !viewModel.issueLinks.isEmpty || !viewModel.urlLinks.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
                             ForEach(viewModel.issueLinks) { link in
-                                HStack(spacing: 6) {
-                                    Image(systemName: link.linkType.iconName)
-                                        .font(.system(size: 11, weight: .medium))
-                                        .foregroundColor(.textPrimary)
-                                        .frame(width: 12)
+                                Button(action: {
+                                    dismiss()
+                                    onNavigateToIssue?(link.targetIssue)
+                                }) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: link.linkType.iconName)
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundColor(.textPrimary)
+                                            .frame(width: 12)
 
-                                    issueTypeBadge(link.targetIssue.type)
+                                        issueTypeBadge(link.targetIssue.type)
 
-                                    Text(link.targetIssue.title)
-                                        .font(.system(size: 13))
-                                        .foregroundColor(.textPrimary)
-                                        .lineLimit(1)
+                                        Text(link.targetIssue.title)
+                                            .font(.system(size: 13))
+                                            .foregroundColor(.textPrimary)
+                                            .lineLimit(1)
+                                    }
                                 }
                             }
 

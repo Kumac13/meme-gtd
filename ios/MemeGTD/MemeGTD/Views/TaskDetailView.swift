@@ -4,6 +4,7 @@ struct TaskDetailView: View {
     let taskId: Int
     let initialTitle: String?
     let onMenuTap: () -> Void
+    var onNavigateToLinkedIssue: ((Int, String, String) -> Void)?
 
     @EnvironmentObject var taskStore: TaskStore
     @StateObject private var viewModel: TaskDetailViewModel
@@ -22,10 +23,11 @@ struct TaskDetailView: View {
         case comment(Int)
     }
 
-    init(taskId: Int, initialTitle: String? = nil, onMenuTap: @escaping () -> Void) {
+    init(taskId: Int, initialTitle: String? = nil, onMenuTap: @escaping () -> Void, onNavigateToLinkedIssue: ((Int, String, String) -> Void)? = nil) {
         self.taskId = taskId
         self.initialTitle = initialTitle
         self.onMenuTap = onMenuTap
+        self.onNavigateToLinkedIssue = onNavigateToLinkedIssue
         self._viewModel = StateObject(wrappedValue: TaskDetailViewModel(taskId: taskId))
     }
 
@@ -285,6 +287,9 @@ struct TaskDetailView: View {
                             parentLabels: task.labels
                         ))
                     }
+                },
+                onNavigateToIssue: { target in
+                    onNavigateToLinkedIssue?(target.id, target.type, target.title)
                 },
                 labelCountKeyPath: \.taskCount
             )
