@@ -42,6 +42,8 @@ struct MarkdownBody: View {
             blockquoteView(content: content)
         case .listItem(let content, let indent):
             listItemView(content: content, indent: indent)
+        case .image(let alt, let url):
+            imageView(alt: alt, url: url)
         case .text(let content):
             if !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 inlineMarkdownText(content)
@@ -79,6 +81,53 @@ struct MarkdownBody: View {
 
     private func codeBlockView(language: String, code: String) -> some View {
         HighlightedCodeBlockView(language: language, code: code, fontSize: fontSize)
+    }
+
+    // MARK: - Image
+
+    private func imageView(alt: String, url: String) -> some View {
+        let imageURL = transformAttachmentURL(url)
+        return AsyncImage(url: URL(string: imageURL)) { phase in
+            switch phase {
+            case .success(let image):
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            case .failure:
+                HStack(spacing: 6) {
+                    Image(systemName: "photo")
+                        .foregroundColor(.textSecondary)
+                    Text(alt.isEmpty ? "Image" : alt)
+                        .font(.system(size: 12))
+                        .foregroundColor(.textSecondary)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.systemGray6))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            case .empty:
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 100)
+            @unknown default:
+                EmptyView()
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func transformAttachmentURL(_ path: String) -> String {
+        // Convert absolute path like /Users/xxx/.mgtd/attachments/uuid.png
+        // to API URL like {baseUrl}/api/attachments/uuid.png
+        if let range = path.range(of: #"\.mgtd/attachments/([a-zA-Z0-9\-]+\.(png|jpe?g|gif|webp))$"#, options: .regularExpression) {
+            let matched = String(path[range])
+            let filename = matched.components(separatedBy: "/").last ?? matched
+            return "\(Settings.shared.effectiveApiUrl)/api/attachments/\(filename)"
+        }
+        // If already a URL or unrecognized format, return as-is
+        return path
     }
 
     // MARK: - Blockquote
@@ -153,6 +202,7 @@ private enum MarkdownBlock {
     case mermaidBlock(code: String)
     case blockquote(String)
     case listItem(content: String, indent: Int)
+    case image(alt: String, url: String)
 }
 
 private func parseBlocks(_ markdown: String) -> [MarkdownBlock] {
@@ -205,6 +255,19 @@ private func parseBlocks(_ markdown: String) -> [MarkdownBlock] {
         if inCodeBlock {
             if !codeContent.isEmpty { codeContent += "\n" }
             codeContent += line
+            continue
+        }
+
+        // Image (![alt](url))
+        if let match = line.range(of: #"^!\[([^\]]*)\]\(([^)]+)\)$"#, options: .regularExpression) {
+            flushText()
+            flushQuote()
+            let fullMatch = String(line[match])
+            let altRange = fullMatch.range(of: #"\[([^\]]*)\]"#, options: .regularExpression)!
+            let urlRange = fullMatch.range(of: #"\(([^)]+)\)"#, options: .regularExpression)!
+            let alt = String(fullMatch[altRange].dropFirst().dropLast())
+            let url = String(fullMatch[urlRange].dropFirst().dropLast())
+            blocks.append(.image(alt: alt, url: url))
             continue
         }
 

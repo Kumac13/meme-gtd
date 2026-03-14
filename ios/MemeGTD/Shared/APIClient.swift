@@ -129,6 +129,34 @@ class APIClient {
         }
     }
 
+    // MARK: - Multipart upload
+
+    struct AttachmentResponse: Decodable {
+        let id: String
+        let filename: String
+        let markdownRef: String
+        let mimeType: String
+        let size: Int
+    }
+
+    func uploadImage(imageData: Data, filename: String, mimeType: String) async throws -> AttachmentResponse {
+        let url = try buildURL(path: "/api/attachments")
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+
+        return try await execute(request)
+    }
+
     // MARK: - Legacy methods (Article support)
 
     func saveArticle(_ request: CreateArticleRequest) async throws -> ArticleResponse {

@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 struct MemoListView: View {
@@ -9,6 +10,12 @@ struct MemoListView: View {
     @State private var isSearching: Bool = false
     @State private var showLabelPicker: Bool = false
     @State private var selectedLabelNames: Set<String> = []
+    @State private var showImagePicker: Bool = false
+    @State private var showSizePicker: Bool = false
+    @State private var isUploadingImage: Bool = false
+    @State private var pickedImageData: Data? = nil
+    @State private var pickedMimeType: String = "image/jpeg"
+    @State private var pickedExtension: String = "jpg"
 
     private var reversedMemos: [Memo] {
         memoStore.memos.reversed()
@@ -107,11 +114,14 @@ struct MemoListView: View {
                 }
             }
             .safeAreaBar(edge: .bottom) {
-                ComposePill(
-                    memoText: $viewModel.newMemoBody,
-                    isLoading: viewModel.isLoading,
-                    isCreating: viewModel.isCreating,
-                    onCreateMemo: {
+                FloatingComposer(
+                    text: $viewModel.newMemoBody,
+                    placeholder: "Write a memo...",
+                    disabled: viewModel.isLoading,
+                    submitting: viewModel.isCreating,
+                    onAttachImage: { showImagePicker = true },
+                    isUploadingImage: isUploadingImage,
+                    onSubmit: {
                         Task {
                             await viewModel.createMemo()
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -179,6 +189,38 @@ struct MemoListView: View {
             )
             .presentationDetents([.medium, .large])
         }
+        .sheet(isPresented: $showImagePicker) {
+            ImagePicker(
+                imageData: $pickedImageData,
+                imageMimeType: $pickedMimeType,
+                imageExtension: $pickedExtension
+            )
+        }
+        .onChange(of: pickedImageData) { _, newData in
+            guard newData != nil else { return }
+            showSizePicker = true
+        }
+        .sheet(isPresented: $showSizePicker) {
+            if let data = pickedImageData {
+                ImageSizePickerSheet(
+                    imageData: data,
+                    mimeType: pickedMimeType,
+                    ext: pickedExtension,
+                    onSelect: { resizedData, mime, ext in
+                        showSizePicker = false
+                        pickedImageData = nil
+                        isUploadingImage = true
+                        HapticManager.impact(.medium)
+                        Task { await uploadImageData(data: resizedData, mimeType: mime, ext: ext) }
+                    },
+                    onCancel: {
+                        showSizePicker = false
+                        pickedImageData = nil
+                    }
+                )
+                .presentationDetents([.medium])
+            }
+        }
         .overlay {
             if viewModel.isLoading && memoStore.memos.isEmpty {
                 ProgressView("Loading memos...")
@@ -231,51 +273,36 @@ struct MemoListView: View {
         .modifier(PillSurface(radius: 16))
     }
 
-}
+    // MARK: - Image upload
 
-// MARK: - Compose Pill (always-visible memo input)
+    private func uploadImageData(data: Data, mimeType: String, ext: String) async {
+        isUploadingImage = true
+        defer { isUploadingImage = false }
 
-private struct ComposePill: View {
-    @Binding var memoText: String
-    let isLoading: Bool
-    let isCreating: Bool
-    let onCreateMemo: () -> Void
+        let filename = "\(UUID().uuidString).\(ext)"
+        let start = Date()
 
-    private var canSubmitMemo: Bool {
-        !memoText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isLoading && !isCreating
-    }
+        do {
+            let response = try await APIClient.shared.uploadImage(
+                imageData: data, filename: filename, mimeType: mimeType
+            )
 
-    var body: some View {
-        HStack(alignment: .center, spacing: 0) {
-            TextField("Write a memo...", text: $memoText, axis: .vertical)
-                .lineLimit(1...5)
-                .textFieldStyle(.plain)
-                .font(.system(size: 14))
-                .tint(Color.accent)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .padding(.leading, 16)
-                .padding(.trailing, 8)
-                .padding(.top, 18)
-                .padding(.bottom, 16)
-                .disabled(isLoading || isCreating)
-                .onSubmit {
-                    if canSubmitMemo { onCreateMemo() }
-                }
-
-            Button(action: {
-                if canSubmitMemo { onCreateMemo() }
-            }) {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 32, height: 32)
-                    .background(canSubmitMemo ? Color.accent : Color(.systemGray4))
-                    .clipShape(Circle())
+            // Ensure uploading indicator is visible for at least 0.75s
+            let elapsed = Date().timeIntervalSince(start)
+            let remaining = 0.75 - elapsed
+            if remaining > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
             }
-            .disabled(!canSubmitMemo)
-            .padding(.trailing, 10)
+
+            let ref = response.markdownRef
+            if viewModel.newMemoBody.isEmpty {
+                viewModel.newMemoBody = ref
+            } else {
+                viewModel.newMemoBody += "\n\(ref)"
+            }
+            HapticManager.notification(.success)
+        } catch {
+            HapticManager.notification(.error)
         }
-        .modifier(PillSurface(radius: 22))
     }
 }
