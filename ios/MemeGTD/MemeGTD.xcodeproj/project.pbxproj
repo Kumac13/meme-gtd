@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E97C17652F65404800CC7490 /* HighlightSwift in Frameworks */ = {isa = PBXBuildFile; productRef = E9F1A0022F04000200000002 /* HighlightSwift */; };
 		E9E8D21E2EFCD0C200AAD867 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E9E8D2142EFCD0C200AAD867 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -75,6 +76,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E97C17652F65404800CC7490 /* HighlightSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -186,13 +188,13 @@
 			);
 			mainGroup = E9E8D1F72EFCD06300AAD867;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E9F1A0012F04000100000001 /* XCRemoteSwiftPackageReference "HighlightSwift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E9E8D2012EFCD06300AAD867 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
-			packageReferences = (
-				E9F1A0012F04000100000001 /* XCRemoteSwiftPackageReference "HighlightSwift" */,
-			);
 			targets = (
 				E9E8D1FF2EFCD06300AAD867 /* MemeGTD */,
 				E9E8D2132EFCD0C200AAD867 /* ShareExtension */,

@@ -7,6 +7,8 @@ struct FloatingComposer: View {
     var submitting: Bool = false
     var notice: String? = nil
     var onDismissNotice: (() -> Void)? = nil
+    var onAttachImage: (() -> Void)? = nil
+    var isUploadingImage: Bool = false
     let onSubmit: () -> Void
 
     @FocusState private var isFocused: Bool
@@ -41,23 +43,46 @@ struct FloatingComposer: View {
                 .padding(.top, 10)
             }
 
-            HStack(alignment: .center, spacing: 0) {
-                TextField(placeholder, text: $text, axis: .vertical)
-                    .lineLimit(1...5)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 14))
-                    .tint(Color.accent)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .padding(.leading, 16)
-                    .padding(.trailing, 8)
-                    .padding(.top, notice != nil ? 14 : 18)
-                    .padding(.bottom, 16)
-                    .focused($isFocused)
-                    .disabled(disabled || submitting)
-                    .onSubmit {
-                        if canSubmit { onSubmit() }
+            // Text input area
+            TextField(placeholder, text: $text, axis: .vertical)
+                .lineLimit(2...8)
+                .textFieldStyle(.plain)
+                .font(.system(size: 14))
+                .tint(Color.accent)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .padding(.horizontal, 16)
+                .padding(.top, notice != nil ? 10 : 14)
+                .padding(.bottom, 8)
+                .focused($isFocused)
+                .disabled(disabled || submitting)
+                .onSubmit {
+                    if canSubmit { onSubmit() }
+                }
+
+            // Bottom toolbar row
+            HStack(spacing: 12) {
+                if let onAttach = onAttachImage {
+                    if isUploadingImage {
+                        HStack(spacing: 6) {
+                            ProgressView()
+                                .frame(width: 16, height: 16)
+                            Text("Uploading...")
+                                .font(.system(size: 12))
+                                .foregroundColor(.textSecondary)
+                        }
+                    } else {
+                        Button(action: onAttach) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.textSecondary)
+                                .frame(width: 28, height: 28)
+                        }
+                        .disabled(disabled)
                     }
+                }
+
+                Spacer()
 
                 Button(action: {
                     if canSubmit { onSubmit() }
@@ -70,8 +95,9 @@ struct FloatingComposer: View {
                         .clipShape(Circle())
                 }
                 .disabled(!canSubmit)
-                .padding(.trailing, 10)
             }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 10)
         }
         .modifier(PillSurface(radius: 22))
     }

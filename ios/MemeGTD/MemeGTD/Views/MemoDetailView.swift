@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 struct MemoDetailView: View {
@@ -14,6 +15,12 @@ struct MemoDetailView: View {
     @State private var showCopiedFeedback: Bool = false
     @State private var editingMemo: Bool = false
     @State private var editingCommentId: Int? = nil
+    @State private var showImagePicker: Bool = false
+    @State private var showSizePicker: Bool = false
+    @State private var isUploadingImage: Bool = false
+    @State private var pickedImageData: Data? = nil
+    @State private var pickedMimeType: String = "image/jpeg"
+    @State private var pickedExtension: String = "jpg"
 
     init(memoId: Int, initialBody: String? = nil, onMenuTap: @escaping () -> Void, onNavigateToLinkedIssue: ((Int, String, String) -> Void)? = nil) {
         self.memoId = memoId
@@ -87,21 +94,17 @@ struct MemoDetailView: View {
             .refreshable {
                 await withCheckedContinuation { continuation in
                     Task { @MainActor in
-                        // 1. トリガー到達ハプティクス
                         HapticManager.impact(.medium)
 
-                        // データを裏で取得（UIには反映しない）
                         let start = Date()
                         let result = await viewModel.fetchMemo()
 
-                        // 最低1秒スピナー表示
                         let elapsed = Date().timeIntervalSince(start)
                         let remaining = 0.75 - elapsed
                         if remaining > 0 {
                             try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
                         }
 
-                        // 2. データをUIに反映 + 完了ハプティクス
                         if let (memo, comments) = result {
                             viewModel.applyMemo(memo, comments: comments)
                         }
@@ -127,6 +130,8 @@ struct MemoDetailView: View {
                         editingCommentId = nil
                         viewModel.replyBody = ""
                     },
+                    onAttachImage: { showImagePicker = true },
+                    isUploadingImage: isUploadingImage,
                     onSubmit: {
                         if editingMemo {
                             Task {
@@ -186,6 +191,38 @@ struct MemoDetailView: View {
         } message: {
             Text("Are you sure you want to delete this memo? This action cannot be undone.")
         }
+        .sheet(isPresented: $showImagePicker) {
+            ImagePicker(
+                imageData: $pickedImageData,
+                imageMimeType: $pickedMimeType,
+                imageExtension: $pickedExtension
+            )
+        }
+        .onChange(of: pickedImageData) { _, newData in
+            guard newData != nil else { return }
+            showSizePicker = true
+        }
+        .sheet(isPresented: $showSizePicker) {
+            if let data = pickedImageData {
+                ImageSizePickerSheet(
+                    imageData: data,
+                    mimeType: pickedMimeType,
+                    ext: pickedExtension,
+                    onSelect: { resizedData, mime, ext in
+                        showSizePicker = false
+                        pickedImageData = nil
+                        isUploadingImage = true
+                        HapticManager.impact(.medium)
+                        Task { await uploadImageData(data: resizedData, mimeType: mime, ext: ext) }
+                    },
+                    onCancel: {
+                        showSizePicker = false
+                        pickedImageData = nil
+                    }
+                )
+                .presentationDetents([.medium])
+            }
+        }
         .overlay {
             if viewModel.isLoading && viewModel.memo == nil {
                 ProgressView("Loading...")
@@ -207,11 +244,42 @@ struct MemoDetailView: View {
             .components(separatedBy: "\n")
             .first(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty })
         else { return "Memo" }
-        // Strip markdown heading prefix (e.g. "## Title" -> "Title")
         let stripped = firstLine.replacingOccurrences(
             of: #"^#{1,6}\s+"#, with: "", options: .regularExpression
         )
         return stripped.isEmpty ? "Memo" : stripped
+    }
+
+    // MARK: - Image upload
+
+    private func uploadImageData(data: Data, mimeType: String, ext: String) async {
+        isUploadingImage = true
+        defer { isUploadingImage = false }
+
+        let filename = "\(UUID().uuidString).\(ext)"
+        let start = Date()
+
+        do {
+            let response = try await APIClient.shared.uploadImage(
+                imageData: data, filename: filename, mimeType: mimeType
+            )
+
+            let elapsed = Date().timeIntervalSince(start)
+            let remaining = 0.75 - elapsed
+            if remaining > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+            }
+
+            let ref = response.markdownRef
+            if viewModel.replyBody.isEmpty {
+                viewModel.replyBody = ref
+            } else {
+                viewModel.replyBody += "\n\(ref)"
+            }
+            HapticManager.notification(.success)
+        } catch {
+            HapticManager.notification(.error)
+        }
     }
 
     // MARK: - Build unified timeline items
@@ -253,4 +321,3 @@ private struct ThreadTimelineItem: Identifiable {
     let isOriginal: Bool
     let commentId: Int?
 }
-
