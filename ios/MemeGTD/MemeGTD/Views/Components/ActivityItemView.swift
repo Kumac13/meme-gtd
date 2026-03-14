@@ -34,7 +34,7 @@ struct ActivityItemView: View {
         case "label.assigned": return "tag"
         case "label.removed": return "tag.slash"
         case "link.created": return "link"
-        case "link.deleted": return "link.badge.minus"
+        case "link.deleted": return "link"
         case "task.status_changed": return "arrow.triangle.2.circlepath"
         case "project.item_added": return "folder.badge.plus"
         case "project.item_removed": return "folder.badge.minus"
