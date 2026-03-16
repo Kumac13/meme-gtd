@@ -29,6 +29,14 @@ struct ArticleMeta: Codable {
     let archivedAt: String
 }
 
+// Response model for article list (GET /api/articles)
+struct ArticleListResponse: Codable {
+    let data: [ArticleResponse]
+    let total: Int
+    let limit: Int
+    let offset: Int
+}
+
 // Extracted article from JavaScript
 struct ExtractedArticle: Codable {
     let title: String
