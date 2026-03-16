@@ -87,7 +87,12 @@ struct ArticleDetailView: View {
 
                         // === Article Body (reader-like, no card) ===
                         if !article.bodyMd.isEmpty {
-                            MarkdownBody(article.bodyMd)
+                            let cleanBody = article.bodyMd.replacingOccurrences(
+                                of: "\\{#block-\\d+\\}",
+                                with: "",
+                                options: .regularExpression
+                            )
+                            MarkdownBody(cleanBody)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 16)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -119,7 +124,6 @@ struct ArticleDetailView: View {
                     Color.clear.frame(height: 24)
                 }
             }
-            .background(Color.menuBackground)
             .scrollDismissesKeyboard(.immediately)
             .ignoresSafeArea(edges: .top)
             .scrollEdgeEffectStyle(.soft, for: .bottom)
@@ -169,7 +173,8 @@ struct ArticleDetailView: View {
                 onNavigateToIssue: { target in
                     onNavigateToLinkedIssue?(target.id, target.type, target.title)
                 },
-                labelCountKeyPath: \.articleCount
+                labelCountKeyPath: \.articleCount,
+                showBookmark: false
             )
             .presentationDetents([.fraction(0.7), .large])
         }
