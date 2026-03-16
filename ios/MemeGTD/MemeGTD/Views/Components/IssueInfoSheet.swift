@@ -9,6 +9,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
     var onAddChild: (() -> Void)?
     var onNavigateToIssue: ((TargetIssue) -> Void)?
     var labelCountKeyPath: KeyPath<IssueLabel, Int> = \.memoCount
+    var showBookmark: Bool = true
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
@@ -38,24 +39,26 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
             // Rows
             VStack(spacing: 0) {
                 // Bookmark
-                Button(action: {
-                    Task { await viewModel.toggleBookmark() }
-                }) {
-                    HStack {
-                        Text("Bookmark")
-                            .font(.system(size: 15))
-                            .foregroundColor(.textPrimary)
-                        Spacer()
-                        Image(systemName: viewModel.isBookmarked ? "bookmark.fill" : "bookmark")
-                            .font(.system(size: 18))
-                            .foregroundColor(viewModel.isBookmarked ? .accent : .textSecondary)
+                if showBookmark {
+                    Button(action: {
+                        Task { await viewModel.toggleBookmark() }
+                    }) {
+                        HStack {
+                            Text("Bookmark")
+                                .font(.system(size: 15))
+                                .foregroundColor(.textPrimary)
+                            Spacer()
+                            Image(systemName: viewModel.isBookmarked ? "bookmark.fill" : "bookmark")
+                                .font(.system(size: 18))
+                                .foregroundColor(viewModel.isBookmarked ? .accent : .textSecondary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                }
-                .disabled(viewModel.isBookmarking)
+                    .disabled(viewModel.isBookmarking)
 
-                Divider().padding(.leading, 16)
+                    Divider().padding(.leading, 16)
+                }
 
                 // New Task (optional, for tasks)
                 if let onNewTask = onNewTask {
