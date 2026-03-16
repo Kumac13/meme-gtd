@@ -10,6 +10,11 @@ struct TaskRoute: Hashable {
     let initialTitle: String
 }
 
+struct ArticleRoute: Hashable {
+    let articleId: Int
+    let initialTitle: String
+}
+
 struct RootView: View {
     @State private var selectedTab: AppTab = .memos
     @State private var isMenuOpen: Bool = false
@@ -47,6 +52,11 @@ struct RootView: View {
                             onMenuTap: { openMenu() },
                             navigationPath: $navigationPath
                         )
+                    case .articles:
+                        ArticleListView(
+                            onMenuTap: { openMenu() },
+                            navigationPath: $navigationPath
+                        )
                     case .settings:
                         SettingsView(onMenuTap: { openMenu() })
                     }
@@ -64,6 +74,16 @@ struct RootView: View {
                 .navigationDestination(for: TaskRoute.self) { route in
                     TaskDetailView(
                         taskId: route.taskId,
+                        initialTitle: route.initialTitle,
+                        onMenuTap: { openMenu() },
+                        onNavigateToLinkedIssue: { id, type, title in
+                            navigateToIssue(id: id, type: type, title: title)
+                        }
+                    )
+                }
+                .navigationDestination(for: ArticleRoute.self) { route in
+                    ArticleDetailView(
+                        articleId: route.articleId,
                         initialTitle: route.initialTitle,
                         onMenuTap: { openMenu() },
                         onNavigateToLinkedIssue: { id, type, title in
@@ -121,6 +141,8 @@ struct RootView: View {
             navigationPath.append(TaskRoute(taskId: id, initialTitle: title))
         case "memo":
             navigationPath.append(MemoRoute(memoId: id, initialBody: title))
+        case "article":
+            navigationPath.append(ArticleRoute(articleId: id, initialTitle: title))
         default:
             break
         }

@@ -3,6 +3,7 @@ import SwiftUI
 enum AppTab: Hashable {
     case memos
     case tasks
+    case articles
     case settings
 }
 
@@ -38,6 +39,15 @@ struct SideMenuView: View {
                 ) {
                     HapticManager.selection()
                     onNavigate(.tasks)
+                }
+
+                MenuRow(
+                    icon: "doc.richtext",
+                    label: "Articles",
+                    isSelected: selectedTab == .articles
+                ) {
+                    HapticManager.selection()
+                    onNavigate(.articles)
                 }
             }
             .padding(.horizontal, 12)
