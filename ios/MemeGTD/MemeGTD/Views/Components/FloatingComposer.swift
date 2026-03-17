@@ -9,18 +9,19 @@ struct FloatingComposer: View {
     var onDismissNotice: (() -> Void)? = nil
     var onAttachImage: (() -> Void)? = nil
     var isUploadingImage: Bool = false
+    var onExpand: (() -> Void)? = nil
     let onSubmit: () -> Void
 
     @FocusState private var isFocused: Bool
+    @State private var expanded: Bool = false
 
     private var canSubmit: Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !disabled && !submitting
     }
 
     private var isExpanded: Bool {
-        isFocused
+        expanded
             || !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || notice != nil
             || isUploadingImage
     }
 
@@ -62,7 +63,7 @@ struct FloatingComposer: View {
                 .padding(.horizontal, isExpanded ? 16 : 0)
                 .padding(.top, isExpanded ? (notice != nil ? 10 : 14) : 0)
                 .padding(.bottom, isExpanded ? 8 : 0)
-                .frame(maxHeight: isExpanded ? .infinity : 0, alignment: .top)
+                .frame(maxHeight: isExpanded ? nil : 0, alignment: .top)
                 .clipped()
                 .focused($isFocused)
                 .disabled(disabled || submitting)
@@ -100,7 +101,11 @@ struct FloatingComposer: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            isFocused = true
+                            expanded = true
+                            onExpand?()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                isFocused = true
+                            }
                         }
                 } else {
                     Spacer()
@@ -124,5 +129,8 @@ struct FloatingComposer: View {
         }
         .modifier(PillSurface(radius: 22))
         .animation(.easeInOut(duration: 0.2), value: isExpanded)
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            expanded = false
+        }
     }
 }
