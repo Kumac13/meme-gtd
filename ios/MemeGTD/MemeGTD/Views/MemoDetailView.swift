@@ -132,6 +132,11 @@ struct MemoDetailView: View {
                     },
                     onAttachImage: { showImagePicker = true },
                     isUploadingImage: isUploadingImage,
+                    onExpand: {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation { proxy.scrollTo("threadBottom", anchor: .bottom) }
+                        }
+                    },
                     onSubmit: {
                         if editingMemo {
                             Task {

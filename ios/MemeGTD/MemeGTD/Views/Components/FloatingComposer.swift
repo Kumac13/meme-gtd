@@ -9,17 +9,26 @@ struct FloatingComposer: View {
     var onDismissNotice: (() -> Void)? = nil
     var onAttachImage: (() -> Void)? = nil
     var isUploadingImage: Bool = false
+    var onExpand: (() -> Void)? = nil
     let onSubmit: () -> Void
 
     @FocusState private var isFocused: Bool
+    @State private var expanded: Bool = false
 
     private var canSubmit: Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !disabled && !submitting
     }
 
+    private var isExpanded: Bool {
+        expanded
+            || !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || isUploadingImage
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            if let notice = notice {
+            // Notice banner (only when expanded and editing)
+            if let notice = notice, isExpanded {
                 HStack(spacing: 6) {
                     Text(notice)
                         .font(.system(size: 13))
@@ -43,7 +52,7 @@ struct FloatingComposer: View {
                 .padding(.top, 10)
             }
 
-            // Text input area
+            // Text input area - always in hierarchy to preserve focus identity
             TextField(placeholder, text: $text, axis: .vertical)
                 .lineLimit(2...8)
                 .textFieldStyle(.plain)
@@ -51,9 +60,11 @@ struct FloatingComposer: View {
                 .tint(Color.accent)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-                .padding(.horizontal, 16)
-                .padding(.top, notice != nil ? 10 : 14)
-                .padding(.bottom, 8)
+                .padding(.horizontal, isExpanded ? 16 : 0)
+                .padding(.top, isExpanded ? (notice != nil ? 10 : 14) : 0)
+                .padding(.bottom, isExpanded ? 8 : 0)
+                .frame(maxHeight: isExpanded ? nil : 0, alignment: .top)
+                .clipped()
                 .focused($isFocused)
                 .disabled(disabled || submitting)
                 .onSubmit {
@@ -82,7 +93,23 @@ struct FloatingComposer: View {
                     }
                 }
 
-                Spacer()
+                if !isExpanded {
+                    // Compact: tappable placeholder to trigger focus
+                    Text(placeholder)
+                        .font(.system(size: 14))
+                        .foregroundColor(Color(.placeholderText))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            expanded = true
+                            onExpand?()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                isFocused = true
+                            }
+                        }
+                } else {
+                    Spacer()
+                }
 
                 Button(action: {
                     if canSubmit { onSubmit() }
@@ -98,7 +125,12 @@ struct FloatingComposer: View {
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 10)
+            .padding(.top, isExpanded ? 0 : 10)
         }
         .modifier(PillSurface(radius: 22))
+        .animation(.easeInOut(duration: 0.2), value: isExpanded)
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            expanded = false
+        }
     }
 }

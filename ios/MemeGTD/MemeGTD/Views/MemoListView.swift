@@ -121,6 +121,11 @@ struct MemoListView: View {
                     submitting: viewModel.isCreating,
                     onAttachImage: { showImagePicker = true },
                     isUploadingImage: isUploadingImage,
+                    onExpand: {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
+                        }
+                    },
                     onSubmit: {
                         Task {
                             await viewModel.createMemo()
