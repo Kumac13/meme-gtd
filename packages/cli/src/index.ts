@@ -50,6 +50,8 @@ const MULTIWORD_COMMANDS = [
   ['project', 'move'],
   ['project', 'delete'],
   ['project'],
+  ['embedding', 'sync'],
+  ['embedding'],
   ['db', 'migrate'],
   ['db']
 ] as const;
