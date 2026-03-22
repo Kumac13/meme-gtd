@@ -507,6 +507,31 @@ export { UrlLinkService, type UrlLinkServiceOptions } from './urlLinkService.js'
 // Project Service
 export { ProjectService, type ProjectServiceOptions } from './projectService.js';
 
+// Embedding / Semantic Search
+export {
+  generateEmbedding,
+  generateEmbeddings,
+  checkOllamaHealth,
+  DEFAULT_EMBEDDING_CONFIG,
+  type EmbeddingClientConfig,
+} from './embedding/embeddingClient.js';
+export {
+  syncEmbeddings,
+  updateSingleEmbedding,
+  computeContentHash,
+  formatDocumentText,
+  formatQueryText,
+  type SyncOptions,
+  type SyncResult,
+} from './embedding/embeddingService.js';
+export {
+  cosineSimilarity,
+  searchByVector,
+  bufferToFloat32Array,
+  type ScoredIssue,
+  type VectorSearchOptions,
+} from './embedding/vectorSearch.js';
+
 // Activity Log
 export { ActivityLogger } from './activity-log/activity-logger.js';
 export {
