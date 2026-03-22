@@ -1,3 +1,4 @@
+import { performance } from 'node:perf_hooks';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import {
   generateEmbedding,
