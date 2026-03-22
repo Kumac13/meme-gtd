@@ -8,6 +8,7 @@ import {
 } from 'meme-gtd-db';
 import {
   generateEmbedding,
+  generateEmbeddings,
   checkOllamaHealth,
   type EmbeddingClientConfig,
 } from './embeddingClient.js';
@@ -118,23 +119,29 @@ export const syncEmbeddings = async (
     total: toProcess.length,
   };
 
-  for (let i = 0; i < toProcess.length; i++) {
-    const issue = toProcess[i];
-    onProgress?.(i + 1, toProcess.length);
+  // Process in batches for efficiency
+  const BATCH_SIZE = 50;
+  for (let batchStart = 0; batchStart < toProcess.length; batchStart += BATCH_SIZE) {
+    const batch = toProcess.slice(batchStart, batchStart + BATCH_SIZE);
+    const texts = batch.map((issue) => formatDocumentText(issue.title, issue.bodyMd));
+    const hashes = batch.map((issue) => computeContentHash(issue.title, issue.bodyMd));
 
-    const text = formatDocumentText(issue.title, issue.bodyMd);
-    const contentHash = computeContentHash(issue.title, issue.bodyMd);
+    onProgress?.(Math.min(batchStart + BATCH_SIZE, toProcess.length), toProcess.length);
 
-    const embedding = await generateEmbedding(text, config);
-    const buf = float32ArrayToBuffer(embedding);
+    const embeddings = await generateEmbeddings(texts, config);
 
-    const isNew = !hashMap.has(issue.id);
-    upsertEmbedding(db, issue.id, buf, config.model, embedding.length, contentHash);
+    for (let j = 0; j < batch.length; j++) {
+      const issue = batch[j];
+      const buf = float32ArrayToBuffer(embeddings[j]);
+      const isNew = !hashMap.has(issue.id);
 
-    if (isNew) {
-      result.created++;
-    } else {
-      result.updated++;
+      upsertEmbedding(db, issue.id, buf, config.model, embeddings[j].length, hashes[j]);
+
+      if (isNew) {
+        result.created++;
+      } else {
+        result.updated++;
+      }
     }
   }
 
