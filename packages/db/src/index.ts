@@ -147,6 +147,19 @@ export {
   type ListArticleFilters
 } from './articleRepository.js';
 
+// Embedding repository exports
+export {
+  upsertEmbedding,
+  getEmbedding,
+  getAllEmbeddings,
+  deleteEmbedding,
+  listUnembeddedIssues,
+  listEmbeddingHashes,
+  type EmbeddingRow,
+  type EmbeddingWithIssue,
+  type UnembeddedIssue
+} from './embeddingRepository.js';
+
 // URL link repository exports
 export {
   createUrlLink,
