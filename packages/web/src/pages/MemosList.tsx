@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
+import { SearchService } from '../api/services/SearchService';
 import ItemList from '../components/ItemList';
 import LabelFilterDropdown from '../components/LabelFilterDropdown';
 import SearchInput from '../components/SearchInput';
@@ -62,6 +63,7 @@ export default function MemosList() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [matchInfos, setMatchInfos] = useState<Record<number, { label: string; snippet?: string }>>({});
   const [isFetchingOlder, setIsFetchingOlder] = useState(false);
   const [newMemoBody, setNewMemoBody] = useState('');
   const [creatingMemo, setCreatingMemo] = useState(false);
@@ -91,15 +93,52 @@ export default function MemosList() {
 
         const offset = (currentPage - 1) * PAGE_SIZE;
 
-        const response = await MemosService.listMemos(
-          bookmarkFilter ? 'true' : undefined,
-          labelParam,
-          searchParam,
-          PAGE_SIZE,
-          offset
-        );
-        setMemos(response?.data || []);
-        setTotal(response?.total || 0);
+        if (searchParam) {
+          const response = await SearchService.keywordSearch(
+            searchParam,
+            PAGE_SIZE,
+            offset,
+            'memo',
+            undefined,
+            labelParam,
+            bookmarkFilter ? 'true' : undefined,
+          );
+          const mapped: Memo[] = response.results.map((r) => ({
+            id: r.id,
+            title: r.title,
+            bodyMd: r.bodyMd,
+            isBookmarked: r.isBookmarked,
+            commentCount: r.commentCount,
+            labels: r.labels,
+            createdAt: r.createdAt,
+            updatedAt: r.updatedAt,
+          }));
+          const infos: Record<number, { label: string; snippet?: string }> = {};
+          for (const r of response.results) {
+            const match = r.matches[0];
+            if (match) {
+              if (match.field === 'comment') {
+                infos[r.id] = { label: 'Comment match', snippet: match.text };
+              } else {
+                infos[r.id] = { label: 'Issue match' };
+              }
+            }
+          }
+          setMatchInfos(infos);
+          setMemos(mapped);
+          setTotal(response.total);
+        } else {
+          setMatchInfos({});
+          const response = await MemosService.listMemos(
+            bookmarkFilter ? 'true' : undefined,
+            labelParam,
+            undefined,
+            PAGE_SIZE,
+            offset
+          );
+          setMemos(response?.data || []);
+          setTotal(response?.total || 0);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load memos');
         console.error('Error fetching memos:', err);
@@ -484,7 +523,7 @@ export default function MemosList() {
           />
         ) : (
           <>
-            <ItemList items={filteredMemos} itemType="memo" basePath="/memos" currentFilters={searchParams} onDelete={handleDelete} />
+            <ItemList items={filteredMemos} itemType="memo" basePath="/memos" currentFilters={searchParams} onDelete={handleDelete} matchInfos={matchInfos} />
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}

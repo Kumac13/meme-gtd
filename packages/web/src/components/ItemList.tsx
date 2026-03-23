@@ -57,6 +57,11 @@ interface Project {
 
 type Item = BaseItem | Task | Project | Article; // Include Article
 
+interface MatchInfo {
+  label: string;
+  snippet?: string;
+}
+
 interface ItemListProps {
   items: Item[];
 itemType: IssueType | "project";
@@ -66,6 +71,8 @@ itemType: IssueType | "project";
   onItemClick?: (id: number, type: IssueType) => void; // Allow "article"
   /** Show status badges on tasks and "Documents" badge on memos (only for project ListView) */
   showStatusBadges?: boolean;
+  /** Match info from keyword search (issueId -> label + optional snippet) */
+  matchInfos?: Record<number, MatchInfo>;
 }
 
 function isTask(item: Item): item is Task {
@@ -88,6 +95,7 @@ export default function ItemList({
   onDelete,
   onItemClick,
   showStatusBadges = false,
+  matchInfos,
 }: ItemListProps) {
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
@@ -109,6 +117,19 @@ export default function ItemList({
     } finally {
       setDeleting(null);
     }
+  };
+
+  const renderMatchInfo = (itemId: number) => {
+    const info = matchInfos?.[itemId];
+    if (!info) return null;
+    return (
+      <div className="flex items-baseline gap-2 mt-1.5 mb-1">
+        <span className="shrink-0 whitespace-nowrap text-[11px] font-medium text-gray-400">{info.label}</span>
+        {info.snippet && (
+          <span className="text-[11px] text-gray-400 truncate min-w-0">{info.snippet}</span>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -198,6 +219,7 @@ export default function ItemList({
                           </>
                         )}
                       </div>
+                      {renderMatchInfo(item.id)}
                       <div className="flex items-center text-xs text-gray-500 space-x-3">
                         <span>#{item.id}</span>
                         {isTask(item) && item.scheduledOn && (
@@ -274,6 +296,7 @@ export default function ItemList({
                           )}
                         </div>
                       )}
+                      {renderMatchInfo(item.id)}
                       <div className="flex items-center text-xs text-gray-500 space-x-3">
                         <span>#{item.id}</span>
                         <span title={formatDateTime(item.createdAt)}>
