@@ -87,14 +87,24 @@ export async function keywordSearchHandler(
   request: FastifyRequest<{ Querystring: KeywordSearchQuery }>,
   reply: FastifyReply
 ) {
-  const { q, limit, types } = request.query;
+  const { q, limit, offset, types, status, label, order } = request.query;
   const db = request.server.db;
 
   const typeFilter = types ? types.split(',').map((t) => t.trim()).filter(Boolean) : undefined;
-  const results = searchByKeyword(db, q, { types: typeFilter, limit });
+  const labelFilter = label ? label.split(',').map((l) => l.trim()).filter(Boolean) : undefined;
+  const results = searchByKeyword(db, q, {
+    types: typeFilter,
+    status,
+    labels: labelFilter,
+    order,
+    limit,
+    offset,
+  });
 
   return reply.status(200).send({
     results,
     total: results.length,
+    limit,
+    offset,
   });
 }

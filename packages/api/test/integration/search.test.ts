@@ -244,6 +244,82 @@ describe('GET /api/search/keyword', () => {
 
     assert.ok(res.statusCode >= 400);
   });
+
+  it('should filter by status parameter', async () => {
+    createTask(app.db, { title: 'api_status_filter_epsilon open task', bodyMd: '', status: 'open' });
+    createTask(app.db, { title: 'api_status_filter_epsilon done task', bodyMd: '', status: 'done' });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/search/keyword?q=api_status_filter_epsilon&status=open',
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.ok(body.results.length >= 1);
+    assert.ok(body.results.every((r: any) => r.status === 'open'));
+  });
+
+  it('should filter by label parameter', async () => {
+    const memo1 = createMemo(app.db, { bodyMd: 'api_label_filter_zeta content 1' });
+    const memo2 = createMemo(app.db, { bodyMd: 'api_label_filter_zeta content 2' });
+    const labelA = createLabel(app.db, 'api-label-filter-a');
+    attachLabelToIssue(app.db, memo1.id, labelA.id);
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/search/keyword?q=api_label_filter_zeta&label=api-label-filter-a',
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.strictEqual(body.results.length, 1);
+    assert.strictEqual(body.results[0].id, memo1.id);
+  });
+
+  it('should support offset for pagination', async () => {
+    createMemo(app.db, { bodyMd: 'api_offset_eta first' });
+    createMemo(app.db, { bodyMd: 'api_offset_eta second' });
+    createMemo(app.db, { bodyMd: 'api_offset_eta third' });
+
+    const res1 = await app.inject({
+      method: 'GET',
+      url: '/api/search/keyword?q=api_offset_eta&limit=2&offset=0',
+    });
+    const body1 = JSON.parse(res1.payload);
+    assert.strictEqual(body1.results.length, 2);
+    assert.strictEqual(body1.limit, 2);
+    assert.strictEqual(body1.offset, 0);
+
+    const res2 = await app.inject({
+      method: 'GET',
+      url: '/api/search/keyword?q=api_offset_eta&limit=2&offset=2',
+    });
+    const body2 = JSON.parse(res2.payload);
+    assert.ok(body2.results.length >= 1);
+    assert.strictEqual(body2.offset, 2);
+
+    // No overlap between pages
+    const ids1 = body1.results.map((r: any) => r.id);
+    const ids2 = body2.results.map((r: any) => r.id);
+    assert.ok(ids1.every((id: number) => !ids2.includes(id)));
+  });
+
+  it('should support order parameter', async () => {
+    createMemo(app.db, { bodyMd: 'api_order_theta content' });
+
+    const resDesc = await app.inject({
+      method: 'GET',
+      url: '/api/search/keyword?q=api_order_theta&order=desc',
+    });
+    assert.strictEqual(resDesc.statusCode, 200);
+
+    const resAsc = await app.inject({
+      method: 'GET',
+      url: '/api/search/keyword?q=api_order_theta&order=asc',
+    });
+    assert.strictEqual(resAsc.statusCode, 200);
+  });
 });
 
 describe('getIssueLabels', () => {
