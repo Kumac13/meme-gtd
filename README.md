@@ -115,11 +115,14 @@ mgtd embedding sync --json
 ### セマンティック検索の利用
 
 ```bash
-# API経由
-curl "http://localhost:3001/api/search/semantic?q=料理&limit=10"
+# API経由（日本語は --data-urlencode を使用）
+curl --get 'http://localhost:3000/api/search/semantic' --data-urlencode 'q=料理' -d 'limit=10'
 
 # タイプを絞る
-curl "http://localhost:3001/api/search/semantic?q=料理&types=memo,task"
+curl --get 'http://localhost:3000/api/search/semantic' --data-urlencode 'q=料理' -d 'types=memo,task'
+
+# 英語はそのままでもOK
+curl 'http://localhost:3000/api/search/semantic?q=test&limit=10'
 ```
 
 **注意:** Ollamaが起動していない場合、セマンティック検索は503を返します。他の機能は全て正常に動作します。
