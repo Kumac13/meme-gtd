@@ -1,5 +1,15 @@
+import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { buildApp } from './server.js';
 import { loadConfig } from './config.js';
+
+// Load .env from ~/.config/mgtd/.env (Node.js 22 native)
+// Shell environment variables take precedence over .env values
+try {
+  process.loadEnvFile(join(homedir(), '.config', 'mgtd', '.env'));
+} catch {
+  // .env file is optional
+}
 
 /**
  * Start the API server with graceful shutdown handling

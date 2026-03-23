@@ -4,8 +4,8 @@ import {
   generateEmbedding,
   searchByVector,
   formatQueryText,
-  DEFAULT_EMBEDDING_CONFIG,
-  checkOllamaHealth,
+  loadEmbeddingConfig,
+  checkEmbeddingHealth,
 } from 'meme-gtd-core';
 import type { SemanticSearchQuery } from '../schemas/searchSchemas.js';
 
@@ -20,16 +20,21 @@ export async function semanticSearchHandler(
   const { q, limit, types } = request.query;
   const db = request.server.db;
 
-  const config = {
-    baseUrl: process.env.OLLAMA_URL ?? DEFAULT_EMBEDDING_CONFIG.baseUrl,
-    model: process.env.EMBEDDING_MODEL ?? DEFAULT_EMBEDDING_CONFIG.model,
-  };
+  let config;
+  try {
+    config = loadEmbeddingConfig();
+  } catch (err) {
+    return reply.status(503).send({
+      error: 'Embedding not configured',
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
 
-  const healthy = await checkOllamaHealth(config.baseUrl);
+  const healthy = await checkEmbeddingHealth(config.baseUrl, config.apiKey);
   if (!healthy) {
     return reply.status(503).send({
-      error: 'Ollama service unavailable',
-      message: `Cannot connect to Ollama at ${config.baseUrl}. Ensure Ollama is running.`,
+      error: 'Embedding service unavailable',
+      message: `Cannot connect to embedding server at ${config.baseUrl}. Ensure the server is running.`,
     });
   }
 

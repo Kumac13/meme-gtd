@@ -10,7 +10,7 @@ import {
 import {
   generateEmbedding,
   generateEmbeddings,
-  checkOllamaHealth,
+  checkEmbeddingHealth,
   type EmbeddingClientConfig,
 } from './embeddingClient.js';
 
@@ -74,11 +74,11 @@ export const syncEmbeddings = async (
 ): Promise<SyncResult> => {
   const { config, onProgress } = options;
 
-  const healthy = await checkOllamaHealth(config.baseUrl);
+  const healthy = await checkEmbeddingHealth(config.baseUrl, config.apiKey);
   if (!healthy) {
     throw new Error(
-      `Cannot connect to Ollama at ${config.baseUrl}. ` +
-      `Ensure Ollama is running (ollama serve) and the model is pulled (ollama pull ${config.model}).`
+      `Cannot connect to embedding server at ${config.baseUrl}. ` +
+      `Ensure the server is running and the model "${config.model}" is available.`
     );
   }
 

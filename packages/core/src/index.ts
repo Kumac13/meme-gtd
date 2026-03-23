@@ -511,8 +511,8 @@ export { ProjectService, type ProjectServiceOptions } from './projectService.js'
 export {
   generateEmbedding,
   generateEmbeddings,
-  checkOllamaHealth,
-  DEFAULT_EMBEDDING_CONFIG,
+  checkEmbeddingHealth,
+  loadEmbeddingConfig,
   type EmbeddingClientConfig,
 } from './embedding/embeddingClient.js';
 export {
