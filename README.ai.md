@@ -171,6 +171,18 @@ Memo (Captured) → promote → Task (Inbox)
 | title | TEXT | タイトル |
 | body_md | TEXT | 本文 |
 
+### issue_embeddings（ベクトル埋め込み）
+
+| カラム | 型 | 説明 |
+|--------|-----|------|
+| issue_id | INTEGER PK | issues.id（FK, CASCADE DELETE） |
+| embedding | BLOB | ベクトル埋め込み（Float32Array） |
+| model | TEXT | 使用モデル名（例: `qwen3-embedding:4b`） |
+| dimensions | INTEGER | ベクトル次元数 |
+| content_hash | TEXT | SHA-256 コンテンツハッシュ（変更検知用） |
+| created_at | TEXT | 作成日時 |
+| updated_at | TEXT | 更新日時 |
+
 ## インターフェース
 
 ### CLI (`mgtd`)
@@ -192,6 +204,11 @@ mgtd project create/list/view
 - `--json` オプションで全コマンドJSON出力対応
 - GitHub CLI (gh) のUXをオマージュ
 
+```bash
+# Embedding
+mgtd embedding sync --model <model> --ollama-url <url> --json
+```
+
 ### REST API
 
 | エンドポイント | 説明 |
@@ -208,6 +225,7 @@ mgtd project create/list/view
 | `DELETE /api/url-links/{id}` | URLリンク削除 |
 | `GET/POST /api/issues/{id}/comments` | コメント一覧・作成 |
 | `GET /api/activity-log` | アクティビティログ一覧（フィルタ対応） |
+| `GET /api/search/semantic` | セマンティック検索（ベクトル類似度） |
 
 ### Web UI
 
@@ -224,4 +242,4 @@ mgtd project create/list/view
 - **API**: Fastify 5
 - **Web**: React 19 / Vite / Tailwind CSS
 - **CLI**: oclif
-- **検索**: SQLite FTS5
+- **検索**: SQLite FTS5 / ベクトル検索（Ollama embedding + コサイン類似度）

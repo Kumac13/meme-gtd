@@ -566,6 +566,42 @@ mgtd db migrate --json
 }
 ```
 
+## Embedding Commands
+
+### Embedding Sync
+
+Generate or update vector embeddings for all issues using Ollama. Detects new issues, model changes, and content changes (via SHA-256 hash).
+
+```bash
+# Sync embeddings with default settings
+mgtd embedding sync
+
+# Specify model and Ollama URL
+mgtd embedding sync --model qwen3-embedding:4b --ollama-url http://localhost:11434
+
+# JSON output
+mgtd embedding sync --json
+```
+
+**Options:**
+- `--model, -m` - Embedding model name (default: `qwen3-embedding:4b`)
+- `--ollama-url` - Ollama server URL (default: `http://localhost:11434`)
+- `--json, -j` - Output in JSON format
+
+**Prerequisites:**
+- Ollama must be running (`ollama serve`)
+- Model must be pulled (`ollama pull qwen3-embedding:4b`)
+
+**Output:**
+```json
+{
+  "created": 10,
+  "updated": 2,
+  "skipped": 0,
+  "total": 12
+}
+```
+
 ## Notes
 
 - **Case Sensitivity**: Label matching is case-insensitive
