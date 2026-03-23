@@ -3,7 +3,6 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import {
   generateEmbedding,
   searchByVector,
-  formatQueryText,
   loadEmbeddingConfig,
   checkEmbeddingHealth,
 } from 'meme-gtd-core';
@@ -40,7 +39,7 @@ export async function semanticSearchHandler(
 
   const startTime = performance.now();
 
-  const queryText = formatQueryText(q);
+  const queryText = config.queryPrefix ? `${config.queryPrefix}${q}` : q;
   const queryEmbedding = await generateEmbedding(queryText, config);
 
   const typeFilter = types ? types.split(',').map((t) => t.trim()) : undefined;

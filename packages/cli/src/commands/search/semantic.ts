@@ -4,7 +4,6 @@ import { ensureDatabase, getIssueLabels, getIssueComments } from 'meme-gtd-db';
 import {
   checkEmbeddingHealth,
   generateEmbedding,
-  formatQueryText,
   searchByVector,
   loadEmbeddingConfig,
 } from 'meme-gtd-core';
@@ -90,7 +89,7 @@ Configure the embedding server via environment variables or ~/.config/mgtd/.env:
         );
       }
 
-      const queryText = formatQueryText(args.query);
+      const queryText = embeddingConfig.queryPrefix ? `${embeddingConfig.queryPrefix}${args.query}` : args.query;
       const queryEmbedding = await generateEmbedding(queryText, embeddingConfig);
 
       const types = flags.types

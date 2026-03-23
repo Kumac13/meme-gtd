@@ -520,7 +520,6 @@ export {
   updateSingleEmbedding,
   computeContentHash,
   formatDocumentText,
-  formatQueryText,
   type SyncOptions,
   type SyncResult,
 } from './embedding/embeddingService.js';

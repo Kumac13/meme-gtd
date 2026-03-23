@@ -2,6 +2,7 @@ export interface EmbeddingClientConfig {
   baseUrl: string;
   model: string;
   apiKey?: string;
+  queryPrefix?: string;
 }
 
 /**
@@ -26,7 +27,11 @@ export const loadEmbeddingConfig = (modelOverride?: string): EmbeddingClientConf
     );
   }
 
-  return { baseUrl, model, apiKey };
+  // Replace literal \n with actual newlines (process.loadEnvFile reads \n as-is)
+  const rawQueryPrefix = process.env.MGTD_EMBEDDING_QUERY_PREFIX;
+  const queryPrefix = rawQueryPrefix?.replaceAll('\\n', '\n');
+
+  return { baseUrl, model, apiKey, queryPrefix };
 };
 
 interface OpenAIEmbeddingData {

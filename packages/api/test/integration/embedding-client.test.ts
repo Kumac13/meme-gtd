@@ -262,4 +262,22 @@ describe("loadEmbeddingConfig", () => {
     const config = loadEmbeddingConfig();
     assert.strictEqual(config.apiKey, undefined);
   });
+
+  it("should load MGTD_EMBEDDING_QUERY_PREFIX from env", () => {
+    process.env.MGTD_EMBEDDING_URL = "http://myserver:8080/v1";
+    process.env.MGTD_EMBEDDING_MODEL = "my-model";
+    process.env.MGTD_EMBEDDING_QUERY_PREFIX = "search_query: ";
+
+    const config = loadEmbeddingConfig();
+    assert.strictEqual(config.queryPrefix, "search_query: ");
+  });
+
+  it("should have undefined queryPrefix when env var is not set", () => {
+    process.env.MGTD_EMBEDDING_URL = "http://myserver:8080/v1";
+    process.env.MGTD_EMBEDDING_MODEL = "my-model";
+    delete process.env.MGTD_EMBEDDING_QUERY_PREFIX;
+
+    const config = loadEmbeddingConfig();
+    assert.strictEqual(config.queryPrefix, undefined);
+  });
 });

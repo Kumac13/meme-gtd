@@ -51,14 +51,6 @@ const getCommentTexts = (db: Database.Database, issueId: number): string[] => {
 };
 
 /**
- * Format query text with instruction prefix for Qwen3-Embedding.
- * Instruction-aware models benefit from query-side prefixing.
- */
-export const formatQueryText = (query: string): string => {
-  return `Instruct: Given a search query, retrieve relevant documents\nQuery: ${query}`;
-};
-
-/**
  * Convert Float32Array to Buffer for SQLite BLOB storage
  */
 const float32ArrayToBuffer = (arr: Float32Array): Buffer => {
