@@ -4,6 +4,7 @@ import {
   upsertEmbedding,
   listUnembeddedIssues,
   listEmbeddingHashes,
+  listComments,
   type UnembeddedIssue,
 } from 'meme-gtd-db';
 import {
@@ -26,20 +27,27 @@ export interface SyncResult {
 }
 
 /**
- * Compute SHA-256 content hash for an issue's text content.
+ * Compute SHA-256 content hash for an issue's text content (including comments).
  * Used to detect when issue content has changed and re-embedding is needed.
  */
-export const computeContentHash = (title: string | null, bodyMd: string): string => {
-  const text = title ? `${title}\n${bodyMd}` : bodyMd;
-  return createHash('sha256').update(text).digest('hex');
+export const computeContentHash = (title: string | null, bodyMd: string, comments: string[] = []): string => {
+  const parts = [title ? `${title}\n${bodyMd}` : bodyMd, ...comments];
+  return createHash('sha256').update(parts.join('\n')).digest('hex');
 };
 
 /**
- * Format text for embedding generation.
- * For document indexing, text is passed as-is.
+ * Format text for embedding generation (including comments).
  */
-export const formatDocumentText = (title: string | null, bodyMd: string): string => {
-  return title ? `${title}\n${bodyMd}` : bodyMd;
+export const formatDocumentText = (title: string | null, bodyMd: string, comments: string[] = []): string => {
+  const parts = [title ? `${title}\n${bodyMd}` : bodyMd, ...comments];
+  return parts.join('\n');
+};
+
+/**
+ * Get comment texts for an issue using existing listComments.
+ */
+const getCommentTexts = (db: Database.Database, issueId: number): string[] => {
+  return listComments(db, issueId).map((c) => c.bodyMd);
 };
 
 /**
@@ -93,7 +101,8 @@ export const syncEmbeddings = async (
   for (const row of allIssues) {
     const existingHash = hashMap.get(row.id);
     if (existingHash) {
-      const currentHash = computeContentHash(row.title, row.body_md);
+      const comments = getCommentTexts(db, row.id);
+      const currentHash = computeContentHash(row.title, row.body_md, comments);
       if (existingHash !== currentHash) {
         staleIssueIds.add(row.id);
       }
@@ -123,8 +132,9 @@ export const syncEmbeddings = async (
   const BATCH_SIZE = 50;
   for (let batchStart = 0; batchStart < toProcess.length; batchStart += BATCH_SIZE) {
     const batch = toProcess.slice(batchStart, batchStart + BATCH_SIZE);
-    const texts = batch.map((issue) => formatDocumentText(issue.title, issue.bodyMd));
-    const hashes = batch.map((issue) => computeContentHash(issue.title, issue.bodyMd));
+    const batchComments = batch.map((issue) => getCommentTexts(db, issue.id));
+    const texts = batch.map((issue, i) => formatDocumentText(issue.title, issue.bodyMd, batchComments[i]));
+    const hashes = batch.map((issue, i) => computeContentHash(issue.title, issue.bodyMd, batchComments[i]));
 
     onProgress?.(Math.min(batchStart + BATCH_SIZE, toProcess.length), toProcess.length);
 
@@ -162,8 +172,9 @@ export const updateSingleEmbedding = async (
     throw new Error(`Issue #${issueId} not found or deleted`);
   }
 
-  const text = formatDocumentText(row.title, row.body_md);
-  const contentHash = computeContentHash(row.title, row.body_md);
+  const comments = getCommentTexts(db, issueId);
+  const text = formatDocumentText(row.title, row.body_md, comments);
+  const contentHash = computeContentHash(row.title, row.body_md, comments);
   const embedding = await generateEmbedding(text, config);
   const buf = float32ArrayToBuffer(embedding);
 

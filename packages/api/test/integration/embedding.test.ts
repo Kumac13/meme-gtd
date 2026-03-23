@@ -249,4 +249,16 @@ describe("Content Hash", () => {
     const h2 = computeContentHash(null, "body");
     assert.notStrictEqual(h1, h2);
   });
+
+  it("should include comments in hash", () => {
+    const h1 = computeContentHash(null, "body");
+    const h2 = computeContentHash(null, "body", ["comment1"]);
+    assert.notStrictEqual(h1, h2);
+  });
+
+  it("should produce different hash for different comments", () => {
+    const h1 = computeContentHash(null, "body", ["comment1"]);
+    const h2 = computeContentHash(null, "body", ["comment2"]);
+    assert.notStrictEqual(h1, h2);
+  });
 });
