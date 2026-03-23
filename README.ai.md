@@ -238,6 +238,36 @@ mgtd search semantic <query> --types <types> --limit <n> --model <model> --json
 - カレンダー表示（予定/実績）
 - プロジェクト管理
 
+## 検索アーキテクチャ
+
+### 2つの検索モード
+
+| モード | 方式 | 検索対象 | 結果の特徴 |
+|--------|------|---------|-----------|
+| keyword | LIKE部分一致 | title, body_md, comments | マッチ箇所（matches配列）を返す。同一issueの複数コメントマッチはグルーピング |
+| semantic | ベクトル類似度 | embedding（title+body+comments全体） | similarity scoreを返す。comments全件を含む |
+
+### keyword検索の設計意図
+
+- FTS5ではなくLIKEを採用: FTS5のunicode61トークナイザーは日本語の単語境界を認識しないため
+- コメントも検索対象: mgtdのコメントは「追記メモ」として重要情報を含む
+- 結果はissue単位でグルーピング: 同一issueの複数コメントがマッチした場合、matches配列にまとめる
+- matchesにはヒットした全文を切り詰めずに返す: ユーザーがマッチ内容を確認するため
+- title/bodyMdは常に返す: マッチした内容が何のissueに属するか判断するための文脈情報
+
+### semantic検索の設計意図
+
+- embeddingはtitle+body_md+commentsから生成（コメントに重要情報があるため）
+- 結果にcomments全件を含める: embedding対象と結果の情報を一致させる
+- scoreはコサイン類似度（0-1）
+
+### embedding基盤
+
+- 現在はOllama（ローカルLLM）を使用。将来的にプロバイダ変更の可能性あり
+- embedding生成のインターフェース: `generateEmbedding(text, config) → Float32Array`
+- ベクトル検索: 全embeddingをメモリにロードし、コサイン類似度を計算（~1,500件規模で実用的）
+- content hashによる変更検知: 内容が変わったissueのみ再生成
+
 ## 技術スタック
 
 - **言語**: TypeScript
@@ -246,4 +276,4 @@ mgtd search semantic <query> --types <types> --limit <n> --model <model> --json
 - **API**: Fastify 5
 - **Web**: React 19 / Vite / Tailwind CSS
 - **CLI**: oclif
-- **検索**: SQLite FTS5 / ベクトル検索（Ollama embedding + コサイン類似度）
+- **検索**: SQLite FTS5（タイプ内検索） / LIKE（横断keyword検索） / ベクトル検索（embedding + コサイン類似度）
