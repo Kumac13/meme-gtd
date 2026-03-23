@@ -6,7 +6,8 @@ import {
   loadEmbeddingConfig,
   checkEmbeddingHealth,
 } from 'meme-gtd-core';
-import type { SemanticSearchQuery } from '../schemas/searchSchemas.js';
+import { searchByKeyword } from 'meme-gtd-db';
+import type { SemanticSearchQuery, KeywordSearchQuery } from '../schemas/searchSchemas.js';
 
 /**
  * Handle semantic search requests.
@@ -75,5 +76,25 @@ export async function semanticSearchHandler(
       totalResults: results.length,
       searchTimeMs,
     },
+  });
+}
+
+/**
+ * Handle keyword search requests.
+ * Searches issues by LIKE partial matching across title, body, and comments.
+ */
+export async function keywordSearchHandler(
+  request: FastifyRequest<{ Querystring: KeywordSearchQuery }>,
+  reply: FastifyReply
+) {
+  const { q, limit, types } = request.query;
+  const db = request.server.db;
+
+  const typeFilter = types ? types.split(',').map((t) => t.trim()).filter(Boolean) : undefined;
+  const results = searchByKeyword(db, q, { types: typeFilter, limit });
+
+  return reply.status(200).send({
+    results,
+    total: results.length,
   });
 }

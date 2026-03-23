@@ -142,6 +142,110 @@ describe('Keyword Search', () => {
   });
 });
 
+describe('GET /api/search/keyword', () => {
+  let app: FastifyInstance;
+  let cleanup: () => Promise<void>;
+
+  before(async () => {
+    const server = await createTestServer();
+    app = server.app;
+    cleanup = server.cleanup;
+    await app.ready();
+  });
+
+  after(async () => {
+    await cleanup();
+  });
+
+  it('should return results matching query', async () => {
+    createMemo(app.db, { bodyMd: 'api_keyword_test_alpha memo content' });
+    createTask(app.db, { title: 'api_keyword_test_alpha task', bodyMd: '' });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/search/keyword?q=api_keyword_test_alpha',
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.ok(body.results.length >= 2);
+    assert.strictEqual(body.total, body.results.length);
+    assert.ok(body.results.every((r: any) => r.matches.length > 0));
+  });
+
+  it('should filter by types parameter', async () => {
+    createMemo(app.db, { bodyMd: 'api_type_filter_beta content' });
+    createTask(app.db, { title: 'api_type_filter_beta task', bodyMd: '' });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/search/keyword?q=api_type_filter_beta&types=memo',
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.ok(body.results.length >= 1);
+    assert.ok(body.results.every((r: any) => r.type === 'memo'));
+  });
+
+  it('should respect limit parameter', async () => {
+    createMemo(app.db, { bodyMd: 'api_limit_gamma first' });
+    createMemo(app.db, { bodyMd: 'api_limit_gamma second' });
+    createMemo(app.db, { bodyMd: 'api_limit_gamma third' });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/search/keyword?q=api_limit_gamma&limit=1',
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.strictEqual(body.results.length, 1);
+  });
+
+  it('should return empty results for non-matching query', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/search/keyword?q=zzz_nonexistent_api_term_999',
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.strictEqual(body.results.length, 0);
+    assert.strictEqual(body.total, 0);
+  });
+
+  it('should include labels, commentCount, and matches in response', async () => {
+    const memo = createMemo(app.db, { bodyMd: 'api_fields_delta content' });
+    const label = createLabel(app.db, 'api-test-label');
+    attachLabelToIssue(app.db, memo.id, label.id);
+    addComment(app.db, memo.id, 'api_fields_delta comment match');
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/search/keyword?q=api_fields_delta',
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    const found = body.results.find((r: any) => r.id === memo.id);
+
+    assert.ok(found);
+    assert.ok(found.labels.includes('api-test-label'));
+    assert.strictEqual(found.commentCount, 1);
+    assert.ok(found.matches.length >= 2); // issue match + comment match
+  });
+
+  it('should return 400 when q is missing', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/search/keyword',
+    });
+
+    assert.ok(res.statusCode >= 400);
+  });
+});
+
 describe('getIssueLabels', () => {
   let app: FastifyInstance;
   let cleanup: () => Promise<void>;
