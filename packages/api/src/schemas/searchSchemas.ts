@@ -54,6 +54,7 @@ export const KeywordSearchQuerySchema = z.object({
   types: z.string().optional().describe('Comma-separated issue types to include (memo,task,article)'),
   status: z.string().optional().describe('Filter by issue status (e.g., open, done)'),
   label: z.string().optional().describe('Filter by label names (comma-separated, OR logic)'),
+  bookmarked: z.string().optional().describe('Filter by bookmarked status (set to "true" to show only bookmarked)'),
   order: z.enum(['asc', 'desc']).default('desc').describe('Sort order by updated_at'),
 });
 

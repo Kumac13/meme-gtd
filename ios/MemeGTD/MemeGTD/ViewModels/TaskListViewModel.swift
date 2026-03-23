@@ -24,13 +24,19 @@ class TaskListViewModel: ObservableObject {
     // Projects for picker
     @Published var allProjects: [Project] = []
 
+    // Search match info (issueId -> match label + snippet)
+    @Published var searchMatchInfos: [Int: SearchMatchInfo] = [:]
+
     var store: TaskStore?
 
     private let pageSize = 20
 
     // MARK: - Query building
 
-    private func buildQueryItems(offset: Int) -> [URLQueryItem] {
+    /// Whether the current request should use the keyword search API
+    var isSearching: Bool { !searchQuery.isEmpty }
+
+    private func buildListQueryItems(offset: Int) -> [URLQueryItem] {
         var items: [URLQueryItem] = [
             URLQueryItem(name: "limit", value: String(pageSize)),
             URLQueryItem(name: "offset", value: String(offset)),
@@ -50,10 +56,46 @@ class TaskListViewModel: ObservableObject {
         if bookmarkFilter {
             items.append(URLQueryItem(name: "bookmarked", value: "true"))
         }
-        if !searchQuery.isEmpty {
-            items.append(URLQueryItem(name: "search", value: searchQuery))
+        return items
+    }
+
+    private func buildSearchQueryItems(offset: Int) -> [URLQueryItem] {
+        var items: [URLQueryItem] = [
+            URLQueryItem(name: "q", value: searchQuery),
+            URLQueryItem(name: "types", value: "task"),
+            URLQueryItem(name: "limit", value: String(pageSize)),
+            URLQueryItem(name: "offset", value: String(offset)),
+        ]
+        if let apiValue = statusFilter.apiValue {
+            items.append(URLQueryItem(name: "status", value: apiValue))
+        }
+        if !labelFilters.isEmpty {
+            items.append(URLQueryItem(name: "label", value: labelFilters.joined(separator: ",")))
+        }
+        if bookmarkFilter {
+            items.append(URLQueryItem(name: "bookmarked", value: "true"))
         }
         return items
+    }
+
+    // MARK: - Load
+
+    // MARK: - Keyword search helpers
+
+    private func fetchKeywordSearch(offset: Int) async throws -> TaskListResponse {
+        let response: KeywordSearchResponse = try await APIClient.shared.get(
+            path: "/api/search/keyword",
+            queryItems: buildSearchQueryItems(offset: offset)
+        )
+        var infos: [Int: SearchMatchInfo] = [:]
+        for item in response.results {
+            if let info = item.firstMatchInfo() {
+                infos[item.id] = info
+            }
+        }
+        searchMatchInfos = infos
+        let tasks = response.results.map { $0.toTaskItem() }
+        return TaskListResponse(data: tasks, total: response.total, limit: response.limit, offset: response.offset)
     }
 
     // MARK: - Load
@@ -64,10 +106,16 @@ class TaskListViewModel: ObservableObject {
         error = nil
 
         do {
-            let response: TaskListResponse = try await APIClient.shared.get(
-                path: "/api/tasks",
-                queryItems: buildQueryItems(offset: 0)
-            )
+            let response: TaskListResponse
+            if isSearching {
+                response = try await fetchKeywordSearch(offset: 0)
+            } else {
+                searchMatchInfos = [:]
+                response = try await APIClient.shared.get(
+                    path: "/api/tasks",
+                    queryItems: buildListQueryItems(offset: 0)
+                )
+            }
             store?.setItems(response.data, total: response.total)
             logger.info("loadTasks done: count=\(response.data.count), total=\(response.total)")
         } catch {
@@ -82,9 +130,12 @@ class TaskListViewModel: ObservableObject {
 
     func fetchTasks() async -> TaskListResponse? {
         do {
+            if isSearching {
+                return try await fetchKeywordSearch(offset: 0)
+            }
             return try await APIClient.shared.get(
                 path: "/api/tasks",
-                queryItems: buildQueryItems(offset: 0)
+                queryItems: buildListQueryItems(offset: 0)
             )
         } catch {
             self.error = error.localizedDescription
@@ -95,9 +146,12 @@ class TaskListViewModel: ObservableObject {
     func fetchOlderTasks() async -> TaskListResponse? {
         guard let store, store.hasMore, !isLoadingMore else { return nil }
         do {
+            if isSearching {
+                return try await fetchKeywordSearch(offset: store.tasks.count)
+            }
             return try await APIClient.shared.get(
                 path: "/api/tasks",
-                queryItems: buildQueryItems(offset: store.tasks.count)
+                queryItems: buildListQueryItems(offset: store.tasks.count)
             )
         } catch is CancellationError {
             return nil
@@ -125,10 +179,15 @@ class TaskListViewModel: ObservableObject {
         isLoadingMore = true
 
         do {
-            let response: TaskListResponse = try await APIClient.shared.get(
-                path: "/api/tasks",
-                queryItems: buildQueryItems(offset: store.tasks.count)
-            )
+            let response: TaskListResponse
+            if isSearching {
+                response = try await fetchKeywordSearch(offset: store.tasks.count)
+            } else {
+                response = try await APIClient.shared.get(
+                    path: "/api/tasks",
+                    queryItems: buildListQueryItems(offset: store.tasks.count)
+                )
+            }
             store.appendItems(response.data, total: response.total)
             logger.info("loadOlderTasks done: count=\(store.tasks.count), total=\(store.total)")
         } catch is CancellationError {

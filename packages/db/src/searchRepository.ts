@@ -25,6 +25,7 @@ export interface KeywordSearchOptions {
   types?: string[];
   status?: string;
   labels?: string[];
+  bookmarked?: boolean;
   order?: 'asc' | 'desc';
   limit?: number;
   offset?: number;
@@ -68,7 +69,9 @@ export const searchByKeyword = (
     : '';
   const labelParams = options.labels ?? [];
 
-  const extraFilters = `${typesFilter} ${statusFilter} ${labelFilter}`;
+  const bookmarkedFilter = options.bookmarked ? 'AND i.is_bookmarked = 1' : '';
+
+  const extraFilters = `${typesFilter} ${statusFilter} ${labelFilter} ${bookmarkedFilter}`;
   const extraParams = [...typesParams, ...statusParams, ...labelParams];
 
   const sql = `

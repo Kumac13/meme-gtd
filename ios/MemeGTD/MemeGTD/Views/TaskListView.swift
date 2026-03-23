@@ -25,7 +25,7 @@ struct TaskListView: View {
                             TaskRoute(taskId: task.id, initialTitle: task.title)
                         )
                     }) {
-                        TaskCell(task: task)
+                        TaskCell(task: task, matchInfo: viewModel.searchMatchInfos[task.id])
                             .padding(.horizontal, 16)
                     }
                     .buttonStyle(.plain)

@@ -10,6 +10,7 @@ import {
   createLabel,
   searchByKeyword,
   getIssueLabels,
+  setBookmark,
 } from 'meme-gtd-db';
 
 describe('Keyword Search', () => {
@@ -319,6 +320,28 @@ describe('GET /api/search/keyword', () => {
       url: '/api/search/keyword?q=api_order_theta&order=asc',
     });
     assert.strictEqual(resAsc.statusCode, 200);
+  });
+
+  it('should filter by bookmarked parameter', async () => {
+    const memo1 = createMemo(app.db, { bodyMd: 'api_bookmark_iota first' });
+    const memo2 = createMemo(app.db, { bodyMd: 'api_bookmark_iota second' });
+    setBookmark(app.db, memo1.id, true);
+
+    const resAll = await app.inject({
+      method: 'GET',
+      url: '/api/search/keyword?q=api_bookmark_iota',
+    });
+    const bodyAll = JSON.parse(resAll.payload);
+    assert.ok(bodyAll.results.length >= 2);
+
+    const resBookmarked = await app.inject({
+      method: 'GET',
+      url: '/api/search/keyword?q=api_bookmark_iota&bookmarked=true',
+    });
+    const bodyBookmarked = JSON.parse(resBookmarked.payload);
+    assert.strictEqual(bodyBookmarked.results.length, 1);
+    assert.strictEqual(bodyBookmarked.results[0].id, memo1.id);
+    assert.strictEqual(bodyBookmarked.results[0].isBookmarked, true);
   });
 });
 

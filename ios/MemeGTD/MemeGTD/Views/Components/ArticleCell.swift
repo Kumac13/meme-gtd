@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ArticleCell: View {
     let article: Article
+    var matchInfo: SearchMatchInfo? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -10,6 +11,26 @@ struct ArticleCell: View {
                 .font(.system(size: 14))
                 .foregroundColor(.textPrimary)
                 .lineLimit(2)
+
+            // Search match info (label + optional snippet)
+            if let info = matchInfo {
+                HStack(spacing: 6) {
+                    Text(info.label)
+                        .font(.system(size: 10, weight: .medium))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.textSecondary.opacity(0.15))
+                        .foregroundColor(.textSecondary)
+                        .cornerRadius(4)
+                    if let snippet = info.snippet {
+                        Text(snippet)
+                            .font(.system(size: 11))
+                            .foregroundColor(.textSecondary)
+                            .lineLimit(1)
+                    }
+                }
+                .padding(.top, 4)
+            }
 
             // site name | time | labels
             HStack(spacing: 6) {
@@ -46,10 +67,11 @@ struct ArticleCell: View {
     // MARK: - Site name (from meta.siteName or domain extraction)
 
     private var siteDisplayName: String? {
-        if let siteName = article.meta.siteName, !siteName.isEmpty {
+        if let siteName = article.meta?.siteName, !siteName.isEmpty {
             return siteName
         }
-        guard let url = URL(string: article.meta.originalUrl),
+        guard let originalUrl = article.meta?.originalUrl,
+              let url = URL(string: originalUrl),
               let host = url.host else {
             return nil
         }

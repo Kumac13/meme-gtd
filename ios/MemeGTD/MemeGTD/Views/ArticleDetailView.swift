@@ -51,7 +51,7 @@ struct ArticleDetailView: View {
 
                                     // Open in browser
                                     Button(action: {
-                                        if let url = URL(string: article.meta.originalUrl) {
+                                        if let url = URL(string: article.meta?.originalUrl ?? "") {
                                             openURL(url)
                                         }
                                     }) {
@@ -211,10 +211,10 @@ struct ArticleDetailView: View {
     // MARK: - Site display name
 
     private func siteDisplayName(for article: Article) -> String? {
-        if let siteName = article.meta.siteName, !siteName.isEmpty {
+        if let siteName = article.meta?.siteName, !siteName.isEmpty {
             return siteName
         }
-        guard let url = URL(string: article.meta.originalUrl),
+        guard let url = URL(string: article.meta?.originalUrl ?? ""),
               let host = url.host else {
             return nil
         }

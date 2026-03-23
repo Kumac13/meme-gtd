@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TaskCell: View {
     let task: TaskItem
+    var matchInfo: SearchMatchInfo? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -10,6 +11,26 @@ struct TaskCell: View {
                 .font(.system(size: 14))
                 .foregroundColor(.textPrimary)
                 .lineLimit(2)
+
+            // Search match info (label + optional snippet)
+            if let info = matchInfo {
+                HStack(spacing: 6) {
+                    Text(info.label)
+                        .font(.system(size: 10, weight: .medium))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.textSecondary.opacity(0.15))
+                        .foregroundColor(.textSecondary)
+                        .cornerRadius(4)
+                    if let snippet = info.snippet {
+                        Text(snippet)
+                            .font(.system(size: 11))
+                            .foregroundColor(.textSecondary)
+                            .lineLimit(1)
+                    }
+                }
+                .padding(.top, 4)
+            }
 
             // #id time | bookmark | labels — spacing で視覚的にグループ分け
             HStack(spacing: 6) {

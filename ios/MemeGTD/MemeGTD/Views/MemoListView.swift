@@ -57,7 +57,7 @@ struct MemoListView: View {
                             HapticManager.selection()
                             navigationPath.append(MemoRoute(memoId: memo.id, initialBody: memo.bodyMd))
                         }) {
-                            MemoTimelineItem(memo: memo)
+                            MemoTimelineItem(memo: memo, matchInfo: viewModel.searchMatchInfos[memo.id])
                         }
                         .buttonStyle(.plain)
                         .padding(.horizontal, 16)

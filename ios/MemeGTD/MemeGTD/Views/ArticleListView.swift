@@ -18,7 +18,7 @@ struct ArticleListView: View {
                             ArticleRoute(articleId: article.id, initialTitle: article.title)
                         )
                     }) {
-                        ArticleCell(article: article)
+                        ArticleCell(article: article, matchInfo: viewModel.searchMatchInfos[article.id])
                             .padding(.horizontal, 16)
                     }
                     .buttonStyle(.plain)

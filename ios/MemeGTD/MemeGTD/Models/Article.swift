@@ -5,7 +5,7 @@ struct Article: Codable, Identifiable {
     let type: String
     let title: String
     let bodyMd: String
-    let meta: ArticleMeta
+    let meta: ArticleMeta?
     let createdAt: String
     let updatedAt: String
     let isBookmarked: Bool

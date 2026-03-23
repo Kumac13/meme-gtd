@@ -87,7 +87,7 @@ export async function keywordSearchHandler(
   request: FastifyRequest<{ Querystring: KeywordSearchQuery }>,
   reply: FastifyReply
 ) {
-  const { q, limit, offset, types, status, label, order } = request.query;
+  const { q, limit, offset, types, status, label, bookmarked, order } = request.query;
   const db = request.server.db;
 
   const typeFilter = types ? types.split(',').map((t) => t.trim()).filter(Boolean) : undefined;
@@ -96,6 +96,7 @@ export async function keywordSearchHandler(
     types: typeFilter,
     status,
     labels: labelFilter,
+    bookmarked: bookmarked === 'true' ? true : undefined,
     order,
     limit,
     offset,

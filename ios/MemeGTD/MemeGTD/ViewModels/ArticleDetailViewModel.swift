@@ -378,7 +378,7 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
         guard let article = article else { return }
 
         var text = "# \(article.title)\n\n"
-        text += "Source: \(article.meta.originalUrl)\n\n"
+        text += "Source: \(article.meta?.originalUrl ?? "")\n\n"
         if !article.bodyMd.isEmpty {
             text += article.bodyMd
         }
