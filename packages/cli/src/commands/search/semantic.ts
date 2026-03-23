@@ -80,8 +80,15 @@ export default class SearchSemantic extends Command {
     };
 
     try {
+      if (!flags.json) {
+        process.stdout.write('Searching...');
+      }
+
       const healthy = await checkOllamaHealth(embeddingConfig.baseUrl);
       if (!healthy) {
+        if (!flags.json) {
+          process.stdout.write('\r');
+        }
         throw new Error(
           `Cannot connect to Ollama at ${embeddingConfig.baseUrl}. Ensure Ollama is running (ollama serve) and the model is pulled (ollama pull ${embeddingConfig.model}).`
         );
@@ -99,13 +106,52 @@ export default class SearchSemantic extends Command {
         types,
       });
 
+      if (scored.length === 0) {
+        if (!flags.json) {
+          process.stdout.write('\r\x1b[K');
+        }
+        if (flags.json) {
+          this.log(JSON.stringify({ results: [], total: 0 }, null, 2));
+        } else {
+          this.log('No results found.');
+        }
+        return;
+      }
+
+      const issueIds = scored.map((s) => s.issueId);
+      const placeholders = issueIds.map(() => '?').join(',');
+
+      // Batch fetch issue details
+      const issueRows = db
+        .prepare(`SELECT id, type, title, body_md, status, is_bookmarked, created_at, updated_at FROM issues WHERE id IN (${placeholders})`)
+        .all(...issueIds) as any[];
+      const issueMap = new Map(issueRows.map((r) => [r.id, r]));
+
+      // Batch fetch comments
+      const commentRows = db
+        .prepare(`SELECT id, issue_id, body_md, created_at, updated_at FROM comments WHERE issue_id IN (${placeholders}) AND is_deleted = 0 ORDER BY created_at ASC`)
+        .all(...issueIds) as any[];
+      const commentMap = new Map<number, any[]>();
+      for (const c of commentRows) {
+        const list = commentMap.get(c.issue_id) ?? [];
+        list.push({ id: c.id, bodyMd: c.body_md, createdAt: c.created_at, updatedAt: c.updated_at });
+        commentMap.set(c.issue_id, list);
+      }
+
+      // Batch fetch labels
+      const labelRows = db
+        .prepare(`SELECT il.issue_id, l.name FROM labels l JOIN issue_labels il ON il.label_id = l.id WHERE il.issue_id IN (${placeholders}) ORDER BY l.name`)
+        .all(...issueIds) as any[];
+      const labelMap = new Map<number, string[]>();
+      for (const l of labelRows) {
+        const list = labelMap.get(l.issue_id) ?? [];
+        list.push(l.name);
+        labelMap.set(l.issue_id, list);
+      }
+
       const results: SemanticSearchResult[] = scored.map((s) => {
-        const row = db
-          .prepare('SELECT id, type, title, body_md, status, is_bookmarked, created_at, updated_at FROM issues WHERE id = ?')
-          .get(s.issueId) as any;
-
-        const comments = getIssueComments(db, s.issueId);
-
+        const row = issueMap.get(s.issueId)!;
+        const comments = commentMap.get(s.issueId) ?? [];
         return {
           id: row.id,
           type: row.type,
@@ -113,13 +159,8 @@ export default class SearchSemantic extends Command {
           bodyMd: row.body_md,
           status: row.status,
           isBookmarked: row.is_bookmarked === 1,
-          labels: getIssueLabels(db, row.id),
-          comments: comments.map((c) => ({
-            id: c.id,
-            bodyMd: c.bodyMd,
-            createdAt: c.createdAt,
-            updatedAt: c.updatedAt,
-          })),
+          labels: labelMap.get(row.id) ?? [],
+          comments,
           commentCount: comments.length,
           createdAt: row.created_at,
           updatedAt: row.updated_at,
@@ -127,13 +168,12 @@ export default class SearchSemantic extends Command {
         };
       });
 
-      if (flags.json) {
-        this.log(JSON.stringify({ results, total: results.length }, null, 2));
-        return;
+      if (!flags.json) {
+        process.stdout.write('\r\x1b[K');
       }
 
-      if (results.length === 0) {
-        this.log('No results found.');
+      if (flags.json) {
+        this.log(JSON.stringify({ results, total: results.length }, null, 2));
         return;
       }
 

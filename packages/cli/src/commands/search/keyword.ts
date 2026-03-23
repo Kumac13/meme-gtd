@@ -67,24 +67,28 @@ export default class SearchKeyword extends Command {
         const statusLabel = result.status ? `  [${result.status}]` : '';
         const date = result.updatedAt.split('T')[0];
 
-        if (result.matchField === 'comment') {
-          // Comment match: show parent issue context + matched comment
+        // Show issue header
+        const issueMatch = result.matches.find((m) => m.field === 'issue');
+        if (result.title) {
+          this.log(`${indicator} #${result.id}  ${typeLabel}${statusLabel}  ${result.title}`);
+          if (issueMatch && issueMatch.text !== result.title) {
+            this.log(`                ${issueMatch.text}`);
+          }
+        } else if (issueMatch) {
+          this.log(`${indicator} #${result.id}  ${typeLabel}  ${issueMatch.text}`);
+        } else {
+          // Only comment matches, show parent context
           const parentContext = result.title ?? result.bodyMd.split('\n')[0].slice(0, 60);
           this.log(`${indicator} #${result.id}  ${typeLabel}${statusLabel}  ${parentContext}`);
-          this.log(`                comment #${result.matchCommentId}: ${result.matchedText}`);
-          this.log(`                ${' '.repeat(40)}${date}`);
-        } else if (result.title) {
-          // Issue match with title (task/article): show title + matched body
-          this.log(`${indicator} #${result.id}  ${typeLabel}${statusLabel}  ${result.title}`);
-          if (result.matchedText !== result.title) {
-            this.log(`                ${result.matchedText}`);
-          }
-          this.log(`                ${' '.repeat(40)}${date}`);
-        } else {
-          // Issue match without title (memo): show matched text
-          this.log(`${indicator} #${result.id}  ${typeLabel}  ${result.matchedText}`);
-          this.log(`                ${' '.repeat(40)}${date}`);
         }
+
+        // Show comment matches
+        const commentMatches = result.matches.filter((m) => m.field === 'comment');
+        for (const cm of commentMatches) {
+          this.log(`                comment #${cm.commentId}: ${cm.text}`);
+        }
+
+        this.log(`                ${' '.repeat(40)}${date}`);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

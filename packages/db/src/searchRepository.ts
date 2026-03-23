@@ -1,6 +1,12 @@
 import type Database from 'better-sqlite3';
 import type { Comment } from 'meme-gtd-shared';
 
+export interface KeywordMatch {
+  field: 'issue' | 'comment';
+  commentId: number | null;
+  text: string;
+}
+
 export interface KeywordSearchResult {
   id: number;
   type: 'memo' | 'task' | 'article';
@@ -12,9 +18,7 @@ export interface KeywordSearchResult {
   commentCount: number;
   createdAt: string;
   updatedAt: string;
-  matchField: 'issue' | 'comment';
-  matchCommentId: number | null;
-  matchedText: string;
+  matches: KeywordMatch[];
 }
 
 export interface KeywordSearchOptions {
@@ -64,7 +68,7 @@ export const searchByKeyword = (
       WHERE i.is_deleted = 0 AND (i.title LIKE ? OR i.body_md LIKE ?)
       ${typesFilter}
 
-      UNION
+      UNION ALL
 
       SELECT i.id, i.type, i.title, i.body_md, i.status,
              i.is_bookmarked, i.created_at, i.updated_at,
@@ -77,31 +81,61 @@ export const searchByKeyword = (
       ${typesFilter}
     )
     ORDER BY updated_at DESC
-    LIMIT ?
   `;
 
   const params = [
     q, q, q, ...typesParams,
     q, ...typesParams,
-    limit,
   ];
 
   const rows = db.prepare(sql).all(...params) as RawSearchRow[];
 
-  return rows.map((row) => ({
+  // Group by issue id, preserving order of first appearance
+  const grouped = new Map<number, { row: RawSearchRow; matches: KeywordMatch[] }>();
+  for (const row of rows) {
+    const existing = grouped.get(row.id);
+    const match: KeywordMatch = {
+      field: row.match_field as 'issue' | 'comment',
+      commentId: row.match_comment_id,
+      text: row.matched_text,
+    };
+    if (existing) {
+      existing.matches.push(match);
+    } else {
+      grouped.set(row.id, { row, matches: [match] });
+    }
+  }
+
+  // Apply limit after grouping (limit is per issue, not per match)
+  const entries = [...grouped.values()].slice(0, limit);
+
+  // Batch fetch labels
+  const issueIds = entries.map((e) => e.row.id);
+  const labelMap = new Map<number, string[]>();
+  if (issueIds.length > 0) {
+    const placeholders = issueIds.map(() => '?').join(',');
+    const labelRows = db
+      .prepare(`SELECT il.issue_id, l.name FROM labels l JOIN issue_labels il ON il.label_id = l.id WHERE il.issue_id IN (${placeholders}) ORDER BY l.name`)
+      .all(...issueIds) as any[];
+    for (const l of labelRows) {
+      const list = labelMap.get(l.issue_id) ?? [];
+      list.push(l.name);
+      labelMap.set(l.issue_id, list);
+    }
+  }
+
+  return entries.map(({ row, matches }) => ({
     id: row.id,
     type: row.type as 'memo' | 'task' | 'article',
     title: row.title,
     bodyMd: row.body_md,
     status: row.status,
     isBookmarked: row.is_bookmarked === 1,
-    labels: getIssueLabels(db, row.id),
+    labels: labelMap.get(row.id) ?? [],
     commentCount: row.comment_count,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    matchField: row.match_field as 'issue' | 'comment',
-    matchCommentId: row.match_comment_id,
-    matchedText: row.matched_text,
+    matches,
   }));
 };
 

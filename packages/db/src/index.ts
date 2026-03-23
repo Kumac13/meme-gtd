@@ -166,7 +166,8 @@ export {
   getIssueLabels,
   getIssueComments,
   type KeywordSearchResult,
-  type KeywordSearchOptions
+  type KeywordSearchOptions,
+  type KeywordMatch
 } from './searchRepository.js';
 
 // URL link repository exports

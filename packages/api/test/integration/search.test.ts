@@ -38,16 +38,17 @@ describe('Keyword Search', () => {
     assert.ok(ids.includes(task.id), 'Should find task with apple in title');
   });
 
-  it('should return matchField=issue and matchedText for issue matches', () => {
+  it('should return matches with field=issue and text for issue matches', () => {
     const memo = createMemo(app.db, { bodyMd: 'unique_keyword_xyz test content' });
 
     const results = searchByKeyword(app.db, 'unique_keyword_xyz');
     const found = results.find((r) => r.id === memo.id);
 
     assert.ok(found);
-    assert.strictEqual(found.matchField, 'issue');
-    assert.strictEqual(found.matchCommentId, null);
-    assert.strictEqual(found.matchedText, 'unique_keyword_xyz test content');
+    assert.strictEqual(found.matches.length, 1);
+    assert.strictEqual(found.matches[0].field, 'issue');
+    assert.strictEqual(found.matches[0].commentId, null);
+    assert.strictEqual(found.matches[0].text, 'unique_keyword_xyz test content');
   });
 
   it('should find issues where only a comment matches', () => {
@@ -58,9 +59,23 @@ describe('Keyword Search', () => {
     const found = results.find((r) => r.id === memo.id);
 
     assert.ok(found, 'Should find memo via comment match');
-    assert.strictEqual(found.matchField, 'comment');
-    assert.ok(found.matchCommentId !== null, 'Should have matchCommentId');
-    assert.strictEqual(found.matchedText, 'grape juice is delicious');
+    assert.strictEqual(found.matches.length, 1);
+    assert.strictEqual(found.matches[0].field, 'comment');
+    assert.ok(found.matches[0].commentId !== null, 'Should have commentId');
+    assert.strictEqual(found.matches[0].text, 'grape juice is delicious');
+  });
+
+  it('should group multiple comment matches under one issue', () => {
+    const memo = createMemo(app.db, { bodyMd: 'no match in body' });
+    addComment(app.db, memo.id, 'multiword_abc first comment');
+    addComment(app.db, memo.id, 'multiword_abc second comment');
+
+    const results = searchByKeyword(app.db, 'multiword_abc');
+    const found = results.find((r) => r.id === memo.id);
+
+    assert.ok(found);
+    assert.strictEqual(found.matches.length, 2);
+    assert.ok(found.matches.every((m) => m.field === 'comment'));
   });
 
   it('should filter by types', () => {
@@ -121,8 +136,8 @@ describe('Keyword Search', () => {
     const found = results.find((r) => r.id === task.id);
 
     assert.ok(found);
-    assert.strictEqual(found.matchField, 'issue');
-    assert.strictEqual(found.matchedText, 'titlematch_ghi task');
+    assert.strictEqual(found.matches[0].field, 'issue');
+    assert.strictEqual(found.matches[0].text, 'titlematch_ghi task');
     assert.strictEqual(found.title, 'titlematch_ghi task');
   });
 });
