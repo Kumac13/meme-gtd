@@ -206,11 +206,11 @@ mgtd project create/list/view
 
 ```bash
 # Embedding
-mgtd embedding sync --model <model> --ollama-url <url> --json
+mgtd embedding sync --model <model> --json
 
 # 横断検索
 mgtd search keyword <query> --types <types> --limit <n> --json
-mgtd search semantic <query> --types <types> --limit <n> --model <model> --json
+mgtd search semantic <query> --types <types> --limit <n> --json
 ```
 
 ### REST API
@@ -263,7 +263,8 @@ mgtd search semantic <query> --types <types> --limit <n> --model <model> --json
 
 ### embedding基盤
 
-- 現在はOllama（ローカルLLM）を使用。将来的にプロバイダ変更の可能性あり
+- OpenAI互換 `/v1/embeddings` APIを使用（Ollama, OpenAI等のプロバイダに対応）
+- 設定は `~/.config/mgtd/.env` で管理（`MGTD_EMBEDDING_URL`, `MGTD_EMBEDDING_MODEL`, `MGTD_EMBEDDING_API_KEY`）
 - embedding生成のインターフェース: `generateEmbedding(text, config) → Float32Array`
 - ベクトル検索: 全embeddingをメモリにロードし、コサイン類似度を計算（~1,500件規模で実用的）
 - content hashによる変更検知: 内容が変わったissueのみ再生成

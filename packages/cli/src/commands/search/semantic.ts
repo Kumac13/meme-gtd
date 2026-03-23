@@ -2,11 +2,10 @@ import { Args, Command, Flags } from '@oclif/core';
 import { loadConfig } from 'meme-gtd-config';
 import { ensureDatabase, getIssueLabels, getIssueComments } from 'meme-gtd-db';
 import {
-  checkOllamaHealth,
+  checkEmbeddingHealth,
   generateEmbedding,
-  formatQueryText,
   searchByVector,
-  DEFAULT_EMBEDDING_CONFIG,
+  loadEmbeddingConfig,
 } from 'meme-gtd-core';
 
 interface SemanticSearchResult {
@@ -26,8 +25,13 @@ interface SemanticSearchResult {
 
 export default class SearchSemantic extends Command {
   static summary = 'Search by semantic similarity across all issue types';
-  static description = 'Search memos, tasks, and articles using vector similarity via Ollama embeddings. Requires Ollama to be running with the embedding model pulled.';
-  static usage = ['<%= command.id %> <query> [--types <types>] [--limit <n>] [--model <model>] [--ollama-url <url>] [--json]'];
+  static description = `Search memos, tasks, and articles using vector similarity via OpenAI-compatible embeddings.
+
+Configure the embedding server via environment variables or ~/.config/mgtd/.env:
+  MGTD_EMBEDDING_URL    - OpenAI-compatible embeddings endpoint (default: http://localhost:11434/v1)
+  MGTD_EMBEDDING_MODEL  - Model name (default: qwen3-embedding:4b)
+  MGTD_EMBEDDING_API_KEY - API key (default: ollama)`;
+  static usage = ['<%= command.id %> <query> [--types <types>] [--limit <n>] [--model <model>] [--json]'];
   static examples = [
     '$ mgtd search semantic "郡司ペギオ"',
     '$ mgtd search semantic "GTD workflow" --types task --limit 10',
@@ -52,14 +56,8 @@ export default class SearchSemantic extends Command {
     }),
     model: Flags.string({
       char: 'm',
-      summary: 'Ollama embedding model name',
-      description: 'The Ollama model to use for query embedding.',
-      default: DEFAULT_EMBEDDING_CONFIG.model,
-    }),
-    'ollama-url': Flags.string({
-      summary: 'Ollama server URL',
-      description: 'Base URL of the Ollama server.',
-      default: DEFAULT_EMBEDDING_CONFIG.baseUrl,
+      summary: 'Embedding model name (overrides MGTD_EMBEDDING_MODEL env var)',
+      description: 'The model to use for query embedding. Overrides the MGTD_EMBEDDING_MODEL environment variable.',
     }),
     json: Flags.boolean({
       char: 'j',
@@ -74,27 +72,24 @@ export default class SearchSemantic extends Command {
     const { config } = await loadConfig({ createIfMissing: true });
     const db = ensureDatabase(config);
 
-    const embeddingConfig = {
-      baseUrl: flags['ollama-url'],
-      model: flags.model,
-    };
+    const embeddingConfig = loadEmbeddingConfig(flags.model);
 
     try {
       if (!flags.json) {
         process.stdout.write('Searching...');
       }
 
-      const healthy = await checkOllamaHealth(embeddingConfig.baseUrl);
+      const healthy = await checkEmbeddingHealth(embeddingConfig.baseUrl, embeddingConfig.apiKey);
       if (!healthy) {
         if (!flags.json) {
           process.stdout.write('\r');
         }
         throw new Error(
-          `Cannot connect to Ollama at ${embeddingConfig.baseUrl}. Ensure Ollama is running (ollama serve) and the model is pulled (ollama pull ${embeddingConfig.model}).`
+          `Cannot connect to embedding server at ${embeddingConfig.baseUrl}. Ensure the server is running and the model "${embeddingConfig.model}" is available.`
         );
       }
 
-      const queryText = formatQueryText(args.query);
+      const queryText = embeddingConfig.queryPrefix ? `${embeddingConfig.queryPrefix}${args.query}` : args.query;
       const queryEmbedding = await generateEmbedding(queryText, embeddingConfig);
 
       const types = flags.types

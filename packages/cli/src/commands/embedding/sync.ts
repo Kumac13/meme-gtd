@@ -3,39 +3,35 @@ import { loadConfig } from 'meme-gtd-config';
 import { ensureDatabase } from 'meme-gtd-db';
 import {
   syncEmbeddings,
-  DEFAULT_EMBEDDING_CONFIG,
+  loadEmbeddingConfig,
 } from 'meme-gtd-core';
 
 export default class EmbeddingSync extends Command {
   static summary = 'Sync embeddings for all issues';
-  static description = `Generate or update vector embeddings for all issues using Ollama.
+  static description = `Generate or update vector embeddings for all issues.
 
 Embeddings are generated for issues that:
 - Have no embedding yet
 - Have been updated since last embedding (content hash changed)
 - Were embedded with a different model
 
-Requires Ollama to be running with the target model pulled.`;
+Configure the embedding server via environment variables or ~/.config/mgtd/.env:
+  MGTD_EMBEDDING_URL    - OpenAI-compatible embeddings endpoint (default: http://localhost:11434/v1)
+  MGTD_EMBEDDING_MODEL  - Model name (default: qwen3-embedding:4b)
+  MGTD_EMBEDDING_API_KEY - API key (default: ollama)`;
 
-  static usage = ['<%= command.id %> [--model <model>] [--ollama-url <url>] [--json]'];
+  static usage = ['<%= command.id %> [--model <model>] [--json]'];
   static examples = [
     '$ mgtd embedding sync',
     '$ mgtd embedding sync --model qwen3-embedding:0.6b',
-    '$ mgtd embedding sync --ollama-url http://192.168.1.100:11434',
     '$ mgtd embedding sync --json'
   ];
 
   static flags = {
     model: Flags.string({
       char: 'm',
-      summary: 'Ollama embedding model name',
-      description: 'The Ollama model to use for embedding generation.',
-      default: DEFAULT_EMBEDDING_CONFIG.model,
-    }),
-    'ollama-url': Flags.string({
-      summary: 'Ollama server URL',
-      description: 'Base URL of the Ollama server.',
-      default: DEFAULT_EMBEDDING_CONFIG.baseUrl,
+      summary: 'Embedding model name (overrides MGTD_EMBEDDING_MODEL env var)',
+      description: 'The model to use for embedding generation. Overrides the MGTD_EMBEDDING_MODEL environment variable.',
     }),
     json: Flags.boolean({
       char: 'j',
@@ -51,10 +47,7 @@ Requires Ollama to be running with the target model pulled.`;
     const { config: currentConfig } = await loadConfig({ createIfMissing: false });
     const db = ensureDatabase(currentConfig);
 
-    const embeddingConfig = {
-      baseUrl: flags['ollama-url'],
-      model: flags.model,
-    };
+    const embeddingConfig = loadEmbeddingConfig(flags.model);
 
     try {
       const result = await syncEmbeddings(db, {

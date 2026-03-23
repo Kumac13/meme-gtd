@@ -10,7 +10,7 @@ import {
 import {
   generateEmbedding,
   generateEmbeddings,
-  checkOllamaHealth,
+  checkEmbeddingHealth,
   type EmbeddingClientConfig,
 } from './embeddingClient.js';
 
@@ -51,14 +51,6 @@ const getCommentTexts = (db: Database.Database, issueId: number): string[] => {
 };
 
 /**
- * Format query text with instruction prefix for Qwen3-Embedding.
- * Instruction-aware models benefit from query-side prefixing.
- */
-export const formatQueryText = (query: string): string => {
-  return `Instruct: Given a search query, retrieve relevant documents\nQuery: ${query}`;
-};
-
-/**
  * Convert Float32Array to Buffer for SQLite BLOB storage
  */
 const float32ArrayToBuffer = (arr: Float32Array): Buffer => {
@@ -74,11 +66,11 @@ export const syncEmbeddings = async (
 ): Promise<SyncResult> => {
   const { config, onProgress } = options;
 
-  const healthy = await checkOllamaHealth(config.baseUrl);
+  const healthy = await checkEmbeddingHealth(config.baseUrl, config.apiKey);
   if (!healthy) {
     throw new Error(
-      `Cannot connect to Ollama at ${config.baseUrl}. ` +
-      `Ensure Ollama is running (ollama serve) and the model is pulled (ollama pull ${config.model}).`
+      `Cannot connect to embedding server at ${config.baseUrl}. ` +
+      `Ensure the server is running and the model "${config.model}" is available.`
     );
   }
 

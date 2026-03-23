@@ -618,7 +618,7 @@ Each result is grouped by issue. If multiple comments match, they are listed und
 
 ### Semantic Search
 
-Search across memos, tasks, and articles using vector similarity via Ollama embeddings. Requires embeddings to be synced first (`mgtd embedding sync`).
+Search across memos, tasks, and articles using vector similarity via OpenAI-compatible embeddings. Requires embeddings to be synced first (`mgtd embedding sync`).
 
 ```bash
 # Basic semantic search
@@ -634,13 +634,17 @@ mgtd search semantic "読書メモ" --model qwen3-embedding:4b --json
 **Options:**
 - `--types, -t` - Comma-separated issue types to search: memo, task, article
 - `--limit, -n` - Maximum number of results (default: 20)
-- `--model, -m` - Ollama embedding model name (default: `qwen3-embedding:4b`)
-- `--ollama-url` - Ollama server URL (default: `http://localhost:11434`)
+- `--model, -m` - Embedding model name (overrides `MGTD_EMBEDDING_MODEL`)
 - `--json, -j` - Output in JSON format
 
+**Configuration (via `~/.config/mgtd/.env` or environment variables):**
+- `MGTD_EMBEDDING_URL` - OpenAI-compatible embeddings endpoint (default: `http://localhost:11434/v1`)
+- `MGTD_EMBEDDING_MODEL` - Model name (default: `qwen3-embedding:4b`)
+- `MGTD_EMBEDDING_API_KEY` - API key (default: `ollama`)
+
 **Prerequisites:**
-- Ollama must be running (`ollama serve`)
-- Model must be pulled (`ollama pull qwen3-embedding:4b`)
+- Embedding server must be running (e.g., Ollama, OpenAI API)
+- Model must be available on the server
 - Embeddings must be synced (`mgtd embedding sync`)
 
 **Result structure:**
@@ -675,27 +679,31 @@ Results include full body text, all comments (embedding target includes comments
 
 ### Embedding Sync
 
-Generate or update vector embeddings for all issues using Ollama. Detects new issues, model changes, and content changes (via SHA-256 hash).
+Generate or update vector embeddings for all issues. Detects new issues, model changes, and content changes (via SHA-256 hash).
 
 ```bash
 # Sync embeddings with default settings
 mgtd embedding sync
 
-# Specify model and Ollama URL
-mgtd embedding sync --model qwen3-embedding:4b --ollama-url http://localhost:11434
+# Specify model (overrides MGTD_EMBEDDING_MODEL)
+mgtd embedding sync --model qwen3-embedding:0.6b
 
 # JSON output
 mgtd embedding sync --json
 ```
 
 **Options:**
-- `--model, -m` - Embedding model name (default: `qwen3-embedding:4b`)
-- `--ollama-url` - Ollama server URL (default: `http://localhost:11434`)
+- `--model, -m` - Embedding model name (overrides `MGTD_EMBEDDING_MODEL`)
 - `--json, -j` - Output in JSON format
 
+**Configuration (via `~/.config/mgtd/.env` or environment variables):**
+- `MGTD_EMBEDDING_URL` - OpenAI-compatible embeddings endpoint (default: `http://localhost:11434/v1`)
+- `MGTD_EMBEDDING_MODEL` - Model name (default: `qwen3-embedding:4b`)
+- `MGTD_EMBEDDING_API_KEY` - API key (default: `ollama`)
+
 **Prerequisites:**
-- Ollama must be running (`ollama serve`)
-- Model must be pulled (`ollama pull qwen3-embedding:4b`)
+- Embedding server must be running (e.g., Ollama, OpenAI API)
+- Model must be available on the server
 
 **Output:**
 ```json
