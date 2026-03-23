@@ -230,6 +230,17 @@ mgtd memo list --search "meeting notes"
 mgtd memo list --label meeting-notes --search "action items"
 ```
 
+**横断検索（keyword / semantic）:**
+```bash
+# キーワード検索（memo/task/article横断、title/body/commentsを検索）
+mgtd search keyword "郡司ペギオ"
+mgtd search keyword "TODO" --types memo,task --limit 5 --json
+
+# セマンティック検索（ベクトル類似度、Ollama必須）
+mgtd search semantic "郡司ペギオ"
+mgtd search semantic "読書メモ" --types memo --limit 10 --json
+```
+
 詳細は [docs/cli-commands.md](./docs/cli-commands.md) を参照してください。
 
 ### API での検索

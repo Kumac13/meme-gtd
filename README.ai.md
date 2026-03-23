@@ -207,6 +207,10 @@ mgtd project create/list/view
 ```bash
 # Embedding
 mgtd embedding sync --model <model> --ollama-url <url> --json
+
+# 横断検索
+mgtd search keyword <query> --types <types> --limit <n> --json
+mgtd search semantic <query> --types <types> --limit <n> --model <model> --json
 ```
 
 ### REST API
