@@ -160,6 +160,15 @@ export {
   type UnembeddedIssue
 } from './embeddingRepository.js';
 
+// Search repository exports
+export {
+  searchByKeyword,
+  getIssueLabels,
+  getIssueComments,
+  type KeywordSearchResult,
+  type KeywordSearchOptions
+} from './searchRepository.js';
+
 // URL link repository exports
 export {
   createUrlLink,
