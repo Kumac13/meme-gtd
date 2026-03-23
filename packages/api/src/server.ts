@@ -246,6 +246,10 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   const { default: articlesRoutes } = await import('./routes/articles.js');
   await app.register(articlesRoutes, { prefix: '/api/articles' });
 
+  // Register Search routes
+  const { default: searchRoutes } = await import('./routes/search.js');
+  await app.register(searchRoutes, { prefix: '/api/search' });
+
   // Register static file serving for Web UI (after API routes)
   await app.register(import('@fastify/static'), {
     root: new URL('../../web/dist', import.meta.url).pathname,

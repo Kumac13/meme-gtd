@@ -566,6 +566,155 @@ mgtd db migrate --json
 }
 ```
 
+## Search Commands
+
+### Keyword Search
+
+Search across memos, tasks, and articles by keyword. Searches title, body, and comments using partial text matching (LIKE).
+
+```bash
+# Basic keyword search
+mgtd search keyword "郡司ペギオ"
+
+# Filter by issue types
+mgtd search keyword "TODO" --types memo,task
+
+# Limit results and output JSON
+mgtd search keyword "meeting" --limit 5 --json
+```
+
+**Options:**
+- `--types, -t` - Comma-separated issue types to search: memo, task, article
+- `--limit, -n` - Maximum number of results (default: 20)
+- `--json, -j` - Output in JSON format
+
+**Result structure:**
+
+Each result is grouped by issue. If multiple comments match, they are listed under the same issue.
+
+```json
+{
+  "results": [
+    {
+      "id": 1405,
+      "type": "memo",
+      "title": null,
+      "bodyMd": "full body text...",
+      "status": null,
+      "isBookmarked": false,
+      "labels": ["reading"],
+      "commentCount": 17,
+      "createdAt": "2026-02-19T09:18:16.650Z",
+      "updatedAt": "2026-02-19T09:18:16.650Z",
+      "matches": [
+        { "field": "comment", "commentId": 864, "text": "matched comment text..." },
+        { "field": "comment", "commentId": 867, "text": "another matched comment..." }
+      ]
+    }
+  ],
+  "total": 1
+}
+```
+
+### Semantic Search
+
+Search across memos, tasks, and articles using vector similarity via OpenAI-compatible embeddings. Requires embeddings to be synced first (`mgtd embedding sync`).
+
+```bash
+# Basic semantic search
+mgtd search semantic "郡司ペギオ"
+
+# Filter by types and limit
+mgtd search semantic "GTD workflow" --types task --limit 10
+
+# Specify model and output JSON
+mgtd search semantic "読書メモ" --model qwen3-embedding:4b --json
+```
+
+**Options:**
+- `--types, -t` - Comma-separated issue types to search: memo, task, article
+- `--limit, -n` - Maximum number of results (default: 20)
+- `--model, -m` - Embedding model name (overrides `MGTD_EMBEDDING_MODEL`)
+- `--json, -j` - Output in JSON format
+
+**Configuration (via `~/.config/mgtd/.env` or environment variables):**
+- `MGTD_EMBEDDING_URL` - OpenAI-compatible embeddings endpoint (default: `http://localhost:11434/v1`)
+- `MGTD_EMBEDDING_MODEL` - Model name (default: `qwen3-embedding:4b`)
+- `MGTD_EMBEDDING_API_KEY` - API key (default: `ollama`)
+
+**Prerequisites:**
+- Embedding server must be running (e.g., Ollama, OpenAI API)
+- Model must be available on the server
+- Embeddings must be synced (`mgtd embedding sync`)
+
+**Result structure:**
+
+Results include full body text, all comments (embedding target includes comments), and similarity score.
+
+```json
+{
+  "results": [
+    {
+      "id": 654,
+      "type": "memo",
+      "title": null,
+      "bodyMd": "full body text...",
+      "status": null,
+      "isBookmarked": false,
+      "labels": [],
+      "comments": [
+        { "id": 45, "bodyMd": "comment text...", "createdAt": "...", "updatedAt": "..." }
+      ],
+      "commentCount": 1,
+      "createdAt": "2025-04-23T13:03:23.570Z",
+      "updatedAt": "2025-04-23T13:03:23.570Z",
+      "score": 0.47
+    }
+  ],
+  "total": 1
+}
+```
+
+## Embedding Commands
+
+### Embedding Sync
+
+Generate or update vector embeddings for all issues. Detects new issues, model changes, and content changes (via SHA-256 hash).
+
+```bash
+# Sync embeddings with default settings
+mgtd embedding sync
+
+# Specify model (overrides MGTD_EMBEDDING_MODEL)
+mgtd embedding sync --model qwen3-embedding:0.6b
+
+# JSON output
+mgtd embedding sync --json
+```
+
+**Options:**
+- `--model, -m` - Embedding model name (overrides `MGTD_EMBEDDING_MODEL`)
+- `--json, -j` - Output in JSON format
+
+**Configuration (via `~/.config/mgtd/.env` or environment variables):**
+- `MGTD_EMBEDDING_URL` - OpenAI-compatible embeddings endpoint (default: `http://localhost:11434/v1`)
+- `MGTD_EMBEDDING_MODEL` - Model name (default: `qwen3-embedding:4b`)
+- `MGTD_EMBEDDING_API_KEY` - API key (default: `ollama`)
+
+**Prerequisites:**
+- Embedding server must be running (e.g., Ollama, OpenAI API)
+- Model must be available on the server
+
+**Output:**
+```json
+{
+  "created": 10,
+  "updated": 2,
+  "skipped": 0,
+  "total": 12
+}
+```
+
 ## Notes
 
 - **Case Sensitivity**: Label matching is case-insensitive

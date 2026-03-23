@@ -2,7 +2,16 @@
 import { run, flush, Errors } from '@oclif/core';
 import fsExtra from 'fs-extra';
 import { join, dirname } from 'node:path';
+import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+
+// Load .env from ~/.config/mgtd/.env (Node.js 22 native)
+// Shell environment variables take precedence over .env values
+try {
+  process.loadEnvFile(join(homedir(), '.config', 'mgtd', '.env'));
+} catch {
+  // .env file is optional
+}
 
 const { readJsonSync } = fsExtra;
 
@@ -50,6 +59,11 @@ const MULTIWORD_COMMANDS = [
   ['project', 'move'],
   ['project', 'delete'],
   ['project'],
+  ['search', 'keyword'],
+  ['search', 'semantic'],
+  ['search'],
+  ['embedding', 'sync'],
+  ['embedding'],
   ['db', 'migrate'],
   ['db']
 ] as const;

@@ -147,6 +147,29 @@ export {
   type ListArticleFilters
 } from './articleRepository.js';
 
+// Embedding repository exports
+export {
+  upsertEmbedding,
+  getEmbedding,
+  getAllEmbeddings,
+  deleteEmbedding,
+  listUnembeddedIssues,
+  listEmbeddingHashes,
+  type EmbeddingRow,
+  type EmbeddingWithIssue,
+  type UnembeddedIssue
+} from './embeddingRepository.js';
+
+// Search repository exports
+export {
+  searchByKeyword,
+  getIssueLabels,
+  getIssueComments,
+  type KeywordSearchResult,
+  type KeywordSearchOptions,
+  type KeywordMatch
+} from './searchRepository.js';
+
 // URL link repository exports
 export {
   createUrlLink,

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.27.0 - 2026-03-23
+
+### New Features
+
+- **Semantic Search**: Vector-based search using Ollama embeddings (cosine similarity KNN)
+  - New `issue_embeddings` table for storing vector embeddings as BLOBs
+  - `GET /api/search/semantic` endpoint for semantic search
+  - `mgtd embedding sync` CLI command for batch embedding generation
+  - Support for `qwen3-embedding:4b` model (2560 dimensions, Japanese-capable)
+  - SHA-256 content hash for staleness detection
+  - Batch processing (50 items per request)
+
 ## 0.26.0 - 2026-03-05
 
 ### Improvements
