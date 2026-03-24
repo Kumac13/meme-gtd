@@ -22,11 +22,11 @@ func highlightKeyword(in text: String, query: String, fontSize: CGFloat = 11, ba
 extension SearchMatchInfo {
     /// Render match info as a single AttributedString: "Label - snippet with keyword"
     func attributedText(searchQuery: String?) -> AttributedString {
-        if let snippet = snippet, let query = searchQuery, !query.isEmpty {
+        if let query = searchQuery, !query.isEmpty {
             return highlightKeyword(in: snippet, query: query)
         }
-        var result = AttributedString(label)
-        result.font = .system(size: 11, weight: .medium)
+        var result = AttributedString(snippet)
+        result.font = .system(size: 11)
         result.foregroundColor = .textSecondary
         return result
     }
@@ -39,8 +39,7 @@ struct KeywordMatch: Codable {
 }
 
 struct SearchMatchInfo {
-    let label: String // "Issue match" or "Comment match"
-    let snippet: String? // Snippet with keyword context (nil when content already visible)
+    let snippet: String
 }
 
 /// Extract a snippet of text centered around the keyword, ±contextChars characters.
@@ -68,15 +67,15 @@ extension KeywordSearchResultItem {
     func firstMatchInfo(searchQuery: String) -> SearchMatchInfo? {
         guard let match = matches.first else { return nil }
         if match.field == "comment" {
-            return SearchMatchInfo(label: "", snippet: extractSnippet(match.text, query: searchQuery))
+            return SearchMatchInfo(snippet: extractSnippet(match.text, query: searchQuery))
         }
         // Issue match: title match → nil (keyword highlighted in title)
         let isTitleMatch = title != nil && match.text == title
         if isTitleMatch {
             return nil
         }
-        // Body match → snippet only (body not visible in task/article list)
-        return SearchMatchInfo(label: "", snippet: extractSnippet(match.text, query: searchQuery))
+        // Body match → snippet (body not visible in task/article list)
+        return SearchMatchInfo(snippet: extractSnippet(match.text, query: searchQuery))
     }
 }
 

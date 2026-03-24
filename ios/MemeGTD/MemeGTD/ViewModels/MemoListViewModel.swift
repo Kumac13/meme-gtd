@@ -116,7 +116,7 @@ class MemoListViewModel: ObservableObject {
         for item in response.results {
             guard let match = item.matches.first else { continue }
             if match.field == "comment" {
-                infos[item.id] = SearchMatchInfo(label: "", snippet: extractSnippet(match.text, query: searchQuery))
+                infos[item.id] = SearchMatchInfo(snippet: extractSnippet(match.text, query: searchQuery))
             }
             // Issue match: keyword highlighted in body, no label needed
         }
