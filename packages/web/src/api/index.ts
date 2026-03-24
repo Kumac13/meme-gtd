@@ -15,5 +15,6 @@ export { LabelsService } from './services/LabelsService';
 export { LinksService } from './services/LinksService';
 export { MemosService } from './services/MemosService';
 export { ProjectsService } from './services/ProjectsService';
+export { SearchService } from './services/SearchService';
 export { TasksService } from './services/TasksService';
 export { UrlLinksService } from './services/UrlLinksService';

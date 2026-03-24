@@ -2,14 +2,27 @@ import SwiftUI
 
 struct ArticleCell: View {
     let article: Article
+    var snippet: String? = nil
+    var searchQuery: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Title
-            Text(article.title)
-                .font(.system(size: 14))
-                .foregroundColor(.textPrimary)
-                .lineLimit(2)
+            // Title (with keyword highlight during search)
+            if let query = searchQuery, !query.isEmpty {
+                Text(highlightKeyword(in: article.title, query: query, fontSize: 14, baseColor: .textPrimary))
+                    .lineLimit(2)
+            } else {
+                Text(article.title)
+                    .font(.system(size: 14))
+                    .foregroundColor(.textPrimary)
+                    .lineLimit(2)
+            }
+
+            if let snippet = snippet, let query = searchQuery, !query.isEmpty {
+                Text(highlightKeyword(in: snippet, query: query))
+                    .lineLimit(2)
+                    .padding(.top, 4)
+            }
 
             // site name | time | labels
             HStack(spacing: 6) {
@@ -46,10 +59,11 @@ struct ArticleCell: View {
     // MARK: - Site name (from meta.siteName or domain extraction)
 
     private var siteDisplayName: String? {
-        if let siteName = article.meta.siteName, !siteName.isEmpty {
+        if let siteName = article.meta?.siteName, !siteName.isEmpty {
             return siteName
         }
-        guard let url = URL(string: article.meta.originalUrl),
+        guard let originalUrl = article.meta?.originalUrl,
+              let url = URL(string: originalUrl),
               let host = url.host else {
             return nil
         }

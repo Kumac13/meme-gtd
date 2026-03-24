@@ -170,7 +170,7 @@ export class TasksService {
      * @param status Filter by task status
      * @param bookmarked Filter by bookmark status
      * @param label Filter by label name(s). Supports comma-separated values for OR logic (e.g., bug,enhancement)
-     * @param projectId Filter by project ID(s). Supports comma-separated values for OR logic (e.g., 1,2,3)
+     * @param projectId Filter by project ID(s). Supports comma-separated values for OR logic (e.g., 1,2,3). Use "none" to filter tasks not assigned to any project. Can be combined: "none,1".
      * @param search Search tasks by title using free-text partial matching
      * @param scheduledFrom Filter tasks where scheduled_on >= this date (YYYY-MM-DD)
      * @param scheduledTo Filter tasks where scheduled_on <= this date (YYYY-MM-DD)

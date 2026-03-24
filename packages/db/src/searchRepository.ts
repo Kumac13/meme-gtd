@@ -23,7 +23,12 @@ export interface KeywordSearchResult {
 
 export interface KeywordSearchOptions {
   types?: string[];
+  status?: string;
+  labels?: string[];
+  bookmarked?: boolean;
+  order?: 'asc' | 'desc';
   limit?: number;
+  offset?: number;
 }
 
 interface RawSearchRow {
@@ -47,13 +52,27 @@ export const searchByKeyword = (
   options: KeywordSearchOptions = {}
 ): KeywordSearchResult[] => {
   const limit = options.limit ?? 20;
+  const offset = options.offset ?? 0;
+  const order = options.order === 'asc' ? 'ASC' : 'DESC';
   const q = `%${query}%`;
 
   const typesFilter = options.types && options.types.length > 0
     ? `AND i.type IN (${options.types.map(() => '?').join(', ')})`
     : '';
-
   const typesParams = options.types ?? [];
+
+  const statusFilter = options.status ? 'AND i.status = ?' : '';
+  const statusParams = options.status ? [options.status] : [];
+
+  const labelFilter = options.labels && options.labels.length > 0
+    ? `AND i.id IN (SELECT il.issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.name IN (${options.labels.map(() => '?').join(', ')}))`
+    : '';
+  const labelParams = options.labels ?? [];
+
+  const bookmarkedFilter = options.bookmarked ? 'AND i.is_bookmarked = 1' : '';
+
+  const extraFilters = `${typesFilter} ${statusFilter} ${labelFilter} ${bookmarkedFilter}`;
+  const extraParams = [...typesParams, ...statusParams, ...labelParams];
 
   const sql = `
     SELECT id, type, title, body_md, status, is_bookmarked, created_at, updated_at,
@@ -66,7 +85,7 @@ export const searchByKeyword = (
              CASE WHEN i.title LIKE ? THEN i.title ELSE i.body_md END AS matched_text
       FROM issues i
       WHERE i.is_deleted = 0 AND (i.title LIKE ? OR i.body_md LIKE ?)
-      ${typesFilter}
+      ${extraFilters}
 
       UNION ALL
 
@@ -78,14 +97,14 @@ export const searchByKeyword = (
       FROM issues i
       JOIN comments c ON c.issue_id = i.id AND c.is_deleted = 0
       WHERE i.is_deleted = 0 AND c.body_md LIKE ?
-      ${typesFilter}
+      ${extraFilters}
     )
-    ORDER BY updated_at DESC
+    ORDER BY updated_at ${order}
   `;
 
   const params = [
-    q, q, q, ...typesParams,
-    q, ...typesParams,
+    q, q, q, ...extraParams,
+    q, ...extraParams,
   ];
 
   const rows = db.prepare(sql).all(...params) as RawSearchRow[];
@@ -106,8 +125,8 @@ export const searchByKeyword = (
     }
   }
 
-  // Apply limit after grouping (limit is per issue, not per match)
-  const entries = [...grouped.values()].slice(0, limit);
+  // Apply offset and limit after grouping (per issue, not per match)
+  const entries = [...grouped.values()].slice(offset, offset + limit);
 
   // Batch fetch labels
   const issueIds = entries.map((e) => e.row.id);

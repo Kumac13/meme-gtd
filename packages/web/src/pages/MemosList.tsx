@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
+import { SearchService } from '../api/services/SearchService';
 import ItemList from '../components/ItemList';
 import LabelFilterDropdown from '../components/LabelFilterDropdown';
 import SearchInput from '../components/SearchInput';
@@ -26,6 +27,8 @@ import {
   getTimelineDateBucket,
   shouldShowGapTimestamp,
 } from '../utils/memoTimeline';
+import { extractSnippet, highlightKeyword } from '../utils/searchHighlight';
+import { useSearchHighlight } from '../hooks/useSearchHighlight';
 
 interface Memo {
   id: number;
@@ -40,6 +43,16 @@ interface Memo {
 }
 
 const PAGE_SIZE = 20;
+
+function SearchHighlightedBody({ bodyMd, searchQuery }: { bodyMd: string; searchQuery?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useSearchHighlight(ref, searchQuery);
+  return (
+    <div ref={ref} className="prose prose-sm prose-p:mb-2 prose-li:my-0 prose-p:text-[13px] prose-p:leading-6 max-w-none break-words text-gray-700">
+      <MarkdownRenderer content={bodyMd} />
+    </div>
+  );
+}
 
 export default function MemosList() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -62,6 +75,7 @@ export default function MemosList() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [matchSnippets, setMatchSnippets] = useState<Record<number, string>>({});
   const [isFetchingOlder, setIsFetchingOlder] = useState(false);
   const [newMemoBody, setNewMemoBody] = useState('');
   const [creatingMemo, setCreatingMemo] = useState(false);
@@ -91,15 +105,49 @@ export default function MemosList() {
 
         const offset = (currentPage - 1) * PAGE_SIZE;
 
-        const response = await MemosService.listMemos(
-          bookmarkFilter ? 'true' : undefined,
-          labelParam,
-          searchParam,
-          PAGE_SIZE,
-          offset
-        );
-        setMemos(response?.data || []);
-        setTotal(response?.total || 0);
+        if (searchParam) {
+          const response = await SearchService.keywordSearch(
+            searchParam,
+            PAGE_SIZE,
+            offset,
+            'memo',
+            undefined,
+            labelParam,
+            bookmarkFilter ? 'true' : undefined,
+          );
+          const mapped = response.results.map((r) => ({
+            id: r.id,
+            type: r.type,
+            title: r.title,
+            bodyMd: r.bodyMd,
+            isBookmarked: r.isBookmarked,
+            commentCount: r.commentCount,
+            labels: r.labels,
+            createdAt: r.createdAt,
+            updatedAt: r.updatedAt,
+          }));
+          const snippets: Record<number, string> = {};
+          for (const r of response.results) {
+            const match = r.matches[0];
+            if (match && match.field === 'comment') {
+              snippets[r.id] = match.text;
+            }
+          }
+          setMatchSnippets(snippets);
+          setMemos(mapped);
+          setTotal(response.total);
+        } else {
+          setMatchSnippets({});
+          const response = await MemosService.listMemos(
+            bookmarkFilter ? 'true' : undefined,
+            labelParam,
+            undefined,
+            PAGE_SIZE,
+            offset
+          );
+          setMemos(response?.data || []);
+          setTotal(response?.total || 0);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load memos');
         console.error('Error fetching memos:', err);
@@ -395,14 +443,17 @@ export default function MemosList() {
 
                       <div className="flex items-start gap-2.5">
                         <Link to={itemPath} className="min-w-0 flex-1">
-                          <div className="prose prose-sm prose-p:mb-2 prose-li:my-0 prose-p:text-[13px] prose-p:leading-6 max-w-none break-words text-gray-700">
-                            <MarkdownRenderer content={memo.bodyMd} />
-                          </div>
+                          <SearchHighlightedBody bodyMd={memo.bodyMd} searchQuery={filters.parsedQuery.freeText} />
                           {memo.labels && memo.labels.length > 0 && (
                             <div className="mt-1.5 flex flex-wrap gap-1">
                               {memo.labels.map((label) => (
                                 <LabelBadge key={`${memo.id}-${label}`} name={label} />
                               ))}
+                            </div>
+                          )}
+                          {matchSnippets[memo.id] && filters.parsedQuery.freeText && (
+                            <div className="text-xs text-gray-500 mt-1.5">
+                              {highlightKeyword(extractSnippet(matchSnippets[memo.id], filters.parsedQuery.freeText), filters.parsedQuery.freeText)}
                             </div>
                           )}
                         </Link>
@@ -484,7 +535,7 @@ export default function MemosList() {
           />
         ) : (
           <>
-            <ItemList items={filteredMemos} itemType="memo" basePath="/memos" currentFilters={searchParams} onDelete={handleDelete} />
+            <ItemList items={filteredMemos} itemType="memo" basePath="/memos" currentFilters={searchParams} onDelete={handleDelete} matchSnippets={matchSnippets} searchQuery={filters.parsedQuery.freeText} />
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}

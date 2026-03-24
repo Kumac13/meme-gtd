@@ -13,21 +13,50 @@ class ArticleListViewModel: ObservableObject {
     // Search
     @Published var searchQuery: String = ""
 
+    // Search match info (issueId -> match label + snippet)
+    @Published var searchMatchInfos: [Int: String] = [:]
+
     var store: ArticleStore?
 
     private let pageSize = 20
 
+    /// Whether the current request should use the keyword search API
+    var isSearching: Bool { !searchQuery.isEmpty }
+
     // MARK: - Query building
 
-    private func buildQueryItems(offset: Int) -> [URLQueryItem] {
-        var items: [URLQueryItem] = [
+    private func buildListQueryItems(offset: Int) -> [URLQueryItem] {
+        [
             URLQueryItem(name: "limit", value: String(pageSize)),
             URLQueryItem(name: "offset", value: String(offset)),
         ]
-        if !searchQuery.isEmpty {
-            items.append(URLQueryItem(name: "search", value: searchQuery))
+    }
+
+    private func buildSearchQueryItems(offset: Int) -> [URLQueryItem] {
+        [
+            URLQueryItem(name: "q", value: searchQuery),
+            URLQueryItem(name: "types", value: "article"),
+            URLQueryItem(name: "limit", value: String(pageSize)),
+            URLQueryItem(name: "offset", value: String(offset)),
+        ]
+    }
+
+    // MARK: - Keyword search helpers
+
+    private func fetchKeywordSearch(offset: Int) async throws -> ArticleListResponse {
+        let response: KeywordSearchResponse = try await APIClient.shared.get(
+            path: "/api/search/keyword",
+            queryItems: buildSearchQueryItems(offset: offset)
+        )
+        var infos: [Int: String] = [:]
+        for item in response.results {
+            if let snippet = item.matchSnippet(searchQuery: searchQuery) {
+                infos[item.id] = snippet
+            }
         }
-        return items
+        searchMatchInfos = infos
+        let articles = response.results.map { $0.toArticle() }
+        return ArticleListResponse(data: articles, total: response.total, limit: response.limit, offset: response.offset)
     }
 
     // MARK: - Load
@@ -38,10 +67,16 @@ class ArticleListViewModel: ObservableObject {
         error = nil
 
         do {
-            let response: ArticleListResponse = try await APIClient.shared.get(
-                path: "/api/articles",
-                queryItems: buildQueryItems(offset: 0)
-            )
+            let response: ArticleListResponse
+            if isSearching {
+                response = try await fetchKeywordSearch(offset: 0)
+            } else {
+                searchMatchInfos = [:]
+                response = try await APIClient.shared.get(
+                    path: "/api/articles",
+                    queryItems: buildListQueryItems(offset: 0)
+                )
+            }
             store?.setItems(response.data, total: response.total)
             logger.info("loadArticles done: count=\(response.data.count), total=\(response.total)")
         } catch {
@@ -56,9 +91,12 @@ class ArticleListViewModel: ObservableObject {
 
     func fetchArticles() async -> ArticleListResponse? {
         do {
+            if isSearching {
+                return try await fetchKeywordSearch(offset: 0)
+            }
             return try await APIClient.shared.get(
                 path: "/api/articles",
-                queryItems: buildQueryItems(offset: 0)
+                queryItems: buildListQueryItems(offset: 0)
             )
         } catch {
             self.error = error.localizedDescription
@@ -80,10 +118,15 @@ class ArticleListViewModel: ObservableObject {
         isLoadingMore = true
 
         do {
-            let response: ArticleListResponse = try await APIClient.shared.get(
-                path: "/api/articles",
-                queryItems: buildQueryItems(offset: store.articles.count)
-            )
+            let response: ArticleListResponse
+            if isSearching {
+                response = try await fetchKeywordSearch(offset: store.articles.count)
+            } else {
+                response = try await APIClient.shared.get(
+                    path: "/api/articles",
+                    queryItems: buildListQueryItems(offset: store.articles.count)
+                )
+            }
             store.appendItems(response.data, total: response.total)
             logger.info("loadOlderArticles done: count=\(store.articles.count), total=\(store.total)")
         } catch is CancellationError {

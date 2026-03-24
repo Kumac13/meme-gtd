@@ -1496,9 +1496,7 @@ paths:
           in: query
           name: projectId
           required: false
-          description: >-
-            Filter by project ID(s). Supports comma-separated values for OR logic (e.g., 1,2,3).
-            Use "none" to filter tasks not assigned to any project. Can be combined: "none,1".
+          description: 'Filter by project ID(s). Supports comma-separated values for OR logic (e.g., 1,2,3). Use "none" to filter tasks not assigned to any project. Can be combined: "none,1".'
         - schema:
             type: string
           in: query
@@ -7499,6 +7497,180 @@ paths:
                   - error
                   - message
                 additionalProperties: false
+  /api/search/keyword:
+    get:
+      operationId: keywordSearch
+      summary: Keyword search
+      tags:
+        - Search
+      description: Search issues by keyword using partial text matching across title, body, and comments
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: query
+          name: q
+          required: true
+          description: Search query text
+        - schema:
+            type: integer
+            exclusiveMinimum: true
+            minimum: 0
+            maximum: 100
+            default: 20
+          in: query
+          name: limit
+          required: false
+          description: Maximum number of results to return
+        - schema:
+            type: integer
+            minimum: 0
+            default: 0
+          in: query
+          name: offset
+          required: false
+          description: Pagination offset
+        - schema:
+            type: string
+          in: query
+          name: types
+          required: false
+          description: Comma-separated issue types to include (memo,task,article)
+        - schema:
+            type: string
+          in: query
+          name: status
+          required: false
+          description: Filter by issue status (e.g., open, done)
+        - schema:
+            type: string
+          in: query
+          name: label
+          required: false
+          description: Filter by label names (comma-separated, OR logic)
+        - schema:
+            type: string
+          in: query
+          name: bookmarked
+          required: false
+          description: Filter by bookmarked status (set to "true" to show only bookmarked)
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+          in: query
+          name: order
+          required: false
+          description: Sort order by updated_at
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                          description: Issue ID
+                        type:
+                          type: string
+                          description: Issue type (memo, task, article)
+                        title:
+                          type: string
+                          nullable: true
+                          description: Issue title
+                        bodyMd:
+                          type: string
+                          description: Issue body in Markdown
+                        status:
+                          type: string
+                          nullable: true
+                          description: Issue status
+                        isBookmarked:
+                          type: boolean
+                          description: Whether the issue is bookmarked
+                        labels:
+                          type: array
+                          items:
+                            type: string
+                          description: Labels assigned to the issue
+                        commentCount:
+                          type: integer
+                          minimum: 0
+                          description: Number of comments
+                        createdAt:
+                          type: string
+                          description: Creation timestamp
+                        updatedAt:
+                          type: string
+                          description: Last update timestamp
+                        matches:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              field:
+                                type: string
+                                enum:
+                                  - issue
+                                  - comment
+                                description: Where the match was found
+                              commentId:
+                                type: integer
+                                nullable: true
+                                description: Comment ID if match is in a comment
+                              text:
+                                type: string
+                                description: Matched text
+                            required:
+                              - field
+                              - commentId
+                              - text
+                            additionalProperties: false
+                          description: Match details
+                      required:
+                        - id
+                        - type
+                        - title
+                        - bodyMd
+                        - status
+                        - isBookmarked
+                        - labels
+                        - commentCount
+                        - createdAt
+                        - updatedAt
+                        - matches
+                      additionalProperties: false
+                    description: Search results grouped by issue
+                  total:
+                    type: integer
+                    minimum: 0
+                    description: Total number of results
+                  limit:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Page size
+                  offset:
+                    type: integer
+                    minimum: 0
+                    description: Current offset
+                required:
+                  - results
+                  - total
+                  - limit
+                  - offset
+                additionalProperties: false
   /api/search/semantic:
     get:
       operationId: semanticSearch
@@ -7516,7 +7688,8 @@ paths:
           description: Search query text
         - schema:
             type: integer
-            minimum: 1
+            exclusiveMinimum: true
+            minimum: 0
             maximum: 100
             default: 20
           in: query
@@ -7547,6 +7720,8 @@ paths:
                           properties:
                             id:
                               type: integer
+                              exclusiveMinimum: true
+                              minimum: 0
                               description: Issue ID
                             type:
                               type: string
@@ -7564,6 +7739,14 @@ paths:
                             updatedAt:
                               type: string
                               description: Last update timestamp
+                          required:
+                            - id
+                            - type
+                            - title
+                            - bodyMd
+                            - createdAt
+                            - updatedAt
+                          additionalProperties: false
                         score:
                           type: number
                           description: Combined relevance score
@@ -7575,6 +7758,12 @@ paths:
                           items:
                             type: string
                           description: Reasons for the match
+                      required:
+                        - issue
+                        - score
+                        - vectorScore
+                        - matchReason
+                      additionalProperties: false
                     description: Search results sorted by relevance
                   meta:
                     type: object
@@ -7584,12 +7773,23 @@ paths:
                         description: Original search query
                       totalResults:
                         type: integer
+                        minimum: 0
                         description: Total number of results returned
                       searchTimeMs:
                         type: number
+                        minimum: 0
                         description: Search duration in milliseconds
+                    required:
+                      - query
+                      - totalResults
+                      - searchTimeMs
+                    additionalProperties: false
+                required:
+                  - results
+                  - meta
+                additionalProperties: false
         "503":
-          description: Service Unavailable
+          description: Default Response
           content:
             application/json:
               schema:
@@ -7597,8 +7797,20 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
                   message:
                     type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
 servers:
   - url: http://localhost:3000
     description: Development server
@@ -7621,5 +7833,3 @@ tags:
     description: Image attachment endpoints
   - name: ActivityLog
     description: Activity log endpoints
-  - name: Search
-    description: Semantic search endpoints

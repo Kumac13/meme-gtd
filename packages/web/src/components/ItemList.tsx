@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { formatDateTime, formatRelativeTime } from "../utils/dates";
 import { InlineMarkdownRenderer, extractFirstLine } from "../utils/markdown";
+import { extractSnippet, highlightKeyword } from "../utils/searchHighlight";
 import { LabelBadge } from "./LabelBadge";
 import { createItemDetailUrl } from "../utils/navigationHelpers";
 import type { Article, IssueType } from "meme-gtd-shared";
@@ -66,6 +67,10 @@ itemType: IssueType | "project";
   onItemClick?: (id: number, type: IssueType) => void; // Allow "article"
   /** Show status badges on tasks and "Documents" badge on memos (only for project ListView) */
   showStatusBadges?: boolean;
+  /** Match snippets from keyword search (issueId -> snippet text) */
+  matchSnippets?: Record<number, string>;
+  /** Search query for keyword highlighting */
+  searchQuery?: string;
 }
 
 function isTask(item: Item): item is Task {
@@ -88,6 +93,8 @@ export default function ItemList({
   onDelete,
   onItemClick,
   showStatusBadges = false,
+  matchSnippets,
+  searchQuery,
 }: ItemListProps) {
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
@@ -109,6 +116,19 @@ export default function ItemList({
     } finally {
       setDeleting(null);
     }
+  };
+
+  const renderSnippet = (itemId: number) => {
+    const raw = matchSnippets?.[itemId];
+    if (!raw) return null;
+    const snippet = searchQuery
+      ? extractSnippet(raw, searchQuery)
+      : raw;
+    return (
+      <div className="text-xs text-gray-500 mt-1">
+        {highlightKeyword(snippet, searchQuery)}
+      </div>
+    );
   };
 
   return (
@@ -178,7 +198,9 @@ export default function ItemList({
                     <>
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h2 className="text-base text-gray-900">
-                          {item.title || `Task #\${item.id}`}
+                          {searchQuery && item.title
+                            ? highlightKeyword(item.title, searchQuery)
+                            : (item.title || `Task #\${item.id}`)}
                         </h2>
                         {showStatusBadges && item.status && (
                           <span className={`px-2 py-0.5 text-xs font-medium rounded ${statusBadgeClasses[item.status] || "bg-gray-100 text-gray-700"}`}>
@@ -198,7 +220,8 @@ export default function ItemList({
                           </>
                         )}
                       </div>
-                      <div className="flex items-center text-xs text-gray-500 space-x-3">
+                      {renderSnippet(item.id)}
+                      <div className="flex items-center text-xs text-gray-500 space-x-3 mt-1">
                         <span>#{item.id}</span>
                         {isTask(item) && item.scheduledOn && (
                           <span>
@@ -274,6 +297,7 @@ export default function ItemList({
                           )}
                         </div>
                       )}
+                      {renderSnippet(item.id)}
                       <div className="flex items-center text-xs text-gray-500 space-x-3">
                         <span>#{item.id}</span>
                         <span title={formatDateTime(item.createdAt)}>

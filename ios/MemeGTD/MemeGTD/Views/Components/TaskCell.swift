@@ -2,14 +2,27 @@ import SwiftUI
 
 struct TaskCell: View {
     let task: TaskItem
+    var snippet: String? = nil
+    var searchQuery: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Title
-            Text(task.title)
-                .font(.system(size: 14))
-                .foregroundColor(.textPrimary)
-                .lineLimit(2)
+            // Title (with keyword highlight during search)
+            if let query = searchQuery, !query.isEmpty {
+                Text(highlightKeyword(in: task.title, query: query, fontSize: 14, baseColor: .textPrimary))
+                    .lineLimit(2)
+            } else {
+                Text(task.title)
+                    .font(.system(size: 14))
+                    .foregroundColor(.textPrimary)
+                    .lineLimit(2)
+            }
+
+            if let snippet = snippet, let query = searchQuery, !query.isEmpty {
+                Text(highlightKeyword(in: snippet, query: query))
+                    .lineLimit(2)
+                    .padding(.top, 4)
+            }
 
             // #id time | bookmark | labels — spacing で視覚的にグループ分け
             HStack(spacing: 6) {

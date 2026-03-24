@@ -29,6 +29,11 @@
 
 /* Calendar event colors are now controlled by task_kind in calendar-custom.css */
 
+/* Search keyword highlight (CSS Custom Highlight API) */
+::highlight(search-match) {
+  color: #1a7f37; /* github-green-700 */
+}
+
 /* Prevent iOS auto-zoom on input focus */
 @media screen and (max-width: 768px) {
   input,

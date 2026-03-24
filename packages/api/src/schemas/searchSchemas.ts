@@ -50,7 +50,12 @@ export type SemanticSearchResponse = z.infer<typeof SemanticSearchResponseSchema
 export const KeywordSearchQuerySchema = z.object({
   q: z.string().min(1, 'Search query is required').describe('Search query text'),
   limit: z.coerce.number().int().positive().max(100).default(20).describe('Maximum number of results to return'),
+  offset: z.coerce.number().int().nonnegative().default(0).describe('Pagination offset'),
   types: z.string().optional().describe('Comma-separated issue types to include (memo,task,article)'),
+  status: z.string().optional().describe('Filter by issue status (e.g., open, done)'),
+  label: z.string().optional().describe('Filter by label names (comma-separated, OR logic)'),
+  bookmarked: z.string().optional().describe('Filter by bookmarked status (set to "true" to show only bookmarked)'),
+  order: z.enum(['asc', 'desc']).default('desc').describe('Sort order by updated_at'),
 });
 
 export type KeywordSearchQuery = z.infer<typeof KeywordSearchQuerySchema>;
@@ -78,6 +83,8 @@ export const KeywordSearchResultItemSchema = z.object({
 export const KeywordSearchResponseSchema = z.object({
   results: z.array(KeywordSearchResultItemSchema).describe('Search results grouped by issue'),
   total: z.number().int().nonnegative().describe('Total number of results'),
+  limit: z.number().int().positive().describe('Page size'),
+  offset: z.number().int().nonnegative().describe('Current offset'),
 });
 
 export type KeywordSearchResponse = z.infer<typeof KeywordSearchResponseSchema>;

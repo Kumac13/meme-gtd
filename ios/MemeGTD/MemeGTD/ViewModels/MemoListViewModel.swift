@@ -16,6 +16,9 @@ class MemoListViewModel: ObservableObject {
     @Published var labelFilters: Set<String> = []
     @Published var allLabels: [IssueLabel] = []
 
+    // Search match info (issueId -> match label + snippet)
+    @Published var searchMatchInfos: [Int: String] = [:]
+
     var store: MemoStore?
 
     private let pageSize = 20
@@ -49,7 +52,14 @@ class MemoListViewModel: ObservableObject {
         return result
     }
 
-    private func buildQueryItems(offset: Int) -> [URLQueryItem] {
+    /// Whether the current request should use the keyword search API
+    var isSearching: Bool {
+        if searchQuery.isEmpty { return false }
+        let parsed = parseSearchQuery(searchQuery)
+        return !parsed.freeText.isEmpty
+    }
+
+    private func buildListQueryItems(offset: Int) -> [URLQueryItem] {
         var queryItems: [URLQueryItem] = [
             URLQueryItem(name: "limit", value: String(pageSize)),
             URLQueryItem(name: "offset", value: String(offset)),
@@ -58,15 +68,10 @@ class MemoListViewModel: ObservableObject {
             queryItems.append(URLQueryItem(name: "bookmarked", value: "true"))
         }
 
-        // Combine pill-based label filters with search query label: syntax
         var allLabelFilters = Array(labelFilters)
-
         if !searchQuery.isEmpty {
             let parsed = parseSearchQuery(searchQuery)
             allLabelFilters.append(contentsOf: parsed.labels)
-            if !parsed.freeText.isEmpty {
-                queryItems.append(URLQueryItem(name: "search", value: parsed.freeText))
-            }
         }
 
         if !allLabelFilters.isEmpty {
@@ -74,6 +79,48 @@ class MemoListViewModel: ObservableObject {
         }
 
         return queryItems
+    }
+
+    private func buildSearchQueryItems(offset: Int) -> [URLQueryItem] {
+        let parsed = parseSearchQuery(searchQuery)
+        var items: [URLQueryItem] = [
+            URLQueryItem(name: "q", value: parsed.freeText),
+            URLQueryItem(name: "types", value: "memo"),
+            URLQueryItem(name: "limit", value: String(pageSize)),
+            URLQueryItem(name: "offset", value: String(offset)),
+        ]
+
+        if bookmarkFilter {
+            items.append(URLQueryItem(name: "bookmarked", value: "true"))
+        }
+
+        var allLabelFilters = Array(labelFilters)
+        allLabelFilters.append(contentsOf: parsed.labels)
+        if !allLabelFilters.isEmpty {
+            items.append(URLQueryItem(name: "label", value: allLabelFilters.joined(separator: ",")))
+        }
+
+        return items
+    }
+
+    // MARK: - Load
+
+    // MARK: - Keyword search helpers
+
+    private func fetchKeywordSearch(offset: Int) async throws -> MemoListResponse {
+        let response: KeywordSearchResponse = try await APIClient.shared.get(
+            path: "/api/search/keyword",
+            queryItems: buildSearchQueryItems(offset: offset)
+        )
+        var infos: [Int: String] = [:]
+        for item in response.results {
+            if let snippet = item.matchSnippet(searchQuery: searchQuery, isBodyVisible: true) {
+                infos[item.id] = snippet
+            }
+        }
+        searchMatchInfos = infos
+        let memos = response.results.map { $0.toMemo() }
+        return MemoListResponse(data: memos, total: response.total, limit: response.limit, offset: response.offset)
     }
 
     // MARK: - Load
@@ -84,10 +131,16 @@ class MemoListViewModel: ObservableObject {
         error = nil
 
         do {
-            let response: MemoListResponse = try await APIClient.shared.get(
-                path: "/api/memos",
-                queryItems: buildQueryItems(offset: 0)
-            )
+            let response: MemoListResponse
+            if isSearching {
+                response = try await fetchKeywordSearch(offset: 0)
+            } else {
+                searchMatchInfos = [:]
+                response = try await APIClient.shared.get(
+                    path: "/api/memos",
+                    queryItems: buildListQueryItems(offset: 0)
+                )
+            }
             store?.setItems(response.data, total: response.total)
             logger.info("loadMemos done: count=\(response.data.count), total=\(response.total)")
         } catch {
@@ -102,9 +155,12 @@ class MemoListViewModel: ObservableObject {
 
     func fetchMemos() async -> MemoListResponse? {
         do {
+            if isSearching {
+                return try await fetchKeywordSearch(offset: 0)
+            }
             return try await APIClient.shared.get(
                 path: "/api/memos",
-                queryItems: buildQueryItems(offset: 0)
+                queryItems: buildListQueryItems(offset: 0)
             )
         } catch {
             self.error = error.localizedDescription
@@ -115,9 +171,12 @@ class MemoListViewModel: ObservableObject {
     func fetchOlderMemos() async -> MemoListResponse? {
         guard let store, store.hasMore, !isLoadingMore else { return nil }
         do {
+            if isSearching {
+                return try await fetchKeywordSearch(offset: store.memos.count)
+            }
             return try await APIClient.shared.get(
                 path: "/api/memos",
-                queryItems: buildQueryItems(offset: store.memos.count)
+                queryItems: buildListQueryItems(offset: store.memos.count)
             )
         } catch is CancellationError {
             return nil
@@ -145,10 +204,15 @@ class MemoListViewModel: ObservableObject {
         isLoadingMore = true
 
         do {
-            let response: MemoListResponse = try await APIClient.shared.get(
-                path: "/api/memos",
-                queryItems: buildQueryItems(offset: store.memos.count)
-            )
+            let response: MemoListResponse
+            if isSearching {
+                response = try await fetchKeywordSearch(offset: store.memos.count)
+            } else {
+                response = try await APIClient.shared.get(
+                    path: "/api/memos",
+                    queryItems: buildListQueryItems(offset: store.memos.count)
+                )
+            }
             store.appendItems(response.data, total: response.total)
             logger.info("loadOlderMemos done: count=\(store.memos.count), total=\(store.total)")
         } catch is CancellationError {

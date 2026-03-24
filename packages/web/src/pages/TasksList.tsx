@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
+import { SearchService } from '../api/services/SearchService';
 import { ProjectsService } from '../api/services/ProjectsService';
 import ItemList from '../components/ItemList';
 import StatusDropdown from '../components/StatusDropdown';
@@ -97,6 +98,7 @@ export default function TasksList() {
   const [total, setTotal] = useState(0);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [matchSnippets, setMatchSnippets] = useState<Record<number, string>>({});
   const [projects, setProjects] = useState<Project[]>([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -154,19 +156,65 @@ export default function TasksList() {
           return parts.length > 0 ? parts.join(',') : undefined;
         })();
 
-        const response = await TasksService.listTasks(
-          effectiveStatus as 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled' | undefined,
-          undefined,
-          labelParam,
-          projectIdFilter,
-          searchParam,
-          undefined,
-          undefined,
-          PAGE_SIZE,
-          offset
-        );
-        setTasks(response?.data || []);
-        setTotal(response?.total || 0);
+        if (searchParam) {
+          // Use keyword search API — respect current status filter
+          const searchStatus = statusFilter !== 'all' ? statusFilter : undefined;
+          const response = await SearchService.keywordSearch(
+            searchParam,
+            PAGE_SIZE,
+            offset,
+            'task',
+            searchStatus || undefined,
+            labelParam,
+            bookmarkFilter ? 'true' : undefined,
+          );
+          const mapped = response.results.map((r) => ({
+            id: r.id,
+            type: r.type,
+            title: r.title,
+            bodyMd: r.bodyMd,
+            status: r.status,
+            isBookmarked: r.isBookmarked,
+            commentCount: r.commentCount,
+            scheduledOn: null as string | null,
+            labels: r.labels,
+            createdAt: r.createdAt,
+            updatedAt: r.updatedAt,
+          }));
+          const snippets: Record<number, string> = {};
+          for (const r of response.results) {
+            const match = r.matches[0];
+            if (match) {
+              if (match.field === 'comment') {
+                snippets[r.id] = match.text;
+              } else {
+                const isTitleMatch = r.title && match.text === r.title;
+                if (!isTitleMatch) {
+                  snippets[r.id] = match.text;
+                }
+              }
+            }
+          }
+          setMatchSnippets(snippets);
+          setTasks(mapped);
+          setTotal(response.total);
+        } else {
+          // Use list API
+          setMatchSnippets({});
+          const response = await TasksService.listTasks(
+            effectiveStatus as 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled' | undefined,
+            undefined,
+            labelParam,
+            projectIdFilter,
+            undefined,
+            undefined,
+            undefined,
+            PAGE_SIZE,
+            offset
+          );
+          setTasks(response?.data || []);
+          setTotal(response?.total || 0);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load tasks');
         console.error('Error fetching tasks:', err);
@@ -176,7 +224,7 @@ export default function TasksList() {
     }
 
     fetchTasks();
-  }, [statusFilter, filters.searchQuery, currentPage, projectIdParam, selectedLabels]);
+  }, [statusFilter, filters.searchQuery, currentPage, projectIdParam, selectedLabels, bookmarkFilter]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -420,7 +468,7 @@ export default function TasksList() {
           <div className="text-sm text-gray-500 mb-2">
             {total} {total === 1 ? 'task' : 'tasks'}
           </div>
-          <ItemList items={filteredTasks} itemType="task" basePath="/tasks" currentFilters={searchParams} onDelete={handleDelete} />
+          <ItemList items={filteredTasks} itemType="task" basePath="/tasks" currentFilters={searchParams} onDelete={handleDelete} matchSnippets={matchSnippets} searchQuery={filters.parsedQuery.freeText} />
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
