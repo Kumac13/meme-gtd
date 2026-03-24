@@ -75,7 +75,7 @@ export default function MemosList() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [matchInfos, setMatchInfos] = useState<Record<number, { snippet: string }>>({});
+  const [matchSnippets, setMatchSnippets] = useState<Record<number, string>>({});
   const [isFetchingOlder, setIsFetchingOlder] = useState(false);
   const [newMemoBody, setNewMemoBody] = useState('');
   const [creatingMemo, setCreatingMemo] = useState(false);
@@ -126,19 +126,18 @@ export default function MemosList() {
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
           }));
-          const infos: Record<number, { snippet: string }> = {};
+          const snippets: Record<number, string> = {};
           for (const r of response.results) {
             const match = r.matches[0];
             if (match && match.field === 'comment') {
-              infos[r.id] = { snippet: match.text };
+              snippets[r.id] = match.text;
             }
-            // Issue match: keyword highlighted in body, no snippet needed
           }
-          setMatchInfos(infos);
+          setMatchSnippets(snippets);
           setMemos(mapped);
           setTotal(response.total);
         } else {
-          setMatchInfos({});
+          setMatchSnippets({});
           const response = await MemosService.listMemos(
             bookmarkFilter ? 'true' : undefined,
             labelParam,
@@ -452,9 +451,9 @@ export default function MemosList() {
                               ))}
                             </div>
                           )}
-                          {matchInfos[memo.id] && filters.parsedQuery.freeText && (
+                          {matchSnippets[memo.id] && filters.parsedQuery.freeText && (
                             <div className="text-xs text-gray-500 mt-1.5">
-                              {highlightKeyword(extractSnippet(matchInfos[memo.id].snippet, filters.parsedQuery.freeText), filters.parsedQuery.freeText)}
+                              {highlightKeyword(extractSnippet(matchSnippets[memo.id], filters.parsedQuery.freeText), filters.parsedQuery.freeText)}
                             </div>
                           )}
                         </Link>
@@ -536,7 +535,7 @@ export default function MemosList() {
           />
         ) : (
           <>
-            <ItemList items={filteredMemos} itemType="memo" basePath="/memos" currentFilters={searchParams} onDelete={handleDelete} matchInfos={matchInfos} searchQuery={filters.parsedQuery.freeText} />
+            <ItemList items={filteredMemos} itemType="memo" basePath="/memos" currentFilters={searchParams} onDelete={handleDelete} matchSnippets={matchSnippets} searchQuery={filters.parsedQuery.freeText} />
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}

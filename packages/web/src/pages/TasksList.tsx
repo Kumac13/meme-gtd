@@ -98,7 +98,7 @@ export default function TasksList() {
   const [total, setTotal] = useState(0);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [matchInfos, setMatchInfos] = useState<Record<number, { snippet: string }>>({});
+  const [matchSnippets, setMatchSnippets] = useState<Record<number, string>>({});
   const [projects, setProjects] = useState<Project[]>([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -181,26 +181,26 @@ export default function TasksList() {
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
           }));
-          const infos: Record<number, { snippet: string }> = {};
+          const snippets: Record<number, string> = {};
           for (const r of response.results) {
             const match = r.matches[0];
             if (match) {
               if (match.field === 'comment') {
-                infos[r.id] = { snippet: match.text };
+                snippets[r.id] = match.text;
               } else {
                 const isTitleMatch = r.title && match.text === r.title;
                 if (!isTitleMatch) {
-                  infos[r.id] = { snippet: match.text };
+                  snippets[r.id] = match.text;
                 }
               }
             }
           }
-          setMatchInfos(infos);
+          setMatchSnippets(snippets);
           setTasks(mapped);
           setTotal(response.total);
         } else {
           // Use list API
-          setMatchInfos({});
+          setMatchSnippets({});
           const response = await TasksService.listTasks(
             effectiveStatus as 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled' | undefined,
             undefined,
@@ -468,7 +468,7 @@ export default function TasksList() {
           <div className="text-sm text-gray-500 mb-2">
             {total} {total === 1 ? 'task' : 'tasks'}
           </div>
-          <ItemList items={filteredTasks} itemType="task" basePath="/tasks" currentFilters={searchParams} onDelete={handleDelete} matchInfos={matchInfos} searchQuery={filters.parsedQuery.freeText} />
+          <ItemList items={filteredTasks} itemType="task" basePath="/tasks" currentFilters={searchParams} onDelete={handleDelete} matchSnippets={matchSnippets} searchQuery={filters.parsedQuery.freeText} />
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

@@ -58,10 +58,6 @@ interface Project {
 
 type Item = BaseItem | Task | Project | Article; // Include Article
 
-interface MatchInfo {
-  snippet: string;
-}
-
 interface ItemListProps {
   items: Item[];
 itemType: IssueType | "project";
@@ -71,8 +67,8 @@ itemType: IssueType | "project";
   onItemClick?: (id: number, type: IssueType) => void; // Allow "article"
   /** Show status badges on tasks and "Documents" badge on memos (only for project ListView) */
   showStatusBadges?: boolean;
-  /** Match info from keyword search (issueId -> label + optional snippet) */
-  matchInfos?: Record<number, MatchInfo>;
+  /** Match snippets from keyword search (issueId -> snippet text) */
+  matchSnippets?: Record<number, string>;
   /** Search query for keyword highlighting */
   searchQuery?: string;
 }
@@ -97,7 +93,7 @@ export default function ItemList({
   onDelete,
   onItemClick,
   showStatusBadges = false,
-  matchInfos,
+  matchSnippets,
   searchQuery,
 }: ItemListProps) {
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
@@ -122,12 +118,12 @@ export default function ItemList({
     }
   };
 
-  const renderMatchInfo = (itemId: number) => {
-    const info = matchInfos?.[itemId];
-    if (!info) return null;
+  const renderSnippet = (itemId: number) => {
+    const raw = matchSnippets?.[itemId];
+    if (!raw) return null;
     const snippet = searchQuery
-      ? extractSnippet(info.snippet, searchQuery)
-      : info.snippet;
+      ? extractSnippet(raw, searchQuery)
+      : raw;
     return (
       <div className="text-xs text-gray-500 mt-1">
         {highlightKeyword(snippet, searchQuery)}
@@ -224,7 +220,7 @@ export default function ItemList({
                           </>
                         )}
                       </div>
-                      {renderMatchInfo(item.id)}
+                      {renderSnippet(item.id)}
                       <div className="flex items-center text-xs text-gray-500 space-x-3 mt-1">
                         <span>#{item.id}</span>
                         {isTask(item) && item.scheduledOn && (
@@ -301,7 +297,7 @@ export default function ItemList({
                           )}
                         </div>
                       )}
-                      {renderMatchInfo(item.id)}
+                      {renderSnippet(item.id)}
                       <div className="flex items-center text-xs text-gray-500 space-x-3">
                         <span>#{item.id}</span>
                         <span title={formatDateTime(item.createdAt)}>
