@@ -8,11 +8,13 @@ struct MarkdownBody: View {
     let text: String
     let fontSize: CGFloat
     let color: Color
+    let searchQuery: String?
 
-    init(_ text: String, fontSize: CGFloat = 14, color: Color = Color(.label).opacity(0.75)) {
+    init(_ text: String, fontSize: CGFloat = 14, color: Color = Color(.label).opacity(0.75), searchQuery: String? = nil) {
         self.text = text
         self.fontSize = fontSize
         self.color = color
+        self.searchQuery = searchQuery
     }
 
     private var blocks: [MarkdownBlock] {
@@ -184,6 +186,22 @@ struct MarkdownBody: View {
                     let range = run.range
                     attributed[range].foregroundColor = UIColor(red: 0x2d/255.0, green: 0xa4/255.0, blue: 0x4e/255.0, alpha: 1.0)
                     attributed[range].underlineStyle = .single
+                }
+            }
+            // Highlight search keywords
+            if let query = searchQuery, !query.isEmpty {
+                let plainText = String(attributed.characters)
+                let lower = plainText.lowercased()
+                let queryLower = query.lowercased()
+                var searchStart = lower.startIndex
+                while let range = lower.range(of: queryLower, range: searchStart..<lower.endIndex) {
+                    let startOffset = lower.distance(from: lower.startIndex, to: range.lowerBound)
+                    let endOffset = lower.distance(from: lower.startIndex, to: range.upperBound)
+                    let attrStart = attributed.characters.index(attributed.characters.startIndex, offsetBy: startOffset)
+                    let attrEnd = attributed.characters.index(attributed.characters.startIndex, offsetBy: endOffset)
+                    attributed[attrStart..<attrEnd].foregroundColor = UIColor(Color.accentDarker)
+                    attributed[attrStart..<attrEnd].font = .system(size: fontSize, weight: .semibold)
+                    searchStart = range.upperBound
                 }
             }
             return Text(attributed)

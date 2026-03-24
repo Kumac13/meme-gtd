@@ -9,9 +9,7 @@ struct ArticleCell: View {
         VStack(alignment: .leading, spacing: 0) {
             // Title (with keyword highlight during search)
             if let query = searchQuery, !query.isEmpty {
-                Text(highlightKeyword(in: article.title, query: query))
-                    .font(.system(size: 14))
-                    .foregroundColor(.textPrimary)
+                Text(highlightKeyword(in: article.title, query: query, fontSize: 14, baseColor: .textPrimary))
                     .lineLimit(2)
             } else {
                 Text(article.title)
@@ -20,23 +18,11 @@ struct ArticleCell: View {
                     .lineLimit(2)
             }
 
-            // Search match info (label + optional snippet)
+            // Search match info
             if let info = matchInfo {
-                HStack(spacing: 4) {
-                    Text(info.label)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.textSecondary)
-                    if let snippet = info.snippet, let query = searchQuery, !query.isEmpty {
-                        Text("-")
-                            .font(.system(size: 11))
-                            .foregroundColor(.textSecondary)
-                        Text(highlightKeyword(in: snippet, query: query))
-                            .font(.system(size: 11))
-                            .foregroundColor(.textSecondary)
-                            .lineLimit(2)
-                    }
-                }
-                .padding(.top, 4)
+                Text(info.attributedText(searchQuery: searchQuery))
+                    .lineLimit(2)
+                    .padding(.top, 4)
             }
 
             // site name | time | labels

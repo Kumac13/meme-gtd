@@ -114,8 +114,12 @@ class MemoListViewModel: ObservableObject {
         )
         var infos: [Int: SearchMatchInfo] = [:]
         for item in response.results {
-            if let info = item.firstMatchInfo(searchQuery: searchQuery) {
-                infos[item.id] = info
+            guard let match = item.matches.first else { continue }
+            if match.field == "comment" {
+                infos[item.id] = SearchMatchInfo(label: "Comment match", snippet: extractSnippet(match.text, query: searchQuery))
+            } else {
+                // Memo body is visible — no snippet needed for issue match
+                infos[item.id] = SearchMatchInfo(label: "Issue match", snippet: nil)
             }
         }
         searchMatchInfos = infos

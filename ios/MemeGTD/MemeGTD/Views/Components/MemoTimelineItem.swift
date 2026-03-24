@@ -8,7 +8,7 @@ struct MemoTimelineItem: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 10) {
-                MemoBody(bodyMd: memo.bodyMd, labels: memo.labels)
+                MemoBody(bodyMd: memo.bodyMd, labels: memo.labels, searchQuery: searchQuery)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 Spacer(minLength: 0)
@@ -22,23 +22,11 @@ struct MemoTimelineItem: View {
                 }
             }
 
-            // Search match info (label + optional snippet)
+            // Search match info
             if let info = matchInfo {
-                HStack(spacing: 4) {
-                    Text(info.label)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.textSecondary)
-                    if let snippet = info.snippet, let query = searchQuery, !query.isEmpty {
-                        Text("-")
-                            .font(.system(size: 11))
-                            .foregroundColor(.textSecondary)
-                        Text(highlightKeyword(in: snippet, query: query))
-                            .font(.system(size: 11))
-                            .foregroundColor(.textSecondary)
-                            .lineLimit(2)
-                    }
-                }
-                .padding(.top, 4)
+                Text(info.attributedText(searchQuery: searchQuery))
+                    .lineLimit(2)
+                    .padding(.top, 4)
             }
         }
         .padding(.vertical, 10)

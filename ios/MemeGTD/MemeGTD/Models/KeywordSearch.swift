@@ -2,8 +2,10 @@ import Foundation
 import SwiftUI
 
 /// Build an AttributedString with keyword occurrences highlighted in GitHub Green.
-func highlightKeyword(in text: String, query: String) -> AttributedString {
+func highlightKeyword(in text: String, query: String, fontSize: CGFloat = 11, baseColor: Color = .textSecondary) -> AttributedString {
     var result = AttributedString(text)
+    result.font = .system(size: fontSize)
+    result.foregroundColor = baseColor
     let lower = text.lowercased()
     let queryLower = query.lowercased()
     var searchStart = lower.startIndex
@@ -11,10 +13,29 @@ func highlightKeyword(in text: String, query: String) -> AttributedString {
         let attrStart = AttributedString.Index(range.lowerBound, within: result)!
         let attrEnd = AttributedString.Index(range.upperBound, within: result)!
         result[attrStart..<attrEnd].foregroundColor = Color.accentDarker
-        result[attrStart..<attrEnd].font = .system(size: 11, weight: .semibold)
+        result[attrStart..<attrEnd].font = .system(size: fontSize, weight: .semibold)
         searchStart = range.upperBound
     }
     return result
+}
+
+extension SearchMatchInfo {
+    /// Render match info as a single AttributedString: "Label - snippet with keyword"
+    func attributedText(searchQuery: String?) -> AttributedString {
+        var result = AttributedString(label)
+        result.font = .system(size: 11, weight: .medium)
+        result.foregroundColor = .textSecondary
+
+        if let snippet = snippet, let query = searchQuery, !query.isEmpty {
+            var sep = AttributedString(" - ")
+            sep.font = .system(size: 11)
+            sep.foregroundColor = .textSecondary
+            result += sep
+            result += highlightKeyword(in: snippet, query: query)
+        }
+
+        return result
+    }
 }
 
 struct KeywordMatch: Codable {
@@ -29,21 +50,23 @@ struct SearchMatchInfo {
 }
 
 /// Extract a snippet of text centered around the keyword, ±contextChars characters.
-private func extractSnippet(_ text: String, query: String, contextChars: Int = 20) -> String {
-    let lower = text.lowercased()
+/// Newlines are replaced with spaces for clean single-line display.
+func extractSnippet(_ text: String, query: String, contextChars: Int = 20) -> String {
+    let cleaned = text.replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "\r", with: " ")
+    let lower = cleaned.lowercased()
     let queryLower = query.lowercased()
     guard let range = lower.range(of: queryLower) else {
-        return String(text.prefix(contextChars * 2))
+        return String(cleaned.prefix(contextChars * 2))
     }
     let idx = lower.distance(from: lower.startIndex, to: range.lowerBound)
     let start = max(0, idx - contextChars)
-    let end = min(text.count, idx + query.count + contextChars)
-    let startIdx = text.index(text.startIndex, offsetBy: start)
-    let endIdx = text.index(text.startIndex, offsetBy: end)
+    let end = min(cleaned.count, idx + query.count + contextChars)
+    let startIdx = cleaned.index(cleaned.startIndex, offsetBy: start)
+    let endIdx = cleaned.index(cleaned.startIndex, offsetBy: end)
     var snippet = ""
     if start > 0 { snippet += "..." }
-    snippet += String(text[startIdx..<endIdx])
-    if end < text.count { snippet += "..." }
+    snippet += String(cleaned[startIdx..<endIdx])
+    if end < cleaned.count { snippet += "..." }
     return snippet
 }
 
