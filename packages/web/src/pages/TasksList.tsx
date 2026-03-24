@@ -157,24 +157,26 @@ export default function TasksList() {
         })();
 
         if (searchParam) {
-          // Use keyword search API
+          // Use keyword search API — respect current status filter
+          const searchStatus = statusFilter !== 'all' ? statusFilter : undefined;
           const response = await SearchService.keywordSearch(
             searchParam,
             PAGE_SIZE,
             offset,
             'task',
-            effectiveStatus || undefined,
+            searchStatus || undefined,
             labelParam,
             bookmarkFilter ? 'true' : undefined,
           );
-          const mapped: Task[] = response.results.map((r) => ({
+          const mapped = response.results.map((r) => ({
             id: r.id,
+            type: r.type,
             title: r.title,
             bodyMd: r.bodyMd,
             status: r.status,
             isBookmarked: r.isBookmarked,
             commentCount: r.commentCount,
-            scheduledOn: null,
+            scheduledOn: null as string | null,
             labels: r.labels,
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
@@ -186,7 +188,12 @@ export default function TasksList() {
               if (match.field === 'comment') {
                 infos[r.id] = { label: 'Comment match', snippet: match.text };
               } else {
-                infos[r.id] = { label: 'Issue match' };
+                const isTitleMatch = r.title && match.text === r.title;
+                if (isTitleMatch) {
+                  infos[r.id] = { label: 'Issue match' };
+                } else {
+                  infos[r.id] = { label: 'Issue match', snippet: match.text };
+                }
               }
             }
           }
@@ -463,7 +470,7 @@ export default function TasksList() {
           <div className="text-sm text-gray-500 mb-2">
             {total} {total === 1 ? 'task' : 'tasks'}
           </div>
-          <ItemList items={filteredTasks} itemType="task" basePath="/tasks" currentFilters={searchParams} onDelete={handleDelete} matchInfos={matchInfos} />
+          <ItemList items={filteredTasks} itemType="task" basePath="/tasks" currentFilters={searchParams} onDelete={handleDelete} matchInfos={matchInfos} searchQuery={filters.parsedQuery.freeText} />
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

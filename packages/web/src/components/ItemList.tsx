@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { formatDateTime, formatRelativeTime } from "../utils/dates";
 import { InlineMarkdownRenderer, extractFirstLine } from "../utils/markdown";
+import { extractSnippet, highlightKeyword } from "../utils/searchHighlight";
 import { LabelBadge } from "./LabelBadge";
 import { createItemDetailUrl } from "../utils/navigationHelpers";
 import type { Article, IssueType } from "meme-gtd-shared";
@@ -73,6 +74,8 @@ itemType: IssueType | "project";
   showStatusBadges?: boolean;
   /** Match info from keyword search (issueId -> label + optional snippet) */
   matchInfos?: Record<number, MatchInfo>;
+  /** Search query for keyword highlighting */
+  searchQuery?: string;
 }
 
 function isTask(item: Item): item is Task {
@@ -96,6 +99,7 @@ export default function ItemList({
   onItemClick,
   showStatusBadges = false,
   matchInfos,
+  searchQuery,
 }: ItemListProps) {
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
@@ -122,11 +126,17 @@ export default function ItemList({
   const renderMatchInfo = (itemId: number) => {
     const info = matchInfos?.[itemId];
     if (!info) return null;
+    const snippet = info.snippet && searchQuery
+      ? extractSnippet(info.snippet, searchQuery)
+      : info.snippet;
     return (
-      <div className="flex items-baseline gap-2 mt-1.5 mb-1">
-        <span className="shrink-0 whitespace-nowrap text-[11px] font-medium text-gray-400">{info.label}</span>
-        {info.snippet && (
-          <span className="text-[11px] text-gray-400 truncate min-w-0">{info.snippet}</span>
+      <div className="text-xs text-gray-500 mt-1">
+        <span className="text-gray-600 font-medium">{info.label}</span>
+        {snippet && (
+          <>
+            <span className="mx-1">-</span>
+            <span>{highlightKeyword(snippet, searchQuery)}</span>
+          </>
         )}
       </div>
     );
@@ -199,7 +209,9 @@ export default function ItemList({
                     <>
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h2 className="text-base text-gray-900">
-                          {item.title || `Task #\${item.id}`}
+                          {searchQuery && item.title
+                            ? highlightKeyword(item.title, searchQuery)
+                            : (item.title || `Task #\${item.id}`)}
                         </h2>
                         {showStatusBadges && item.status && (
                           <span className={`px-2 py-0.5 text-xs font-medium rounded ${statusBadgeClasses[item.status] || "bg-gray-100 text-gray-700"}`}>
@@ -220,7 +232,7 @@ export default function ItemList({
                         )}
                       </div>
                       {renderMatchInfo(item.id)}
-                      <div className="flex items-center text-xs text-gray-500 space-x-3">
+                      <div className="flex items-center text-xs text-gray-500 space-x-3 mt-1">
                         <span>#{item.id}</span>
                         {isTask(item) && item.scheduledOn && (
                           <span>

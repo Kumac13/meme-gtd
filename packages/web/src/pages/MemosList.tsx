@@ -27,6 +27,7 @@ import {
   getTimelineDateBucket,
   shouldShowGapTimestamp,
 } from '../utils/memoTimeline';
+import { extractSnippet, highlightKeyword } from '../utils/searchHighlight';
 
 interface Memo {
   id: number;
@@ -103,8 +104,9 @@ export default function MemosList() {
             labelParam,
             bookmarkFilter ? 'true' : undefined,
           );
-          const mapped: Memo[] = response.results.map((r) => ({
+          const mapped = response.results.map((r) => ({
             id: r.id,
+            type: r.type,
             title: r.title,
             bodyMd: r.bodyMd,
             isBookmarked: r.isBookmarked,
@@ -444,6 +446,17 @@ export default function MemosList() {
                               ))}
                             </div>
                           )}
+                          {matchInfos[memo.id] && (
+                            <div className="text-xs text-gray-500 mt-1.5">
+                              <span className="text-gray-600 font-medium">{matchInfos[memo.id].label}</span>
+                              {matchInfos[memo.id].snippet && filters.parsedQuery.freeText && (
+                                <>
+                                  <span className="mx-1">-</span>
+                                  <span>{highlightKeyword(extractSnippet(matchInfos[memo.id].snippet!, filters.parsedQuery.freeText), filters.parsedQuery.freeText)}</span>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </Link>
 
                         {(memo.commentCount ?? 0) > 0 && (
@@ -523,7 +536,7 @@ export default function MemosList() {
           />
         ) : (
           <>
-            <ItemList items={filteredMemos} itemType="memo" basePath="/memos" currentFilters={searchParams} onDelete={handleDelete} matchInfos={matchInfos} />
+            <ItemList items={filteredMemos} itemType="memo" basePath="/memos" currentFilters={searchParams} onDelete={handleDelete} matchInfos={matchInfos} searchQuery={filters.parsedQuery.freeText} />
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
