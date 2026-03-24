@@ -3,6 +3,7 @@ import SwiftUI
 struct MemoTimelineItem: View {
     let memo: Memo
     var matchInfo: SearchMatchInfo? = nil
+    var searchQuery: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -23,19 +24,18 @@ struct MemoTimelineItem: View {
 
             // Search match info (label + optional snippet)
             if let info = matchInfo {
-                HStack(spacing: 6) {
+                HStack(spacing: 4) {
                     Text(info.label)
-                        .font(.system(size: 10, weight: .medium))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.textSecondary.opacity(0.15))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.textSecondary)
-                        .cornerRadius(4)
-                    if let snippet = info.snippet {
-                        Text(snippet)
+                    if let snippet = info.snippet, let query = searchQuery, !query.isEmpty {
+                        Text("-")
                             .font(.system(size: 11))
                             .foregroundColor(.textSecondary)
-                            .lineLimit(1)
+                        Text(highlightKeyword(in: snippet, query: query))
+                            .font(.system(size: 11))
+                            .foregroundColor(.textSecondary)
+                            .lineLimit(2)
                     }
                 }
                 .padding(.top, 4)

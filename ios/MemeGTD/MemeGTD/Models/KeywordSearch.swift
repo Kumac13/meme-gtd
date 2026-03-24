@@ -1,4 +1,21 @@
 import Foundation
+import SwiftUI
+
+/// Build an AttributedString with keyword occurrences highlighted in GitHub Green.
+func highlightKeyword(in text: String, query: String) -> AttributedString {
+    var result = AttributedString(text)
+    let lower = text.lowercased()
+    let queryLower = query.lowercased()
+    var searchStart = lower.startIndex
+    while let range = lower.range(of: queryLower, range: searchStart..<lower.endIndex) {
+        let attrStart = AttributedString.Index(range.lowerBound, within: result)!
+        let attrEnd = AttributedString.Index(range.upperBound, within: result)!
+        result[attrStart..<attrEnd].foregroundColor = Color.accentDarker
+        result[attrStart..<attrEnd].font = .system(size: 11, weight: .semibold)
+        searchStart = range.upperBound
+    }
+    return result
+}
 
 struct KeywordMatch: Codable {
     let field: String // "issue" or "comment"
@@ -7,17 +24,41 @@ struct KeywordMatch: Codable {
 }
 
 struct SearchMatchInfo {
-    let label: String // "Issue" or "Comment"
-    let snippet: String? // Only present for comment matches
+    let label: String // "Issue match" or "Comment match"
+    let snippet: String? // Snippet with keyword context (nil when content already visible)
+}
+
+/// Extract a snippet of text centered around the keyword, ±contextChars characters.
+private func extractSnippet(_ text: String, query: String, contextChars: Int = 20) -> String {
+    let lower = text.lowercased()
+    let queryLower = query.lowercased()
+    guard let range = lower.range(of: queryLower) else {
+        return String(text.prefix(contextChars * 2))
+    }
+    let idx = lower.distance(from: lower.startIndex, to: range.lowerBound)
+    let start = max(0, idx - contextChars)
+    let end = min(text.count, idx + query.count + contextChars)
+    let startIdx = text.index(text.startIndex, offsetBy: start)
+    let endIdx = text.index(text.startIndex, offsetBy: end)
+    var snippet = ""
+    if start > 0 { snippet += "..." }
+    snippet += String(text[startIdx..<endIdx])
+    if end < text.count { snippet += "..." }
+    return snippet
 }
 
 extension KeywordSearchResultItem {
-    func firstMatchInfo() -> SearchMatchInfo? {
+    func firstMatchInfo(searchQuery: String) -> SearchMatchInfo? {
         guard let match = matches.first else { return nil }
         if match.field == "comment" {
-            return SearchMatchInfo(label: "Comment match", snippet: match.text)
+            return SearchMatchInfo(label: "Comment match", snippet: extractSnippet(match.text, query: searchQuery))
         }
-        return SearchMatchInfo(label: "Issue match", snippet: nil)
+        // Issue match: title match → no snippet (title visible), body match → snippet
+        let isTitleMatch = title != nil && match.text == title
+        if isTitleMatch {
+            return SearchMatchInfo(label: "Issue match", snippet: nil)
+        }
+        return SearchMatchInfo(label: "Issue match", snippet: extractSnippet(match.text, query: searchQuery))
     }
 }
 

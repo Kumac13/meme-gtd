@@ -89,7 +89,7 @@ class TaskListViewModel: ObservableObject {
         )
         var infos: [Int: SearchMatchInfo] = [:]
         for item in response.results {
-            if let info = item.firstMatchInfo() {
+            if let info = item.firstMatchInfo(searchQuery: searchQuery) {
                 infos[item.id] = info
             }
         }

@@ -3,30 +3,37 @@ import SwiftUI
 struct TaskCell: View {
     let task: TaskItem
     var matchInfo: SearchMatchInfo? = nil
+    var searchQuery: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Title
-            Text(task.title)
-                .font(.system(size: 14))
-                .foregroundColor(.textPrimary)
-                .lineLimit(2)
+            // Title (with keyword highlight during search)
+            if let query = searchQuery, !query.isEmpty {
+                Text(highlightKeyword(in: task.title, query: query))
+                    .font(.system(size: 14))
+                    .foregroundColor(.textPrimary)
+                    .lineLimit(2)
+            } else {
+                Text(task.title)
+                    .font(.system(size: 14))
+                    .foregroundColor(.textPrimary)
+                    .lineLimit(2)
+            }
 
             // Search match info (label + optional snippet)
             if let info = matchInfo {
-                HStack(spacing: 6) {
+                HStack(spacing: 4) {
                     Text(info.label)
-                        .font(.system(size: 10, weight: .medium))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.textSecondary.opacity(0.15))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.textSecondary)
-                        .cornerRadius(4)
-                    if let snippet = info.snippet {
-                        Text(snippet)
+                    if let snippet = info.snippet, let query = searchQuery, !query.isEmpty {
+                        Text("-")
                             .font(.system(size: 11))
                             .foregroundColor(.textSecondary)
-                            .lineLimit(1)
+                        Text(highlightKeyword(in: snippet, query: query))
+                            .font(.system(size: 11))
+                            .foregroundColor(.textSecondary)
+                            .lineLimit(2)
                     }
                 }
                 .padding(.top, 4)
