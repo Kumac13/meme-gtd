@@ -22,18 +22,12 @@ func highlightKeyword(in text: String, query: String, fontSize: CGFloat = 11, ba
 extension SearchMatchInfo {
     /// Render match info as a single AttributedString: "Label - snippet with keyword"
     func attributedText(searchQuery: String?) -> AttributedString {
+        if let snippet = snippet, let query = searchQuery, !query.isEmpty {
+            return highlightKeyword(in: snippet, query: query)
+        }
         var result = AttributedString(label)
         result.font = .system(size: 11, weight: .medium)
         result.foregroundColor = .textSecondary
-
-        if let snippet = snippet, let query = searchQuery, !query.isEmpty {
-            var sep = AttributedString(" - ")
-            sep.font = .system(size: 11)
-            sep.foregroundColor = .textSecondary
-            result += sep
-            result += highlightKeyword(in: snippet, query: query)
-        }
-
         return result
     }
 }
@@ -74,14 +68,15 @@ extension KeywordSearchResultItem {
     func firstMatchInfo(searchQuery: String) -> SearchMatchInfo? {
         guard let match = matches.first else { return nil }
         if match.field == "comment" {
-            return SearchMatchInfo(label: "Comment match", snippet: extractSnippet(match.text, query: searchQuery))
+            return SearchMatchInfo(label: "", snippet: extractSnippet(match.text, query: searchQuery))
         }
-        // Issue match: title match → no snippet (title visible), body match → snippet
+        // Issue match: title match → nil (keyword highlighted in title)
         let isTitleMatch = title != nil && match.text == title
         if isTitleMatch {
-            return SearchMatchInfo(label: "Issue match", snippet: nil)
+            return nil
         }
-        return SearchMatchInfo(label: "Issue match", snippet: extractSnippet(match.text, query: searchQuery))
+        // Body match → snippet only (body not visible in task/article list)
+        return SearchMatchInfo(label: "", snippet: extractSnippet(match.text, query: searchQuery))
     }
 }
 
