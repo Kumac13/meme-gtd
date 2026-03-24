@@ -75,7 +75,7 @@ export default function MemosList() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [matchInfos, setMatchInfos] = useState<Record<number, { label: string; snippet?: string }>>({});
+  const [matchInfos, setMatchInfos] = useState<Record<number, { snippet: string }>>({});
   const [isFetchingOlder, setIsFetchingOlder] = useState(false);
   const [newMemoBody, setNewMemoBody] = useState('');
   const [creatingMemo, setCreatingMemo] = useState(false);
@@ -126,16 +126,13 @@ export default function MemosList() {
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
           }));
-          const infos: Record<number, { label: string; snippet?: string }> = {};
+          const infos: Record<number, { snippet: string }> = {};
           for (const r of response.results) {
             const match = r.matches[0];
-            if (match) {
-              if (match.field === 'comment') {
-                infos[r.id] = { label: 'Comment match', snippet: match.text };
-              } else {
-                infos[r.id] = { label: 'Issue match' };
-              }
+            if (match && match.field === 'comment') {
+              infos[r.id] = { snippet: match.text };
             }
+            // Issue match: keyword highlighted in body, no snippet needed
           }
           setMatchInfos(infos);
           setMemos(mapped);
@@ -455,15 +452,9 @@ export default function MemosList() {
                               ))}
                             </div>
                           )}
-                          {matchInfos[memo.id] && (
+                          {matchInfos[memo.id] && filters.parsedQuery.freeText && (
                             <div className="text-xs text-gray-500 mt-1.5">
-                              <span className="text-gray-600 font-medium">{matchInfos[memo.id].label}</span>
-                              {matchInfos[memo.id].snippet && filters.parsedQuery.freeText && (
-                                <>
-                                  <span className="mx-1">-</span>
-                                  <span>{highlightKeyword(extractSnippet(matchInfos[memo.id].snippet!, filters.parsedQuery.freeText), filters.parsedQuery.freeText)}</span>
-                                </>
-                              )}
+                              {highlightKeyword(extractSnippet(matchInfos[memo.id].snippet, filters.parsedQuery.freeText), filters.parsedQuery.freeText)}
                             </div>
                           )}
                         </Link>

@@ -98,7 +98,7 @@ export default function TasksList() {
   const [total, setTotal] = useState(0);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [matchInfos, setMatchInfos] = useState<Record<number, { label: string; snippet?: string }>>({});
+  const [matchInfos, setMatchInfos] = useState<Record<number, { snippet: string }>>({});
   const [projects, setProjects] = useState<Project[]>([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -181,18 +181,16 @@ export default function TasksList() {
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
           }));
-          const infos: Record<number, { label: string; snippet?: string }> = {};
+          const infos: Record<number, { snippet: string }> = {};
           for (const r of response.results) {
             const match = r.matches[0];
             if (match) {
               if (match.field === 'comment') {
-                infos[r.id] = { label: 'Comment match', snippet: match.text };
+                infos[r.id] = { snippet: match.text };
               } else {
                 const isTitleMatch = r.title && match.text === r.title;
-                if (isTitleMatch) {
-                  infos[r.id] = { label: 'Issue match' };
-                } else {
-                  infos[r.id] = { label: 'Issue match', snippet: match.text };
+                if (!isTitleMatch) {
+                  infos[r.id] = { snippet: match.text };
                 }
               }
             }

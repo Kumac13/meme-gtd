@@ -59,8 +59,7 @@ interface Project {
 type Item = BaseItem | Task | Project | Article; // Include Article
 
 interface MatchInfo {
-  label: string;
-  snippet?: string;
+  snippet: string;
 }
 
 interface ItemListProps {
@@ -126,18 +125,12 @@ export default function ItemList({
   const renderMatchInfo = (itemId: number) => {
     const info = matchInfos?.[itemId];
     if (!info) return null;
-    const snippet = info.snippet && searchQuery
+    const snippet = searchQuery
       ? extractSnippet(info.snippet, searchQuery)
       : info.snippet;
     return (
       <div className="text-xs text-gray-500 mt-1">
-        <span className="text-gray-600 font-medium">{info.label}</span>
-        {snippet && (
-          <>
-            <span className="mx-1">-</span>
-            <span>{highlightKeyword(snippet, searchQuery)}</span>
-          </>
-        )}
+        {highlightKeyword(snippet, searchQuery)}
       </div>
     );
   };
