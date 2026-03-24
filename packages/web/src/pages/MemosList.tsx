@@ -28,6 +28,7 @@ import {
   shouldShowGapTimestamp,
 } from '../utils/memoTimeline';
 import { extractSnippet, highlightKeyword } from '../utils/searchHighlight';
+import { useSearchHighlight } from '../hooks/useSearchHighlight';
 
 interface Memo {
   id: number;
@@ -42,6 +43,16 @@ interface Memo {
 }
 
 const PAGE_SIZE = 20;
+
+function SearchHighlightedBody({ bodyMd, searchQuery }: { bodyMd: string; searchQuery?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useSearchHighlight(ref, searchQuery);
+  return (
+    <div ref={ref} className="prose prose-sm prose-p:mb-2 prose-li:my-0 prose-p:text-[13px] prose-p:leading-6 max-w-none break-words text-gray-700">
+      <MarkdownRenderer content={bodyMd} />
+    </div>
+  );
+}
 
 export default function MemosList() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -436,9 +447,7 @@ export default function MemosList() {
 
                       <div className="flex items-start gap-2.5">
                         <Link to={itemPath} className="min-w-0 flex-1">
-                          <div className="prose prose-sm prose-p:mb-2 prose-li:my-0 prose-p:text-[13px] prose-p:leading-6 max-w-none break-words text-gray-700">
-                            <MarkdownRenderer content={memo.bodyMd} />
-                          </div>
+                          <SearchHighlightedBody bodyMd={memo.bodyMd} searchQuery={filters.parsedQuery.freeText} />
                           {memo.labels && memo.labels.length > 0 && (
                             <div className="mt-1.5 flex flex-wrap gap-1">
                               {memo.labels.map((label) => (
