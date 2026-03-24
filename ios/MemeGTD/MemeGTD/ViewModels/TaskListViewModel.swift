@@ -25,7 +25,7 @@ class TaskListViewModel: ObservableObject {
     @Published var allProjects: [Project] = []
 
     // Search match info (issueId -> match label + snippet)
-    @Published var searchMatchInfos: [Int: SearchMatchInfo] = [:]
+    @Published var searchMatchInfos: [Int: String] = [:]
 
     var store: TaskStore?
 
@@ -87,10 +87,10 @@ class TaskListViewModel: ObservableObject {
             path: "/api/search/keyword",
             queryItems: buildSearchQueryItems(offset: offset)
         )
-        var infos: [Int: SearchMatchInfo] = [:]
+        var infos: [Int: String] = [:]
         for item in response.results {
-            if let info = item.firstMatchInfo(searchQuery: searchQuery) {
-                infos[item.id] = info
+            if let snippet = item.matchSnippet(searchQuery: searchQuery) {
+                infos[item.id] = snippet
             }
         }
         searchMatchInfos = infos

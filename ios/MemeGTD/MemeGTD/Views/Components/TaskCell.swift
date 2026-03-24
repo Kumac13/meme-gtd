@@ -2,7 +2,7 @@ import SwiftUI
 
 struct TaskCell: View {
     let task: TaskItem
-    var matchInfo: SearchMatchInfo? = nil
+    var snippet: String? = nil
     var searchQuery: String? = nil
 
     var body: some View {
@@ -18,9 +18,8 @@ struct TaskCell: View {
                     .lineLimit(2)
             }
 
-            // Search match info
-            if let info = matchInfo {
-                Text(info.attributedText(searchQuery: searchQuery))
+            if let snippet = snippet, let query = searchQuery, !query.isEmpty {
+                Text(highlightKeyword(in: snippet, query: query))
                     .lineLimit(2)
                     .padding(.top, 4)
             }

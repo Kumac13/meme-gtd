@@ -19,27 +19,10 @@ func highlightKeyword(in text: String, query: String, fontSize: CGFloat = 11, ba
     return result
 }
 
-extension SearchMatchInfo {
-    /// Render match info as a single AttributedString: "Label - snippet with keyword"
-    func attributedText(searchQuery: String?) -> AttributedString {
-        if let query = searchQuery, !query.isEmpty {
-            return highlightKeyword(in: snippet, query: query)
-        }
-        var result = AttributedString(snippet)
-        result.font = .system(size: 11)
-        result.foregroundColor = .textSecondary
-        return result
-    }
-}
-
 struct KeywordMatch: Codable {
     let field: String // "issue" or "comment"
     let commentId: Int?
     let text: String
-}
-
-struct SearchMatchInfo {
-    let snippet: String
 }
 
 /// Extract a snippet of text centered around the keyword, ±contextChars characters.
@@ -64,18 +47,18 @@ func extractSnippet(_ text: String, query: String, contextChars: Int = 20) -> St
 }
 
 extension KeywordSearchResultItem {
-    func firstMatchInfo(searchQuery: String) -> SearchMatchInfo? {
+    /// Returns a snippet for display, or nil if no snippet is needed.
+    /// - `isBodyVisible`: true for memos (body rendered in list), false for tasks/articles
+    func matchSnippet(searchQuery: String, isBodyVisible: Bool = false) -> String? {
         guard let match = matches.first else { return nil }
         if match.field == "comment" {
-            return SearchMatchInfo(snippet: extractSnippet(match.text, query: searchQuery))
+            return extractSnippet(match.text, query: searchQuery)
         }
-        // Issue match: title match → nil (keyword highlighted in title)
+        // Issue match
+        if isBodyVisible { return nil }
         let isTitleMatch = title != nil && match.text == title
-        if isTitleMatch {
-            return nil
-        }
-        // Body match → snippet (body not visible in task/article list)
-        return SearchMatchInfo(snippet: extractSnippet(match.text, query: searchQuery))
+        if isTitleMatch { return nil }
+        return extractSnippet(match.text, query: searchQuery)
     }
 }
 

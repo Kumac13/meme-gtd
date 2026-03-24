@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ArticleCell: View {
     let article: Article
-    var matchInfo: SearchMatchInfo? = nil
+    var snippet: String? = nil
     var searchQuery: String? = nil
 
     var body: some View {
@@ -18,9 +18,8 @@ struct ArticleCell: View {
                     .lineLimit(2)
             }
 
-            // Search match info
-            if let info = matchInfo {
-                Text(info.attributedText(searchQuery: searchQuery))
+            if let snippet = snippet, let query = searchQuery, !query.isEmpty {
+                Text(highlightKeyword(in: snippet, query: query))
                     .lineLimit(2)
                     .padding(.top, 4)
             }

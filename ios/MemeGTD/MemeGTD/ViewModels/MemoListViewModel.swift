@@ -17,7 +17,7 @@ class MemoListViewModel: ObservableObject {
     @Published var allLabels: [IssueLabel] = []
 
     // Search match info (issueId -> match label + snippet)
-    @Published var searchMatchInfos: [Int: SearchMatchInfo] = [:]
+    @Published var searchMatchInfos: [Int: String] = [:]
 
     var store: MemoStore?
 
@@ -112,13 +112,11 @@ class MemoListViewModel: ObservableObject {
             path: "/api/search/keyword",
             queryItems: buildSearchQueryItems(offset: offset)
         )
-        var infos: [Int: SearchMatchInfo] = [:]
+        var infos: [Int: String] = [:]
         for item in response.results {
-            guard let match = item.matches.first else { continue }
-            if match.field == "comment" {
-                infos[item.id] = SearchMatchInfo(snippet: extractSnippet(match.text, query: searchQuery))
+            if let snippet = item.matchSnippet(searchQuery: searchQuery, isBodyVisible: true) {
+                infos[item.id] = snippet
             }
-            // Issue match: keyword highlighted in body, no label needed
         }
         searchMatchInfos = infos
         let memos = response.results.map { $0.toMemo() }
