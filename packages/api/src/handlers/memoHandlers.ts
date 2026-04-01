@@ -40,6 +40,7 @@ export async function listMemosHandler(
     Querystring: {
       bookmarked?: string;
       label?: string;
+      projectId?: string;
       search?: string;
       limit?: number;
       offset?: number;
@@ -48,7 +49,7 @@ export async function listMemosHandler(
   reply: FastifyReply
 ) {
   const memoService = new MemoService({ db: request.server.db });
-  const { bookmarked, label, search, limit, offset } = request.query;
+  const { bookmarked, label, projectId, search, limit, offset } = request.query;
 
   const actualLimit = limit ?? DEFAULT_LIMIT;
   const actualOffset = offset ?? DEFAULT_OFFSET;
@@ -62,6 +63,19 @@ export async function listMemosHandler(
   }
   if (label) {
     filters.labels = label.split(',').map(l => l.trim()).filter(Boolean);
+  }
+  if (projectId) {
+    const parts = projectId.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.includes('none')) {
+      filters.includeNoProject = true;
+    }
+    const numericIds = parts
+      .filter(s => s !== 'none')
+      .map(s => parseInt(s, 10))
+      .filter(id => !isNaN(id));
+    if (numericIds.length > 0) {
+      filters.projectIds = numericIds;
+    }
   }
   if (search) {
     filters.search = search;
