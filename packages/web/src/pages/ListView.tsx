@@ -8,7 +8,6 @@ import LoadingState from '../components/LoadingState';
 import { TasksService } from '../api/services/TasksService';
 import { MemosService } from '../api/services/MemosService';
 import { ItemDetailPanel } from '../components/ItemDetailPanel';
-import StatusDropdown from '../components/StatusDropdown';
 
 interface OutletContext {
   project: ProjectDetail;
@@ -203,14 +202,8 @@ export default function ListView() {
 
   return (
     <>
-      {/* Filters row: Status, Bookmark */}
+      {/* Filters row: Bookmark */}
       <div className="mb-4 flex flex-wrap gap-2 items-center">
-        <StatusDropdown
-          value={statusFilter}
-          options={statusOptions}
-          labels={statusLabels}
-          onChange={handleStatusFilterChange}
-        />
         <button
           onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}
           className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
@@ -221,6 +214,23 @@ export default function ListView() {
         >
           Bookmarked
         </button>
+      </div>
+
+      {/* Status filter row */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        {statusOptions.map((status) => (
+          <button
+            key={status}
+            onClick={() => handleStatusFilterChange(status)}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              statusFilter === status
+                ? 'bg-github-green-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {statusLabels[status] || status}
+          </button>
+        ))}
       </div>
       {filteredAndSortedItems.length === 0 ? (
         <EmptyState
