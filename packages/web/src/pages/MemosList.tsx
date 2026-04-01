@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
+import { ProjectsService } from '../api/services/ProjectsService';
 import { SearchService } from '../api/services/SearchService';
 import ItemList from '../components/ItemList';
 import LabelFilterDropdown from '../components/LabelFilterDropdown';
@@ -42,6 +43,12 @@ interface Memo {
   updatedAt: string;
 }
 
+interface Project {
+  id: number;
+  name: string;
+  status: string;
+}
+
 const PAGE_SIZE = 20;
 
 function SearchHighlightedBody({ bodyMd, searchQuery }: { bodyMd: string; searchQuery?: string }) {
@@ -65,6 +72,23 @@ export default function MemosList() {
     [searchParams]
   );
 
+  // Project filter from URL
+  const projectIdParam = searchParams.get('projectId') || '';
+  const selectedProjectIds = useMemo(() => {
+    if (!projectIdParam) return new Set<number>();
+    return new Set(
+      projectIdParam.split(',')
+        .map(id => id.trim())
+        .filter(id => id !== 'none')
+        .map(id => parseInt(id, 10))
+        .filter(id => !isNaN(id))
+    );
+  }, [projectIdParam]);
+
+  const selectedNoneProject = useMemo(() => {
+    return projectIdParam.split(',').map(s => s.trim()).includes('none');
+  }, [projectIdParam]);
+
   // Pagination state from URL
   const currentPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
 
@@ -80,7 +104,11 @@ export default function MemosList() {
   const [newMemoBody, setNewMemoBody] = useState('');
   const [creatingMemo, setCreatingMemo] = useState(false);
   const [initialScrollDone, setInitialScrollDone] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
 
+  // Refs
+  const dropdownRef = useRef<HTMLDivElement>(null);
   // Mobile scroll management refs
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const previousScrollHeightRef = useRef(0);
@@ -88,6 +116,24 @@ export default function MemosList() {
   const [pullDistance, setPullDistance] = useState(0);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  // Load projects for filter dropdown
+  useEffect(() => {
+    ProjectsService.listProjects().then(data => {
+      setProjects(data.map(p => ({ id: p.id, name: p.name, status: p.status })));
+    }).catch(console.error);
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowProjectDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     async function fetchMemos() {
@@ -99,6 +145,14 @@ export default function MemosList() {
         const labelParam = selectedLabels.size > 0
           ? Array.from(selectedLabels).join(',')
           : undefined;
+
+        // Build projectId parameter
+        const projectIdFilter = (() => {
+          const parts: string[] = [];
+          if (selectedNoneProject) parts.push('none');
+          if (selectedProjectIds.size > 0) parts.push(...Array.from(selectedProjectIds).map(String));
+          return parts.length > 0 ? parts.join(',') : undefined;
+        })();
 
         // Extract free-text search from parsed query
         const searchParam = filters.parsedQuery.freeText;
@@ -141,7 +195,7 @@ export default function MemosList() {
           const response = await MemosService.listMemos(
             bookmarkFilter ? 'true' : undefined,
             labelParam,
-            undefined,
+            projectIdFilter,
             undefined,
             PAGE_SIZE,
             offset
@@ -158,7 +212,7 @@ export default function MemosList() {
     }
 
     fetchMemos();
-  }, [filters.searchQuery, currentPage, bookmarkFilter, selectedLabels]);
+  }, [filters.searchQuery, currentPage, bookmarkFilter, selectedLabels, selectedProjectIds, selectedNoneProject]);
 
   // Mobile: scroll to bottom after initial load so newest memos are visible
   useEffect(() => {
@@ -205,6 +259,55 @@ export default function MemosList() {
     setSearchParams(params);
   };
 
+  const handleProjectToggle = (projectId: number) => {
+    const params = new URLSearchParams(searchParams);
+    const newIds = new Set(selectedProjectIds);
+    if (newIds.has(projectId)) {
+      newIds.delete(projectId);
+    } else {
+      newIds.add(projectId);
+    }
+    const parts: string[] = [];
+    if (selectedNoneProject) parts.push('none');
+    parts.push(...Array.from(newIds).map(String));
+    if (parts.length === 0) {
+      params.delete('projectId');
+    } else {
+      params.set('projectId', parts.join(','));
+    }
+    params.delete('page');
+    setSearchParams(params);
+  };
+
+  const handleNoneProjectToggle = () => {
+    const params = new URLSearchParams(searchParams);
+    const parts: string[] = [];
+    if (!selectedNoneProject) parts.push('none');
+    if (selectedProjectIds.size > 0) parts.push(...Array.from(selectedProjectIds).map(String));
+    if (parts.length === 0) {
+      params.delete('projectId');
+    } else {
+      params.set('projectId', parts.join(','));
+    }
+    params.delete('page');
+    setSearchParams(params);
+  };
+
+  const handleClearProjects = () => {
+    const params = new URLSearchParams(searchParams);
+    params.delete('projectId');
+    params.delete('page');
+    setSearchParams(params);
+    setShowProjectDropdown(false);
+  };
+
+  const projectFilterLabel = useMemo(() => {
+    const count = selectedProjectIds.size + (selectedNoneProject ? 1 : 0);
+    if (count === 0) return 'Project';
+    if (count === 1 && selectedNoneProject) return 'No Project';
+    return `${count} Projects`;
+  }, [selectedProjectIds, selectedNoneProject]);
+
   const handlePageChange = useCallback((page: number) => {
     const params = new URLSearchParams(searchParams);
     if (page === 1) {
@@ -230,11 +333,17 @@ export default function MemosList() {
       const labelParam = selectedLabels.size > 0
         ? Array.from(selectedLabels).join(',')
         : undefined;
+      const projectIdFilter = (() => {
+        const parts: string[] = [];
+        if (selectedNoneProject) parts.push('none');
+        if (selectedProjectIds.size > 0) parts.push(...Array.from(selectedProjectIds).map(String));
+        return parts.length > 0 ? parts.join(',') : undefined;
+      })();
       const searchParam = filters.parsedQuery.freeText;
       const response = await MemosService.listMemos(
         bookmarkFilter ? 'true' : undefined,
         labelParam,
-        undefined,
+        projectIdFilter,
         searchParam,
         PAGE_SIZE,
         memos.length
@@ -248,7 +357,7 @@ export default function MemosList() {
     } finally {
       setIsFetchingOlder(false);
     }
-  }, [bookmarkFilter, filters.parsedQuery.freeText, selectedLabels, isFetchingOlder, memos.length, total]);
+  }, [bookmarkFilter, filters.parsedQuery.freeText, selectedLabels, selectedProjectIds, selectedNoneProject, isFetchingOlder, memos.length, total]);
 
   // Preserve scroll position after older memos are prepended (in reversed view)
   useEffect(() => {
@@ -373,13 +482,75 @@ export default function MemosList() {
             />
           </div>
 
-          <div className="mb-4 flex flex-wrap gap-2 items-center">
+          <div className="mb-4 flex flex-wrap gap-2 items-center" ref={dropdownRef}>
             <LabelFilterDropdown
               selectedLabels={selectedLabels}
               onToggle={handleLabelToggle}
               onClear={handleClearLabels}
               countKey="memoCount"
             />
+
+            {/* Project filter dropdown */}
+            {projects.length > 0 && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowProjectDropdown(!showProjectDropdown)}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 ${
+                    selectedProjectIds.size > 0 || selectedNoneProject
+                      ? 'bg-github-green-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {projectFilterLabel}
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {showProjectDropdown && (
+                  <div className="absolute top-full left-0 mt-1 min-w-[280px] max-w-[400px] bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
+                    {(selectedProjectIds.size > 0 || selectedNoneProject) && (
+                      <button
+                        onClick={handleClearProjects}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 border-b border-gray-100"
+                      >
+                        Clear
+                      </button>
+                    )}
+                    <button
+                      onClick={handleNoneProjectToggle}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill={selectedNoneProject ? 'currentColor' : 'none'}>
+                        {selectedNoneProject ? (
+                          <path className="text-github-green-600" fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        ) : (
+                          <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-gray-300" />
+                        )}
+                      </svg>
+                      <span className="text-gray-500 italic truncate">No Project</span>
+                    </button>
+                    {projects.map(project => (
+                      <button
+                        key={project.id}
+                        onClick={() => handleProjectToggle(project.id)}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill={selectedProjectIds.has(project.id) ? 'currentColor' : 'none'}>
+                          {selectedProjectIds.has(project.id) ? (
+                            <path className="text-github-green-600" fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          ) : (
+                            <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-gray-300" />
+                          )}
+                        </svg>
+                        <span className="text-gray-700 truncate">{project.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <button
               onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}
               className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
@@ -514,6 +685,68 @@ export default function MemosList() {
             onClear={handleClearLabels}
             countKey="memoCount"
           />
+
+          {/* Project filter dropdown (desktop) */}
+          {projects.length > 0 && (
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setShowProjectDropdown(!showProjectDropdown)}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 ${
+                  selectedProjectIds.size > 0 || selectedNoneProject
+                    ? 'bg-github-green-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {projectFilterLabel}
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {showProjectDropdown && (
+                <div className="absolute top-full left-0 mt-1 min-w-[280px] max-w-[400px] bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
+                  {(selectedProjectIds.size > 0 || selectedNoneProject) && (
+                    <button
+                      onClick={handleClearProjects}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 border-b border-gray-100"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <button
+                    onClick={handleNoneProjectToggle}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill={selectedNoneProject ? 'currentColor' : 'none'}>
+                      {selectedNoneProject ? (
+                        <path className="text-github-green-600" fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      ) : (
+                        <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-gray-300" />
+                      )}
+                    </svg>
+                    <span className="text-gray-500 italic truncate">No Project</span>
+                  </button>
+                  {projects.map(project => (
+                    <button
+                      key={project.id}
+                      onClick={() => handleProjectToggle(project.id)}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill={selectedProjectIds.has(project.id) ? 'currentColor' : 'none'}>
+                        {selectedProjectIds.has(project.id) ? (
+                          <path className="text-github-green-600" fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        ) : (
+                          <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-gray-300" />
+                        )}
+                      </svg>
+                      <span className="text-gray-700 truncate">{project.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <button
             onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}
             className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
