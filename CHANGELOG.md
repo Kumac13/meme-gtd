@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.27.1 - 2026-04-01
+
+### Improvements
+
+- **Web UI Status Filter**: Revert status filter from dropdown back to horizontal buttons for better usability (TasksList and ListView)
+
 ## 0.27.0 - 2026-03-23
 
 ### New Features
