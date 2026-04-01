@@ -142,6 +142,7 @@ export default function MemosList() {
             bookmarkFilter ? 'true' : undefined,
             labelParam,
             undefined,
+            undefined,
             PAGE_SIZE,
             offset
           );
@@ -233,6 +234,7 @@ export default function MemosList() {
       const response = await MemosService.listMemos(
         bookmarkFilter ? 'true' : undefined,
         labelParam,
+        undefined,
         searchParam,
         PAGE_SIZE,
         memos.length
