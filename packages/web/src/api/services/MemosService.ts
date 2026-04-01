@@ -85,6 +85,7 @@ export class MemosService {
      * List all memos with optional filters and pagination
      * @param bookmarked Filter by bookmark status
      * @param label Filter by label name(s). Supports comma-separated values for OR logic (e.g., idea,meeting-notes)
+     * @param projectId Filter by project ID(s). Supports comma-separated values for OR logic (e.g., 1,2,3). Use "none" to filter memos not assigned to any project.
      * @param search Search memos by body content using free-text partial matching
      * @param limit Maximum number of memos to return (default: 100, max: 1000)
      * @param offset Number of memos to skip (default: 0)
@@ -94,6 +95,7 @@ export class MemosService {
     public static listMemos(
         bookmarked?: 'true' | 'false',
         label?: string,
+        projectId?: string,
         search?: string,
         limit?: number,
         offset?: number,
@@ -178,6 +180,7 @@ export class MemosService {
             query: {
                 'bookmarked': bookmarked,
                 'label': label,
+                'projectId': projectId,
                 'search': search,
                 'limit': limit,
                 'offset': offset,

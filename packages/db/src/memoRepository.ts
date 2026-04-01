@@ -24,6 +24,8 @@ export interface ListMemoFilters {
   offset?: number;  // Pagination offset
   order?: 'asc' | 'desc';
   isBookmarked?: boolean;
+  projectIds?: number[];   // Filter memos that belong to any of these projects (OR logic)
+  includeNoProject?: boolean;  // When true, include memos not assigned to any project
 }
 
 // Build WHERE conditions for memos (shared by listMemos and countMemos)
@@ -51,6 +53,32 @@ const buildMemoConditions = (filters: ListMemoFilters): { conditions: string[]; 
   if (filters.isBookmarked !== undefined) {
     conditions.push('is_bookmarked = @isBookmarked');
     params.isBookmarked = filters.isBookmarked ? 1 : 0;
+  }
+
+  // Project filter
+  const hasProjectIds = filters.projectIds && filters.projectIds.length > 0;
+  const hasNoProject = filters.includeNoProject;
+
+  if (hasProjectIds && hasNoProject) {
+    const projectPlaceholders = filters.projectIds!.map((_, i) => `@projectId${i}`).join(', ');
+    conditions.push(
+      `(id IN(SELECT issue_id FROM project_items WHERE project_id IN(${projectPlaceholders})) OR id NOT IN(SELECT issue_id FROM project_items))`
+    );
+    filters.projectIds!.forEach((projectId, i) => {
+      params[`projectId${i}`] = projectId;
+    });
+  } else if (hasProjectIds) {
+    const projectPlaceholders = filters.projectIds!.map((_, i) => `@projectId${i}`).join(', ');
+    conditions.push(
+      `id IN(SELECT issue_id FROM project_items WHERE project_id IN(${projectPlaceholders}))`
+    );
+    filters.projectIds!.forEach((projectId, i) => {
+      params[`projectId${i}`] = projectId;
+    });
+  } else if (hasNoProject) {
+    conditions.push(
+      `id NOT IN(SELECT issue_id FROM project_items)`
+    );
   }
 
   // Search filter (search body)
@@ -173,6 +201,32 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
     params.isBookmarked = filters.isBookmarked ? 1 : 0;
   }
 
+  // Project filter (duplicated from buildMemoConditions for listMemos inline path)
+  const hasProjectIds = filters.projectIds && filters.projectIds.length > 0;
+  const hasNoProject = filters.includeNoProject;
+
+  if (hasProjectIds && hasNoProject) {
+    const projectPlaceholders = filters.projectIds!.map((_, i) => `@projectId${i}`).join(', ');
+    conditions.push(
+      `(id IN(SELECT issue_id FROM project_items WHERE project_id IN(${projectPlaceholders})) OR id NOT IN(SELECT issue_id FROM project_items))`
+    );
+    filters.projectIds!.forEach((projectId, i) => {
+      params[`projectId${i}`] = projectId;
+    });
+  } else if (hasProjectIds) {
+    const projectPlaceholders = filters.projectIds!.map((_, i) => `@projectId${i}`).join(', ');
+    conditions.push(
+      `id IN(SELECT issue_id FROM project_items WHERE project_id IN(${projectPlaceholders}))`
+    );
+    filters.projectIds!.forEach((projectId, i) => {
+      params[`projectId${i}`] = projectId;
+    });
+  } else if (hasNoProject) {
+    conditions.push(
+      `id NOT IN(SELECT issue_id FROM project_items)`
+    );
+  }
+
   let orderBy = 'created_at DESC';
   if (filters.order === 'asc') {
     orderBy = 'created_at ASC';
@@ -216,6 +270,22 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
     }
     if (filters.isBookmarked !== undefined) {
       searchConditions.push('i.is_bookmarked = @isBookmarked');
+    }
+    // Project filter for search path
+    if (hasProjectIds && hasNoProject) {
+      const projectPlaceholders = filters.projectIds!.map((_, i) => `@projectId${i}`).join(', ');
+      searchConditions.push(
+        `(i.id IN(SELECT issue_id FROM project_items WHERE project_id IN(${projectPlaceholders})) OR i.id NOT IN(SELECT issue_id FROM project_items))`
+      );
+    } else if (hasProjectIds) {
+      const projectPlaceholders = filters.projectIds!.map((_, i) => `@projectId${i}`).join(', ');
+      searchConditions.push(
+        `i.id IN(SELECT issue_id FROM project_items WHERE project_id IN(${projectPlaceholders}))`
+      );
+    } else if (hasNoProject) {
+      searchConditions.push(
+        `i.id NOT IN(SELECT issue_id FROM project_items)`
+      );
     }
     sql = `
       SELECT i.*,

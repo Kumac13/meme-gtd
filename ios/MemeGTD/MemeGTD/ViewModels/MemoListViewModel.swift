@@ -14,7 +14,10 @@ class MemoListViewModel: ObservableObject {
     @Published var searchQuery: String = ""
     @Published var bookmarkFilter: Bool = false
     @Published var labelFilters: Set<String> = []
+    @Published var projectFilters: Set<Int> = []
+    @Published var includeNoProject: Bool = false
     @Published var allLabels: [IssueLabel] = []
+    @Published var allProjects: [Project] = []
 
     // Search match info (issueId -> match label + snippet)
     @Published var searchMatchInfos: [Int: String] = [:]
@@ -76,6 +79,13 @@ class MemoListViewModel: ObservableObject {
 
         if !allLabelFilters.isEmpty {
             queryItems.append(URLQueryItem(name: "label", value: allLabelFilters.joined(separator: ",")))
+        }
+
+        if !projectFilters.isEmpty || includeNoProject {
+            var parts: [String] = []
+            if includeNoProject { parts.append("none") }
+            parts.append(contentsOf: projectFilters.map(String.init))
+            queryItems.append(URLQueryItem(name: "projectId", value: parts.joined(separator: ",")))
         }
 
         return queryItems
@@ -267,6 +277,16 @@ class MemoListViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Load projects for filter picker
+
+    func loadProjects() async {
+        do {
+            allProjects = try await APIClient.shared.get(path: "/api/projects")
+        } catch {
+            logger.error("loadProjects error: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Filter actions
 
     func toggleBookmarkFilter() {
@@ -276,6 +296,12 @@ class MemoListViewModel: ObservableObject {
 
     func setLabelFilters(_ labels: Set<String>) {
         labelFilters = labels
+        Task { await loadMemos() }
+    }
+
+    func setProjectFilters(_ projectIds: Set<Int>, includeNone: Bool) {
+        projectFilters = projectIds
+        includeNoProject = includeNone
         Task { await loadMemos() }
     }
 
