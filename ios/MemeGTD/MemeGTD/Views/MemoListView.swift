@@ -10,6 +10,9 @@ struct MemoListView: View {
     @State private var isSearching: Bool = false
     @State private var showLabelPicker: Bool = false
     @State private var selectedLabelNames: Set<String> = []
+    @State private var showProjectPicker: Bool = false
+    @State private var selectedProjectIds: Set<Int> = []
+    @State private var selectedNoProject: Bool = false
     @State private var showImagePicker: Bool = false
     @State private var showSizePicker: Bool = false
     @State private var isUploadingImage: Bool = false
@@ -104,6 +107,7 @@ struct MemoListView: View {
             .task {
                 viewModel.store = memoStore
                 await viewModel.loadLabels()
+                await viewModel.loadProjects()
                 if memoStore.memos.isEmpty {
                     await viewModel.loadMemos()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -153,6 +157,15 @@ struct MemoListView: View {
                     showLabelPicker = true
                 }
 
+                filterPill(
+                    label: projectFilterDisplayLabel,
+                    isActive: !viewModel.projectFilters.isEmpty || viewModel.includeNoProject
+                ) {
+                    selectedProjectIds = viewModel.projectFilters
+                    selectedNoProject = viewModel.includeNoProject
+                    showProjectPicker = true
+                }
+
                 bookmarkPill
 
                 Spacer()
@@ -191,6 +204,18 @@ struct MemoListView: View {
                 onDismiss: { showLabelPicker = false },
                 showClear: true,
                 countFor: { $0.memoCount }
+            )
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showProjectPicker, onDismiss: {
+            viewModel.setProjectFilters(selectedProjectIds, includeNone: selectedNoProject)
+        }) {
+            ProjectPickerModal(
+                allProjects: viewModel.allProjects,
+                selectedIds: $selectedProjectIds,
+                onDismiss: { showProjectPicker = false },
+                showClear: true,
+                includeNoProject: $selectedNoProject
             )
             .presentationDetents([.medium, .large])
         }
@@ -257,6 +282,12 @@ struct MemoListView: View {
         if count == 0 { return "Label" }
         if count == 1 { return viewModel.labelFilters.first! }
         return "\(count) Labels"
+    }
+
+    private var projectFilterDisplayLabel: String {
+        let count = viewModel.projectFilters.count + (viewModel.includeNoProject ? 1 : 0)
+        if count == 0 { return "Project" }
+        return "\(count) Projects"
     }
 
     private func filterPill(label: String, isActive: Bool, action: @escaping () -> Void) -> some View {
