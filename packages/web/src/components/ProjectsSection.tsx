@@ -9,20 +9,7 @@ import { ProjectsService } from '../api/services/ProjectsService';
 import type { Project, ProjectWithMeta } from '../types/project';
 import { useRecentProjects } from '../hooks/useRecentProjects';
 import type { IssueType } from 'meme-gtd-shared';
-
-const PROJECT_STATUS_ORDER: Record<string, number> = {
-  active: 0, paused: 1, done: 2, planned: 3, canceled: 4,
-};
-
-const PROJECT_STATUS_LABELS: Record<string, string> = {
-  planned: 'Planned', active: 'Active', paused: 'Paused', done: 'Done', canceled: 'Canceled',
-};
-
-const sortProjectsByStatus = <T extends { name: string; status: string }>(projects: T[]): T[] =>
-  [...projects].sort((a, b) => {
-    const orderDiff = (PROJECT_STATUS_ORDER[a.status] ?? 99) - (PROJECT_STATUS_ORDER[b.status] ?? 99);
-    return orderDiff !== 0 ? orderDiff : a.name.localeCompare(b.name);
-  });
+import { PROJECT_STATUS_LABELS, sortProjectsByStatus } from '../utils/projectStatus';
 
 interface ProjectsSectionProps {
   itemId: number;
