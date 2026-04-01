@@ -57,6 +57,20 @@ const statusLabels: Record<string, string> = {
 
 const statusOptions = ['all', 'inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled'];
 
+const PROJECT_STATUS_ORDER: Record<string, number> = {
+  active: 0, paused: 1, done: 2, planned: 3, canceled: 4,
+};
+
+const PROJECT_STATUS_LABELS: Record<string, string> = {
+  planned: 'Planned', active: 'Active', paused: 'Paused', done: 'Done', canceled: 'Canceled',
+};
+
+const sortProjectsByStatus = <T extends { name: string; status: string }>(projects: T[]): T[] =>
+  [...projects].sort((a, b) => {
+    const orderDiff = (PROJECT_STATUS_ORDER[a.status] ?? 99) - (PROJECT_STATUS_ORDER[b.status] ?? 99);
+    return orderDiff !== 0 ? orderDiff : a.name.localeCompare(b.name);
+  });
+
 const PAGE_SIZE = 20;
 
 export default function TasksList() {
@@ -108,7 +122,8 @@ export default function TasksList() {
   // Load projects for filter dropdown
   useEffect(() => {
     ProjectsService.listProjects().then(data => {
-      setProjects(data.map(p => ({ id: p.id, name: p.name, status: p.status })));
+      const mapped = data.map(p => ({ id: p.id, name: p.name, status: p.status }));
+      setProjects(sortProjectsByStatus(mapped));
     }).catch(console.error);
   }, []);
 
@@ -422,6 +437,7 @@ export default function TasksList() {
                       )}
                     </svg>
                     <span className="text-gray-700 truncate">{project.name}</span>
+                    <span className="text-xs text-gray-400 ml-auto shrink-0">{PROJECT_STATUS_LABELS[project.status] || project.status}</span>
                   </button>
                 ))}
               </div>
