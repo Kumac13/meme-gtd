@@ -4,7 +4,7 @@ import { TasksService } from '../api/services/TasksService';
 import { SearchService } from '../api/services/SearchService';
 import { ProjectsService } from '../api/services/ProjectsService';
 import ItemList from '../components/ItemList';
-import StatusDropdown from '../components/StatusDropdown';
+
 import LabelFilterDropdown from '../components/LabelFilterDropdown';
 import SearchInput from '../components/SearchInput';
 import LoadingState from '../components/LoadingState';
@@ -358,16 +358,8 @@ export default function TasksList() {
         </Link>
       </div>
 
-      {/* Filters row: Status, Label, Project, Bookmark */}
+      {/* Filters row: Label, Project, Bookmark */}
       <div className="mb-4 flex flex-wrap gap-2 items-center" ref={dropdownRef}>
-        {/* Status dropdown */}
-        <StatusDropdown
-          value={statusFilter}
-          options={statusOptions}
-          labels={statusLabels}
-          onChange={handleStatusFilterChange}
-        />
-
         {/* Label filter dropdown */}
         <LabelFilterDropdown
           selectedLabels={selectedLabels}
@@ -448,6 +440,23 @@ export default function TasksList() {
         >
           Bookmarked
         </button>
+      </div>
+
+      {/* Status filter row */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        {statusOptions.map((status) => (
+          <button
+            key={status}
+            onClick={() => handleStatusFilterChange(status)}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              statusFilter === status
+                ? 'bg-github-green-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {statusLabels[status] || status}
+          </button>
+        ))}
       </div>
 
       {filteredTasks.length === 0 ? (
