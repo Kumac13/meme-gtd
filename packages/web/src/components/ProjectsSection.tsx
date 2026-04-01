@@ -9,6 +9,7 @@ import { ProjectsService } from '../api/services/ProjectsService';
 import type { Project, ProjectWithMeta } from '../types/project';
 import { useRecentProjects } from '../hooks/useRecentProjects';
 import type { IssueType } from 'meme-gtd-shared';
+import { PROJECT_STATUS_LABELS, sortProjectsByStatus } from '../utils/projectStatus';
 
 interface ProjectsSectionProps {
   itemId: number;
@@ -96,10 +97,12 @@ export function ProjectsSection({ itemId, itemType: _ }: ProjectsSectionProps) {
     }
   };
 
-  const filteredProjects = allProjects.filter((project) =>
-    searchQuery.trim()
-      ? project.name.toLowerCase().includes(searchQuery.toLowerCase())
-      : true
+  const filteredProjects = sortProjectsByStatus(
+    allProjects.filter((project) =>
+      searchQuery.trim()
+        ? project.name.toLowerCase().includes(searchQuery.toLowerCase())
+        : true
+    )
   );
 
   const recentProjects = getRecentProjects(filteredProjects);
@@ -166,19 +169,22 @@ export function ProjectsSection({ itemId, itemType: _ }: ProjectsSectionProps) {
               No projects yet
             </div>
           ) : (
-            associatedProjects.map((project) => (
-              <div
-                key={project.id}
-                className="text-sm"
-              >
-                <div className="font-medium text-gray-900 truncate">
-                  {project.name}
+            associatedProjects.map((project) => {
+              const realStatus = allProjects.find(p => p.id === project.id)?.status;
+              return (
+                <div
+                  key={project.id}
+                  className="text-sm"
+                >
+                  <div className="font-medium text-gray-900 truncate">
+                    {project.name}
+                  </div>
+                  <div className="text-gray-500 text-xs">
+                    {realStatus ? (PROJECT_STATUS_LABELS[realStatus] || realStatus) : project.status}
+                  </div>
                 </div>
-                <div className="text-gray-500 text-xs">
-                  {project.status}
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
@@ -237,6 +243,7 @@ export function ProjectsSection({ itemId, itemType: _ }: ProjectsSectionProps) {
                         <span className="text-sm text-gray-900 truncate">
                           {project.name}
                         </span>
+                        <span className="text-xs text-gray-400 ml-auto shrink-0">{PROJECT_STATUS_LABELS[project.status] || project.status}</span>
                       </label>
                     );
                   })}
@@ -276,6 +283,7 @@ export function ProjectsSection({ itemId, itemType: _ }: ProjectsSectionProps) {
                         <span className="text-sm text-gray-900 truncate">
                           {project.name}
                         </span>
+                        <span className="text-xs text-gray-400 ml-auto shrink-0">{PROJECT_STATUS_LABELS[project.status] || project.status}</span>
                       </label>
                     );
                   })

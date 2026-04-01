@@ -55,6 +55,8 @@ const statusLabels: Record<string, string> = {
   canceled: 'Canceled',
 };
 
+import { PROJECT_STATUS_LABELS, sortProjectsByStatus } from '../utils/projectStatus';
+
 const statusOptions = ['all', 'inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled'];
 
 const PAGE_SIZE = 20;
@@ -108,7 +110,8 @@ export default function TasksList() {
   // Load projects for filter dropdown
   useEffect(() => {
     ProjectsService.listProjects().then(data => {
-      setProjects(data.map(p => ({ id: p.id, name: p.name, status: p.status })));
+      const mapped = data.map(p => ({ id: p.id, name: p.name, status: p.status }));
+      setProjects(sortProjectsByStatus(mapped));
     }).catch(console.error);
   }, []);
 
@@ -422,6 +425,7 @@ export default function TasksList() {
                       )}
                     </svg>
                     <span className="text-gray-700 truncate">{project.name}</span>
+                    <span className="text-xs text-gray-400 ml-auto shrink-0">{PROJECT_STATUS_LABELS[project.status] || project.status}</span>
                   </button>
                 ))}
               </div>
