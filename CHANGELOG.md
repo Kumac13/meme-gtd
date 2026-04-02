@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.29.0 - 2026-04-03
+
+### New Features
+
+- **Date Range Filtering**: Filter memos and tasks by date range across Web, iOS, and API
+  - 8 presets: Today, Yesterday, This/Last Week, This/Last Month, This/Last Year
+  - Custom range with wheel picker (iOS) and date inputs (Web)
+  - New `createdFrom`/`createdTo` query parameters for memo API
+  - URL-persisted filters for bookmarkable/shareable filtered views
+
 ## 0.27.1 - 2026-04-01
 
 ### Improvements
