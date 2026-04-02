@@ -248,6 +248,17 @@ class MemoListViewModel: ObservableObject {
                 body: request
             )
             store?.insertItem(memo, at: 0)
+
+            // Auto-link to filtered projects
+            if !projectFilters.isEmpty {
+                for projectId in projectFilters {
+                    let _: ProjectItem? = try? await APIClient.shared.post(
+                        path: "/api/projects/\(projectId)/items",
+                        body: AddProjectItemRequest(issueId: memo.id)
+                    )
+                }
+            }
+
             newMemoBody = ""
             HapticManager.notification(.success)
         } catch {
