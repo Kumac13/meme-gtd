@@ -20,6 +20,8 @@ export interface ListMemoFilters {
   labels?: string[];
   search?: string;  // Search body (same as searchBody for memos)
   searchBody?: string;  // Search body only (explicit)
+  createdFrom?: string;  // Filter memos created on or after this date (YYYY-MM-DD)
+  createdTo?: string;    // Filter memos created on or before this date (YYYY-MM-DD)
   limit?: number;
   offset?: number;  // Pagination offset
   order?: 'asc' | 'desc';
@@ -58,6 +60,16 @@ const buildMemoConditions = (filters: ListMemoFilters): { conditions: string[]; 
   if (searchTerm) {
     conditions.push('body_md LIKE @search');
     params.search = `%${searchTerm}%`;
+  }
+
+  // Date range filter (created_at)
+  if (filters.createdFrom) {
+    conditions.push('DATE(created_at) >= @createdFrom');
+    params.createdFrom = filters.createdFrom;
+  }
+  if (filters.createdTo) {
+    conditions.push('DATE(created_at) <= @createdTo');
+    params.createdTo = filters.createdTo;
   }
 
   return { conditions, params };
@@ -173,6 +185,16 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
     params.isBookmarked = filters.isBookmarked ? 1 : 0;
   }
 
+  // Date range filter (created_at)
+  if (filters.createdFrom) {
+    conditions.push('DATE(created_at) >= @createdFrom');
+    params.createdFrom = filters.createdFrom;
+  }
+  if (filters.createdTo) {
+    conditions.push('DATE(created_at) <= @createdTo');
+    params.createdTo = filters.createdTo;
+  }
+
   let orderBy = 'created_at DESC';
   if (filters.order === 'asc') {
     orderBy = 'created_at ASC';
@@ -216,6 +238,12 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
     }
     if (filters.isBookmarked !== undefined) {
       searchConditions.push('i.is_bookmarked = @isBookmarked');
+    }
+    if (filters.createdFrom) {
+      searchConditions.push('DATE(i.created_at) >= @createdFrom');
+    }
+    if (filters.createdTo) {
+      searchConditions.push('DATE(i.created_at) <= @createdTo');
     }
     sql = `
       SELECT i.*,

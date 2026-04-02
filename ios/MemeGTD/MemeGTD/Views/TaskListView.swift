@@ -13,6 +13,9 @@ struct TaskListView: View {
     @State private var showProjectPicker: Bool = false
     @State private var selectedProjectIds: Set<Int> = []
     @State private var selectedNoProject: Bool = false
+    @State private var showDateRangePicker: Bool = false
+    @State private var dateFrom: Date?
+    @State private var dateTo: Date?
     @State private var createTaskMode: CreateTaskMode? = nil
 
     var body: some View {
@@ -94,6 +97,15 @@ struct TaskListView: View {
                     showProjectPicker = true
                 }
 
+                filterPill(
+                    label: scheduleFilterDisplayLabel,
+                    isActive: viewModel.scheduledFrom != nil || viewModel.scheduledTo != nil
+                ) {
+                    dateFrom = viewModel.scheduledFrom
+                    dateTo = viewModel.scheduledTo
+                    showDateRangePicker = true
+                }
+
                 bookmarkPill
 
                 Spacer()
@@ -171,6 +183,16 @@ struct TaskListView: View {
             )
             .presentationDetents([.medium, .large])
         }
+        .sheet(isPresented: $showDateRangePicker, onDismiss: {
+            viewModel.setDateFilter(from: dateFrom, to: dateTo)
+        }) {
+            DateRangePickerModal(
+                dateFrom: $dateFrom,
+                dateTo: $dateTo,
+                onDismiss: { showDateRangePicker = false }
+            )
+            .presentationDetents([.medium])
+        }
         .sheet(item: $createTaskMode) { mode in
             CreateTaskModal(
                 mode: mode.kind,
@@ -226,6 +248,33 @@ struct TaskListView: View {
         let count = viewModel.projectFilters.count + (viewModel.includeNoProject ? 1 : 0)
         if count == 0 { return "Project" }
         return "\(count) Projects"
+    }
+
+    private var scheduleFilterDisplayLabel: String {
+        guard let from = viewModel.scheduledFrom, let to = viewModel.scheduledTo else {
+            if viewModel.scheduledFrom != nil { return "From..." }
+            if viewModel.scheduledTo != nil { return "To..." }
+            return "Schedule"
+        }
+        let cal = Calendar.current
+        let fromYear = cal.component(.year, from: from)
+        let toYear = cal.component(.year, from: to)
+        let fromMonth = cal.component(.month, from: from)
+        let toMonth = cal.component(.month, from: to)
+        if fromYear == toYear {
+            if fromMonth == 1 && toMonth == 12 {
+                return "\(fromYear)"
+            }
+            let fmt = DateFormatter()
+            fmt.dateFormat = "MMM"
+            if fromMonth == toMonth {
+                return "\(fmt.string(from: from)) \(fromYear)"
+            }
+            return "\(fmt.string(from: from)) - \(fmt.string(from: to))"
+        }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM yyyy"
+        return "\(fmt.string(from: from)) - \(fmt.string(from: to))"
     }
 
     private func filterPill(label: String, isActive: Bool, action: @escaping () -> Void) -> some View {

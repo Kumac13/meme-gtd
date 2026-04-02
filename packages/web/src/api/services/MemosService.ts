@@ -97,6 +97,8 @@ export class MemosService {
         search?: string,
         limit?: number,
         offset?: number,
+        createdFrom?: string,
+        createdTo?: string,
     ): CancelablePromise<{
         /**
          * Array of memos
@@ -181,6 +183,8 @@ export class MemosService {
                 'search': search,
                 'limit': limit,
                 'offset': offset,
+                'createdFrom': createdFrom,
+                'createdTo': createdTo,
             },
             errors: {
                 400: `Default Response`,

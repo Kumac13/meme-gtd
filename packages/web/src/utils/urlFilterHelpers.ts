@@ -176,3 +176,56 @@ export function updateLabelParam(
 
   return params;
 }
+
+/**
+ * Parses date range parameters from URLSearchParams
+ *
+ * @param params - URLSearchParams object
+ * @param fromKey - Parameter name for the "from" date
+ * @param toKey - Parameter name for the "to" date
+ * @returns Object with from and to date strings (YYYY-MM-DD or empty string)
+ */
+export function parseDateRangeParams(
+  params: URLSearchParams,
+  fromKey: string,
+  toKey: string
+): { from: string; to: string } {
+  return {
+    from: params.get(fromKey) || '',
+    to: params.get(toKey) || '',
+  };
+}
+
+/**
+ * Updates date range parameters in URLSearchParams
+ *
+ * @param currentParams - Current URLSearchParams object
+ * @param from - From date string (YYYY-MM-DD or empty to clear)
+ * @param to - To date string (YYYY-MM-DD or empty to clear)
+ * @param fromKey - Parameter name for the "from" date
+ * @param toKey - Parameter name for the "to" date
+ * @returns New URLSearchParams object with updated date range
+ */
+export function updateDateRangeParams(
+  currentParams: URLSearchParams,
+  from: string,
+  to: string,
+  fromKey: string,
+  toKey: string
+): URLSearchParams {
+  const params = new URLSearchParams(currentParams);
+
+  if (from) {
+    params.set(fromKey, from);
+  } else {
+    params.delete(fromKey);
+  }
+
+  if (to) {
+    params.set(toKey, to);
+  } else {
+    params.delete(toKey);
+  }
+
+  return params;
+}

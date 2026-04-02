@@ -6,6 +6,7 @@ import { ProjectsService } from '../api/services/ProjectsService';
 import ItemList from '../components/ItemList';
 
 import LabelFilterDropdown from '../components/LabelFilterDropdown';
+import DateRangeFilterDropdown from '../components/DateRangeFilterDropdown';
 import SearchInput from '../components/SearchInput';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
@@ -20,6 +21,8 @@ import {
   updateSearchParam,
   parseLabelParam,
   updateLabelParam,
+  parseDateRangeParams,
+  updateDateRangeParams,
 } from '../utils/urlFilterHelpers';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
@@ -87,6 +90,12 @@ export default function TasksList() {
   const selectedNoneProject = useMemo(() => {
     return projectIdParam.split(',').map(s => s.trim()).includes('none');
   }, [projectIdParam]);
+
+  // Schedule date range filter from URL
+  const { from: scheduledFrom, to: scheduledTo } = useMemo(
+    () => parseDateRangeParams(searchParams, 'scheduledFrom', 'scheduledTo'),
+    [searchParams]
+  );
 
   // Pagination state from URL
   const currentPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
@@ -207,8 +216,8 @@ export default function TasksList() {
             labelParam,
             projectIdFilter,
             undefined,
-            undefined,
-            undefined,
+            scheduledFrom || undefined,
+            scheduledTo || undefined,
             PAGE_SIZE,
             offset
           );
@@ -224,7 +233,7 @@ export default function TasksList() {
     }
 
     fetchTasks();
-  }, [statusFilter, filters.searchQuery, currentPage, projectIdParam, selectedLabels, bookmarkFilter]);
+  }, [statusFilter, filters.searchQuery, currentPage, projectIdParam, selectedLabels, bookmarkFilter, scheduledFrom, scheduledTo]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -259,6 +268,18 @@ export default function TasksList() {
 
   const handleClearLabels = () => {
     const params = updateLabelParam(searchParams, new Set());
+    params.delete('page');
+    setSearchParams(params);
+  };
+
+  const handleScheduleChange = (from: string, to: string) => {
+    const params = updateDateRangeParams(searchParams, from, to, 'scheduledFrom', 'scheduledTo');
+    params.delete('page');
+    setSearchParams(params);
+  };
+
+  const handleScheduleClear = () => {
+    const params = updateDateRangeParams(searchParams, '', '', 'scheduledFrom', 'scheduledTo');
     params.delete('page');
     setSearchParams(params);
   };
@@ -428,6 +449,14 @@ export default function TasksList() {
             )}
           </div>
         )}
+
+        {/* Schedule date range filter */}
+        <DateRangeFilterDropdown
+          dateFrom={scheduledFrom}
+          dateTo={scheduledTo}
+          onChange={handleScheduleChange}
+          onClear={handleScheduleClear}
+        />
 
         {/* Bookmark filter */}
         <button

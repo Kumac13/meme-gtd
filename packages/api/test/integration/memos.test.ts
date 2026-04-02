@@ -4,6 +4,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import type { FastifyInstance } from 'fastify';
 import { createTestServer } from '../helpers/testServer.js';
 import { createMemoFixture } from '../helpers/fixtures.js';
+import { createMemo } from 'meme-gtd-db';
 
 describe('Memo CRUD Operations', () => {
   let app: FastifyInstance;
@@ -499,5 +500,111 @@ describe('Memo Bookmark Operations', () => {
     const memo2 = result2.data.find((m: any) => m.bodyMd === 'Memo without comments');
     assert.ok(memo2);
     assert.strictEqual(memo2.commentCount, 0);
+  });
+});
+
+describe('Memo Date Filtering', () => {
+  let app: FastifyInstance;
+  let cleanup: () => Promise<void>;
+
+  beforeEach(async () => {
+    const testServer = await createTestServer();
+    app = testServer.app;
+    cleanup = testServer.cleanup;
+  });
+
+  afterEach(async () => {
+    await cleanup();
+  });
+
+  it('should filter memos by createdFrom', async () => {
+    const memo1 = createMemo(app.db, { bodyMd: 'Old memo' });
+    const memo2 = createMemo(app.db, { bodyMd: 'New memo' });
+
+    // Set created_at directly to control dates
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2024-06-15T10:00:00Z', memo1.id);
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2025-03-20T10:00:00Z', memo2.id);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos?createdFrom=2025-01-01',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.data.length, 1);
+    assert.strictEqual(result.data[0].bodyMd, 'New memo');
+  });
+
+  it('should filter memos by createdTo', async () => {
+    const memo1 = createMemo(app.db, { bodyMd: 'Old memo' });
+    const memo2 = createMemo(app.db, { bodyMd: 'New memo' });
+
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2024-06-15T10:00:00Z', memo1.id);
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2025-03-20T10:00:00Z', memo2.id);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos?createdTo=2024-12-31',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.data.length, 1);
+    assert.strictEqual(result.data[0].bodyMd, 'Old memo');
+  });
+
+  it('should filter memos by createdFrom and createdTo combined', async () => {
+    const memo1 = createMemo(app.db, { bodyMd: 'Memo 2024' });
+    const memo2 = createMemo(app.db, { bodyMd: 'Memo Jan 2025' });
+    const memo3 = createMemo(app.db, { bodyMd: 'Memo Jul 2025' });
+
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2024-06-15T10:00:00Z', memo1.id);
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2025-01-10T10:00:00Z', memo2.id);
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2025-07-20T10:00:00Z', memo3.id);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos?createdFrom=2025-01-01&createdTo=2025-06-30',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.data.length, 1);
+    assert.strictEqual(result.data[0].bodyMd, 'Memo Jan 2025');
+  });
+
+  it('should return all memos when no date filter is applied', async () => {
+    createMemo(app.db, { bodyMd: 'Memo A' });
+    createMemo(app.db, { bodyMd: 'Memo B' });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.data.length, 2);
+  });
+
+  it('should return correct total count with date filter', async () => {
+    const memo1 = createMemo(app.db, { bodyMd: 'Old' });
+    const memo2 = createMemo(app.db, { bodyMd: 'New 1' });
+    const memo3 = createMemo(app.db, { bodyMd: 'New 2' });
+
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2024-01-01T10:00:00Z', memo1.id);
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2025-06-01T10:00:00Z', memo2.id);
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2025-06-15T10:00:00Z', memo3.id);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos?createdFrom=2025-01-01',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.data.length, 2);
+    assert.strictEqual(result.total, 2);
   });
 });

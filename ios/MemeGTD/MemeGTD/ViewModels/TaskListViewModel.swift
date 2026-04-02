@@ -17,6 +17,8 @@ class TaskListViewModel: ObservableObject {
     @Published var includeNoProject: Bool = false
     @Published var bookmarkFilter: Bool = false
     @Published var searchQuery: String = ""
+    @Published var scheduledFrom: Date?
+    @Published var scheduledTo: Date?
 
     // Labels for picker
     @Published var allLabels: [IssueLabel] = []
@@ -30,6 +32,13 @@ class TaskListViewModel: ObservableObject {
     var store: TaskStore?
 
     private let pageSize = 20
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
 
     // MARK: - Query building
 
@@ -55,6 +64,12 @@ class TaskListViewModel: ObservableObject {
         }
         if bookmarkFilter {
             items.append(URLQueryItem(name: "bookmarked", value: "true"))
+        }
+        if let from = scheduledFrom {
+            items.append(URLQueryItem(name: "scheduledFrom", value: Self.dateFormatter.string(from: from)))
+        }
+        if let to = scheduledTo {
+            items.append(URLQueryItem(name: "scheduledTo", value: Self.dateFormatter.string(from: to)))
         }
         return items
     }
@@ -240,6 +255,18 @@ class TaskListViewModel: ObservableObject {
 
     func toggleBookmarkFilter() {
         bookmarkFilter.toggle()
+        Task { await loadTasks() }
+    }
+
+    func setDateFilter(from: Date?, to: Date?) {
+        scheduledFrom = from
+        scheduledTo = to
+        Task { await loadTasks() }
+    }
+
+    func clearDateFilter() {
+        scheduledFrom = nil
+        scheduledTo = nil
         Task { await loadTasks() }
     }
 

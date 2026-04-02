@@ -4,6 +4,7 @@ import { MemosService } from '../api/services/MemosService';
 import { SearchService } from '../api/services/SearchService';
 import ItemList from '../components/ItemList';
 import LabelFilterDropdown from '../components/LabelFilterDropdown';
+import DateRangeFilterDropdown from '../components/DateRangeFilterDropdown';
 import SearchInput from '../components/SearchInput';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
@@ -16,6 +17,8 @@ import {
   updateSearchParam,
   parseLabelParam,
   updateLabelParam,
+  parseDateRangeParams,
+  updateDateRangeParams,
 } from '../utils/urlFilterHelpers';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { MarkdownRenderer } from '../utils/markdown';
@@ -62,6 +65,12 @@ export default function MemosList() {
   // Label filter from URL
   const selectedLabels = useMemo(
     () => parseLabelParam(searchParams.get('label')),
+    [searchParams]
+  );
+
+  // Date range filter from URL
+  const { from: createdFrom, to: createdTo } = useMemo(
+    () => parseDateRangeParams(searchParams, 'createdFrom', 'createdTo'),
     [searchParams]
   );
 
@@ -143,7 +152,9 @@ export default function MemosList() {
             labelParam,
             undefined,
             PAGE_SIZE,
-            offset
+            offset,
+            createdFrom || undefined,
+            createdTo || undefined
           );
           setMemos(response?.data || []);
           setTotal(response?.total || 0);
@@ -157,7 +168,7 @@ export default function MemosList() {
     }
 
     fetchMemos();
-  }, [filters.searchQuery, currentPage, bookmarkFilter, selectedLabels]);
+  }, [filters.searchQuery, currentPage, bookmarkFilter, selectedLabels, createdFrom, createdTo]);
 
   // Mobile: scroll to bottom after initial load so newest memos are visible
   useEffect(() => {
@@ -204,6 +215,18 @@ export default function MemosList() {
     setSearchParams(params);
   };
 
+  const handleDateRangeChange = (from: string, to: string) => {
+    const params = updateDateRangeParams(searchParams, from, to, 'createdFrom', 'createdTo');
+    params.delete('page');
+    setSearchParams(params);
+  };
+
+  const handleDateRangeClear = () => {
+    const params = updateDateRangeParams(searchParams, '', '', 'createdFrom', 'createdTo');
+    params.delete('page');
+    setSearchParams(params);
+  };
+
   const handlePageChange = useCallback((page: number) => {
     const params = new URLSearchParams(searchParams);
     if (page === 1) {
@@ -235,7 +258,9 @@ export default function MemosList() {
         labelParam,
         searchParam,
         PAGE_SIZE,
-        memos.length
+        memos.length,
+        createdFrom || undefined,
+        createdTo || undefined
       );
 
       setMemos((prev) => [...prev, ...(response?.data || [])]);
@@ -246,7 +271,7 @@ export default function MemosList() {
     } finally {
       setIsFetchingOlder(false);
     }
-  }, [bookmarkFilter, filters.parsedQuery.freeText, selectedLabels, isFetchingOlder, memos.length, total]);
+  }, [bookmarkFilter, filters.parsedQuery.freeText, selectedLabels, isFetchingOlder, memos.length, total, createdFrom, createdTo]);
 
   // Preserve scroll position after older memos are prepended (in reversed view)
   useEffect(() => {
@@ -377,6 +402,12 @@ export default function MemosList() {
               onToggle={handleLabelToggle}
               onClear={handleClearLabels}
               countKey="memoCount"
+            />
+            <DateRangeFilterDropdown
+              dateFrom={createdFrom}
+              dateTo={createdTo}
+              onChange={handleDateRangeChange}
+              onClear={handleDateRangeClear}
             />
             <button
               onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}
@@ -511,6 +542,12 @@ export default function MemosList() {
             onToggle={handleLabelToggle}
             onClear={handleClearLabels}
             countKey="memoCount"
+          />
+          <DateRangeFilterDropdown
+            dateFrom={createdFrom}
+            dateTo={createdTo}
+            onChange={handleDateRangeChange}
+            onClear={handleDateRangeClear}
           />
           <button
             onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}
