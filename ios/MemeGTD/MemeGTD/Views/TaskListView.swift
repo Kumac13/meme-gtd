@@ -251,30 +251,7 @@ struct TaskListView: View {
     }
 
     private var scheduleFilterDisplayLabel: String {
-        guard let from = viewModel.scheduledFrom, let to = viewModel.scheduledTo else {
-            if viewModel.scheduledFrom != nil { return "From..." }
-            if viewModel.scheduledTo != nil { return "To..." }
-            return "Schedule"
-        }
-        let cal = Calendar.current
-        let fromYear = cal.component(.year, from: from)
-        let toYear = cal.component(.year, from: to)
-        let fromMonth = cal.component(.month, from: from)
-        let toMonth = cal.component(.month, from: to)
-        if fromYear == toYear {
-            if fromMonth == 1 && toMonth == 12 {
-                return "\(fromYear)"
-            }
-            let fmt = DateFormatter()
-            fmt.dateFormat = "MMM"
-            if fromMonth == toMonth {
-                return "\(fmt.string(from: from)) \(fromYear)"
-            }
-            return "\(fmt.string(from: from)) - \(fmt.string(from: to))"
-        }
-        let fmt = DateFormatter()
-        fmt.dateFormat = "MMM yyyy"
-        return "\(fmt.string(from: from)) - \(fmt.string(from: to))"
+        DateFilterHelpers.displayLabel(from: viewModel.scheduledFrom, to: viewModel.scheduledTo)
     }
 
     private func filterPill(label: String, isActive: Bool, action: @escaping () -> Void) -> some View {

@@ -50,11 +50,10 @@ function getPresets(): Preset[] {
   ];
 }
 
-function formatButtonLabel(from: string, to: string): string {
+function formatButtonLabel(from: string, to: string, presets: Preset[]): string {
   if (!from && !to) return 'Schedule';
 
   // Check if it matches a preset
-  const presets = getPresets();
   const match = presets.find(p => p.from === from && p.to === to);
   if (match) return match.label;
 
@@ -87,7 +86,7 @@ export default function DateRangeFilterDropdown({
 
   const presets = useMemo(() => getPresets(), []);
   const isActive = !!(dateFrom || dateTo);
-  const buttonLabel = formatButtonLabel(dateFrom, dateTo);
+  const buttonLabel = formatButtonLabel(dateFrom, dateTo, presets);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

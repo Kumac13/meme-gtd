@@ -16,7 +16,10 @@ class MemoListViewModel: ObservableObject {
     @Published var labelFilters: Set<String> = []
     @Published var createdFrom: Date?
     @Published var createdTo: Date?
+    @Published var projectFilters: Set<Int> = []
+    @Published var includeNoProject: Bool = false
     @Published var allLabels: [IssueLabel] = []
+    @Published var allProjects: [Project] = []
 
     // Search match info (issueId -> match label + snippet)
     @Published var searchMatchInfos: [Int: String] = [:]
@@ -91,6 +94,13 @@ class MemoListViewModel: ObservableObject {
         }
         if let to = createdTo {
             queryItems.append(URLQueryItem(name: "createdTo", value: Self.dateFormatter.string(from: to)))
+        }
+
+        if !projectFilters.isEmpty || includeNoProject {
+            var parts: [String] = []
+            if includeNoProject { parts.append("none") }
+            parts.append(contentsOf: projectFilters.map(String.init))
+            queryItems.append(URLQueryItem(name: "projectId", value: parts.joined(separator: ",")))
         }
 
         return queryItems
@@ -253,6 +263,17 @@ class MemoListViewModel: ObservableObject {
                 body: request
             )
             store?.insertItem(memo, at: 0)
+
+            // Auto-link to filtered projects
+            if !projectFilters.isEmpty {
+                for projectId in projectFilters {
+                    let _: ProjectItem? = try? await APIClient.shared.post(
+                        path: "/api/projects/\(projectId)/items",
+                        body: AddProjectItemRequest(issueId: memo.id)
+                    )
+                }
+            }
+
             newMemoBody = ""
             HapticManager.notification(.success)
         } catch {
@@ -282,6 +303,16 @@ class MemoListViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Load projects for filter picker
+
+    func loadProjects() async {
+        do {
+            allProjects = try await APIClient.shared.get(path: "/api/projects")
+        } catch {
+            logger.error("loadProjects error: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Filter actions
 
     func toggleBookmarkFilter() {
@@ -303,6 +334,12 @@ class MemoListViewModel: ObservableObject {
     func clearDateFilter() {
         createdFrom = nil
         createdTo = nil
+        Task { await loadMemos() }
+    }
+
+    func setProjectFilters(_ projectIds: Set<Int>, includeNone: Bool) {
+        projectFilters = projectIds
+        includeNoProject = includeNone
         Task { await loadMemos() }
     }
 

@@ -10,6 +10,9 @@ struct MemoListView: View {
     @State private var isSearching: Bool = false
     @State private var showLabelPicker: Bool = false
     @State private var selectedLabelNames: Set<String> = []
+    @State private var showProjectPicker: Bool = false
+    @State private var selectedProjectIds: Set<Int> = []
+    @State private var selectedNoProject: Bool = false
     @State private var showDateRangePicker: Bool = false
     @State private var dateFrom: Date?
     @State private var dateTo: Date?
@@ -107,6 +110,7 @@ struct MemoListView: View {
             .task {
                 viewModel.store = memoStore
                 await viewModel.loadLabels()
+                await viewModel.loadProjects()
                 if memoStore.memos.isEmpty {
                     await viewModel.loadMemos()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -126,6 +130,9 @@ struct MemoListView: View {
                     isUploadingImage: isUploadingImage,
                     onExpand: {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                             withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
                         }
                     },
@@ -154,6 +161,15 @@ struct MemoListView: View {
                 ) {
                     selectedLabelNames = viewModel.labelFilters
                     showLabelPicker = true
+                }
+
+                filterPill(
+                    label: projectFilterDisplayLabel,
+                    isActive: !viewModel.projectFilters.isEmpty || viewModel.includeNoProject
+                ) {
+                    selectedProjectIds = viewModel.projectFilters
+                    selectedNoProject = viewModel.includeNoProject
+                    showProjectPicker = true
                 }
 
                 filterPill(
@@ -203,6 +219,18 @@ struct MemoListView: View {
                 onDismiss: { showLabelPicker = false },
                 showClear: true,
                 countFor: { $0.memoCount }
+            )
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showProjectPicker, onDismiss: {
+            viewModel.setProjectFilters(selectedProjectIds, includeNone: selectedNoProject)
+        }) {
+            ProjectPickerModal(
+                allProjects: viewModel.allProjects,
+                selectedIds: $selectedProjectIds,
+                onDismiss: { showProjectPicker = false },
+                showClear: true,
+                includeNoProject: $selectedNoProject
             )
             .presentationDetents([.medium, .large])
         }
@@ -281,31 +309,14 @@ struct MemoListView: View {
         return "\(count) Labels"
     }
 
+    private var projectFilterDisplayLabel: String {
+        let count = viewModel.projectFilters.count + (viewModel.includeNoProject ? 1 : 0)
+        if count == 0 { return "Project" }
+        return "\(count) Projects"
+    }
+
     private var scheduleFilterDisplayLabel: String {
-        guard let from = viewModel.createdFrom, let to = viewModel.createdTo else {
-            if viewModel.createdFrom != nil { return "From..." }
-            if viewModel.createdTo != nil { return "To..." }
-            return "Schedule"
-        }
-        let cal = Calendar.current
-        let fromYear = cal.component(.year, from: from)
-        let toYear = cal.component(.year, from: to)
-        let fromMonth = cal.component(.month, from: from)
-        let toMonth = cal.component(.month, from: to)
-        if fromYear == toYear {
-            if fromMonth == 1 && toMonth == 12 {
-                return "\(fromYear)"
-            }
-            let fmt = DateFormatter()
-            fmt.dateFormat = "MMM"
-            if fromMonth == toMonth {
-                return "\(fmt.string(from: from)) \(fromYear)"
-            }
-            return "\(fmt.string(from: from)) - \(fmt.string(from: to))"
-        }
-        let fmt = DateFormatter()
-        fmt.dateFormat = "MMM yyyy"
-        return "\(fmt.string(from: from)) - \(fmt.string(from: to))"
+        DateFilterHelpers.displayLabel(from: viewModel.createdFrom, to: viewModel.createdTo)
     }
 
     private func filterPill(label: String, isActive: Bool, action: @escaping () -> Void) -> some View {

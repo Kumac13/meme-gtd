@@ -503,6 +503,124 @@ describe('Memo Bookmark Operations', () => {
   });
 });
 
+describe('Memo Project Filter', () => {
+  let app: FastifyInstance;
+  let cleanup: () => Promise<void>;
+
+  beforeEach(async () => {
+    const testServer = await createTestServer();
+    app = testServer.app;
+    cleanup = testServer.cleanup;
+  });
+
+  afterEach(async () => {
+    await cleanup();
+  });
+
+  it('should filter memos by single projectId', async () => {
+    // Create two memos
+    const res1 = await app.inject({ method: 'POST', url: '/api/memos', payload: { bodyMd: 'Memo in project' } });
+    const memo1 = JSON.parse(res1.body);
+    await app.inject({ method: 'POST', url: '/api/memos', payload: { bodyMd: 'Memo without project' } });
+
+    // Create a project
+    const projectRes = await app.inject({
+      method: 'POST',
+      url: '/api/projects',
+      payload: { name: 'Filter Test Project', viewMeta: { viewType: 'board', columns: ['To Do', 'Done'] } },
+    });
+    const project = JSON.parse(projectRes.body);
+
+    // Add memo1 to the project
+    await app.inject({
+      method: 'POST',
+      url: `/api/projects/${project.id}/items`,
+      payload: { issueId: memo1.id },
+    });
+
+    // Filter by projectId
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/memos?projectId=${project.id}`,
+    });
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.data.length, 1);
+    assert.strictEqual(result.data[0].id, memo1.id);
+  });
+
+  it('should filter memos by projectId=none', async () => {
+    // Create two memos
+    const res1 = await app.inject({ method: 'POST', url: '/api/memos', payload: { bodyMd: 'Memo in project' } });
+    const memo1 = JSON.parse(res1.body);
+    const res2 = await app.inject({ method: 'POST', url: '/api/memos', payload: { bodyMd: 'Memo without project' } });
+    const memo2 = JSON.parse(res2.body);
+
+    // Create a project and add memo1
+    const projectRes = await app.inject({
+      method: 'POST',
+      url: '/api/projects',
+      payload: { name: 'None Filter Project', viewMeta: { viewType: 'board', columns: ['To Do', 'Done'] } },
+    });
+    const project = JSON.parse(projectRes.body);
+    await app.inject({
+      method: 'POST',
+      url: `/api/projects/${project.id}/items`,
+      payload: { issueId: memo1.id },
+    });
+
+    // Filter by projectId=none
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos?projectId=none',
+    });
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.ok(result.data.some((m: any) => m.id === memo2.id), 'should include unassigned memo');
+    assert.ok(!result.data.some((m: any) => m.id === memo1.id), 'should not include assigned memo');
+  });
+
+  it('should filter memos by combined projectId and none', async () => {
+    // Create three memos
+    const res1 = await app.inject({ method: 'POST', url: '/api/memos', payload: { bodyMd: 'Memo in project A' } });
+    const memo1 = JSON.parse(res1.body);
+    const res2 = await app.inject({ method: 'POST', url: '/api/memos', payload: { bodyMd: 'Memo in project B' } });
+    const memo2 = JSON.parse(res2.body);
+    const res3 = await app.inject({ method: 'POST', url: '/api/memos', payload: { bodyMd: 'Memo unassigned' } });
+    const memo3 = JSON.parse(res3.body);
+
+    // Create two projects
+    const projResA = await app.inject({
+      method: 'POST',
+      url: '/api/projects',
+      payload: { name: 'Project A', viewMeta: { viewType: 'board', columns: ['To Do', 'Done'] } },
+    });
+    const projectA = JSON.parse(projResA.body);
+    const projResB = await app.inject({
+      method: 'POST',
+      url: '/api/projects',
+      payload: { name: 'Project B', viewMeta: { viewType: 'board', columns: ['To Do', 'Done'] } },
+    });
+    const projectB = JSON.parse(projResB.body);
+
+    // Assign memos to projects
+    await app.inject({ method: 'POST', url: `/api/projects/${projectA.id}/items`, payload: { issueId: memo1.id } });
+    await app.inject({ method: 'POST', url: `/api/projects/${projectB.id}/items`, payload: { issueId: memo2.id } });
+
+    // Filter by none + projectA: should return memo1 (in A) and memo3 (unassigned), not memo2 (in B)
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/memos?projectId=none,${projectA.id}`,
+    });
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    const ids = result.data.map((m: any) => m.id);
+    assert.ok(ids.includes(memo1.id), 'should include memo in project A');
+    assert.ok(ids.includes(memo3.id), 'should include unassigned memo');
+    assert.ok(!ids.includes(memo2.id), 'should not include memo in project B');
+  });
+});
+
 describe('Memo Date Filtering', () => {
   let app: FastifyInstance;
   let cleanup: () => Promise<void>;
@@ -521,7 +639,6 @@ describe('Memo Date Filtering', () => {
     const memo1 = createMemo(app.db, { bodyMd: 'Old memo' });
     const memo2 = createMemo(app.db, { bodyMd: 'New memo' });
 
-    // Set created_at directly to control dates
     app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2024-06-15T10:00:00Z', memo1.id);
     app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2025-03-20T10:00:00Z', memo2.id);
 
@@ -574,6 +691,24 @@ describe('Memo Date Filtering', () => {
     assert.strictEqual(result.data[0].bodyMd, 'Memo Jan 2025');
   });
 
+  it('should reject invalid createdFrom format', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos?createdFrom=not-a-date',
+    });
+
+    assert.strictEqual(response.statusCode, 400);
+  });
+
+  it('should reject invalid createdTo format', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos?createdTo=2025/01/01',
+    });
+
+    assert.strictEqual(response.statusCode, 400);
+  });
+
   it('should return all memos when no date filter is applied', async () => {
     createMemo(app.db, { bodyMd: 'Memo A' });
     createMemo(app.db, { bodyMd: 'Memo B' });
@@ -586,6 +721,24 @@ describe('Memo Date Filtering', () => {
     assert.strictEqual(response.statusCode, 200);
     const result = JSON.parse(response.body);
     assert.strictEqual(result.data.length, 2);
+  });
+
+  it('should reject invalid createdFrom format', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos?createdFrom=not-a-date',
+    });
+
+    assert.strictEqual(response.statusCode, 400);
+  });
+
+  it('should reject invalid createdTo format', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos?createdTo=2025/01/01',
+    });
+
+    assert.strictEqual(response.statusCode, 400);
   });
 
   it('should return correct total count with date filter', async () => {
