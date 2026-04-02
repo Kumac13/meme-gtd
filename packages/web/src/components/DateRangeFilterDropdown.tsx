@@ -22,16 +22,37 @@ function getPresets(): Preset[] {
   const lastDayOfMonth = (year: number, month: number) =>
     new Date(year, month + 1, 0).getDate();
 
+  const todayStr = `${thisYear}-${pad(thisMonth + 1)}-${pad(now.getDate())}`;
+
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = `${yesterday.getFullYear()}-${pad(yesterday.getMonth() + 1)}-${pad(yesterday.getDate())}`;
+
+  // Monday-based week
+  const day = now.getDay();
+  const daysFromMonday = (day + 6) % 7;
+  const thisWeekStart = new Date(now);
+  thisWeekStart.setDate(now.getDate() - daysFromMonday);
+  const thisWeekEnd = new Date(thisWeekStart);
+  thisWeekEnd.setDate(thisWeekStart.getDate() + 6);
+
+  const lastWeekStart = new Date(thisWeekStart);
+  lastWeekStart.setDate(thisWeekStart.getDate() - 7);
+  const lastWeekEnd = new Date(thisWeekStart);
+  lastWeekEnd.setDate(thisWeekStart.getDate() - 1);
+
+  const fmtDate = (d: Date) =>
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
   return [
+    { label: 'Today', from: todayStr, to: todayStr },
+    { label: 'Yesterday', from: yesterdayStr, to: yesterdayStr },
+    { label: 'This Week', from: fmtDate(thisWeekStart), to: fmtDate(thisWeekEnd) },
+    { label: 'Last Week', from: fmtDate(lastWeekStart), to: fmtDate(lastWeekEnd) },
     {
-      label: 'Last Year',
-      from: `${thisYear - 1}-01-01`,
-      to: `${thisYear - 1}-12-31`,
-    },
-    {
-      label: 'This Year',
-      from: `${thisYear}-01-01`,
-      to: `${thisYear}-12-31`,
+      label: 'This Month',
+      from: `${thisYear}-${pad(thisMonth + 1)}-01`,
+      to: `${thisYear}-${pad(thisMonth + 1)}-${lastDayOfMonth(thisYear, thisMonth)}`,
     },
     {
       label: 'Last Month',
@@ -43,9 +64,14 @@ function getPresets(): Preset[] {
         : `${thisYear}-${pad(thisMonth)}-${lastDayOfMonth(thisYear, thisMonth - 1)}`,
     },
     {
-      label: 'This Month',
-      from: `${thisYear}-${pad(thisMonth + 1)}-01`,
-      to: `${thisYear}-${pad(thisMonth + 1)}-${lastDayOfMonth(thisYear, thisMonth)}`,
+      label: 'This Year',
+      from: `${thisYear}-01-01`,
+      to: `${thisYear}-12-31`,
+    },
+    {
+      label: 'Last Year',
+      from: `${thisYear - 1}-01-01`,
+      to: `${thisYear - 1}-12-31`,
     },
   ];
 }

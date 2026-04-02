@@ -13,6 +13,17 @@ struct DateFilterHelpers {
         return fmt
     }()
 
+    private static let shortDateFormatter: DateFormatter = {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM d, yyyy"
+        return fmt
+    }()
+
+    /// Returns a short formatted date string (e.g. "Apr 2, 2026").
+    static func shortDate(_ date: Date) -> String {
+        shortDateFormatter.string(from: date)
+    }
+
     /// Returns a display label for a date range filter pill.
     static func displayLabel(from: Date?, to: Date?, fallback: String = "Schedule") -> String {
         guard let from = from, let to = to else {

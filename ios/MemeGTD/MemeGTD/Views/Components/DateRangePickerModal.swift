@@ -14,20 +14,33 @@ struct DateRangePickerModal: View {
 
     @State private var customFrom: Date = Date()
     @State private var customTo: Date = Date()
-    @State private var showCustomFrom = false
-    @State private var showCustomTo = false
+    @State private var expandedPicker: PickerField? = nil
+
+    private enum PickerField { case from, to }
 
     private var presets: [DateRangePreset] {
         let cal = Calendar.current
         let now = Date()
         let thisYear = cal.component(.year, from: now)
-
-        let lastYearStart = cal.date(from: DateComponents(year: thisYear - 1, month: 1, day: 1))!
-        let lastYearEnd = cal.date(from: DateComponents(year: thisYear - 1, month: 12, day: 31))!
-        let thisYearStart = cal.date(from: DateComponents(year: thisYear, month: 1, day: 1))!
-        let thisYearEnd = cal.date(from: DateComponents(year: thisYear, month: 12, day: 31))!
-
         let thisMonth = cal.component(.month, from: now)
+
+        let todayStart = cal.startOfDay(for: now)
+        let todayEnd = todayStart
+
+        let yesterdayStart = cal.date(byAdding: .day, value: -1, to: todayStart)!
+        let yesterdayEnd = yesterdayStart
+
+        let weekday = cal.component(.weekday, from: now)
+        let daysFromMonday = (weekday + 5) % 7
+        let thisWeekStart = cal.date(byAdding: .day, value: -daysFromMonday, to: todayStart)!
+        let thisWeekEnd = cal.date(byAdding: .day, value: 6, to: thisWeekStart)!
+
+        let lastWeekStart = cal.date(byAdding: .day, value: -7, to: thisWeekStart)!
+        let lastWeekEnd = cal.date(byAdding: .day, value: -1, to: thisWeekStart)!
+
+        let thisMonthStart = cal.date(from: DateComponents(year: thisYear, month: thisMonth, day: 1))!
+        let thisMonthEnd = cal.date(byAdding: DateComponents(month: 1, day: -1), to: thisMonthStart)!
+
         let lastMonthComps: DateComponents = {
             if thisMonth == 1 {
                 return DateComponents(year: thisYear - 1, month: 12, day: 1)
@@ -37,14 +50,21 @@ struct DateRangePickerModal: View {
         let lastMonthStart = cal.date(from: lastMonthComps)!
         let lastMonthEnd = cal.date(byAdding: DateComponents(month: 1, day: -1), to: lastMonthStart)!
 
-        let thisMonthStart = cal.date(from: DateComponents(year: thisYear, month: thisMonth, day: 1))!
-        let thisMonthEnd = cal.date(byAdding: DateComponents(month: 1, day: -1), to: thisMonthStart)!
+        let thisYearStart = cal.date(from: DateComponents(year: thisYear, month: 1, day: 1))!
+        let thisYearEnd = cal.date(from: DateComponents(year: thisYear, month: 12, day: 31))!
+
+        let lastYearStart = cal.date(from: DateComponents(year: thisYear - 1, month: 1, day: 1))!
+        let lastYearEnd = cal.date(from: DateComponents(year: thisYear - 1, month: 12, day: 31))!
 
         return [
-            DateRangePreset(label: "Last Year", from: lastYearStart, to: lastYearEnd),
-            DateRangePreset(label: "This Year", from: thisYearStart, to: thisYearEnd),
-            DateRangePreset(label: "Last Month", from: lastMonthStart, to: lastMonthEnd),
+            DateRangePreset(label: "Today", from: todayStart, to: todayEnd),
+            DateRangePreset(label: "Yesterday", from: yesterdayStart, to: yesterdayEnd),
+            DateRangePreset(label: "This Week", from: thisWeekStart, to: thisWeekEnd),
+            DateRangePreset(label: "Last Week", from: lastWeekStart, to: lastWeekEnd),
             DateRangePreset(label: "This Month", from: thisMonthStart, to: thisMonthEnd),
+            DateRangePreset(label: "Last Month", from: lastMonthStart, to: lastMonthEnd),
+            DateRangePreset(label: "This Year", from: thisYearStart, to: thisYearEnd),
+            DateRangePreset(label: "Last Year", from: lastYearStart, to: lastYearEnd),
         ]
     }
 
@@ -120,47 +140,118 @@ struct DateRangePickerModal: View {
 
                     Divider()
 
-                    // Custom range
-                    VStack(alignment: .leading, spacing: 12) {
+                    // Custom range with expandable wheel pickers
+                    VStack(alignment: .leading, spacing: 0) {
                         Text("Custom Range")
                             .font(.system(size: 13))
                             .foregroundColor(Color(.secondaryLabel))
                             .padding(.horizontal, 4)
+                            .padding(.bottom, 8)
 
-                        // From date
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("From")
-                                .font(.system(size: 13))
-                                .foregroundColor(Color(.secondaryLabel))
+                        // From row
+                        Button(action: {
+                            HapticManager.impact(.light)
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                expandedPicker = expandedPicker == .from ? nil : .from
+                            }
+                        }) {
+                            HStack {
+                                Text("From")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(Color(.label))
+                                Spacer()
+                                Text(DateFilterHelpers.shortDate(customFrom))
+                                    .font(.system(size: 15, weight: dateFrom != nil ? .semibold : .regular))
+                                    .foregroundColor(dateFrom != nil ? .accent : Color(.secondaryLabel))
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(Color(.tertiaryLabel))
+                                    .rotationEffect(.degrees(expandedPicker == .from ? -180 : 0))
+                            }
+                            .padding(.vertical, 12)
+                        }
 
-                            DatePicker(
-                                "",
-                                selection: $customFrom,
-                                displayedComponents: .date
-                            )
-                            .datePickerStyle(.compact)
-                            .labelsHidden()
-                            .onChange(of: customFrom) { _, newValue in
-                                dateFrom = newValue
+                        if expandedPicker == .from {
+                            VStack(spacing: 8) {
+                                DatePicker(
+                                    "",
+                                    selection: $customFrom,
+                                    displayedComponents: .date
+                                )
+                                .datePickerStyle(.wheel)
+                                .labelsHidden()
+                                .frame(maxWidth: .infinity, maxHeight: 150)
+                                .clipped()
+                                .onChange(of: customFrom) { _, newValue in
+                                    dateFrom = newValue
+                                }
+
+                                Button(action: {
+                                    HapticManager.impact(.light)
+                                    withAnimation(.easeInOut(duration: 0.25)) {
+                                        expandedPicker = nil
+                                    }
+                                }) {
+                                    Text("Done")
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundColor(.accent)
+                                }
+                                .padding(.bottom, 4)
                             }
                         }
 
-                        // To date
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("To")
-                                .font(.system(size: 13))
-                                .foregroundColor(Color(.secondaryLabel))
+                        Divider()
 
-                            DatePicker(
-                                "",
-                                selection: $customTo,
-                                in: customFrom...,
-                                displayedComponents: .date
-                            )
-                            .datePickerStyle(.compact)
-                            .labelsHidden()
-                            .onChange(of: customTo) { _, newValue in
-                                dateTo = newValue
+                        // To row
+                        Button(action: {
+                            HapticManager.impact(.light)
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                expandedPicker = expandedPicker == .to ? nil : .to
+                            }
+                        }) {
+                            HStack {
+                                Text("To")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(Color(.label))
+                                Spacer()
+                                Text(DateFilterHelpers.shortDate(customTo))
+                                    .font(.system(size: 15, weight: dateTo != nil ? .semibold : .regular))
+                                    .foregroundColor(dateTo != nil ? .accent : Color(.secondaryLabel))
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(Color(.tertiaryLabel))
+                                    .rotationEffect(.degrees(expandedPicker == .to ? -180 : 0))
+                            }
+                            .padding(.vertical, 12)
+                        }
+
+                        if expandedPicker == .to {
+                            VStack(spacing: 8) {
+                                DatePicker(
+                                    "",
+                                    selection: $customTo,
+                                    in: customFrom...,
+                                    displayedComponents: .date
+                                )
+                                .datePickerStyle(.wheel)
+                                .labelsHidden()
+                                .frame(maxWidth: .infinity, maxHeight: 150)
+                                .clipped()
+                                .onChange(of: customTo) { _, newValue in
+                                    dateTo = newValue
+                                }
+
+                                Button(action: {
+                                    HapticManager.impact(.light)
+                                    withAnimation(.easeInOut(duration: 0.25)) {
+                                        expandedPicker = nil
+                                    }
+                                }) {
+                                    Text("Done")
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundColor(.accent)
+                                }
+                                .padding(.bottom, 4)
                             }
                         }
                     }
