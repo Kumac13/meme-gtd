@@ -14,6 +14,8 @@ class MemoListViewModel: ObservableObject {
     @Published var searchQuery: String = ""
     @Published var bookmarkFilter: Bool = false
     @Published var labelFilters: Set<String> = []
+    @Published var createdFrom: Date?
+    @Published var createdTo: Date?
     @Published var projectFilters: Set<Int> = []
     @Published var includeNoProject: Bool = false
     @Published var allLabels: [IssueLabel] = []
@@ -25,6 +27,13 @@ class MemoListViewModel: ObservableObject {
     var store: MemoStore?
 
     private let pageSize = 20
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
 
     // MARK: - Query parsing (matches Web UI queryParser.ts)
 
@@ -79,6 +88,12 @@ class MemoListViewModel: ObservableObject {
 
         if !allLabelFilters.isEmpty {
             queryItems.append(URLQueryItem(name: "label", value: allLabelFilters.joined(separator: ",")))
+        }
+        if let from = createdFrom {
+            queryItems.append(URLQueryItem(name: "createdFrom", value: Self.dateFormatter.string(from: from)))
+        }
+        if let to = createdTo {
+            queryItems.append(URLQueryItem(name: "createdTo", value: Self.dateFormatter.string(from: to)))
         }
 
         if !projectFilters.isEmpty || includeNoProject {
@@ -307,6 +322,18 @@ class MemoListViewModel: ObservableObject {
 
     func setLabelFilters(_ labels: Set<String>) {
         labelFilters = labels
+        Task { await loadMemos() }
+    }
+
+    func setDateFilter(from: Date?, to: Date?) {
+        createdFrom = from
+        createdTo = to
+        Task { await loadMemos() }
+    }
+
+    func clearDateFilter() {
+        createdFrom = nil
+        createdTo = nil
         Task { await loadMemos() }
     }
 

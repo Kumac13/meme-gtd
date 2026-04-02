@@ -156,6 +156,20 @@ paths:
           required: false
           description: Search memos by body content using free-text partial matching
         - schema:
+            type: string
+            format: date
+          in: query
+          name: createdFrom
+          required: false
+          description: Filter memos created on or after this date (YYYY-MM-DD)
+        - schema:
+            type: string
+            format: date
+          in: query
+          name: createdTo
+          required: false
+          description: Filter memos created on or before this date (YYYY-MM-DD)
+        - schema:
             type: integer
             minimum: 1
             maximum: 1000

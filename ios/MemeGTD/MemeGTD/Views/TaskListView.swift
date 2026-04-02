@@ -13,6 +13,9 @@ struct TaskListView: View {
     @State private var showProjectPicker: Bool = false
     @State private var selectedProjectIds: Set<Int> = []
     @State private var selectedNoProject: Bool = false
+    @State private var showDateRangePicker: Bool = false
+    @State private var dateFrom: Date?
+    @State private var dateTo: Date?
     @State private var createTaskMode: CreateTaskMode? = nil
 
     var body: some View {
@@ -94,6 +97,15 @@ struct TaskListView: View {
                     showProjectPicker = true
                 }
 
+                filterPill(
+                    label: scheduleFilterDisplayLabel,
+                    isActive: viewModel.scheduledFrom != nil || viewModel.scheduledTo != nil
+                ) {
+                    dateFrom = viewModel.scheduledFrom
+                    dateTo = viewModel.scheduledTo
+                    showDateRangePicker = true
+                }
+
                 bookmarkPill
 
                 Spacer()
@@ -171,6 +183,16 @@ struct TaskListView: View {
             )
             .presentationDetents([.medium, .large])
         }
+        .sheet(isPresented: $showDateRangePicker, onDismiss: {
+            viewModel.setDateFilter(from: dateFrom, to: dateTo)
+        }) {
+            DateRangePickerModal(
+                dateFrom: $dateFrom,
+                dateTo: $dateTo,
+                onDismiss: { showDateRangePicker = false }
+            )
+            .presentationDetents([.medium])
+        }
         .sheet(item: $createTaskMode) { mode in
             CreateTaskModal(
                 mode: mode.kind,
@@ -226,6 +248,10 @@ struct TaskListView: View {
         let count = viewModel.projectFilters.count + (viewModel.includeNoProject ? 1 : 0)
         if count == 0 { return "Project" }
         return "\(count) Projects"
+    }
+
+    private var scheduleFilterDisplayLabel: String {
+        DateFilterHelpers.displayLabel(from: viewModel.scheduledFrom, to: viewModel.scheduledTo)
     }
 
     private func filterPill(label: String, isActive: Bool, action: @escaping () -> Void) -> some View {
