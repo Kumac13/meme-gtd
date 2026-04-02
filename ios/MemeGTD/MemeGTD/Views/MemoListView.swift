@@ -60,10 +60,25 @@ struct MemoListView: View {
                             HapticManager.selection()
                             navigationPath.append(MemoRoute(memoId: memo.id, initialBody: memo.bodyMd))
                         }) {
-                            MemoTimelineItem(memo: memo, snippet: viewModel.searchMatchInfos[memo.id], searchQuery: viewModel.searchQuery.isEmpty ? nil : viewModel.searchQuery)
+                            VStack(alignment: .leading, spacing: 0) {
+                                MemoTimelineItem(
+                                    memo: memo,
+                                    snippet: viewModel.searchMatchInfos[memo.id],
+                                    searchQuery: viewModel.searchMode == .keyword && !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil
+                                )
+                                if let score = viewModel.relevanceScores[memo.id] {
+                                    RelevanceBar(score: score)
+                                        .padding(.top, 4)
+                                }
+                            }
                         }
                         .buttonStyle(.plain)
                         .padding(.horizontal, 16)
+                        .background(
+                            viewModel.relevanceScores[memo.id].map { score in
+                                Color.accent.opacity(score * 0.12)
+                            } ?? Color.clear
+                        )
                     }
 
                     Color.clear.frame(height: 1)
@@ -180,7 +195,21 @@ struct MemoListView: View {
                 isSearching: $isSearching,
                 searchQuery: $viewModel.searchQuery,
                 searchPlaceholder: "Search memos...",
-                onSearch: { viewModel.search() }
+                onSearch: { viewModel.search() },
+                searchModeView: AnyView(
+                    Picker("Search Mode", selection: $viewModel.searchMode) {
+                        ForEach(SearchMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 180)
+                    .onChange(of: viewModel.searchMode) { _, _ in
+                        if viewModel.isSearching {
+                            viewModel.search()
+                        }
+                    }
+                )
             )
         }
         .navigationBarTitleDisplayMode(.inline)

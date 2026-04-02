@@ -2,6 +2,11 @@ import Combine
 import os
 import SwiftUI
 
+enum SearchMode: String, CaseIterable {
+    case keyword = "Keyword"
+    case semantic = "Semantic"
+}
+
 private let logger = Logger(subsystem: "name.kumac.MemeGTD", category: "TaskList")
 
 @MainActor
@@ -17,6 +22,7 @@ class TaskListViewModel: ObservableObject {
     @Published var includeNoProject: Bool = false
     @Published var bookmarkFilter: Bool = false
     @Published var searchQuery: String = ""
+    @Published var searchMode: SearchMode = .keyword
 
     // Labels for picker
     @Published var allLabels: [IssueLabel] = []
@@ -27,14 +33,21 @@ class TaskListViewModel: ObservableObject {
     // Search match info (issueId -> match label + snippet)
     @Published var searchMatchInfos: [Int: String] = [:]
 
+    // Semantic search relevance scores (issueId -> score 0-1)
+    @Published var relevanceScores: [Int: Double] = [:]
+    @Published var semanticSearchTimeMs: Double?
+
     var store: TaskStore?
 
     private let pageSize = 20
 
     // MARK: - Query building
 
-    /// Whether the current request should use the keyword search API
+    /// Whether the current request should use a search API
     var isSearching: Bool { !searchQuery.isEmpty }
+
+    /// Whether semantic search is active
+    var isSemanticSearching: Bool { isSearching && searchMode == .semantic }
 
     private func buildListQueryItems(offset: Int) -> [URLQueryItem] {
         var items: [URLQueryItem] = [
@@ -98,6 +111,29 @@ class TaskListViewModel: ObservableObject {
         return TaskListResponse(data: tasks, total: response.total, limit: response.limit, offset: response.offset)
     }
 
+    // MARK: - Semantic search helpers
+
+    private func fetchSemanticSearch() async throws -> TaskListResponse {
+        let queryItems = [
+            URLQueryItem(name: "q", value: searchQuery),
+            URLQueryItem(name: "types", value: "task"),
+            URLQueryItem(name: "limit", value: "50"),
+        ]
+        let response: SemanticSearchResponse = try await APIClient.shared.get(
+            path: "/api/search/semantic",
+            queryItems: queryItems
+        )
+        var scores: [Int: Double] = [:]
+        for item in response.results {
+            scores[item.issue.id] = item.score
+        }
+        relevanceScores = scores
+        semanticSearchTimeMs = response.meta.searchTimeMs
+        searchMatchInfos = [:]
+        let tasks = response.results.map { $0.toTaskItem() }
+        return TaskListResponse(data: tasks, total: response.meta.totalResults, limit: 50, offset: 0)
+    }
+
     // MARK: - Load
 
     func loadTasks() async {
@@ -107,10 +143,16 @@ class TaskListViewModel: ObservableObject {
 
         do {
             let response: TaskListResponse
-            if isSearching {
+            if isSemanticSearching {
+                response = try await fetchSemanticSearch()
+            } else if isSearching {
+                relevanceScores = [:]
+                semanticSearchTimeMs = nil
                 response = try await fetchKeywordSearch(offset: 0)
             } else {
                 searchMatchInfos = [:]
+                relevanceScores = [:]
+                semanticSearchTimeMs = nil
                 response = try await APIClient.shared.get(
                     path: "/api/tasks",
                     queryItems: buildListQueryItems(offset: 0)
@@ -130,6 +172,9 @@ class TaskListViewModel: ObservableObject {
 
     func fetchTasks() async -> TaskListResponse? {
         do {
+            if isSemanticSearching {
+                return try await fetchSemanticSearch()
+            }
             if isSearching {
                 return try await fetchKeywordSearch(offset: 0)
             }

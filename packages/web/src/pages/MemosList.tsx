@@ -4,8 +4,9 @@ import { MemosService } from '../api/services/MemosService';
 import { ProjectsService } from '../api/services/ProjectsService';
 import { SearchService } from '../api/services/SearchService';
 import ItemList from '../components/ItemList';
+import RelevanceIndicator from '../components/RelevanceIndicator';
 import LabelFilterDropdown from '../components/LabelFilterDropdown';
-import SearchInput from '../components/SearchInput';
+import SearchInput, { type SearchMode } from '../components/SearchInput';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
@@ -100,6 +101,9 @@ export default function MemosList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [matchSnippets, setMatchSnippets] = useState<Record<number, string>>({});
+  const [relevanceScores, setRelevanceScores] = useState<Record<number, number>>({});
+  const [searchMode, setSearchMode] = useState<SearchMode>('keyword');
+  const [semanticMeta, setSemanticMeta] = useState<{ totalResults: number; searchTimeMs: number } | null>(null);
   const [isFetchingOlder, setIsFetchingOlder] = useState(false);
   const [newMemoBody, setNewMemoBody] = useState('');
   const [creatingMemo, setCreatingMemo] = useState(false);
@@ -159,7 +163,36 @@ export default function MemosList() {
 
         const offset = (currentPage - 1) * PAGE_SIZE;
 
-        if (searchParam) {
+        if (searchParam && searchMode === 'semantic') {
+          // Use semantic search API
+          const response = await SearchService.semanticSearch(
+            searchParam,
+            50,
+            'memo',
+          );
+          const mapped = response.results.map((r) => ({
+            id: r.issue.id,
+            type: r.issue.type,
+            title: r.issue.title,
+            bodyMd: r.issue.bodyMd,
+            isBookmarked: false,
+            commentCount: 0,
+            labels: [] as string[],
+            createdAt: r.issue.createdAt,
+            updatedAt: r.issue.updatedAt,
+          }));
+          const scores: Record<number, number> = {};
+          for (const r of response.results) {
+            scores[r.issue.id] = r.score;
+          }
+          setMatchSnippets({});
+          setRelevanceScores(scores);
+          setSemanticMeta(response.meta);
+          setMemos(mapped);
+          setTotal(response.meta.totalResults);
+        } else if (searchParam) {
+          setRelevanceScores({});
+          setSemanticMeta(null);
           const response = await SearchService.keywordSearch(
             searchParam,
             PAGE_SIZE,
@@ -192,6 +225,8 @@ export default function MemosList() {
           setTotal(response.total);
         } else {
           setMatchSnippets({});
+          setRelevanceScores({});
+          setSemanticMeta(null);
           const response = await MemosService.listMemos(
             bookmarkFilter ? 'true' : undefined,
             labelParam,
@@ -212,7 +247,7 @@ export default function MemosList() {
     }
 
     fetchMemos();
-  }, [filters.searchQuery, currentPage, bookmarkFilter, selectedLabels, selectedProjectIds, selectedNoneProject]);
+  }, [filters.searchQuery, currentPage, bookmarkFilter, selectedLabels, selectedProjectIds, selectedNoneProject, searchMode]);
 
   // Mobile: scroll to bottom after initial load so newest memos are visible
   useEffect(() => {
@@ -479,6 +514,8 @@ export default function MemosList() {
                 setSearchParams(params);
               }}
               placeholder="Search memos"
+              searchMode={searchMode}
+              onSearchModeChange={setSearchMode}
             />
           </div>
 
@@ -602,8 +639,13 @@ export default function MemosList() {
                   const previousBucket = prev ? getTimelineDateBucket(prev.createdAt) : null;
                   const itemPath = createItemDetailUrl({ basePath: '/memos', itemId: memo.id, currentFilters: searchParams });
 
+                  const memoRelevance = relevanceScores[memo.id];
+                  const memoBgStyle = memoRelevance != null
+                    ? { backgroundColor: `rgba(45, 164, 78, ${memoRelevance * 0.12})`, borderRadius: '6px', padding: '4px 6px', margin: '-4px -6px' }
+                    : undefined;
+
                   return (
-                    <div key={memo.id} className="py-1.5">
+                    <div key={memo.id} className="py-1.5" style={memoBgStyle}>
                       {currentBucket !== previousBucket && (
                         <div className="flex items-center gap-3 py-2">
                           <span className="text-[13px] font-medium text-gray-500">{currentBucket}</span>
@@ -628,6 +670,9 @@ export default function MemosList() {
                             <div className="text-xs text-gray-500 mt-1.5">
                               {highlightKeyword(extractSnippet(matchSnippets[memo.id], filters.parsedQuery.freeText), filters.parsedQuery.freeText)}
                             </div>
+                          )}
+                          {relevanceScores[memo.id] != null && (
+                            <RelevanceIndicator score={relevanceScores[memo.id]} />
                           )}
                         </Link>
 
@@ -669,6 +714,8 @@ export default function MemosList() {
               setSearchParams(params);
             }}
             placeholder="Search memos"
+            searchMode={searchMode}
+            onSearchModeChange={setSearchMode}
           />
           <Link
             to="/memos/new"
@@ -761,6 +808,11 @@ export default function MemosList() {
 
         <div className="text-sm text-gray-500 mb-2">
           {total} {total === 1 ? 'memo' : 'memos'}
+          {semanticMeta && (
+            <span className="ml-2 text-gray-400">
+              ({semanticMeta.searchTimeMs}ms)
+            </span>
+          )}
         </div>
 
         {filteredMemos.length === 0 ? (
@@ -770,7 +822,7 @@ export default function MemosList() {
           />
         ) : (
           <>
-            <ItemList items={filteredMemos} itemType="memo" basePath="/memos" currentFilters={searchParams} onDelete={handleDelete} matchSnippets={matchSnippets} searchQuery={filters.parsedQuery.freeText} />
+            <ItemList items={filteredMemos} itemType="memo" basePath="/memos" currentFilters={searchParams} onDelete={handleDelete} matchSnippets={matchSnippets} searchQuery={searchMode === 'keyword' ? filters.parsedQuery.freeText : undefined} relevanceScores={relevanceScores} />
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}

@@ -7,6 +7,7 @@ struct AppToolbar<Trailing: View>: ToolbarContent {
     @ViewBuilder let trailing: () -> Trailing
 
     private let searchConfig: SearchConfig?
+    private let searchModeView: AnyView?
 
     struct SearchConfig {
         let isSearching: Binding<Bool>
@@ -26,6 +27,7 @@ struct AppToolbar<Trailing: View>: ToolbarContent {
         self.onMenuTap = onMenuTap
         self.titleLineLimit = titleLineLimit
         self.searchConfig = nil
+        self.searchModeView = nil
         self.trailing = trailing
     }
 
@@ -37,6 +39,7 @@ struct AppToolbar<Trailing: View>: ToolbarContent {
         searchQuery: Binding<String>,
         searchPlaceholder: String = "Search...",
         onSearch: @escaping () -> Void,
+        searchModeView: AnyView? = nil,
         @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() }
     ) {
         self.title = title
@@ -48,6 +51,7 @@ struct AppToolbar<Trailing: View>: ToolbarContent {
             placeholder: searchPlaceholder,
             onSearch: onSearch
         )
+        self.searchModeView = searchModeView
         self.trailing = trailing
     }
 
@@ -71,32 +75,38 @@ struct AppToolbar<Trailing: View>: ToolbarContent {
         ToolbarItem(placement: .principal) {
             ZStack {
                 if isSearchActive, let config = searchConfig {
-                    HStack(spacing: 8) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 13))
-                            .foregroundColor(Color(.systemGray))
-
-                        AutoFocusTextField(
-                            placeholder: config.placeholder,
-                            text: config.searchQuery,
-                            onSubmit: config.onSearch
-                        )
-
-                        Button(action: {
-                            HapticManager.impact(.light)
-                            config.searchQuery.wrappedValue = ""
-                            config.onSearch()
-                            config.isSearching.wrappedValue = false
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 14))
+                    VStack(spacing: 6) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 13))
                                 .foregroundColor(Color(.systemGray))
+
+                            AutoFocusTextField(
+                                placeholder: config.placeholder,
+                                text: config.searchQuery,
+                                onSubmit: config.onSearch
+                            )
+
+                            Button(action: {
+                                HapticManager.impact(.light)
+                                config.searchQuery.wrappedValue = ""
+                                config.onSearch()
+                                config.isSearching.wrappedValue = false
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(Color(.systemGray))
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .frame(width: UIScreen.main.bounds.width - 32)
+                        .modifier(PillSurface(radius: 22))
+
+                        if let modeView = searchModeView {
+                            modeView
                         }
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .frame(width: UIScreen.main.bounds.width - 32)
-                    .modifier(PillSurface(radius: 22))
                     .transition(.move(edge: .trailing).combined(with: .opacity))
                 } else {
                     if let lineLimit = titleLineLimit {

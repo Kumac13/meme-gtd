@@ -25,8 +25,23 @@ struct TaskListView: View {
                             TaskRoute(taskId: task.id, initialTitle: task.title)
                         )
                     }) {
-                        TaskCell(task: task, snippet: viewModel.searchMatchInfos[task.id], searchQuery: viewModel.searchQuery.isEmpty ? nil : viewModel.searchQuery)
-                            .padding(.horizontal, 16)
+                        VStack(alignment: .leading, spacing: 0) {
+                            TaskCell(
+                                task: task,
+                                snippet: viewModel.searchMatchInfos[task.id],
+                                searchQuery: viewModel.searchMode == .keyword && !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil
+                            )
+                            if let score = viewModel.relevanceScores[task.id] {
+                                RelevanceBar(score: score)
+                                    .padding(.top, 4)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .background(
+                            viewModel.relevanceScores[task.id].map { score in
+                                Color.accent.opacity(score * 0.12)
+                            } ?? Color.clear
+                        )
                     }
                     .buttonStyle(.plain)
 
@@ -128,7 +143,21 @@ struct TaskListView: View {
                 isSearching: $isSearching,
                 searchQuery: $viewModel.searchQuery,
                 searchPlaceholder: "Search tasks...",
-                onSearch: { viewModel.search() }
+                onSearch: { viewModel.search() },
+                searchModeView: AnyView(
+                    Picker("Search Mode", selection: $viewModel.searchMode) {
+                        ForEach(SearchMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 180)
+                    .onChange(of: viewModel.searchMode) { _, _ in
+                        if viewModel.isSearching {
+                            viewModel.search()
+                        }
+                    }
+                )
             )
         }
         .navigationBarTitleDisplayMode(.inline)

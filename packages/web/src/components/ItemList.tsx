@@ -4,6 +4,7 @@ import { formatDateTime, formatRelativeTime } from "../utils/dates";
 import { InlineMarkdownRenderer, extractFirstLine } from "../utils/markdown";
 import { extractSnippet, highlightKeyword } from "../utils/searchHighlight";
 import { LabelBadge } from "./LabelBadge";
+import RelevanceIndicator from "./RelevanceIndicator";
 import { createItemDetailUrl } from "../utils/navigationHelpers";
 import type { Article, IssueType } from "meme-gtd-shared";
 
@@ -71,6 +72,8 @@ itemType: IssueType | "project";
   matchSnippets?: Record<number, string>;
   /** Search query for keyword highlighting */
   searchQuery?: string;
+  /** Relevance scores from semantic search (issueId -> score 0-1) */
+  relevanceScores?: Record<number, number>;
 }
 
 function isTask(item: Item): item is Task {
@@ -95,6 +98,7 @@ export default function ItemList({
   showStatusBadges = false,
   matchSnippets,
   searchQuery,
+  relevanceScores,
 }: ItemListProps) {
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
@@ -166,12 +170,18 @@ export default function ItemList({
           }
         };
 
+        const relevanceScore = relevanceScores?.[item.id];
+        const bgStyle = relevanceScore != null
+          ? { backgroundColor: `rgba(45, 164, 78, ${relevanceScore * 0.12})` }
+          : undefined;
+
         return (
           <div key={item.id} className="relative">
             <Link
               to={itemPath}
               onClick={handleClick}
               className="block p-4 hover:bg-gray-50 transition-colors"
+              style={bgStyle}
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex-1 min-w-0">
@@ -221,6 +231,7 @@ export default function ItemList({
                         )}
                       </div>
                       {renderSnippet(item.id)}
+                      {relevanceScore != null && <RelevanceIndicator score={relevanceScore} />}
                       <div className="flex items-center text-xs text-gray-500 space-x-3 mt-1">
                         <span>#{item.id}</span>
                         {isTask(item) && item.scheduledOn && (
@@ -257,6 +268,7 @@ export default function ItemList({
                           </>
                         )}
                       </div>
+                      {relevanceScore != null && <RelevanceIndicator score={relevanceScore} />}
                       <div className="flex items-center text-xs text-gray-500 space-x-3">
                         <span>#{item.id}</span>
                         {(item.meta as Article["meta"])?.siteName && (
@@ -298,6 +310,7 @@ export default function ItemList({
                         </div>
                       )}
                       {renderSnippet(item.id)}
+                      {relevanceScore != null && <RelevanceIndicator score={relevanceScore} />}
                       <div className="flex items-center text-xs text-gray-500 space-x-3">
                         <span>#{item.id}</span>
                         <span title={formatDateTime(item.createdAt)}>
