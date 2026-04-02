@@ -129,6 +129,9 @@ struct MemoListView: View {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                             withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
                         }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
+                        }
                     },
                     onSubmit: {
                         Task {
