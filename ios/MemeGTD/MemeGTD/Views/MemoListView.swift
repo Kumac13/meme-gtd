@@ -24,14 +24,17 @@ struct MemoListView: View {
     @State private var pickedExtension: String = "jpg"
 
     private var reversedMemos: [Memo] {
-        memoStore.memos.reversed()
+        if viewModel.searchMode == .semantic && isSearching {
+            return memoStore.memos
+        }
+        return memoStore.memos.reversed()
     }
 
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    if !memoStore.hasMore && !memoStore.memos.isEmpty {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        if !memoStore.hasMore && !memoStore.memos.isEmpty {
                         Text("No older memos")
                             .font(.caption)
                             .foregroundColor(Color(.systemGray))
@@ -63,7 +66,17 @@ struct MemoListView: View {
                             HapticManager.selection()
                             navigationPath.append(MemoRoute(memoId: memo.id, initialBody: memo.bodyMd))
                         }) {
-                            MemoTimelineItem(memo: memo, snippet: viewModel.searchMatchInfos[memo.id], searchQuery: viewModel.searchQuery.isEmpty ? nil : viewModel.searchQuery)
+                            VStack(alignment: .leading, spacing: 0) {
+                                MemoTimelineItem(
+                                    memo: memo,
+                                    snippet: viewModel.searchMatchInfos[memo.id],
+                                    searchQuery: viewModel.searchMode == .keyword && !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil
+                                )
+                                if let score = viewModel.relevanceScores[memo.id] {
+                                    RelevanceBar(score: score)
+                                        .padding(.top, 4)
+                                }
+                            }
                         }
                         .buttonStyle(.plain)
                         .padding(.horizontal, 16)
@@ -154,7 +167,24 @@ struct MemoListView: View {
             }
         }
         .safeAreaInset(edge: .top) {
-            HStack(spacing: 8) {
+            VStack(spacing: 4) {
+                if isSearching {
+                    Picker("Search Mode", selection: $viewModel.searchMode) {
+                        ForEach(SearchMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .background(.regularMaterial, in: Capsule())
+                    .padding(.horizontal, 16)
+                    .onChange(of: viewModel.searchMode) { _, _ in
+                        if viewModel.isSearching {
+                            viewModel.search()
+                        }
+                    }
+                }
+
+                HStack(spacing: 8) {
                 filterPill(
                     label: labelFilterDisplayLabel,
                     isActive: !viewModel.labelFilters.isEmpty
@@ -187,6 +217,7 @@ struct MemoListView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+            }
         }
         .toolbar {
             AppToolbar(

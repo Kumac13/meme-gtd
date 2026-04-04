@@ -156,6 +156,30 @@ export class SearchService {
                  */
                 bodyMd: string;
                 /**
+                 * Issue status
+                 */
+                status: string | null;
+                /**
+                 * Whether the issue is bookmarked
+                 */
+                isBookmarked: boolean;
+                /**
+                 * Labels assigned to the issue
+                 */
+                labels: Array<string>;
+                /**
+                 * Number of comments
+                 */
+                commentCount: number;
+                /**
+                 * Task kind (action, waiting, etc.)
+                 */
+                taskKind: string | null;
+                /**
+                 * Scheduled date
+                 */
+                scheduledOn: string | null;
+                /**
                  * Creation timestamp
                  */
                 createdAt: string;

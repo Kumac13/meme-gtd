@@ -7,7 +7,7 @@ import ItemList from '../components/ItemList';
 
 import LabelFilterDropdown from '../components/LabelFilterDropdown';
 import DateRangeFilterDropdown from '../components/DateRangeFilterDropdown';
-import SearchInput from '../components/SearchInput';
+import SearchInput, { type SearchMode } from '../components/SearchInput';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
@@ -110,6 +110,9 @@ export default function TasksList() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [matchSnippets, setMatchSnippets] = useState<Record<number, string>>({});
+  const [relevanceScores, setRelevanceScores] = useState<Record<number, number>>({});
+  const [searchMode, setSearchMode] = useState<SearchMode>('keyword');
+  const [semanticMeta, setSemanticMeta] = useState<{ totalResults: number; searchTimeMs: number } | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -168,8 +171,39 @@ export default function TasksList() {
           return parts.length > 0 ? parts.join(',') : undefined;
         })();
 
-        if (searchParam) {
+        if (searchParam && searchMode === 'semantic') {
+          // Use semantic search API
+          const response = await SearchService.semanticSearch(
+            searchParam,
+            50,
+            'task',
+          );
+          const mapped = response.results.map((r) => ({
+            id: r.issue.id,
+            type: r.issue.type,
+            title: r.issue.title,
+            bodyMd: r.issue.bodyMd,
+            status: r.issue.status ?? null,
+            isBookmarked: r.issue.isBookmarked ?? false,
+            commentCount: r.issue.commentCount ?? 0,
+            scheduledOn: r.issue.scheduledOn ?? null,
+            labels: r.issue.labels ?? [],
+            createdAt: r.issue.createdAt,
+            updatedAt: r.issue.updatedAt,
+          }));
+          const scores: Record<number, number> = {};
+          for (const r of response.results) {
+            scores[r.issue.id] = r.score;
+          }
+          setMatchSnippets({});
+          setRelevanceScores(scores);
+          setSemanticMeta(response.meta);
+          setTasks(mapped);
+          setTotal(response.meta.totalResults);
+        } else if (searchParam) {
           // Use keyword search API — respect current status filter
+          setRelevanceScores({});
+          setSemanticMeta(null);
           const searchStatus = statusFilter !== 'all' ? statusFilter : undefined;
           const response = await SearchService.keywordSearch(
             searchParam,
@@ -213,6 +247,8 @@ export default function TasksList() {
         } else {
           // Use list API
           setMatchSnippets({});
+          setRelevanceScores({});
+          setSemanticMeta(null);
           const response = await TasksService.listTasks(
             effectiveStatus as 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled' | undefined,
             undefined,
@@ -236,7 +272,7 @@ export default function TasksList() {
     }
 
     fetchTasks();
-  }, [statusFilter, filters.searchQuery, currentPage, projectIdParam, selectedLabels, bookmarkFilter, scheduledFrom, scheduledTo]);
+  }, [statusFilter, filters.searchQuery, currentPage, projectIdParam, selectedLabels, bookmarkFilter, searchMode, scheduledFrom, scheduledTo]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -373,6 +409,8 @@ export default function TasksList() {
             setSearchParams(params);
           }}
           placeholder="Search tasks"
+          searchMode={searchMode}
+          onSearchModeChange={setSearchMode}
         />
         <Link
           to="/tasks/new"
@@ -509,8 +547,13 @@ export default function TasksList() {
         <>
           <div className="text-sm text-gray-500 mb-2">
             {total} {total === 1 ? 'task' : 'tasks'}
+            {semanticMeta && (
+              <span className="ml-2 text-gray-400">
+                ({semanticMeta.searchTimeMs}ms)
+              </span>
+            )}
           </div>
-          <ItemList items={filteredTasks} itemType="task" basePath="/tasks" currentFilters={searchParams} onDelete={handleDelete} matchSnippets={matchSnippets} searchQuery={filters.parsedQuery.freeText} />
+          <ItemList items={filteredTasks} itemType="task" basePath="/tasks" currentFilters={searchParams} onDelete={handleDelete} matchSnippets={matchSnippets} searchQuery={searchMode === 'keyword' ? filters.parsedQuery.freeText : undefined} relevanceScores={relevanceScores} />
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

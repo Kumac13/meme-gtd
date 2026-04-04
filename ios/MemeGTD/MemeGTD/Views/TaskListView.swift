@@ -28,8 +28,18 @@ struct TaskListView: View {
                             TaskRoute(taskId: task.id, initialTitle: task.title)
                         )
                     }) {
-                        TaskCell(task: task, snippet: viewModel.searchMatchInfos[task.id], searchQuery: viewModel.searchQuery.isEmpty ? nil : viewModel.searchQuery)
-                            .padding(.horizontal, 16)
+                        VStack(alignment: .leading, spacing: 0) {
+                            TaskCell(
+                                task: task,
+                                snippet: viewModel.searchMatchInfos[task.id],
+                                searchQuery: viewModel.searchMode == .keyword && !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil
+                            )
+                            if let score = viewModel.relevanceScores[task.id] {
+                                RelevanceBar(score: score)
+                                    .padding(.top, 4)
+                            }
+                        }
+                        .padding(.horizontal, 16)
                     }
                     .buttonStyle(.plain)
 
@@ -72,8 +82,26 @@ struct TaskListView: View {
             }
         }
         .safeAreaInset(edge: .top) {
-            HStack(spacing: 8) {
-                filterPill(
+            VStack(spacing: 0) {
+                if isSearching {
+                    Picker("Search Mode", selection: $viewModel.searchMode) {
+                        ForEach(SearchMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .background(.regularMaterial, in: Capsule())
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .onChange(of: viewModel.searchMode) { _, _ in
+                        if viewModel.isSearching {
+                            viewModel.search()
+                        }
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    filterPill(
                     label: viewModel.statusFilter.displayLabel,
                     isActive: true
                 ) {
@@ -112,6 +140,7 @@ struct TaskListView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+            }
         }
         .safeAreaBar(edge: .bottom) {
             HStack {

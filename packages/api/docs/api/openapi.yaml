@@ -7753,6 +7753,30 @@ paths:
                             bodyMd:
                               type: string
                               description: Issue body in Markdown
+                            status:
+                              type: string
+                              nullable: true
+                              description: Issue status
+                            isBookmarked:
+                              type: boolean
+                              description: Whether the issue is bookmarked
+                            labels:
+                              type: array
+                              items:
+                                type: string
+                              description: Labels assigned to the issue
+                            commentCount:
+                              type: integer
+                              minimum: 0
+                              description: Number of comments
+                            taskKind:
+                              type: string
+                              nullable: true
+                              description: Task kind (action, waiting, etc.)
+                            scheduledOn:
+                              type: string
+                              nullable: true
+                              description: Scheduled date
                             createdAt:
                               type: string
                               description: Creation timestamp
@@ -7764,6 +7788,12 @@ paths:
                             - type
                             - title
                             - bodyMd
+                            - status
+                            - isBookmarked
+                            - labels
+                            - commentCount
+                            - taskKind
+                            - scheduledOn
                             - createdAt
                             - updatedAt
                           additionalProperties: false
