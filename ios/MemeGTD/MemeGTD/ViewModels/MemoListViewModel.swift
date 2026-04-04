@@ -12,6 +12,7 @@ class MemoListViewModel: ObservableObject {
     @Published var newMemoBody: String = ""
     @Published var isCreating: Bool = false
     @Published var searchQuery: String = ""
+    @Published var searchMode: SearchMode = .keyword
     @Published var bookmarkFilter: Bool = false
     @Published var labelFilters: Set<String> = []
     @Published var createdFrom: Date?
@@ -23,6 +24,10 @@ class MemoListViewModel: ObservableObject {
 
     // Search match info (issueId -> match label + snippet)
     @Published var searchMatchInfos: [Int: String] = [:]
+
+    // Semantic search relevance scores (issueId -> score 0-1)
+    @Published var relevanceScores: [Int: Double] = [:]
+    @Published var semanticSearchTimeMs: Double?
 
     var store: MemoStore?
 
@@ -64,12 +69,15 @@ class MemoListViewModel: ObservableObject {
         return result
     }
 
-    /// Whether the current request should use the keyword search API
+    /// Whether the current request should use a search API
     var isSearching: Bool {
         if searchQuery.isEmpty { return false }
         let parsed = parseSearchQuery(searchQuery)
         return !parsed.freeText.isEmpty
     }
+
+    /// Whether semantic search is active
+    var isSemanticSearching: Bool { isSearching && searchMode == .semantic }
 
     private func buildListQueryItems(offset: Int) -> [URLQueryItem] {
         var queryItems: [URLQueryItem] = [
@@ -148,6 +156,30 @@ class MemoListViewModel: ObservableObject {
         return MemoListResponse(data: memos, total: response.total, limit: response.limit, offset: response.offset)
     }
 
+    // MARK: - Semantic search helpers
+
+    private func fetchSemanticSearch() async throws -> MemoListResponse {
+        let parsed = parseSearchQuery(searchQuery)
+        let queryItems = [
+            URLQueryItem(name: "q", value: parsed.freeText),
+            URLQueryItem(name: "types", value: "memo"),
+            URLQueryItem(name: "limit", value: "50"),
+        ]
+        let response: SemanticSearchResponse = try await APIClient.shared.get(
+            path: "/api/search/semantic",
+            queryItems: queryItems
+        )
+        var scores: [Int: Double] = [:]
+        for item in response.results {
+            scores[item.issue.id] = item.score
+        }
+        relevanceScores = scores
+        semanticSearchTimeMs = response.meta.searchTimeMs
+        searchMatchInfos = [:]
+        let memos = response.results.map { $0.toMemo() }
+        return MemoListResponse(data: memos, total: response.meta.totalResults, limit: 50, offset: 0)
+    }
+
     // MARK: - Load
 
     func loadMemos() async {
@@ -157,10 +189,16 @@ class MemoListViewModel: ObservableObject {
 
         do {
             let response: MemoListResponse
-            if isSearching {
+            if isSemanticSearching {
+                response = try await fetchSemanticSearch()
+            } else if isSearching {
+                relevanceScores = [:]
+                semanticSearchTimeMs = nil
                 response = try await fetchKeywordSearch(offset: 0)
             } else {
                 searchMatchInfos = [:]
+                relevanceScores = [:]
+                semanticSearchTimeMs = nil
                 response = try await APIClient.shared.get(
                     path: "/api/memos",
                     queryItems: buildListQueryItems(offset: 0)
@@ -180,6 +218,9 @@ class MemoListViewModel: ObservableObject {
 
     func fetchMemos() async -> MemoListResponse? {
         do {
+            if isSemanticSearching {
+                return try await fetchSemanticSearch()
+            }
             if isSearching {
                 return try await fetchKeywordSearch(offset: 0)
             }
