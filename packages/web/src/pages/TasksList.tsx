@@ -6,6 +6,7 @@ import { ProjectsService } from '../api/services/ProjectsService';
 import ItemList from '../components/ItemList';
 
 import LabelFilterDropdown from '../components/LabelFilterDropdown';
+import DateRangeFilterDropdown from '../components/DateRangeFilterDropdown';
 import SearchInput, { type SearchMode } from '../components/SearchInput';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
@@ -20,6 +21,8 @@ import {
   updateSearchParam,
   parseLabelParam,
   updateLabelParam,
+  parseDateRangeParams,
+  updateDateRangeParams,
 } from '../utils/urlFilterHelpers';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
@@ -55,6 +58,8 @@ const statusLabels: Record<string, string> = {
   canceled: 'Canceled',
 };
 
+import { PROJECT_STATUS_LABELS, sortProjectsByStatus } from '../utils/projectStatus';
+
 const statusOptions = ['all', 'inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled'];
 
 const PAGE_SIZE = 20;
@@ -88,6 +93,12 @@ export default function TasksList() {
     return projectIdParam.split(',').map(s => s.trim()).includes('none');
   }, [projectIdParam]);
 
+  // Schedule date range filter from URL
+  const { from: scheduledFrom, to: scheduledTo } = useMemo(
+    () => parseDateRangeParams(searchParams, 'scheduledFrom', 'scheduledTo'),
+    [searchParams]
+  );
+
   // Pagination state from URL
   const currentPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
 
@@ -111,7 +122,8 @@ export default function TasksList() {
   // Load projects for filter dropdown
   useEffect(() => {
     ProjectsService.listProjects().then(data => {
-      setProjects(data.map(p => ({ id: p.id, name: p.name, status: p.status })));
+      const mapped = data.map(p => ({ id: p.id, name: p.name, status: p.status }));
+      setProjects(sortProjectsByStatus(mapped));
     }).catch(console.error);
   }, []);
 
@@ -243,8 +255,8 @@ export default function TasksList() {
             labelParam,
             projectIdFilter,
             undefined,
-            undefined,
-            undefined,
+            scheduledFrom || undefined,
+            scheduledTo || undefined,
             PAGE_SIZE,
             offset
           );
@@ -260,7 +272,7 @@ export default function TasksList() {
     }
 
     fetchTasks();
-  }, [statusFilter, filters.searchQuery, currentPage, projectIdParam, selectedLabels, bookmarkFilter, searchMode]);
+  }, [statusFilter, filters.searchQuery, currentPage, projectIdParam, selectedLabels, bookmarkFilter, searchMode, scheduledFrom, scheduledTo]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -295,6 +307,18 @@ export default function TasksList() {
 
   const handleClearLabels = () => {
     const params = updateLabelParam(searchParams, new Set());
+    params.delete('page');
+    setSearchParams(params);
+  };
+
+  const handleScheduleChange = (from: string, to: string) => {
+    const params = updateDateRangeParams(searchParams, from, to, 'scheduledFrom', 'scheduledTo');
+    params.delete('page');
+    setSearchParams(params);
+  };
+
+  const handleScheduleClear = () => {
+    const params = updateDateRangeParams(searchParams, '', '', 'scheduledFrom', 'scheduledTo');
     params.delete('page');
     setSearchParams(params);
   };
@@ -460,12 +484,21 @@ export default function TasksList() {
                       )}
                     </svg>
                     <span className="text-gray-700 truncate">{project.name}</span>
+                    <span className="text-xs text-gray-400 ml-auto shrink-0">{PROJECT_STATUS_LABELS[project.status] || project.status}</span>
                   </button>
                 ))}
               </div>
             )}
           </div>
         )}
+
+        {/* Schedule date range filter */}
+        <DateRangeFilterDropdown
+          dateFrom={scheduledFrom}
+          dateTo={scheduledTo}
+          onChange={handleScheduleChange}
+          onClear={handleScheduleClear}
+        />
 
         {/* Bookmark filter */}
         <button

@@ -13,6 +13,9 @@ struct MemoListView: View {
     @State private var showProjectPicker: Bool = false
     @State private var selectedProjectIds: Set<Int> = []
     @State private var selectedNoProject: Bool = false
+    @State private var showDateRangePicker: Bool = false
+    @State private var dateFrom: Date?
+    @State private var dateTo: Date?
     @State private var showImagePicker: Bool = false
     @State private var showSizePicker: Bool = false
     @State private var isUploadingImage: Bool = false
@@ -142,6 +145,9 @@ struct MemoListView: View {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                             withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
                         }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
+                        }
                     },
                     onSubmit: {
                         Task {
@@ -194,6 +200,15 @@ struct MemoListView: View {
                     selectedProjectIds = viewModel.projectFilters
                     selectedNoProject = viewModel.includeNoProject
                     showProjectPicker = true
+                }
+
+                filterPill(
+                    label: scheduleFilterDisplayLabel,
+                    isActive: viewModel.createdFrom != nil || viewModel.createdTo != nil
+                ) {
+                    dateFrom = viewModel.createdFrom
+                    dateTo = viewModel.createdTo
+                    showDateRangePicker = true
                 }
 
                 bookmarkPill
@@ -249,6 +264,16 @@ struct MemoListView: View {
                 includeNoProject: $selectedNoProject
             )
             .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showDateRangePicker, onDismiss: {
+            viewModel.setDateFilter(from: dateFrom, to: dateTo)
+        }) {
+            DateRangePickerModal(
+                dateFrom: $dateFrom,
+                dateTo: $dateTo,
+                onDismiss: { showDateRangePicker = false }
+            )
+            .presentationDetents([.medium])
         }
         .sheet(isPresented: $showImagePicker) {
             ImagePicker(
@@ -319,6 +344,10 @@ struct MemoListView: View {
         let count = viewModel.projectFilters.count + (viewModel.includeNoProject ? 1 : 0)
         if count == 0 { return "Project" }
         return "\(count) Projects"
+    }
+
+    private var scheduleFilterDisplayLabel: String {
+        DateFilterHelpers.displayLabel(from: viewModel.createdFrom, to: viewModel.createdTo)
     }
 
     private func filterPill(label: String, isActive: Bool, action: @escaping () -> Void) -> some View {
