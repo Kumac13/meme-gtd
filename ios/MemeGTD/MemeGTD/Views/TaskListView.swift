@@ -136,6 +136,7 @@ struct TaskListView: View {
 
                 bookmarkPill
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             }
