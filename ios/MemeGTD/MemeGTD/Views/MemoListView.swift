@@ -212,9 +212,8 @@ struct MemoListView: View {
                 }
 
                 bookmarkPill
-
-                Spacer()
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             }
@@ -323,7 +322,8 @@ struct MemoListView: View {
             viewModel.toggleBookmarkFilter()
         }) {
             Text(viewModel.bookmarkFilter ? "Bookmarked" : "Bookmark")
-                .font(.system(size: 13))
+                .font(.system(size: 14))
+                .lineLimit(1)
                 .foregroundColor(viewModel.bookmarkFilter ? .accent : .textSecondary)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
@@ -355,16 +355,12 @@ struct MemoListView: View {
             HapticManager.impact(.light)
             action()
         }) {
-            HStack(spacing: 3) {
-                Text(label)
-                    .font(.system(size: 13))
-                    .foregroundColor(isActive ? .textPrimary : .textSecondary)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundColor(.textSecondary)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            Text(label)
+                .font(.system(size: 14))
+                .lineLimit(1)
+                .foregroundColor(isActive ? .textPrimary : .textSecondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
         }
         .modifier(PillSurface(radius: 16))
     }
