@@ -8,6 +8,12 @@ struct SemanticSearchIssue: Codable {
     let type: String
     let title: String?
     let bodyMd: String
+    let status: String?
+    let isBookmarked: Bool?
+    let labels: [String]?
+    let commentCount: Int?
+    let taskKind: String?
+    let scheduledOn: String?
     let createdAt: String
     let updatedAt: String
 }
@@ -39,24 +45,24 @@ extension SemanticSearchResultItem {
             type: issue.type,
             title: issue.title ?? "",
             bodyMd: issue.bodyMd,
-            status: "open",
-            taskKind: "action",
+            status: issue.status ?? "open",
+            taskKind: issue.taskKind ?? "action",
             scheduledStart: nil,
             scheduledEnd: nil,
             isAllDay: false,
             actualStart: nil,
             actualEnd: nil,
-            scheduledOn: nil,
+            scheduledOn: issue.scheduledOn,
             startTime: nil,
             endDate: nil,
             endTime: nil,
             duration: nil,
-            isBookmarked: false,
+            isBookmarked: issue.isBookmarked ?? false,
             isDeleted: false,
             createdAt: issue.createdAt,
             updatedAt: issue.updatedAt,
-            labels: [],
-            commentCount: 0,
+            labels: issue.labels ?? [],
+            commentCount: issue.commentCount ?? 0,
             preview: nil,
             projectIds: nil,
             linkIds: nil
@@ -68,12 +74,12 @@ extension SemanticSearchResultItem {
             id: issue.id,
             type: issue.type,
             bodyMd: issue.bodyMd,
-            isBookmarked: false,
+            isBookmarked: issue.isBookmarked ?? false,
             isDeleted: false,
             createdAt: issue.createdAt,
             updatedAt: issue.updatedAt,
-            labels: [],
-            commentCount: 0
+            labels: issue.labels ?? [],
+            commentCount: issue.commentCount ?? 0
         )
     }
 
@@ -86,10 +92,10 @@ extension SemanticSearchResultItem {
             meta: nil,
             createdAt: issue.createdAt,
             updatedAt: issue.updatedAt,
-            isBookmarked: false,
+            isBookmarked: issue.isBookmarked ?? false,
             isDeleted: false,
-            labels: [],
-            commentCount: 0
+            labels: issue.labels ?? [],
+            commentCount: issue.commentCount ?? 0
         )
     }
 }

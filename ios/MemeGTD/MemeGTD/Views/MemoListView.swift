@@ -21,14 +21,17 @@ struct MemoListView: View {
     @State private var pickedExtension: String = "jpg"
 
     private var reversedMemos: [Memo] {
-        memoStore.memos.reversed()
+        if viewModel.searchMode == .semantic && isSearching {
+            return memoStore.memos
+        }
+        return memoStore.memos.reversed()
     }
 
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    if !memoStore.hasMore && !memoStore.memos.isEmpty {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        if !memoStore.hasMore && !memoStore.memos.isEmpty {
                         Text("No older memos")
                             .font(.caption)
                             .foregroundColor(Color(.systemGray))
@@ -74,11 +77,6 @@ struct MemoListView: View {
                         }
                         .buttonStyle(.plain)
                         .padding(.horizontal, 16)
-                        .background(
-                            viewModel.relevanceScores[memo.id].map { score in
-                                Color.accent.opacity(score * 0.12)
-                            } ?? Color.clear
-                        )
                     }
 
                     Color.clear.frame(height: 1)
@@ -163,7 +161,24 @@ struct MemoListView: View {
             }
         }
         .safeAreaInset(edge: .top) {
-            HStack(spacing: 8) {
+            VStack(spacing: 4) {
+                if isSearching {
+                    Picker("Search Mode", selection: $viewModel.searchMode) {
+                        ForEach(SearchMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .background(.regularMaterial, in: Capsule())
+                    .padding(.horizontal, 16)
+                    .onChange(of: viewModel.searchMode) { _, _ in
+                        if viewModel.isSearching {
+                            viewModel.search()
+                        }
+                    }
+                }
+
+                HStack(spacing: 8) {
                 filterPill(
                     label: labelFilterDisplayLabel,
                     isActive: !viewModel.labelFilters.isEmpty
@@ -187,6 +202,7 @@ struct MemoListView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+            }
         }
         .toolbar {
             AppToolbar(
@@ -195,21 +211,7 @@ struct MemoListView: View {
                 isSearching: $isSearching,
                 searchQuery: $viewModel.searchQuery,
                 searchPlaceholder: "Search memos...",
-                onSearch: { viewModel.search() },
-                searchModeView: AnyView(
-                    Picker("Search Mode", selection: $viewModel.searchMode) {
-                        ForEach(SearchMode.allCases, id: \.self) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 180)
-                    .onChange(of: viewModel.searchMode) { _, _ in
-                        if viewModel.isSearching {
-                            viewModel.search()
-                        }
-                    }
-                )
+                onSearch: { viewModel.search() }
             )
         }
         .navigationBarTitleDisplayMode(.inline)

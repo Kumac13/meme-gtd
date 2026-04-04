@@ -37,11 +37,6 @@ struct TaskListView: View {
                             }
                         }
                         .padding(.horizontal, 16)
-                        .background(
-                            viewModel.relevanceScores[task.id].map { score in
-                                Color.accent.opacity(score * 0.12)
-                            } ?? Color.clear
-                        )
                     }
                     .buttonStyle(.plain)
 
@@ -84,8 +79,26 @@ struct TaskListView: View {
             }
         }
         .safeAreaInset(edge: .top) {
-            HStack(spacing: 8) {
-                filterPill(
+            VStack(spacing: 0) {
+                if isSearching {
+                    Picker("Search Mode", selection: $viewModel.searchMode) {
+                        ForEach(SearchMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .background(.regularMaterial, in: Capsule())
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .onChange(of: viewModel.searchMode) { _, _ in
+                        if viewModel.isSearching {
+                            viewModel.search()
+                        }
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    filterPill(
                     label: viewModel.statusFilter.displayLabel,
                     isActive: true
                 ) {
@@ -115,6 +128,7 @@ struct TaskListView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+            }
         }
         .safeAreaBar(edge: .bottom) {
             HStack {
@@ -143,21 +157,7 @@ struct TaskListView: View {
                 isSearching: $isSearching,
                 searchQuery: $viewModel.searchQuery,
                 searchPlaceholder: "Search tasks...",
-                onSearch: { viewModel.search() },
-                searchModeView: AnyView(
-                    Picker("Search Mode", selection: $viewModel.searchMode) {
-                        ForEach(SearchMode.allCases, id: \.self) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 180)
-                    .onChange(of: viewModel.searchMode) { _, _ in
-                        if viewModel.isSearching {
-                            viewModel.search()
-                        }
-                    }
-                )
+                onSearch: { viewModel.search() }
             )
         }
         .navigationBarTitleDisplayMode(.inline)

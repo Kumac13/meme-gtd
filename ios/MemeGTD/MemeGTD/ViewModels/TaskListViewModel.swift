@@ -115,7 +115,7 @@ class TaskListViewModel: ObservableObject {
 
     private func fetchSemanticSearch() async throws -> TaskListResponse {
         let queryItems = [
-            URLQueryItem(name: "q", value: searchQuery),
+            URLQueryItem(name: "q", value: searchQuery.trimmingCharacters(in: .whitespaces)),
             URLQueryItem(name: "types", value: "task"),
             URLQueryItem(name: "limit", value: "50"),
         ]

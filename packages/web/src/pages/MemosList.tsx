@@ -142,7 +142,6 @@ export default function MemosList() {
   useEffect(() => {
     async function fetchMemos() {
       try {
-        setLoading(true);
         setError(null);
 
         // Build label parameter from URL
@@ -175,9 +174,9 @@ export default function MemosList() {
             type: r.issue.type,
             title: r.issue.title,
             bodyMd: r.issue.bodyMd,
-            isBookmarked: false,
-            commentCount: 0,
-            labels: [] as string[],
+            isBookmarked: r.issue.isBookmarked ?? false,
+            commentCount: r.issue.commentCount ?? 0,
+            labels: r.issue.labels ?? [],
             createdAt: r.issue.createdAt,
             updatedAt: r.issue.updatedAt,
           }));
@@ -265,9 +264,10 @@ export default function MemosList() {
   }, [memos, bookmarkFilter]);
 
   // Reversed order for mobile: oldest at top, newest at bottom (chat-like)
+  // Keep original order for semantic search (sorted by relevance score)
   const mobileFilteredMemos = useMemo(
-    () => [...filteredMemos].reverse(),
-    [filteredMemos]
+    () => searchMode === 'semantic' ? filteredMemos : [...filteredMemos].reverse(),
+    [filteredMemos, searchMode]
   );
 
   const handleBookmarkFilterChange = (newBookmarked: boolean) => {
@@ -639,13 +639,8 @@ export default function MemosList() {
                   const previousBucket = prev ? getTimelineDateBucket(prev.createdAt) : null;
                   const itemPath = createItemDetailUrl({ basePath: '/memos', itemId: memo.id, currentFilters: searchParams });
 
-                  const memoRelevance = relevanceScores[memo.id];
-                  const memoBgStyle = memoRelevance != null
-                    ? { backgroundColor: `rgba(45, 164, 78, ${memoRelevance * 0.12})`, borderRadius: '6px', padding: '4px 6px', margin: '-4px -6px' }
-                    : undefined;
-
                   return (
-                    <div key={memo.id} className="py-1.5" style={memoBgStyle}>
+                    <div key={memo.id} className="py-1.5">
                       {currentBucket !== previousBucket && (
                         <div className="flex items-center gap-3 py-2">
                           <span className="text-[13px] font-medium text-gray-500">{currentBucket}</span>
@@ -658,7 +653,7 @@ export default function MemosList() {
 
                       <div className="flex items-start gap-2.5">
                         <Link to={itemPath} className="min-w-0 flex-1">
-                          <SearchHighlightedBody bodyMd={memo.bodyMd} searchQuery={filters.parsedQuery.freeText} />
+                          <SearchHighlightedBody bodyMd={memo.bodyMd} searchQuery={searchMode === 'keyword' ? filters.parsedQuery.freeText : undefined} />
                           {memo.labels && memo.labels.length > 0 && (
                             <div className="mt-1.5 flex flex-wrap gap-1">
                               {memo.labels.map((label) => (

@@ -171,9 +171,6 @@ export default function ItemList({
         };
 
         const relevanceScore = relevanceScores?.[item.id];
-        const bgStyle = relevanceScore != null
-          ? { backgroundColor: `rgba(45, 164, 78, ${relevanceScore * 0.12})` }
-          : undefined;
 
         return (
           <div key={item.id} className="relative">
@@ -181,7 +178,6 @@ export default function ItemList({
               to={itemPath}
               onClick={handleClick}
               className="block p-4 hover:bg-gray-50 transition-colors"
-              style={bgStyle}
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex-1 min-w-0">

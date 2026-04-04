@@ -51,8 +51,8 @@ export default function SearchInput({
   };
 
   return (
-    <div className="flex-1 relative">
-      <div className="relative">
+    <div className="flex-1 flex items-center gap-2">
+      <div className="relative flex-1">
         <IoSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
         <input
           type="text"
@@ -73,23 +73,23 @@ export default function SearchInput({
         )}
       </div>
       {searchMode && onSearchModeChange && (
-        <div className="flex mt-1.5 gap-1">
+        <div className="relative inline-flex rounded-md bg-white p-0.5 shrink-0 self-stretch">
           <button
             onClick={() => onSearchModeChange('keyword')}
-            className={`px-2 py-0.5 text-xs rounded transition-colors ${
+            className={`relative px-3 text-xs font-medium rounded transition-all ${
               searchMode === 'keyword'
-                ? 'bg-github-green-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-github-green-600 text-white shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             Keyword
           </button>
           <button
             onClick={() => onSearchModeChange('semantic')}
-            className={`px-2 py-0.5 text-xs rounded transition-colors ${
+            className={`relative px-3 text-xs font-medium rounded transition-all ${
               searchMode === 'semantic'
-                ? 'bg-github-green-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-github-green-600 text-white shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             Semantic
