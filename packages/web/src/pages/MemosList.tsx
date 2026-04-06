@@ -57,11 +57,9 @@ interface Project {
 
 const PAGE_SIZE = 20;
 
-function SearchHighlightedBody({ bodyMd, searchQuery }: { bodyMd: string; searchQuery?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useSearchHighlight(ref, searchQuery);
+function MemoBody({ bodyMd }: { bodyMd: string }) {
   return (
-    <div ref={ref} className="prose prose-sm prose-p:mb-2 prose-li:my-0 prose-p:text-[13px] prose-p:leading-6 max-w-none break-words text-gray-700">
+    <div className="prose prose-sm prose-p:mb-2 prose-li:my-0 prose-p:text-[13px] prose-p:leading-6 max-w-none break-words text-gray-700">
       <MarkdownRenderer content={bodyMd} />
     </div>
   );
@@ -126,6 +124,7 @@ export default function MemosList() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   // Mobile scroll management refs
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const timelineContainerRef = useRef<HTMLDivElement>(null);
   const previousScrollHeightRef = useRef(0);
   const touchStartYRef = useRef(0);
   const [pullDistance, setPullDistance] = useState(0);
@@ -283,6 +282,11 @@ export default function MemosList() {
     () => searchMode === 'semantic' ? filteredMemos : [...filteredMemos].reverse(),
     [filteredMemos, searchMode]
   );
+
+  // Highlight search keywords across all memo bodies in the timeline container
+  const searchQueryForHighlight = searchMode === 'keyword' ? filters.parsedQuery.freeText : undefined;
+  const memoContentKey = mobileFilteredMemos.map(m => m.id).join(',');
+  useSearchHighlight(timelineContainerRef, searchQueryForHighlight, 'search-match', memoContentKey);
 
   const handleBookmarkFilterChange = (newBookmarked: boolean) => {
     const params = updateBookmarkedParam(searchParams, newBookmarked);
@@ -668,7 +672,7 @@ export default function MemosList() {
                 ) : null}
               </div>
 
-              <div>
+              <div ref={timelineContainerRef}>
                 {mobileFilteredMemos.map((memo, index) => {
                   const prev = index > 0 ? mobileFilteredMemos[index - 1] : null;
                   const currentBucket = getTimelineDateBucket(memo.createdAt);
@@ -689,7 +693,7 @@ export default function MemosList() {
 
                       <div className="flex items-start gap-2.5">
                         <Link to={itemPath} className="min-w-0 flex-1">
-                          <SearchHighlightedBody bodyMd={memo.bodyMd} searchQuery={searchMode === 'keyword' ? filters.parsedQuery.freeText : undefined} />
+                          <MemoBody bodyMd={memo.bodyMd} />
                           {memo.labels && memo.labels.length > 0 && (
                             <div className="mt-1.5 flex flex-wrap gap-1">
                               {memo.labels.map((label) => (

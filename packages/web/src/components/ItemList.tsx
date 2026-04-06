@@ -282,7 +282,9 @@ export default function ItemList({
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <p className="text-gray-900 text-sm">
                           {item.bodyMd && item.bodyMd.trim() ? (
-                            <InlineMarkdownRenderer content={extractFirstLine(item.bodyMd, 150)} />
+                            searchQuery
+                              ? highlightKeyword(extractFirstLine(item.bodyMd, 150), searchQuery)
+                              : <InlineMarkdownRenderer content={extractFirstLine(item.bodyMd, 150)} />
                           ) : (
                             <span className="text-gray-500">Memo #{item.id}</span>
                           )}
