@@ -101,14 +101,14 @@ struct TaskListView: View {
                 }
 
                 HStack(spacing: 8) {
-                    filterPill(
+                    FilterPill(
                     label: viewModel.statusFilter.displayLabel,
                     isActive: true
                 ) {
                     showStatusPicker = true
                 }
 
-                filterPill(
+                FilterPill(
                     label: labelFilterDisplayLabel,
                     isActive: !viewModel.labelFilters.isEmpty
                 ) {
@@ -116,7 +116,7 @@ struct TaskListView: View {
                     showLabelPicker = true
                 }
 
-                filterPill(
+                FilterPill(
                     label: projectFilterDisplayLabel,
                     isActive: !viewModel.projectFilters.isEmpty || viewModel.includeNoProject
                 ) {
@@ -125,7 +125,7 @@ struct TaskListView: View {
                     showProjectPicker = true
                 }
 
-                filterPill(
+                FilterPill(
                     label: scheduleFilterDisplayLabel,
                     isActive: viewModel.scheduledFrom != nil || viewModel.scheduledTo != nil
                 ) {
@@ -134,7 +134,13 @@ struct TaskListView: View {
                     showDateRangePicker = true
                 }
 
-                bookmarkPill
+                FilterPill(
+                    label: viewModel.bookmarkFilter ? "Bookmarked" : "Bookmark",
+                    isActive: viewModel.bookmarkFilter,
+                    activeColor: .accent
+                ) {
+                    viewModel.toggleBookmarkFilter()
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
@@ -247,24 +253,7 @@ struct TaskListView: View {
         }
     }
 
-    // MARK: - Bookmark Pill
-
-    private var bookmarkPill: some View {
-        Button(action: {
-            HapticManager.impact(.light)
-            viewModel.toggleBookmarkFilter()
-        }) {
-            Text(viewModel.bookmarkFilter ? "Bookmarked" : "Bookmark")
-                .font(.system(size: 14))
-                .lineLimit(1)
-                .foregroundColor(viewModel.bookmarkFilter ? .accent : .textSecondary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-        }
-        .modifier(PillSurface(radius: 16))
-    }
-
-    // MARK: - Filter Pill
+    // MARK: - Filter Display Labels
 
     private var labelFilterDisplayLabel: String {
         let count = viewModel.labelFilters.count
@@ -283,20 +272,6 @@ struct TaskListView: View {
         DateFilterHelpers.displayLabel(from: viewModel.scheduledFrom, to: viewModel.scheduledTo)
     }
 
-    private func filterPill(label: String, isActive: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: {
-            HapticManager.impact(.light)
-            action()
-        }) {
-            Text(label)
-                .font(.system(size: 14))
-                .lineLimit(1)
-                .foregroundColor(isActive ? .textPrimary : .textSecondary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-        }
-        .modifier(PillSurface(radius: 16))
-    }
 
     // MARK: - Status Picker Sheet
 
