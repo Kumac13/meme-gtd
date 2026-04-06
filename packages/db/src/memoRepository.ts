@@ -92,11 +92,11 @@ const buildMemoConditions = (filters: ListMemoFilters): { conditions: string[]; 
 
   // Date range filter (created_at)
   if (filters.createdFrom) {
-    conditions.push('DATE(created_at) >= @createdFrom');
+    conditions.push("DATE(created_at, 'localtime') >= @createdFrom");
     params.createdFrom = filters.createdFrom;
   }
   if (filters.createdTo) {
-    conditions.push('DATE(created_at) <= @createdTo');
+    conditions.push("DATE(created_at, 'localtime') <= @createdTo");
     params.createdTo = filters.createdTo;
   }
 
@@ -241,11 +241,11 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
 
   // Date range filter (created_at)
   if (filters.createdFrom) {
-    conditions.push('DATE(created_at) >= @createdFrom');
+    conditions.push("DATE(created_at, 'localtime') >= @createdFrom");
     params.createdFrom = filters.createdFrom;
   }
   if (filters.createdTo) {
-    conditions.push('DATE(created_at) <= @createdTo');
+    conditions.push("DATE(created_at, 'localtime') <= @createdTo");
     params.createdTo = filters.createdTo;
   }
 
@@ -310,10 +310,10 @@ export const listMemos = (db: Database.Database, filters: ListMemoFilters = {}):
       );
     }
     if (filters.createdFrom) {
-      searchConditions.push('DATE(i.created_at) >= @createdFrom');
+      searchConditions.push("DATE(i.created_at, 'localtime') >= @createdFrom");
     }
     if (filters.createdTo) {
-      searchConditions.push('DATE(i.created_at) <= @createdTo');
+      searchConditions.push("DATE(i.created_at, 'localtime') <= @createdTo");
     }
     sql = `
       SELECT i.*,
