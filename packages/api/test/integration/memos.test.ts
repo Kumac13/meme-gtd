@@ -691,6 +691,28 @@ describe('Memo Date Filtering', () => {
     assert.strictEqual(result.data[0].bodyMd, 'Memo Jan 2025');
   });
 
+  it('should filter memos by local date when UTC date differs (timezone boundary)', async () => {
+    // Memo created at UTC 23:22 on April 6 = JST 08:22 on April 7
+    const memo = createMemo(app.db, { bodyMd: 'Late night UTC memo' });
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2025-04-06T23:22:12.345Z', memo.id);
+
+    // Filtering by local date April 7 (JST) should match
+    const response1 = await app.inject({
+      method: 'GET',
+      url: '/api/memos?createdFrom=2025-04-07&createdTo=2025-04-07',
+    });
+    const result1 = JSON.parse(response1.body);
+    assert.strictEqual(result1.data.length, 1, 'Should match local date April 7');
+
+    // Filtering by UTC date April 6 should NOT match (local date is April 7)
+    const response2 = await app.inject({
+      method: 'GET',
+      url: '/api/memos?createdFrom=2025-04-06&createdTo=2025-04-06',
+    });
+    const result2 = JSON.parse(response2.body);
+    assert.strictEqual(result2.data.length, 0, 'Should not match UTC date April 6');
+  });
+
   it('should reject invalid createdFrom format', async () => {
     const response = await app.inject({
       method: 'GET',

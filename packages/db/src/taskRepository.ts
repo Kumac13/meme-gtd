@@ -206,21 +206,21 @@ const buildTaskConditions = (filters: ListTaskFilters): { conditions: string[]; 
   // Date range filters for calendar view
   if (filters.scheduledFrom && filters.scheduledTo) {
     conditions.push(`(
-      (scheduled_start IS NOT NULL AND DATE(scheduled_start) >= @scheduledFrom AND DATE(scheduled_start) <= @scheduledTo)
-      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start) >= @scheduledFrom AND DATE(actual_start) <= @scheduledTo)
+      (scheduled_start IS NOT NULL AND DATE(scheduled_start, 'localtime') >= @scheduledFrom AND DATE(scheduled_start, 'localtime') <= @scheduledTo)
+      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start, 'localtime') >= @scheduledFrom AND DATE(actual_start, 'localtime') <= @scheduledTo)
     )`);
     params.scheduledFrom = filters.scheduledFrom;
     params.scheduledTo = filters.scheduledTo;
   } else if (filters.scheduledFrom) {
     conditions.push(`(
-      (scheduled_start IS NOT NULL AND DATE(scheduled_start) >= @scheduledFrom)
-      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start) >= @scheduledFrom)
+      (scheduled_start IS NOT NULL AND DATE(scheduled_start, 'localtime') >= @scheduledFrom)
+      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start, 'localtime') >= @scheduledFrom)
     )`);
     params.scheduledFrom = filters.scheduledFrom;
   } else if (filters.scheduledTo) {
     conditions.push(`(
-      (scheduled_start IS NOT NULL AND DATE(scheduled_start) <= @scheduledTo)
-      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start) <= @scheduledTo)
+      (scheduled_start IS NOT NULL AND DATE(scheduled_start, 'localtime') <= @scheduledTo)
+      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start, 'localtime') <= @scheduledTo)
     )`);
     params.scheduledTo = filters.scheduledTo;
   }
@@ -338,21 +338,21 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
     // Use COALESCE to check scheduled_start first, then actual_start
     // Extract date part from datetime (YYYY-MM-DDTHH:MM:SS -> YYYY-MM-DD)
     conditions.push(`(
-      (scheduled_start IS NOT NULL AND DATE(scheduled_start) >= @scheduledFrom AND DATE(scheduled_start) <= @scheduledTo)
-      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start) >= @scheduledFrom AND DATE(actual_start) <= @scheduledTo)
+      (scheduled_start IS NOT NULL AND DATE(scheduled_start, 'localtime') >= @scheduledFrom AND DATE(scheduled_start, 'localtime') <= @scheduledTo)
+      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start, 'localtime') >= @scheduledFrom AND DATE(actual_start, 'localtime') <= @scheduledTo)
     )`);
     params.scheduledFrom = filters.scheduledFrom;
     params.scheduledTo = filters.scheduledTo;
   } else if (filters.scheduledFrom) {
     conditions.push(`(
-      (scheduled_start IS NOT NULL AND DATE(scheduled_start) >= @scheduledFrom)
-      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start) >= @scheduledFrom)
+      (scheduled_start IS NOT NULL AND DATE(scheduled_start, 'localtime') >= @scheduledFrom)
+      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start, 'localtime') >= @scheduledFrom)
     )`);
     params.scheduledFrom = filters.scheduledFrom;
   } else if (filters.scheduledTo) {
     conditions.push(`(
-      (scheduled_start IS NOT NULL AND DATE(scheduled_start) <= @scheduledTo)
-      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start) <= @scheduledTo)
+      (scheduled_start IS NOT NULL AND DATE(scheduled_start, 'localtime') <= @scheduledTo)
+      OR (scheduled_start IS NULL AND actual_start IS NOT NULL AND DATE(actual_start, 'localtime') <= @scheduledTo)
     )`);
     params.scheduledTo = filters.scheduledTo;
   }
@@ -434,18 +434,18 @@ export const listTasks = (db: Database.Database, filters: ListTaskFilters = {}):
     // Priority: scheduled_start, fallback to actual_start for tasks without schedule
     if (filters.scheduledFrom && filters.scheduledTo) {
       searchConditions.push(`(
-        (i.scheduled_start IS NOT NULL AND DATE(i.scheduled_start) >= @scheduledFrom AND DATE(i.scheduled_start) <= @scheduledTo)
-        OR (i.scheduled_start IS NULL AND i.actual_start IS NOT NULL AND DATE(i.actual_start) >= @scheduledFrom AND DATE(i.actual_start) <= @scheduledTo)
+        (i.scheduled_start IS NOT NULL AND DATE(i.scheduled_start, 'localtime') >= @scheduledFrom AND DATE(i.scheduled_start, 'localtime') <= @scheduledTo)
+        OR (i.scheduled_start IS NULL AND i.actual_start IS NOT NULL AND DATE(i.actual_start, 'localtime') >= @scheduledFrom AND DATE(i.actual_start, 'localtime') <= @scheduledTo)
       )`);
     } else if (filters.scheduledFrom) {
       searchConditions.push(`(
-        (i.scheduled_start IS NOT NULL AND DATE(i.scheduled_start) >= @scheduledFrom)
-        OR (i.scheduled_start IS NULL AND i.actual_start IS NOT NULL AND DATE(i.actual_start) >= @scheduledFrom)
+        (i.scheduled_start IS NOT NULL AND DATE(i.scheduled_start, 'localtime') >= @scheduledFrom)
+        OR (i.scheduled_start IS NULL AND i.actual_start IS NOT NULL AND DATE(i.actual_start, 'localtime') >= @scheduledFrom)
       )`);
     } else if (filters.scheduledTo) {
       searchConditions.push(`(
-        (i.scheduled_start IS NOT NULL AND DATE(i.scheduled_start) <= @scheduledTo)
-        OR (i.scheduled_start IS NULL AND i.actual_start IS NOT NULL AND DATE(i.actual_start) <= @scheduledTo)
+        (i.scheduled_start IS NOT NULL AND DATE(i.scheduled_start, 'localtime') <= @scheduledTo)
+        OR (i.scheduled_start IS NULL AND i.actual_start IS NOT NULL AND DATE(i.actual_start, 'localtime') <= @scheduledTo)
       )`);
     }
 

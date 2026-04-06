@@ -1684,4 +1684,44 @@ describe('Task Kind Operations', () => {
     const fetched = JSON.parse(response.body);
     assert.strictEqual(fetched.taskKind, 'event');
   });
+
+  // Timezone boundary test: scheduledFrom/scheduledTo should use local time
+  it('should filter tasks by local date when UTC date differs (timezone boundary)', async () => {
+    const createTaskFixture = (overrides = {}) => ({
+      title: 'TZ boundary task',
+      bodyMd: '',
+      status: 'open' as const,
+      ...overrides,
+    });
+
+    // Create a task with scheduledStart at UTC 23:30 on April 6 = JST 08:30 on April 7
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({
+        title: 'Late UTC task',
+        scheduledStart: '2025-04-06T23:30:00',
+      }),
+    });
+    const task = JSON.parse(createRes.body);
+
+    // Override scheduled_start to a UTC ISO string to simulate the timezone boundary
+    app.db.prepare('UPDATE issues SET scheduled_start = ? WHERE id = ?').run('2025-04-06T23:30:00Z', task.id);
+
+    // Filtering by local date April 7 (JST) should match
+    const response1 = await app.inject({
+      method: 'GET',
+      url: '/api/tasks?scheduledFrom=2025-04-07&scheduledTo=2025-04-07',
+    });
+    const result1 = JSON.parse(response1.body);
+    assert.strictEqual(result1.data.length, 1, 'Should match local date April 7');
+
+    // Filtering by UTC date April 6 should NOT match (local date is April 7)
+    const response2 = await app.inject({
+      method: 'GET',
+      url: '/api/tasks?scheduledFrom=2025-04-06&scheduledTo=2025-04-06',
+    });
+    const result2 = JSON.parse(response2.body);
+    assert.strictEqual(result2.data.length, 0, 'Should not match UTC date April 6');
+  });
 });
