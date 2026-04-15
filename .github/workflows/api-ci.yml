@@ -17,6 +17,11 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      # Match the local development timezone so date-boundary tests
+      # (added in PR #217 "fix-date-filter-timezone") are exercised against
+      # the same UTC offset they were written for.
+      TZ: Asia/Tokyo
     steps:
       - name: Checkout
         uses: actions/checkout@v4
