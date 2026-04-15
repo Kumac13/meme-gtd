@@ -1,10 +1,15 @@
 import SwiftUI
 
-struct AppToolbar<Trailing: View>: ToolbarContent {
+struct AppToolbar<Trailing: View, SearchBarAction: View>: ToolbarContent {
     let title: String
     let onMenuTap: () -> Void
     var titleLineLimit: Int? = nil
     @ViewBuilder let trailing: () -> Trailing
+    /// Optional content rendered inside the search bar, to the left of the
+    /// clear ([x]) button, only while the search bar is open. Used by list
+    /// views to surface a "copy current search results" action without adding
+    /// a new UI element.
+    @ViewBuilder let searchBarAction: () -> SearchBarAction
 
     private let searchConfig: SearchConfig?
 
@@ -20,13 +25,15 @@ struct AppToolbar<Trailing: View>: ToolbarContent {
         title: String,
         onMenuTap: @escaping () -> Void,
         titleLineLimit: Int? = nil,
-        @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() }
+        @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() },
+        @ViewBuilder searchBarAction: @escaping () -> SearchBarAction = { EmptyView() }
     ) {
         self.title = title
         self.onMenuTap = onMenuTap
         self.titleLineLimit = titleLineLimit
         self.searchConfig = nil
         self.trailing = trailing
+        self.searchBarAction = searchBarAction
     }
 
     // Init with search
@@ -37,7 +44,8 @@ struct AppToolbar<Trailing: View>: ToolbarContent {
         searchQuery: Binding<String>,
         searchPlaceholder: String = "Search...",
         onSearch: @escaping () -> Void,
-        @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() }
+        @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() },
+        @ViewBuilder searchBarAction: @escaping () -> SearchBarAction = { EmptyView() }
     ) {
         self.title = title
         self.onMenuTap = onMenuTap
@@ -49,6 +57,7 @@ struct AppToolbar<Trailing: View>: ToolbarContent {
             onSearch: onSearch
         )
         self.trailing = trailing
+        self.searchBarAction = searchBarAction
     }
 
     private var isSearchActive: Bool {
@@ -81,6 +90,12 @@ struct AppToolbar<Trailing: View>: ToolbarContent {
                             text: config.searchQuery,
                             onSubmit: config.onSearch
                         )
+
+                        // Slot for a view-provided search-bar action
+                        // (e.g. "copy current search results"). Sits to the
+                        // left of the clear button so the clear affordance
+                        // stays at the trailing edge where the user expects.
+                        searchBarAction()
 
                         Button(action: {
                             HapticManager.impact(.light)

@@ -22,6 +22,7 @@ struct MemoListView: View {
     @State private var pickedImageData: Data? = nil
     @State private var pickedMimeType: String = "image/jpeg"
     @State private var pickedExtension: String = "jpg"
+    @State private var showCopyDialog: Bool = false
 
     private var reversedMemos: [Memo] {
         if viewModel.searchMode == .semantic && isSearching {
@@ -231,9 +232,52 @@ struct MemoListView: View {
                 isSearching: $isSearching,
                 searchQuery: $viewModel.searchQuery,
                 searchPlaceholder: "Search memos...",
-                onSearch: { viewModel.search() }
+                onSearch: { viewModel.search() },
+                searchBarAction: {
+                    if !memoStore.memos.isEmpty {
+                        Button(action: {
+                            HapticManager.impact(.light)
+                            showCopyDialog = true
+                        }) {
+                            if viewModel.isExporting {
+                                ProgressView()
+                                    .controlSize(.mini)
+                            } else {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(Color(.systemGray))
+                            }
+                        }
+                        .disabled(viewModel.isExporting)
+                    }
+                }
             )
         }
+        .confirmationDialog(
+            "Copy Search Results",
+            isPresented: $showCopyDialog,
+            titleVisibility: .visible
+        ) {
+            Button("Copy Results") {
+                Task { await viewModel.exportAndCopy(includeComments: false) }
+            }
+            Button("Copy with Comments") {
+                Task { await viewModel.exportAndCopy(includeComments: true) }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .overlay(alignment: .top) {
+            if viewModel.showCopiedFeedback {
+                Text("Copied!")
+                    .font(.system(size: 13, weight: .semibold))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(.regularMaterial, in: Capsule())
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: viewModel.showCopiedFeedback)
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: memoStore.needsReload) { _, needsReload in
             if needsReload {
