@@ -148,7 +148,7 @@ paths:
           in: query
           name: projectId
           required: false
-          description: "Filter by project ID(s). Supports comma-separated values for OR logic (e.g., 1,2,3). Use \"none\" to filter memos not assigned to any project. Can be combined: \"none,1\"."
+          description: 'Filter by project ID(s). Supports comma-separated values for OR logic (e.g., 1,2,3). Use "none" to filter memos not assigned to any project. Can be combined: "none,1".'
         - schema:
             type: string
           in: query
@@ -6432,6 +6432,7 @@ paths:
               - comment.created
               - comment.updated
               - comment.deleted
+              - search.exported
           in: query
           name: eventType
           required: false
@@ -6532,6 +6533,7 @@ paths:
                         - comment.created
                         - comment.updated
                         - comment.deleted
+                        - search.exported
                       description: Event type (e.g., task.created, task.status_changed)
                     occurredAt:
                       type: string
@@ -6695,6 +6697,7 @@ paths:
                         - comment.created
                         - comment.updated
                         - comment.deleted
+                        - search.exported
                       description: Event type (e.g., task.created, task.status_changed)
                     occurredAt:
                       type: string
@@ -6858,6 +6861,7 @@ paths:
                         - comment.created
                         - comment.updated
                         - comment.deleted
+                        - search.exported
                       description: Event type (e.g., task.created, task.status_changed)
                     occurredAt:
                       type: string
@@ -7860,6 +7864,335 @@ paths:
                 required:
                   - error
                   - message
+                additionalProperties: false
+  /api/search/export:
+    post:
+      operationId: exportSearchResults
+      summary: Export search results
+      tags:
+        - Search
+      description: Records a search.exported activity log entry and returns the items for the given IDs together with the filter context, for copying to clipboard
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - memos
+                    - tasks
+                    - articles
+                  description: Issue type being exported
+                filters:
+                  type: object
+                  properties:
+                    query:
+                      type: string
+                      description: Free-text search query
+                    searchMode:
+                      type: string
+                      enum:
+                        - keyword
+                        - semantic
+                      description: Search mode used
+                    labels:
+                      type: array
+                      items:
+                        type: string
+                      description: Labels filter (OR)
+                    dateFrom:
+                      type: string
+                      description: Start of date range filter
+                    dateTo:
+                      type: string
+                      description: End of date range filter
+                    bookmarked:
+                      type: boolean
+                      description: Whether bookmark-only filter is on
+                    projectIds:
+                      type: array
+                      items:
+                        type: integer
+                      description: Project IDs filter
+                    includeNoProject:
+                      type: boolean
+                      description: Include items without project
+                    status:
+                      type: string
+                      description: Task status filter
+                  additionalProperties: false
+                  description: Filters currently applied to the list view
+                itemIds:
+                  type: array
+                  items:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  description: IDs of items to include (current page or loaded range)
+                matchedComments:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: Matched comment snippets keyed by item id (from keyword search)
+                includeComments:
+                  type: boolean
+                  default: false
+                  description: Whether to include full comments for each item
+              required:
+                - type
+                - filters
+                - itemIds
+              additionalProperties: false
+        required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum:
+                      - memos
+                      - tasks
+                      - articles
+                  total:
+                    type: integer
+                    minimum: 0
+                  filters:
+                    type: object
+                    properties:
+                      query:
+                        type: string
+                        description: Free-text search query
+                      searchMode:
+                        type: string
+                        enum:
+                          - keyword
+                          - semantic
+                        description: Search mode used
+                      labels:
+                        type: array
+                        items:
+                          type: string
+                        description: Labels filter (OR)
+                      dateFrom:
+                        type: string
+                        description: Start of date range filter
+                      dateTo:
+                        type: string
+                        description: End of date range filter
+                      bookmarked:
+                        type: boolean
+                        description: Whether bookmark-only filter is on
+                      projectIds:
+                        type: array
+                        items:
+                          type: integer
+                        description: Project IDs filter
+                      includeNoProject:
+                        type: boolean
+                        description: Include items without project
+                      status:
+                        type: string
+                        description: Task status filter
+                    additionalProperties: false
+                    description: Filters currently applied to the list view
+                  results:
+                    type: array
+                    items:
+                      anyOf:
+                        - type: object
+                          properties:
+                            id:
+                              type: integer
+                              exclusiveMinimum: true
+                              minimum: 0
+                            type:
+                              type: string
+                              enum:
+                                - memo
+                            bodyMd:
+                              type: string
+                            labels:
+                              type: array
+                              items:
+                                type: string
+                            isBookmarked:
+                              type: boolean
+                            createdAt:
+                              type: string
+                            updatedAt:
+                              type: string
+                            matchedComment:
+                              type: string
+                            comments:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: integer
+                                    exclusiveMinimum: true
+                                    minimum: 0
+                                  bodyMd:
+                                    type: string
+                                  createdAt:
+                                    type: string
+                                  updatedAt:
+                                    type: string
+                                required:
+                                  - id
+                                  - bodyMd
+                                  - createdAt
+                                  - updatedAt
+                                additionalProperties: false
+                          required:
+                            - id
+                            - type
+                            - bodyMd
+                            - labels
+                            - isBookmarked
+                            - createdAt
+                            - updatedAt
+                          additionalProperties: false
+                        - type: object
+                          properties:
+                            id:
+                              type: integer
+                              exclusiveMinimum: true
+                              minimum: 0
+                            type:
+                              type: string
+                              enum:
+                                - task
+                            title:
+                              type: string
+                              nullable: true
+                            bodyMd:
+                              type: string
+                            status:
+                              type: string
+                              nullable: true
+                            scheduledOn:
+                              type: string
+                              nullable: true
+                            labels:
+                              type: array
+                              items:
+                                type: string
+                            isBookmarked:
+                              type: boolean
+                            createdAt:
+                              type: string
+                            updatedAt:
+                              type: string
+                            matchedComment:
+                              type: string
+                            comments:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: integer
+                                    exclusiveMinimum: true
+                                    minimum: 0
+                                  bodyMd:
+                                    type: string
+                                  createdAt:
+                                    type: string
+                                  updatedAt:
+                                    type: string
+                                required:
+                                  - id
+                                  - bodyMd
+                                  - createdAt
+                                  - updatedAt
+                                additionalProperties: false
+                          required:
+                            - id
+                            - type
+                            - title
+                            - bodyMd
+                            - status
+                            - scheduledOn
+                            - labels
+                            - isBookmarked
+                            - createdAt
+                            - updatedAt
+                          additionalProperties: false
+                        - type: object
+                          properties:
+                            id:
+                              type: integer
+                              exclusiveMinimum: true
+                              minimum: 0
+                            type:
+                              type: string
+                              enum:
+                                - article
+                            title:
+                              type: string
+                              nullable: true
+                            url:
+                              type: string
+                              nullable: true
+                            bodyMd:
+                              type: string
+                            labels:
+                              type: array
+                              items:
+                                type: string
+                            isBookmarked:
+                              type: boolean
+                            createdAt:
+                              type: string
+                            updatedAt:
+                              type: string
+                            matchedComment:
+                              type: string
+                            comments:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: integer
+                                    exclusiveMinimum: true
+                                    minimum: 0
+                                  bodyMd:
+                                    type: string
+                                  createdAt:
+                                    type: string
+                                  updatedAt:
+                                    type: string
+                                required:
+                                  - id
+                                  - bodyMd
+                                  - createdAt
+                                  - updatedAt
+                                additionalProperties: false
+                          required:
+                            - id
+                            - type
+                            - title
+                            - url
+                            - bodyMd
+                            - labels
+                            - isBookmarked
+                            - createdAt
+                            - updatedAt
+                          additionalProperties: false
+                required:
+                  - type
+                  - total
+                  - filters
+                  - results
                 additionalProperties: false
 servers:
   - url: http://localhost:3000

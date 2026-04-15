@@ -181,6 +181,7 @@ export {
   LINK_EVENT_TYPES,
   COMMENT_EVENT_TYPES,
   ARTICLE_EVENT_TYPES,
+  SEARCH_EVENT_TYPES,
   ALL_EVENT_TYPES,
 } from './types/activity-log.js';
 

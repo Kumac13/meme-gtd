@@ -5,9 +5,14 @@ import {
   searchByVector,
   loadEmbeddingConfig,
   checkEmbeddingHealth,
+  ActivityLogger,
 } from 'meme-gtd-core';
 import { searchByKeyword } from 'meme-gtd-db';
-import type { SemanticSearchQuery, KeywordSearchQuery } from '../schemas/searchSchemas.js';
+import type {
+  SemanticSearchQuery,
+  KeywordSearchQuery,
+  SearchExportRequest,
+} from '../schemas/searchSchemas.js';
 
 /**
  * Handle semantic search requests.
@@ -150,5 +155,207 @@ export async function keywordSearchHandler(
     total: results.length,
     limit,
     offset,
+  });
+}
+
+/**
+ * Handle search export requests.
+ * Takes the current view's item IDs and filter state, records a
+ * `search.exported` entry in the activity log, and returns a structured JSON
+ * payload that the client writes to the clipboard.
+ *
+ * The scope of "results" is defined by the `itemIds` the client sends — which
+ * is the current page / loaded range of the list view, not all matches.
+ */
+export async function searchExportHandler(
+  request: FastifyRequest<{ Body: SearchExportRequest }>,
+  reply: FastifyReply
+) {
+  const db = request.server.db;
+  const body = request.body;
+  const { type, filters, itemIds, includeComments } = body;
+  const matchedComments = body.matchedComments ?? {};
+
+  const expectedIssueType = type === 'memos' ? 'memo' : type === 'tasks' ? 'task' : 'article';
+
+  // Clean filters: strip keys with undefined/null/empty values so the copied
+  // JSON shows only the filters actually in effect.
+  const cleanedFilters: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(filters ?? {})) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === 'string' && value === '') continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+    cleanedFilters[key] = value;
+  }
+
+  // Log the export event before touching item data so the record is written
+  // even if a later fetch fails.
+  const logger = new ActivityLogger(db, 'api');
+  logger.logSearchExported(
+    expectedIssueType,
+    cleanedFilters,
+    itemIds.length,
+    includeComments
+  );
+
+  if (itemIds.length === 0) {
+    return reply.status(200).send({
+      type,
+      total: 0,
+      filters: cleanedFilters,
+      results: [],
+    });
+  }
+
+  const placeholders = itemIds.map(() => '?').join(',');
+
+  // Batch fetch issues. We filter by type at the SQL level so callers can't
+  // mix types in one export request.
+  const issueRows = db
+    .prepare(
+      `SELECT id, type, title, body_md, status, is_bookmarked, scheduled_on, meta, created_at, updated_at
+       FROM issues
+       WHERE id IN (${placeholders}) AND type = ? AND is_deleted = 0`
+    )
+    .all(...itemIds, expectedIssueType) as Array<{
+      id: number;
+      type: string;
+      title: string | null;
+      body_md: string;
+      status: string | null;
+      is_bookmarked: number;
+      scheduled_on: string | null;
+      meta: string | null;
+      created_at: string;
+      updated_at: string;
+    }>;
+
+  const foundIds = new Set(issueRows.map((r) => r.id));
+
+  // Batch fetch labels for all found items
+  const labelMap = new Map<number, string[]>();
+  if (issueRows.length > 0) {
+    const labelPlaceholders = issueRows.map(() => '?').join(',');
+    const labelRows = db
+      .prepare(
+        `SELECT il.issue_id, l.name
+         FROM labels l
+         JOIN issue_labels il ON il.label_id = l.id
+         WHERE il.issue_id IN (${labelPlaceholders})
+         ORDER BY l.name`
+      )
+      .all(...issueRows.map((r) => r.id)) as Array<{ issue_id: number; name: string }>;
+    for (const row of labelRows) {
+      const list = labelMap.get(row.issue_id) ?? [];
+      list.push(row.name);
+      labelMap.set(row.issue_id, list);
+    }
+  }
+
+  // Batch fetch comments when requested
+  const commentsMap = new Map<
+    number,
+    Array<{ id: number; bodyMd: string; createdAt: string; updatedAt: string }>
+  >();
+  if (includeComments && issueRows.length > 0) {
+    const commentPlaceholders = issueRows.map(() => '?').join(',');
+    const commentRows = db
+      .prepare(
+        `SELECT id, issue_id, body_md, created_at, updated_at
+         FROM comments
+         WHERE issue_id IN (${commentPlaceholders}) AND is_deleted = 0
+         ORDER BY created_at ASC`
+      )
+      .all(...issueRows.map((r) => r.id)) as Array<{
+        id: number;
+        issue_id: number;
+        body_md: string;
+        created_at: string;
+        updated_at: string;
+      }>;
+    for (const row of commentRows) {
+      const list = commentsMap.get(row.issue_id) ?? [];
+      list.push({
+        id: row.id,
+        bodyMd: row.body_md,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      });
+      commentsMap.set(row.issue_id, list);
+    }
+  }
+
+  // Preserve the order the client provided (matches the display order)
+  const orderedRows = itemIds
+    .filter((id) => foundIds.has(id))
+    .map((id) => issueRows.find((r) => r.id === id)!);
+
+  const results = orderedRows.map((row) => {
+    const labels = labelMap.get(row.id) ?? [];
+    const comments = includeComments ? commentsMap.get(row.id) ?? [] : undefined;
+    const matchedComment = matchedComments[String(row.id)];
+
+    if (expectedIssueType === 'memo') {
+      return {
+        id: row.id,
+        type: 'memo' as const,
+        bodyMd: row.body_md,
+        labels,
+        isBookmarked: row.is_bookmarked === 1,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        ...(matchedComment ? { matchedComment } : {}),
+        ...(comments ? { comments } : {}),
+      };
+    }
+
+    if (expectedIssueType === 'task') {
+      return {
+        id: row.id,
+        type: 'task' as const,
+        title: row.title,
+        bodyMd: row.body_md,
+        status: row.status,
+        scheduledOn: row.scheduled_on,
+        labels,
+        isBookmarked: row.is_bookmarked === 1,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        ...(matchedComment ? { matchedComment } : {}),
+        ...(comments ? { comments } : {}),
+      };
+    }
+
+    // article
+    let url: string | null = null;
+    if (row.meta) {
+      try {
+        const meta = JSON.parse(row.meta) as { originalUrl?: string };
+        url = meta.originalUrl ?? null;
+      } catch {
+        url = null;
+      }
+    }
+
+    return {
+      id: row.id,
+      type: 'article' as const,
+      title: row.title,
+      url,
+      bodyMd: row.body_md,
+      labels,
+      isBookmarked: row.is_bookmarked === 1,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      ...(matchedComment ? { matchedComment } : {}),
+      ...(comments ? { comments } : {}),
+    };
+  });
+
+  return reply.status(200).send({
+    type,
+    total: results.length,
+    filters: cleanedFilters,
+    results,
   });
 }
