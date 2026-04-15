@@ -229,4 +229,181 @@ export class SearchService {
             },
         });
     }
+    /**
+     * Export search results
+     * Records a search.exported activity log entry and returns the items for the given IDs together with the filter context, for copying to clipboard
+     * @param requestBody
+     * @returns any Default Response
+     * @throws ApiError
+     */
+    public static exportSearchResults(
+        requestBody: {
+            /**
+             * Issue type being exported
+             */
+            type: 'memos' | 'tasks' | 'articles';
+            /**
+             * Filters currently applied to the list view
+             */
+            filters: {
+                /**
+                 * Free-text search query
+                 */
+                query?: string;
+                /**
+                 * Search mode used
+                 */
+                searchMode?: 'keyword' | 'semantic';
+                /**
+                 * Labels filter (OR)
+                 */
+                labels?: Array<string>;
+                /**
+                 * Start of date range filter
+                 */
+                dateFrom?: string;
+                /**
+                 * End of date range filter
+                 */
+                dateTo?: string;
+                /**
+                 * Whether bookmark-only filter is on
+                 */
+                bookmarked?: boolean;
+                /**
+                 * Project IDs filter
+                 */
+                projectIds?: Array<number>;
+                /**
+                 * Include items without project
+                 */
+                includeNoProject?: boolean;
+                /**
+                 * Task status filter
+                 */
+                status?: string;
+            };
+            /**
+             * IDs of items to include (current page or loaded range)
+             */
+            itemIds: Array<number>;
+            /**
+             * Matched comment snippets keyed by item id (from keyword search)
+             */
+            matchedComments?: Record<string, string>;
+            /**
+             * Semantic search relevance scores keyed by item id (0-1)
+             */
+            matchedScores?: Record<string, number>;
+            /**
+             * Whether to include full comments for each item
+             */
+            includeComments?: boolean;
+        },
+    ): CancelablePromise<{
+        type: 'memos' | 'tasks' | 'articles';
+        total: number;
+        /**
+         * Filters currently applied to the list view
+         */
+        filters: {
+            /**
+             * Free-text search query
+             */
+            query?: string;
+            /**
+             * Search mode used
+             */
+            searchMode?: 'keyword' | 'semantic';
+            /**
+             * Labels filter (OR)
+             */
+            labels?: Array<string>;
+            /**
+             * Start of date range filter
+             */
+            dateFrom?: string;
+            /**
+             * End of date range filter
+             */
+            dateTo?: string;
+            /**
+             * Whether bookmark-only filter is on
+             */
+            bookmarked?: boolean;
+            /**
+             * Project IDs filter
+             */
+            projectIds?: Array<number>;
+            /**
+             * Include items without project
+             */
+            includeNoProject?: boolean;
+            /**
+             * Task status filter
+             */
+            status?: string;
+        };
+        results: Array<({
+            id: number;
+            type: 'memo';
+            bodyMd: string;
+            labels: Array<string>;
+            isBookmarked: boolean;
+            createdAt: string;
+            updatedAt: string;
+            matchedComment?: string;
+            matchedScore?: number;
+            comments?: Array<{
+                id: number;
+                bodyMd: string;
+                createdAt: string;
+                updatedAt: string;
+            }>;
+        } | {
+            id: number;
+            type: 'task';
+            title: string | null;
+            bodyMd: string;
+            status: string | null;
+            scheduledOn: string | null;
+            labels: Array<string>;
+            isBookmarked: boolean;
+            createdAt: string;
+            updatedAt: string;
+            matchedComment?: string;
+            matchedScore?: number;
+            comments?: Array<{
+                id: number;
+                bodyMd: string;
+                createdAt: string;
+                updatedAt: string;
+            }>;
+        } | {
+            id: number;
+            type: 'article';
+            title: string | null;
+            url: string | null;
+            bodyMd: string;
+            labels: Array<string>;
+            isBookmarked: boolean;
+            createdAt: string;
+            updatedAt: string;
+            matchedComment?: string;
+            matchedScore?: number;
+            comments?: Array<{
+                id: number;
+                bodyMd: string;
+                createdAt: string;
+                updatedAt: string;
+            }>;
+        })>;
+    }> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/search/export',
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
 }

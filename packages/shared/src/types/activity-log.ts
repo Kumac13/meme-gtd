@@ -55,6 +55,8 @@ export const ARTICLE_EVENT_TYPES = [
 ] as const;
 export type ArticleEventType = (typeof ARTICLE_EVENT_TYPES)[number];
 
+export const SEARCH_EVENT_TYPES = ['search.exported'] as const;
+
 // All event types - single source of truth
 export const ALL_EVENT_TYPES = [
   ...ISSUE_EVENT_TYPES,
@@ -63,6 +65,7 @@ export const ALL_EVENT_TYPES = [
   ...LINK_EVENT_TYPES,
   ...COMMENT_EVENT_TYPES,
   ...ARTICLE_EVENT_TYPES,
+  ...SEARCH_EVENT_TYPES,
 ] as const;
 export type EventType = (typeof ALL_EVENT_TYPES)[number];
 

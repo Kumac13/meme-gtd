@@ -448,3 +448,232 @@ describe('getIssueLabels', () => {
     assert.strictEqual(labels.length, 0);
   });
 });
+
+describe('POST /api/search/export', () => {
+  let app: FastifyInstance;
+  let cleanup: () => Promise<void>;
+
+  before(async () => {
+    const server = await createTestServer();
+    app = server.app;
+    cleanup = server.cleanup;
+    await app.ready();
+  });
+
+  after(async () => {
+    await cleanup();
+  });
+
+  it('should export memo search results as JSON and log search.exported', async () => {
+    const memo1 = createMemo(app.db, { bodyMd: 'export_alpha_memo content 1' });
+    const memo2 = createMemo(app.db, { bodyMd: 'export_alpha_memo content 2' });
+    const label = createLabel(app.db, 'export-test-label');
+    attachLabelToIssue(app.db, memo1.id, label.id);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search/export',
+      payload: {
+        type: 'memos',
+        filters: { query: 'export_alpha_memo', labels: ['export-test-label'] },
+        itemIds: [memo1.id, memo2.id],
+        includeComments: false,
+      },
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.strictEqual(body.type, 'memos');
+    assert.strictEqual(body.total, 2);
+    assert.deepStrictEqual(body.filters, {
+      query: 'export_alpha_memo',
+      labels: ['export-test-label'],
+    });
+    assert.strictEqual(body.results.length, 2);
+    assert.strictEqual(body.results[0].id, memo1.id);
+    assert.strictEqual(body.results[0].type, 'memo');
+    assert.ok(body.results[0].labels.includes('export-test-label'));
+    assert.strictEqual(body.results[1].id, memo2.id);
+    assert.ok(body.results[0].comments === undefined);
+
+    // Verify activity_log entry was written
+    const logRow = app.db
+      .prepare(
+        `SELECT event_type, payload FROM activity_log WHERE event_type = 'search.exported' ORDER BY id DESC LIMIT 1`
+      )
+      .get() as { event_type: string; payload: string } | undefined;
+    assert.ok(logRow);
+    assert.strictEqual(logRow.event_type, 'search.exported');
+    const payload = JSON.parse(logRow.payload);
+    assert.strictEqual(payload.issue_type, 'memo');
+    assert.strictEqual(payload.item_count, 2);
+    assert.strictEqual(payload.include_comments, false);
+    assert.deepStrictEqual(payload.filters, {
+      query: 'export_alpha_memo',
+      labels: ['export-test-label'],
+    });
+  });
+
+  it('should include comments when includeComments=true', async () => {
+    const memo = createMemo(app.db, { bodyMd: 'export_comments_memo body' });
+    addComment(app.db, memo.id, 'first comment text');
+    addComment(app.db, memo.id, 'second comment text');
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search/export',
+      payload: {
+        type: 'memos',
+        filters: { query: 'export_comments_memo' },
+        itemIds: [memo.id],
+        includeComments: true,
+      },
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.strictEqual(body.results.length, 1);
+    assert.ok(Array.isArray(body.results[0].comments));
+    assert.strictEqual(body.results[0].comments.length, 2);
+    assert.strictEqual(body.results[0].comments[0].bodyMd, 'first comment text');
+    assert.strictEqual(body.results[0].comments[1].bodyMd, 'second comment text');
+  });
+
+  it('should include matchedComment when provided by client', async () => {
+    const memo = createMemo(app.db, { bodyMd: 'export_matched_memo body' });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search/export',
+      payload: {
+        type: 'memos',
+        filters: { query: 'snippet_query' },
+        itemIds: [memo.id],
+        matchedComments: { [String(memo.id)]: 'this comment snippet matched' },
+        includeComments: false,
+      },
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.strictEqual(body.results[0].matchedComment, 'this comment snippet matched');
+  });
+
+  it('should preserve the client-provided order of itemIds', async () => {
+    const memo1 = createMemo(app.db, { bodyMd: 'order_memo one' });
+    const memo2 = createMemo(app.db, { bodyMd: 'order_memo two' });
+    const memo3 = createMemo(app.db, { bodyMd: 'order_memo three' });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search/export',
+      payload: {
+        type: 'memos',
+        filters: {},
+        itemIds: [memo3.id, memo1.id, memo2.id],
+        includeComments: false,
+      },
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.deepStrictEqual(
+      body.results.map((r: { id: number }) => r.id),
+      [memo3.id, memo1.id, memo2.id]
+    );
+  });
+
+  it('should export tasks with title, status, and scheduledOn', async () => {
+    const task = createTask(app.db, {
+      title: 'export_task_title',
+      bodyMd: 'task body',
+      status: 'open',
+      scheduledOn: '2026-04-15',
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search/export',
+      payload: {
+        type: 'tasks',
+        filters: { status: 'open' },
+        itemIds: [task.id],
+        includeComments: false,
+      },
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.strictEqual(body.results.length, 1);
+    assert.strictEqual(body.results[0].type, 'task');
+    assert.strictEqual(body.results[0].title, 'export_task_title');
+    assert.strictEqual(body.results[0].status, 'open');
+    assert.strictEqual(body.results[0].scheduledOn, '2026-04-15');
+  });
+
+  it('should drop empty/nullish filter keys when logging and returning', async () => {
+    const memo = createMemo(app.db, { bodyMd: 'filter_clean_memo' });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search/export',
+      payload: {
+        type: 'memos',
+        filters: { query: '', labels: [], dateFrom: '2026-04-01' },
+        itemIds: [memo.id],
+        includeComments: false,
+      },
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.deepStrictEqual(body.filters, { dateFrom: '2026-04-01' });
+  });
+
+  it('should return empty results when itemIds is empty and still log the event', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search/export',
+      payload: {
+        type: 'memos',
+        filters: { query: 'nothing' },
+        itemIds: [],
+        includeComments: false,
+      },
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.strictEqual(body.total, 0);
+    assert.strictEqual(body.results.length, 0);
+
+    const logRow = app.db
+      .prepare(
+        `SELECT payload FROM activity_log WHERE event_type = 'search.exported' ORDER BY id DESC LIMIT 1`
+      )
+      .get() as { payload: string } | undefined;
+    assert.ok(logRow);
+    const payload = JSON.parse(logRow.payload);
+    assert.strictEqual(payload.item_count, 0);
+  });
+
+  it('should reject items of a different type', async () => {
+    const task = createTask(app.db, { title: 'wrong_type_task', bodyMd: '' });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search/export',
+      payload: {
+        type: 'memos',
+        filters: {},
+        itemIds: [task.id],
+        includeComments: false,
+      },
+    });
+
+    // The task's ID is not found when filtered by type = 'memo' so it's dropped
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.strictEqual(body.results.length, 0);
+  });
+});

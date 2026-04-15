@@ -318,4 +318,68 @@ class TaskListViewModel: ObservableObject {
     func search() {
         Task { await loadTasks() }
     }
+
+    // MARK: - Copy / export search results
+
+    @Published var isExporting: Bool = false
+    @Published var showCopiedFeedback: Bool = false
+
+    /// Calls `POST /api/search/export` with the currently loaded task IDs and
+    /// filter snapshot, then writes the server's JSON response to the
+    /// pasteboard. Also records a `search.exported` entry in activity_log.
+    func exportAndCopy(includeComments: Bool) async {
+        guard let store, !store.tasks.isEmpty else { return }
+        isExporting = true
+        defer { isExporting = false }
+
+        let filters = SearchExportFilters(
+            query: searchQuery.isEmpty ? nil : searchQuery,
+            searchMode: searchQuery.isEmpty ? nil : searchMode.rawValue.lowercased(),
+            labels: labelFilters.isEmpty ? nil : Array(labelFilters),
+            dateFrom: scheduledFrom.map { Self.dateFormatter.string(from: $0) },
+            dateTo: scheduledTo.map { Self.dateFormatter.string(from: $0) },
+            bookmarked: bookmarkFilter ? true : nil,
+            projectIds: projectFilters.isEmpty ? nil : Array(projectFilters),
+            includeNoProject: includeNoProject ? true : nil,
+            status: statusFilter.apiValue
+        )
+
+        let matchedComments: [String: String]? = searchMatchInfos.isEmpty
+            ? nil
+            : Dictionary(
+                uniqueKeysWithValues: searchMatchInfos.map { (String($0.key), $0.value) }
+            )
+
+        let matchedScores: [String: Double]? = relevanceScores.isEmpty
+            ? nil
+            : Dictionary(
+                uniqueKeysWithValues: relevanceScores.map { (String($0.key), $0.value) }
+            )
+
+        let request = SearchExportRequest(
+            type: "tasks",
+            filters: filters,
+            itemIds: store.tasks.map { $0.id },
+            matchedComments: matchedComments,
+            matchedScores: matchedScores,
+            includeComments: includeComments
+        )
+
+        do {
+            let json = try await APIClient.shared.postReturningJSONString(
+                path: "/api/search/export",
+                body: request
+            )
+            UIPasteboard.general.string = json
+            HapticManager.notification(.success)
+            showCopiedFeedback = true
+            Task {
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                await MainActor.run { self.showCopiedFeedback = false }
+            }
+        } catch {
+            self.error = error.localizedDescription
+            HapticManager.notification(.error)
+        }
+    }
 }

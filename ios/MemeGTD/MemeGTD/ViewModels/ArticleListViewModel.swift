@@ -144,4 +144,62 @@ class ArticleListViewModel: ObservableObject {
     func search() {
         Task { await loadArticles() }
     }
+
+    // MARK: - Copy / export search results
+
+    @Published var isExporting: Bool = false
+    @Published var showCopiedFeedback: Bool = false
+
+    /// Calls `POST /api/search/export` with the currently loaded article IDs
+    /// and filter snapshot, then writes the server's JSON response to the
+    /// pasteboard. Also records a `search.exported` entry in activity_log.
+    func exportAndCopy(includeComments: Bool) async {
+        guard let store, !store.articles.isEmpty else { return }
+        isExporting = true
+        defer { isExporting = false }
+
+        let filters = SearchExportFilters(
+            query: searchQuery.isEmpty ? nil : searchQuery,
+            searchMode: searchQuery.isEmpty ? nil : "keyword",
+            labels: nil,
+            dateFrom: nil,
+            dateTo: nil,
+            bookmarked: nil,
+            projectIds: nil,
+            includeNoProject: nil,
+            status: nil
+        )
+
+        let matchedComments: [String: String]? = searchMatchInfos.isEmpty
+            ? nil
+            : Dictionary(
+                uniqueKeysWithValues: searchMatchInfos.map { (String($0.key), $0.value) }
+            )
+
+        let request = SearchExportRequest(
+            type: "articles",
+            filters: filters,
+            itemIds: store.articles.map { $0.id },
+            matchedComments: matchedComments,
+            matchedScores: nil,
+            includeComments: includeComments
+        )
+
+        do {
+            let json = try await APIClient.shared.postReturningJSONString(
+                path: "/api/search/export",
+                body: request
+            )
+            UIPasteboard.general.string = json
+            HapticManager.notification(.success)
+            showCopiedFeedback = true
+            Task {
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                await MainActor.run { self.showCopiedFeedback = false }
+            }
+        } catch {
+            self.error = error.localizedDescription
+            HapticManager.notification(.error)
+        }
+    }
 }

@@ -455,4 +455,26 @@ export class ActivityLogger {
       },
     });
   }
+
+  // ============================================================
+  // Search Events
+  // ============================================================
+
+  logSearchExported(
+    type: IssueType,
+    filters: Record<string, unknown>,
+    itemCount: number,
+    includeComments: boolean
+  ): void {
+    createActivityLog(this.db, {
+      eventType: 'search.exported',
+      sourceType: this.sourceType,
+      payload: {
+        issue_type: type,
+        filters,
+        item_count: itemCount,
+        include_comments: includeComments,
+      },
+    });
+  }
 }

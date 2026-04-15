@@ -12,6 +12,7 @@ import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
 import Pagination from '../components/Pagination';
+import CopyResultsButtons from '../components/CopyResultsButtons';
 import { useUrlFilters } from '../hooks/useUrlFilters';
 import {
   validateBookmarked,
@@ -242,10 +243,10 @@ export default function MemosList() {
             labelParam,
             projectIdFilter,
             undefined,
-            PAGE_SIZE,
-            offset,
             createdFrom || undefined,
-            createdTo || undefined
+            createdTo || undefined,
+            PAGE_SIZE,
+            offset
           );
           setMemos(response?.data || []);
           setTotal(response?.total || 0);
@@ -287,6 +288,68 @@ export default function MemosList() {
   const searchQueryForHighlight = searchMode === 'keyword' ? filters.parsedQuery.freeText : undefined;
   const memoContentKey = mobileFilteredMemos.map(m => m.id).join(',');
   useSearchHighlight(timelineContainerRef, searchQueryForHighlight, 'search-match', memoContentKey);
+
+  // Build the filter snapshot used by the Copy Results buttons so the backend
+  // export call records the same filters the user is currently looking at.
+  const copyExportFilters = useMemo(() => {
+    const result: {
+      query?: string;
+      searchMode?: 'keyword' | 'semantic';
+      labels?: string[];
+      dateFrom?: string;
+      dateTo?: string;
+      bookmarked?: boolean;
+      projectIds?: number[];
+      includeNoProject?: boolean;
+    } = {};
+    if (filters.parsedQuery.freeText) {
+      result.query = filters.parsedQuery.freeText;
+      result.searchMode = searchMode;
+    }
+    if (selectedLabels.size > 0) {
+      result.labels = Array.from(selectedLabels);
+    }
+    if (createdFrom) result.dateFrom = createdFrom;
+    if (createdTo) result.dateTo = createdTo;
+    if (bookmarkFilter) result.bookmarked = true;
+    if (selectedProjectIds.size > 0) {
+      result.projectIds = Array.from(selectedProjectIds);
+    }
+    if (selectedNoneProject) result.includeNoProject = true;
+    return result;
+  }, [
+    filters.parsedQuery.freeText,
+    searchMode,
+    selectedLabels,
+    createdFrom,
+    createdTo,
+    bookmarkFilter,
+    selectedProjectIds,
+    selectedNoneProject,
+  ]);
+  const copyExportItemIds = useMemo(() => filteredMemos.map((m) => m.id), [filteredMemos]);
+  // Copy buttons only make sense when the user has actually narrowed the list
+  // — showing them on the default (all-memos) view would be misleading since
+  // the action is "copy the current search results".
+  const hasActiveFilters = useMemo(
+    () =>
+      !!filters.parsedQuery.freeText ||
+      selectedLabels.size > 0 ||
+      !!createdFrom ||
+      !!createdTo ||
+      bookmarkFilter ||
+      selectedProjectIds.size > 0 ||
+      selectedNoneProject,
+    [
+      filters.parsedQuery.freeText,
+      selectedLabels,
+      createdFrom,
+      createdTo,
+      bookmarkFilter,
+      selectedProjectIds,
+      selectedNoneProject,
+    ]
+  );
 
   const handleBookmarkFilterChange = (newBookmarked: boolean) => {
     const params = updateBookmarkedParam(searchParams, newBookmarked);
@@ -410,10 +473,10 @@ export default function MemosList() {
         labelParam,
         projectIdFilter,
         searchParam,
-        PAGE_SIZE,
-        memos.length,
         createdFrom || undefined,
-        createdTo || undefined
+        createdTo || undefined,
+        PAGE_SIZE,
+        memos.length
       );
 
       setMemos((prev) => [...prev, ...(response?.data || [])]);
@@ -642,6 +705,15 @@ export default function MemosList() {
 
           <div className="text-sm text-gray-500 mb-2">
             {total} {total === 1 ? 'memo' : 'memos'}
+            {hasActiveFilters && copyExportItemIds.length > 0 && (
+              <CopyResultsButtons
+                type="memos"
+                filters={copyExportFilters}
+                itemIds={copyExportItemIds}
+                matchedComments={matchSnippets}
+                matchedScores={relevanceScores}
+              />
+            )}
           </div>
         </div>
 
@@ -855,6 +927,15 @@ export default function MemosList() {
             <span className="ml-2 text-gray-400">
               ({semanticMeta.searchTimeMs}ms)
             </span>
+          )}
+          {hasActiveFilters && copyExportItemIds.length > 0 && (
+            <CopyResultsButtons
+              type="memos"
+              filters={copyExportFilters}
+              itemIds={copyExportItemIds}
+              matchedComments={matchSnippets}
+              matchedScores={relevanceScores}
+            />
           )}
         </div>
 

@@ -153,16 +153,21 @@ struct ArticleDetailView: View {
         .enableSwipeBack()
         .navigationBarBackButtonHidden(true)
         .toolbar {
-            AppToolbar(title: toolbarTitle, onMenuTap: onMenuTap, titleLineLimit: 1) {
-                Button(action: {
-                    HapticManager.impact(.light)
-                    showInfoSheet = true
-                }) {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(.textPrimary)
+            AppToolbar(
+                title: toolbarTitle,
+                onMenuTap: onMenuTap,
+                titleLineLimit: 1,
+                trailing: {
+                    Button(action: {
+                        HapticManager.impact(.light)
+                        showInfoSheet = true
+                    }) {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundColor(.textPrimary)
+                    }
                 }
-            }
+            )
         }
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showInfoSheet) {

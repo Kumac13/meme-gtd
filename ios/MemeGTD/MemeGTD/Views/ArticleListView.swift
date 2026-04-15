@@ -7,6 +7,11 @@ struct ArticleListView: View {
     @EnvironmentObject var articleStore: ArticleStore
     @StateObject private var viewModel = ArticleListViewModel()
     @State private var isSearching: Bool = false
+    @State private var showCopyDialog: Bool = false
+
+    private var hasActiveFilters: Bool {
+        !viewModel.searchQuery.isEmpty
+    }
 
     var body: some View {
         ScrollView {
@@ -68,9 +73,54 @@ struct ArticleListView: View {
                 isSearching: $isSearching,
                 searchQuery: $viewModel.searchQuery,
                 searchPlaceholder: "Search articles...",
-                onSearch: { viewModel.search() }
+                onSearch: { viewModel.search() },
+                searchBarAction: {
+                    if !articleStore.articles.isEmpty && hasActiveFilters {
+                        Button(action: {
+                            HapticManager.impact(.light)
+                            showCopyDialog = true
+                        }) {
+                            if viewModel.isExporting {
+                                ProgressView()
+                                    .controlSize(.mini)
+                            } else {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(Color(.systemGray))
+                            }
+                        }
+                        .disabled(viewModel.isExporting)
+                    }
+                }
             )
         }
+        .sheet(isPresented: $showCopyDialog) {
+            CopyOptionsSheet(
+                isPresented: $showCopyDialog,
+                isExporting: viewModel.isExporting,
+                onCopyResults: {
+                    showCopyDialog = false
+                    Task { await viewModel.exportAndCopy(includeComments: false) }
+                },
+                onCopyWithComments: {
+                    showCopyDialog = false
+                    Task { await viewModel.exportAndCopy(includeComments: true) }
+                }
+            )
+            .presentationDetents([.height(220)])
+        }
+        .overlay(alignment: .top) {
+            if viewModel.showCopiedFeedback {
+                Text("Copied!")
+                    .font(.system(size: 13, weight: .semibold))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(.regularMaterial, in: Capsule())
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: viewModel.showCopiedFeedback)
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: articleStore.needsReload) { _, needsReload in
             if needsReload {

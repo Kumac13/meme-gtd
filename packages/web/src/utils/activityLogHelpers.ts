@@ -29,7 +29,8 @@ type EventType =
   | 'link.deleted'
   | 'comment.created'
   | 'comment.updated'
-  | 'comment.deleted';
+  | 'comment.deleted'
+  | 'search.exported';
 
 export interface ActivityLogEntry {
   id: number;

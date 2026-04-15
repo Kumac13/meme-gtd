@@ -43,6 +43,8 @@ export const EventTypeSchema = z.enum([
   'comment.created',
   'comment.updated',
   'comment.deleted',
+  // Search events
+  'search.exported',
 ]);
 
 export type EventType = z.infer<typeof EventTypeSchema>;

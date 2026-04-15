@@ -62,6 +62,51 @@ class APIClient {
         return try await execute(request)
     }
 
+    /// POST a JSON body and return the raw response JSON as a pretty-printed
+    /// string. Used by the "copy search results" feature where we want to
+    /// place the server's JSON response directly on the clipboard without
+    /// round-tripping through typed Swift structs.
+    func postReturningJSONString<B: Encodable>(
+        path: String,
+        body: B
+    ) async throws -> String {
+        let url = try buildURL(path: path)
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(body)
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw APIError.serverError(0, "Invalid response")
+            }
+            guard (200...299).contains(httpResponse.statusCode) else {
+                let message = String(data: data, encoding: .utf8)
+                throw APIError.serverError(httpResponse.statusCode, message)
+            }
+            let object = try JSONSerialization.jsonObject(with: data, options: [])
+            let prettyData = try JSONSerialization.data(
+                withJSONObject: object,
+                options: [.prettyPrinted, .sortedKeys]
+            )
+            guard let prettyString = String(data: prettyData, encoding: .utf8) else {
+                throw APIError.decodingError(
+                    NSError(
+                        domain: "APIClient",
+                        code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "Failed to encode JSON as UTF-8"]
+                    )
+                )
+            }
+            return prettyString
+        } catch let error as APIError {
+            throw error
+        } catch {
+            throw APIError.networkError(error)
+        }
+    }
+
     func patch<B: Encodable, T: Decodable>(
         path: String,
         body: B
