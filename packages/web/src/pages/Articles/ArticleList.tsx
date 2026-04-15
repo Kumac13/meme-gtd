@@ -115,7 +115,7 @@ export const ArticleList: React.FC = () => {
         <>
           <div className="text-sm text-gray-500 mb-2">
             {total} {total === 1 ? 'article' : 'articles'}
-            {copyExportItemIds.length > 0 && (
+            {!!searchQuery && copyExportItemIds.length > 0 && (
               <CopyResultsButtons
                 type="articles"
                 filters={copyExportFilters}

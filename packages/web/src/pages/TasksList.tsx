@@ -328,6 +328,29 @@ export default function TasksList() {
     () => filteredTasks.map((t) => t.id),
     [filteredTasks]
   );
+  // Show Copy buttons only when the user has actively searched or filtered.
+  // Status filter defaults to 'next', so we intentionally ignore it as the
+  // baseline Tasks view and only count it as "active" when the user picked
+  // something other than the default.
+  const hasActiveFilters = useMemo(
+    () =>
+      !!filters.parsedQuery.freeText ||
+      selectedLabels.size > 0 ||
+      !!scheduledFrom ||
+      !!scheduledTo ||
+      bookmarkFilter ||
+      selectedProjectIds.size > 0 ||
+      selectedNoneProject,
+    [
+      filters.parsedQuery.freeText,
+      selectedLabels,
+      scheduledFrom,
+      scheduledTo,
+      bookmarkFilter,
+      selectedProjectIds,
+      selectedNoneProject,
+    ]
+  );
 
   const handleStatusFilterChange = (newStatus: string) => {
     const params = updateStatusParam(searchParams, newStatus as any);
@@ -600,12 +623,13 @@ export default function TasksList() {
                 ({semanticMeta.searchTimeMs}ms)
               </span>
             )}
-            {copyExportItemIds.length > 0 && (
+            {hasActiveFilters && copyExportItemIds.length > 0 && (
               <CopyResultsButtons
                 type="tasks"
                 filters={copyExportFilters}
                 itemIds={copyExportItemIds}
                 matchedComments={matchSnippets}
+                matchedScores={relevanceScores}
               />
             )}
           </div>
