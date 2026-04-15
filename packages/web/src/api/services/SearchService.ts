@@ -292,6 +292,10 @@ export class SearchService {
              */
             matchedComments?: Record<string, string>;
             /**
+             * Semantic search relevance scores keyed by item id (0-1)
+             */
+            matchedScores?: Record<string, number>;
+            /**
              * Whether to include full comments for each item
              */
             includeComments?: boolean;
@@ -349,6 +353,7 @@ export class SearchService {
             createdAt: string;
             updatedAt: string;
             matchedComment?: string;
+            matchedScore?: number;
             comments?: Array<{
                 id: number;
                 bodyMd: string;
@@ -367,6 +372,7 @@ export class SearchService {
             createdAt: string;
             updatedAt: string;
             matchedComment?: string;
+            matchedScore?: number;
             comments?: Array<{
                 id: number;
                 bodyMd: string;
@@ -384,6 +390,7 @@ export class SearchService {
             createdAt: string;
             updatedAt: string;
             matchedComment?: string;
+            matchedScore?: number;
             comments?: Array<{
                 id: number;
                 bodyMd: string;

@@ -175,6 +175,7 @@ export async function searchExportHandler(
   const body = request.body;
   const { type, filters, itemIds, includeComments } = body;
   const matchedComments = body.matchedComments ?? {};
+  const matchedScores = body.matchedScores ?? {};
 
   const expectedIssueType = type === 'memos' ? 'memo' : type === 'tasks' ? 'task' : 'article';
 
@@ -294,6 +295,7 @@ export async function searchExportHandler(
     const labels = labelMap.get(row.id) ?? [];
     const comments = includeComments ? commentsMap.get(row.id) ?? [] : undefined;
     const matchedComment = matchedComments[String(row.id)];
+    const matchedScore = matchedScores[String(row.id)];
 
     if (expectedIssueType === 'memo') {
       return {
@@ -305,6 +307,7 @@ export async function searchExportHandler(
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         ...(matchedComment ? { matchedComment } : {}),
+        ...(matchedScore !== undefined ? { matchedScore } : {}),
         ...(comments ? { comments } : {}),
       };
     }
@@ -322,6 +325,7 @@ export async function searchExportHandler(
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         ...(matchedComment ? { matchedComment } : {}),
+        ...(matchedScore !== undefined ? { matchedScore } : {}),
         ...(comments ? { comments } : {}),
       };
     }
@@ -348,6 +352,7 @@ export async function searchExportHandler(
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       ...(matchedComment ? { matchedComment } : {}),
+      ...(matchedScore !== undefined ? { matchedScore } : {}),
       ...(comments ? { comments } : {}),
     };
   });

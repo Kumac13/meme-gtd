@@ -424,11 +424,18 @@ class MemoListViewModel: ObservableObject {
                 uniqueKeysWithValues: searchMatchInfos.map { (String($0.key), $0.value) }
             )
 
+        let matchedScores: [String: Double]? = relevanceScores.isEmpty
+            ? nil
+            : Dictionary(
+                uniqueKeysWithValues: relevanceScores.map { (String($0.key), $0.value) }
+            )
+
         let request = SearchExportRequest(
             type: "memos",
             filters: filters,
             itemIds: store.memos.map { $0.id },
             matchedComments: matchedComments,
+            matchedScores: matchedScores,
             includeComments: includeComments
         )
 

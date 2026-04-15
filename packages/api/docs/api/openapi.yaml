@@ -7936,6 +7936,11 @@ paths:
                   additionalProperties:
                     type: string
                   description: Matched comment snippets keyed by item id (from keyword search)
+                matchedScores:
+                  type: object
+                  additionalProperties:
+                    type: number
+                  description: Semantic search relevance scores keyed by item id (0-1)
                 includeComments:
                   type: boolean
                   default: false
@@ -8030,6 +8035,8 @@ paths:
                               type: string
                             matchedComment:
                               type: string
+                            matchedScore:
+                              type: number
                             comments:
                               type: array
                               items:
@@ -8093,6 +8100,8 @@ paths:
                               type: string
                             matchedComment:
                               type: string
+                            matchedScore:
+                              type: number
                             comments:
                               type: array
                               items:
@@ -8156,6 +8165,8 @@ paths:
                               type: string
                             matchedComment:
                               type: string
+                            matchedScore:
+                              type: number
                             comments:
                               type: array
                               items:

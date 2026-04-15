@@ -8,6 +8,7 @@ struct SearchExportRequest: Encodable {
     let filters: SearchExportFilters
     let itemIds: [Int]
     let matchedComments: [String: String]?
+    let matchedScores: [String: Double]?
     let includeComments: Bool
 }
 

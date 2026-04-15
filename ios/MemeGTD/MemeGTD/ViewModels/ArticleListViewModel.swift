@@ -181,6 +181,7 @@ class ArticleListViewModel: ObservableObject {
             filters: filters,
             itemIds: store.articles.map { $0.id },
             matchedComments: matchedComments,
+            matchedScores: nil,
             includeComments: includeComments
         )
 

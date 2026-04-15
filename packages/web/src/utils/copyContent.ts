@@ -61,6 +61,7 @@ export interface ExportAndCopyOptions {
   };
   itemIds: number[];
   matchedComments?: Record<string, string>;
+  matchedScores?: Record<string, number>;
   includeComments: boolean;
 }
 
@@ -79,6 +80,7 @@ export async function exportAndCopySearchResults(
     filters: options.filters,
     itemIds: options.itemIds,
     matchedComments: options.matchedComments,
+    matchedScores: options.matchedScores,
     includeComments: options.includeComments,
   });
   const json = JSON.stringify(response, null, 2);

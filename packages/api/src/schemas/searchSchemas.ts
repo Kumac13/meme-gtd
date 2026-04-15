@@ -123,6 +123,10 @@ export const SearchExportRequestSchema = z.object({
     .record(z.string(), z.string())
     .optional()
     .describe('Matched comment snippets keyed by item id (from keyword search)'),
+  matchedScores: z
+    .record(z.string(), z.number())
+    .optional()
+    .describe('Semantic search relevance scores keyed by item id (0-1)'),
   includeComments: z.boolean().default(false).describe('Whether to include full comments for each item'),
 });
 
@@ -144,6 +148,7 @@ const SearchExportMemoResultSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   matchedComment: z.string().optional(),
+  matchedScore: z.number().optional(),
   comments: z.array(SearchExportCommentSchema).optional(),
 });
 
@@ -159,6 +164,7 @@ const SearchExportTaskResultSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   matchedComment: z.string().optional(),
+  matchedScore: z.number().optional(),
   comments: z.array(SearchExportCommentSchema).optional(),
 });
 
@@ -173,6 +179,7 @@ const SearchExportArticleResultSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   matchedComment: z.string().optional(),
+  matchedScore: z.number().optional(),
   comments: z.array(SearchExportCommentSchema).optional(),
 });
 
