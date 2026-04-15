@@ -26,7 +26,7 @@ export class ActivityLogService {
         issueId?: number,
         projectId?: number,
         labelId?: number,
-        eventType?: 'task.created' | 'task.updated' | 'task.status_changed' | 'task.deleted' | 'task.bookmarked' | 'memo.created' | 'memo.updated' | 'memo.promoted' | 'memo.deleted' | 'memo.bookmarked' | 'article.created' | 'article.deleted' | 'label.created' | 'label.deleted' | 'label.assigned' | 'label.removed' | 'project.created' | 'project.updated' | 'project.deleted' | 'project.item_added' | 'project.item_removed' | 'link.created' | 'link.deleted' | 'comment.created' | 'comment.updated' | 'comment.deleted',
+        eventType?: 'task.created' | 'task.updated' | 'task.status_changed' | 'task.deleted' | 'task.bookmarked' | 'memo.created' | 'memo.updated' | 'memo.promoted' | 'memo.deleted' | 'memo.bookmarked' | 'article.created' | 'article.deleted' | 'label.created' | 'label.deleted' | 'label.assigned' | 'label.removed' | 'project.created' | 'project.updated' | 'project.deleted' | 'project.item_added' | 'project.item_removed' | 'link.created' | 'link.deleted' | 'comment.created' | 'comment.updated' | 'comment.deleted' | 'search.exported',
         sourceType?: 'cli' | 'api' | 'system',
         from?: string,
         to?: string,
@@ -41,7 +41,7 @@ export class ActivityLogService {
         /**
          * Event type (e.g., task.created, task.status_changed)
          */
-        eventType: 'task.created' | 'task.updated' | 'task.status_changed' | 'task.deleted' | 'task.bookmarked' | 'memo.created' | 'memo.updated' | 'memo.promoted' | 'memo.deleted' | 'memo.bookmarked' | 'article.created' | 'article.deleted' | 'label.created' | 'label.deleted' | 'label.assigned' | 'label.removed' | 'project.created' | 'project.updated' | 'project.deleted' | 'project.item_added' | 'project.item_removed' | 'link.created' | 'link.deleted' | 'comment.created' | 'comment.updated' | 'comment.deleted';
+        eventType: 'task.created' | 'task.updated' | 'task.status_changed' | 'task.deleted' | 'task.bookmarked' | 'memo.created' | 'memo.updated' | 'memo.promoted' | 'memo.deleted' | 'memo.bookmarked' | 'article.created' | 'article.deleted' | 'label.created' | 'label.deleted' | 'label.assigned' | 'label.removed' | 'project.created' | 'project.updated' | 'project.deleted' | 'project.item_added' | 'project.item_removed' | 'link.created' | 'link.deleted' | 'comment.created' | 'comment.updated' | 'comment.deleted' | 'search.exported';
         /**
          * Event timestamp (ISO 8601)
          */
@@ -109,7 +109,7 @@ export class ActivityLogService {
         /**
          * Event type (e.g., task.created, task.status_changed)
          */
-        eventType: 'task.created' | 'task.updated' | 'task.status_changed' | 'task.deleted' | 'task.bookmarked' | 'memo.created' | 'memo.updated' | 'memo.promoted' | 'memo.deleted' | 'memo.bookmarked' | 'article.created' | 'article.deleted' | 'label.created' | 'label.deleted' | 'label.assigned' | 'label.removed' | 'project.created' | 'project.updated' | 'project.deleted' | 'project.item_added' | 'project.item_removed' | 'link.created' | 'link.deleted' | 'comment.created' | 'comment.updated' | 'comment.deleted';
+        eventType: 'task.created' | 'task.updated' | 'task.status_changed' | 'task.deleted' | 'task.bookmarked' | 'memo.created' | 'memo.updated' | 'memo.promoted' | 'memo.deleted' | 'memo.bookmarked' | 'article.created' | 'article.deleted' | 'label.created' | 'label.deleted' | 'label.assigned' | 'label.removed' | 'project.created' | 'project.updated' | 'project.deleted' | 'project.item_added' | 'project.item_removed' | 'link.created' | 'link.deleted' | 'comment.created' | 'comment.updated' | 'comment.deleted' | 'search.exported';
         /**
          * Event timestamp (ISO 8601)
          */
@@ -172,7 +172,7 @@ export class ActivityLogService {
         /**
          * Event type (e.g., task.created, task.status_changed)
          */
-        eventType: 'task.created' | 'task.updated' | 'task.status_changed' | 'task.deleted' | 'task.bookmarked' | 'memo.created' | 'memo.updated' | 'memo.promoted' | 'memo.deleted' | 'memo.bookmarked' | 'article.created' | 'article.deleted' | 'label.created' | 'label.deleted' | 'label.assigned' | 'label.removed' | 'project.created' | 'project.updated' | 'project.deleted' | 'project.item_added' | 'project.item_removed' | 'link.created' | 'link.deleted' | 'comment.created' | 'comment.updated' | 'comment.deleted';
+        eventType: 'task.created' | 'task.updated' | 'task.status_changed' | 'task.deleted' | 'task.bookmarked' | 'memo.created' | 'memo.updated' | 'memo.promoted' | 'memo.deleted' | 'memo.bookmarked' | 'article.created' | 'article.deleted' | 'label.created' | 'label.deleted' | 'label.assigned' | 'label.removed' | 'project.created' | 'project.updated' | 'project.deleted' | 'project.item_added' | 'project.item_removed' | 'link.created' | 'link.deleted' | 'comment.created' | 'comment.updated' | 'comment.deleted' | 'search.exported';
         /**
          * Event timestamp (ISO 8601)
          */

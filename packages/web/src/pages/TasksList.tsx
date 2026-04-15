@@ -12,6 +12,7 @@ import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
 import Pagination from '../components/Pagination';
+import CopyResultsButtons from '../components/CopyResultsButtons';
 import { useUrlFilters } from '../hooks/useUrlFilters';
 import {
   validateStatus,
@@ -280,6 +281,53 @@ export default function TasksList() {
       return true;
     });
   }, [tasks, bookmarkFilter]);
+
+  // Filter snapshot for the Copy Results buttons. The backend uses this to
+  // record a search.exported activity_log entry that reflects what the user
+  // was looking at when they triggered copy.
+  const copyExportFilters = useMemo(() => {
+    const result: {
+      query?: string;
+      searchMode?: 'keyword' | 'semantic';
+      labels?: string[];
+      dateFrom?: string;
+      dateTo?: string;
+      bookmarked?: boolean;
+      projectIds?: number[];
+      includeNoProject?: boolean;
+      status?: string;
+    } = {};
+    if (filters.parsedQuery.freeText) {
+      result.query = filters.parsedQuery.freeText;
+      result.searchMode = searchMode;
+    }
+    if (selectedLabels.size > 0) {
+      result.labels = Array.from(selectedLabels);
+    }
+    if (scheduledFrom) result.dateFrom = scheduledFrom;
+    if (scheduledTo) result.dateTo = scheduledTo;
+    if (bookmarkFilter) result.bookmarked = true;
+    if (selectedProjectIds.size > 0) {
+      result.projectIds = Array.from(selectedProjectIds);
+    }
+    if (selectedNoneProject) result.includeNoProject = true;
+    if (statusFilter && statusFilter !== 'all') result.status = statusFilter;
+    return result;
+  }, [
+    filters.parsedQuery.freeText,
+    searchMode,
+    selectedLabels,
+    scheduledFrom,
+    scheduledTo,
+    bookmarkFilter,
+    selectedProjectIds,
+    selectedNoneProject,
+    statusFilter,
+  ]);
+  const copyExportItemIds = useMemo(
+    () => filteredTasks.map((t) => t.id),
+    [filteredTasks]
+  );
 
   const handleStatusFilterChange = (newStatus: string) => {
     const params = updateStatusParam(searchParams, newStatus as any);
@@ -551,6 +599,14 @@ export default function TasksList() {
               <span className="ml-2 text-gray-400">
                 ({semanticMeta.searchTimeMs}ms)
               </span>
+            )}
+            {copyExportItemIds.length > 0 && (
+              <CopyResultsButtons
+                type="tasks"
+                filters={copyExportFilters}
+                itemIds={copyExportItemIds}
+                matchedComments={matchSnippets}
+              />
             )}
           </div>
           <ItemList items={filteredTasks} itemType="task" basePath="/tasks" currentFilters={searchParams} onDelete={handleDelete} matchSnippets={matchSnippets} searchQuery={searchMode === 'keyword' ? filters.parsedQuery.freeText : undefined} relevanceScores={relevanceScores} />

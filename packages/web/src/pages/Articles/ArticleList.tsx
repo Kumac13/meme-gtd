@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ArticlesService } from "../../api/services/ArticlesService";
 import SearchInput from "../../components/SearchInput";
@@ -7,6 +7,7 @@ import LoadingState from "../../components/LoadingState";
 import ErrorState from "../../components/ErrorState";
 import EmptyState from "../../components/EmptyState";
 import Pagination from "../../components/Pagination";
+import CopyResultsButtons from "../../components/CopyResultsButtons";
 import type { Article } from "meme-gtd-shared";
 
 const PAGE_SIZE = 20;
@@ -77,6 +78,16 @@ export const ArticleList: React.FC = () => {
     setTotal(prev => prev - 1);
   };
 
+  const copyExportFilters = useMemo(() => {
+    const result: { query?: string } = {};
+    if (searchQuery) result.query = searchQuery;
+    return result;
+  }, [searchQuery]);
+  const copyExportItemIds = useMemo(
+    () => articles.map((a) => a.id),
+    [articles]
+  );
+
   if (loading) {
     return <LoadingState message="Loading articles..." />;
   }
@@ -104,6 +115,13 @@ export const ArticleList: React.FC = () => {
         <>
           <div className="text-sm text-gray-500 mb-2">
             {total} {total === 1 ? 'article' : 'articles'}
+            {copyExportItemIds.length > 0 && (
+              <CopyResultsButtons
+                type="articles"
+                filters={copyExportFilters}
+                itemIds={copyExportItemIds}
+              />
+            )}
           </div>
           <ItemList
             items={articles}

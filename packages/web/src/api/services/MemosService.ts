@@ -85,8 +85,10 @@ export class MemosService {
      * List all memos with optional filters and pagination
      * @param bookmarked Filter by bookmark status
      * @param label Filter by label name(s). Supports comma-separated values for OR logic (e.g., idea,meeting-notes)
-     * @param projectId Filter by project ID(s). Supports comma-separated values for OR logic (e.g., 1,2,3). Use "none" to filter memos not assigned to any project.
+     * @param projectId Filter by project ID(s). Supports comma-separated values for OR logic (e.g., 1,2,3). Use "none" to filter memos not assigned to any project. Can be combined: "none,1".
      * @param search Search memos by body content using free-text partial matching
+     * @param createdFrom Filter memos created on or after this date (YYYY-MM-DD)
+     * @param createdTo Filter memos created on or before this date (YYYY-MM-DD)
      * @param limit Maximum number of memos to return (default: 100, max: 1000)
      * @param offset Number of memos to skip (default: 0)
      * @returns any Default Response
@@ -97,10 +99,10 @@ export class MemosService {
         label?: string,
         projectId?: string,
         search?: string,
-        limit?: number,
-        offset?: number,
         createdFrom?: string,
         createdTo?: string,
+        limit?: number,
+        offset?: number,
     ): CancelablePromise<{
         /**
          * Array of memos
@@ -184,10 +186,10 @@ export class MemosService {
                 'label': label,
                 'projectId': projectId,
                 'search': search,
-                'limit': limit,
-                'offset': offset,
                 'createdFrom': createdFrom,
                 'createdTo': createdTo,
+                'limit': limit,
+                'offset': offset,
             },
             errors: {
                 400: `Default Response`,
