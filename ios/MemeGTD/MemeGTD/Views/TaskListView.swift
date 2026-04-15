@@ -19,6 +19,16 @@ struct TaskListView: View {
     @State private var createTaskMode: CreateTaskMode? = nil
     @State private var showCopyDialog: Bool = false
 
+    private var hasActiveFilters: Bool {
+        !viewModel.searchQuery.isEmpty ||
+        !viewModel.labelFilters.isEmpty ||
+        !viewModel.projectFilters.isEmpty ||
+        viewModel.includeNoProject ||
+        viewModel.bookmarkFilter ||
+        viewModel.scheduledFrom != nil ||
+        viewModel.scheduledTo != nil
+    }
+
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
@@ -177,7 +187,7 @@ struct TaskListView: View {
                 searchPlaceholder: "Search tasks...",
                 onSearch: { viewModel.search() },
                 searchBarAction: {
-                    if !taskStore.tasks.isEmpty {
+                    if !taskStore.tasks.isEmpty && hasActiveFilters {
                         Button(action: {
                             HapticManager.impact(.light)
                             showCopyDialog = true
@@ -196,18 +206,20 @@ struct TaskListView: View {
                 }
             )
         }
-        .confirmationDialog(
-            "Copy Search Results",
-            isPresented: $showCopyDialog,
-            titleVisibility: .visible
-        ) {
-            Button("Copy Results") {
-                Task { await viewModel.exportAndCopy(includeComments: false) }
-            }
-            Button("Copy with Comments") {
-                Task { await viewModel.exportAndCopy(includeComments: true) }
-            }
-            Button("Cancel", role: .cancel) {}
+        .sheet(isPresented: $showCopyDialog) {
+            CopyOptionsSheet(
+                isPresented: $showCopyDialog,
+                isExporting: viewModel.isExporting,
+                onCopyResults: {
+                    showCopyDialog = false
+                    Task { await viewModel.exportAndCopy(includeComments: false) }
+                },
+                onCopyWithComments: {
+                    showCopyDialog = false
+                    Task { await viewModel.exportAndCopy(includeComments: true) }
+                }
+            )
+            .presentationDetents([.height(220)])
         }
         .overlay(alignment: .top) {
             if viewModel.showCopiedFeedback {

@@ -24,6 +24,16 @@ struct MemoListView: View {
     @State private var pickedExtension: String = "jpg"
     @State private var showCopyDialog: Bool = false
 
+    private var hasActiveFilters: Bool {
+        !viewModel.searchQuery.isEmpty ||
+        !viewModel.labelFilters.isEmpty ||
+        !viewModel.projectFilters.isEmpty ||
+        viewModel.includeNoProject ||
+        viewModel.bookmarkFilter ||
+        viewModel.createdFrom != nil ||
+        viewModel.createdTo != nil
+    }
+
     private var reversedMemos: [Memo] {
         if viewModel.searchMode == .semantic && isSearching {
             return memoStore.memos
@@ -234,7 +244,7 @@ struct MemoListView: View {
                 searchPlaceholder: "Search memos...",
                 onSearch: { viewModel.search() },
                 searchBarAction: {
-                    if !memoStore.memos.isEmpty {
+                    if !memoStore.memos.isEmpty && hasActiveFilters {
                         Button(action: {
                             HapticManager.impact(.light)
                             showCopyDialog = true
@@ -253,18 +263,20 @@ struct MemoListView: View {
                 }
             )
         }
-        .confirmationDialog(
-            "Copy Search Results",
-            isPresented: $showCopyDialog,
-            titleVisibility: .visible
-        ) {
-            Button("Copy Results") {
-                Task { await viewModel.exportAndCopy(includeComments: false) }
-            }
-            Button("Copy with Comments") {
-                Task { await viewModel.exportAndCopy(includeComments: true) }
-            }
-            Button("Cancel", role: .cancel) {}
+        .sheet(isPresented: $showCopyDialog) {
+            CopyOptionsSheet(
+                isPresented: $showCopyDialog,
+                isExporting: viewModel.isExporting,
+                onCopyResults: {
+                    showCopyDialog = false
+                    Task { await viewModel.exportAndCopy(includeComments: false) }
+                },
+                onCopyWithComments: {
+                    showCopyDialog = false
+                    Task { await viewModel.exportAndCopy(includeComments: true) }
+                }
+            )
+            .presentationDetents([.height(220)])
         }
         .overlay(alignment: .top) {
             if viewModel.showCopiedFeedback {

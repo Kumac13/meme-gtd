@@ -9,6 +9,10 @@ struct ArticleListView: View {
     @State private var isSearching: Bool = false
     @State private var showCopyDialog: Bool = false
 
+    private var hasActiveFilters: Bool {
+        !viewModel.searchQuery.isEmpty
+    }
+
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
@@ -71,7 +75,7 @@ struct ArticleListView: View {
                 searchPlaceholder: "Search articles...",
                 onSearch: { viewModel.search() },
                 searchBarAction: {
-                    if !articleStore.articles.isEmpty {
+                    if !articleStore.articles.isEmpty && hasActiveFilters {
                         Button(action: {
                             HapticManager.impact(.light)
                             showCopyDialog = true
@@ -90,18 +94,20 @@ struct ArticleListView: View {
                 }
             )
         }
-        .confirmationDialog(
-            "Copy Search Results",
-            isPresented: $showCopyDialog,
-            titleVisibility: .visible
-        ) {
-            Button("Copy Results") {
-                Task { await viewModel.exportAndCopy(includeComments: false) }
-            }
-            Button("Copy with Comments") {
-                Task { await viewModel.exportAndCopy(includeComments: true) }
-            }
-            Button("Cancel", role: .cancel) {}
+        .sheet(isPresented: $showCopyDialog) {
+            CopyOptionsSheet(
+                isPresented: $showCopyDialog,
+                isExporting: viewModel.isExporting,
+                onCopyResults: {
+                    showCopyDialog = false
+                    Task { await viewModel.exportAndCopy(includeComments: false) }
+                },
+                onCopyWithComments: {
+                    showCopyDialog = false
+                    Task { await viewModel.exportAndCopy(includeComments: true) }
+                }
+            )
+            .presentationDetents([.height(220)])
         }
         .overlay(alignment: .top) {
             if viewModel.showCopiedFeedback {
