@@ -400,6 +400,7 @@ export const promoteMemo = (
   input: PromoteMemoInput
 ): { memo: Memo; taskId: number } => {
   const memo = getMemo(db, input.memoId);
+  const comments = listComments(db, input.memoId);
 
   const now = nowIso();
   const insertTask = db.prepare(
@@ -409,7 +410,7 @@ export const promoteMemo = (
 
   const result = insertTask.run({
     title: input.title,
-    body: input.bodyMd ?? memo.bodyMd,
+    body: input.bodyMd ?? buildPromoteBody(memo, comments),
     status: input.status ?? 'open',
     taskKind: input.taskKind ?? 'action',
     scheduledStart: input.scheduledStart ?? null,
@@ -437,7 +438,73 @@ export const promoteMemo = (
     attachProjects(db, taskId, memoProjectIds.map((row) => row.project_id));
   }
 
+  copyMemoLinks(db, memo.id, taskId, now);
+
   return { memo, taskId };
+};
+
+const buildPromoteBody = (memo: Memo, comments: Comment[]): string => {
+  const parts: string[] = [];
+
+  if (memo.bodyMd) {
+    parts.push(memo.bodyMd);
+  }
+
+  if (comments.length > 0) {
+    parts.push('');
+    parts.push('---');
+    parts.push('## コメント');
+    parts.push('');
+
+    for (const comment of comments) {
+      parts.push(`### ${comment.createdAt}`);
+      parts.push(comment.bodyMd);
+      parts.push('');
+    }
+  }
+
+  return parts.join('\n').trim();
+};
+
+const copyMemoLinks = (
+  db: Database.Database,
+  memoId: number,
+  taskId: number,
+  createdAt: string
+): void => {
+  const links = db.prepare(`
+    SELECT source_issue_id, target_issue_id, link_type
+    FROM links
+    WHERE (source_issue_id = @memoId OR target_issue_id = @memoId)
+      AND NOT (source_issue_id = @taskId AND link_type = 'derived_from')
+  `).all({ memoId, taskId }) as Array<{
+    source_issue_id: number;
+    target_issue_id: number;
+    link_type: string;
+  }>;
+
+  const insertLink = db.prepare(`
+    INSERT INTO links (source_issue_id, target_issue_id, link_type, created_at)
+    VALUES (@source, @target, @linkType, @createdAt)
+  `);
+
+  for (const link of links) {
+    if (link.source_issue_id === memoId) {
+      insertLink.run({
+        source: taskId,
+        target: link.target_issue_id,
+        linkType: link.link_type,
+        createdAt,
+      });
+    } else {
+      insertLink.run({
+        source: link.source_issue_id,
+        target: taskId,
+        linkType: link.link_type,
+        createdAt,
+      });
+    }
+  }
 };
 
 export const addComment = (

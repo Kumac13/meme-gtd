@@ -416,6 +416,78 @@ describe('Memo Promote Operation', () => {
     assert.ok(labelNames.has('review'));
   });
 
+  it('should inline memo comments into the promoted task body', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Discussion memo' }),
+    });
+    const memo = JSON.parse(createResponse.body);
+
+    await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/comments`,
+      payload: { bodyMd: 'first thought' },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/comments`,
+      payload: { bodyMd: 'second thought' },
+    });
+
+    const promoteResponse = await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/promote`,
+      payload: { title: 'Promoted with comments' },
+    });
+    assert.strictEqual(promoteResponse.statusCode, 200);
+    const task = JSON.parse(promoteResponse.body);
+
+    assert.ok(task.bodyMd.includes('Discussion memo'));
+    assert.ok(task.bodyMd.includes('## コメント'));
+    assert.ok(task.bodyMd.includes('first thought'));
+    assert.ok(task.bodyMd.includes('second thought'));
+  });
+
+  it('should copy outgoing and incoming links to the promoted task', async () => {
+    const otherResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Other memo' }),
+    });
+    const other = JSON.parse(otherResponse.body);
+
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Source memo' }),
+    });
+    const memo = JSON.parse(createResponse.body);
+
+    await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: { sourceIssueId: memo.id, targetIssueId: other.id, linkType: 'relates' },
+    });
+
+    const promoteResponse = await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/promote`,
+      payload: { title: 'Promoted with link' },
+    });
+    assert.strictEqual(promoteResponse.statusCode, 200);
+    const task = JSON.parse(promoteResponse.body);
+
+    const linksResponse = await app.inject({
+      method: 'GET',
+      url: `/api/issues/${task.id}/links`,
+    });
+    const links = JSON.parse(linksResponse.body);
+    const relates = links.filter((l: { linkType: string }) => l.linkType === 'relates');
+    const targetIds = relates.map((l: { targetIssue: { id: number } }) => l.targetIssue.id);
+    assert.ok(targetIds.includes(other.id), `expected task to link to other memo; got ${JSON.stringify(links)}`);
+  });
+
   it('should carry over memo project memberships to the promoted task', async () => {
     const projectResponse = await app.inject({
       method: 'POST',
