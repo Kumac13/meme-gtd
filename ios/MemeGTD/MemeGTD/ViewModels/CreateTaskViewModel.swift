@@ -45,6 +45,8 @@ class CreateTaskViewModel: ObservableObject {
             self.selectedLabelNames = Set(parentLabels)
             self.selectedProjectIds = Set(parentProjects.map(\.id))
             self.allProjects = parentProjects
+        case .promoteFromMemo(_, let body):
+            self.bodyMd = body
         }
     }
 
@@ -100,19 +102,47 @@ class CreateTaskViewModel: ObservableObject {
         error = nil
 
         do {
-            // Step 1: Create the task
-            let request = CreateTaskRequest(
-                title: trimmedTitle,
-                bodyMd: bodyMd.isEmpty ? nil : bodyMd,
-                status: status.rawValue,
-                taskKind: taskKind.rawValue,
-                scheduledStart: scheduledStart.map { Self.isoFormatter.string(from: $0) },
-                scheduledEnd: scheduledEnd.map { Self.isoFormatter.string(from: $0) },
-                isAllDay: isAllDay ? true : nil
-            )
-            let task: TaskItem = try await APIClient.shared.post(
-                path: "/api/tasks", body: request
-            )
+            // Step 1: Create the task (mode-specific endpoint)
+            let task: TaskItem
+            switch mode {
+            case .promoteFromMemo(let memoId, let originalBody):
+                // 1-a: Promote via the memo endpoint. Server copies memo body,
+                // creates derived_from link, and logs `memo.promoted`.
+                task = try await APIClient.shared.post(
+                    path: "/api/memos/\(memoId)/promote",
+                    body: PromoteMemoRequest(title: trimmedTitle, status: status.rawValue)
+                )
+                // 1-b: `/promote` only accepts {title, status}. PATCH the remaining
+                // fields only if the user diverged from defaults.
+                let bodyChanged = bodyMd != originalBody
+                let kindChanged = taskKind != .action
+                let hasSchedule = scheduledStart != nil || scheduledEnd != nil || isAllDay
+                if bodyChanged || kindChanged || hasSchedule {
+                    let update = UpdateTaskRequest(
+                        bodyMd: bodyChanged ? bodyMd : nil,
+                        taskKind: kindChanged ? taskKind.rawValue : nil,
+                        scheduledStart: scheduledStart.map { Self.isoFormatter.string(from: $0) },
+                        scheduledEnd: scheduledEnd.map { Self.isoFormatter.string(from: $0) },
+                        isAllDay: isAllDay ? true : nil
+                    )
+                    let _: TaskItem = try await APIClient.shared.patch(
+                        path: "/api/tasks/\(task.id)", body: update
+                    )
+                }
+            case .standard, .linkedTo, .quickChild:
+                let request = CreateTaskRequest(
+                    title: trimmedTitle,
+                    bodyMd: bodyMd.isEmpty ? nil : bodyMd,
+                    status: status.rawValue,
+                    taskKind: taskKind.rawValue,
+                    scheduledStart: scheduledStart.map { Self.isoFormatter.string(from: $0) },
+                    scheduledEnd: scheduledEnd.map { Self.isoFormatter.string(from: $0) },
+                    isAllDay: isAllDay ? true : nil
+                )
+                task = try await APIClient.shared.post(
+                    path: "/api/tasks", body: request
+                )
+            }
 
             // Steps 2-4: Assign labels, projects, links in parallel
             await withTaskGroup(of: Void.self) { group in

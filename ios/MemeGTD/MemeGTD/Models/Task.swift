@@ -107,6 +107,19 @@ struct CreateTaskRequest: Codable {
     let isAllDay: Bool?
 }
 
+struct PromoteMemoRequest: Codable {
+    let title: String
+    let status: String?
+}
+
+struct UpdateTaskRequest: Codable {
+    let bodyMd: String?
+    let taskKind: String?
+    let scheduledStart: String?
+    let scheduledEnd: String?
+    let isAllDay: Bool?
+}
+
 enum TaskStatus: String, CaseIterable {
     case inbox, open, next, waiting, scheduled, someday, done, canceled
 
@@ -135,6 +148,8 @@ enum CreateTaskModeKind {
     case linkedTo(sourceTaskId: Int)
     /// Full form, inherit parent's projects/labels/status, auto-create child link
     case quickChild(parentTask: TaskItem, parentProjects: [Project], parentLabels: [String])
+    /// Promote an existing memo to a task (pre-fill body, submit via /api/memos/:id/promote)
+    case promoteFromMemo(memoId: Int, memoBody: String)
 }
 
 struct PendingLink: Identifiable {

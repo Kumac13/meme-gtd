@@ -21,6 +21,7 @@ struct MemoDetailView: View {
     @State private var pickedImageData: Data? = nil
     @State private var pickedMimeType: String = "image/jpeg"
     @State private var pickedExtension: String = "jpg"
+    @State private var createTaskMode: CreateTaskMode? = nil
 
     init(memoId: Int, initialBody: String? = nil, onMenuTap: @escaping () -> Void, onNavigateToLinkedIssue: ((Int, String, String) -> Void)? = nil) {
         self.memoId = memoId
@@ -183,11 +184,26 @@ struct MemoDetailView: View {
             IssueInfoSheet(
                 viewModel: viewModel,
                 showCopiedFeedback: $showCopiedFeedback,
+                onPromoteToTask: {
+                    guard let body = viewModel.memo?.bodyMd else { return }
+                    createTaskMode = CreateTaskMode(kind: .promoteFromMemo(memoId: memoId, memoBody: body))
+                },
                 onNavigateToIssue: { target in
                     onNavigateToLinkedIssue?(target.id, target.type, target.title)
                 }
             )
             .presentationDetents([.fraction(0.6), .large])
+        }
+        .sheet(item: $createTaskMode) { mode in
+            CreateTaskModal(
+                mode: mode.kind,
+                onCreated: { _ in
+                    createTaskMode = nil
+                    Task { await viewModel.loadMemo() }
+                },
+                onDismiss: { createTaskMode = nil }
+            )
+            .presentationDetents([.large])
         }
         .alert("Delete Memo", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) {}

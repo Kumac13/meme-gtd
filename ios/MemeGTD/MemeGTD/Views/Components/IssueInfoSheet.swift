@@ -7,6 +7,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
     var onDelete: (() -> Void)?
     var onNewTask: (() -> Void)?
     var onAddChild: (() -> Void)?
+    var onPromoteToTask: (() -> Void)?
     var onNavigateToIssue: ((TargetIssue) -> Void)?
     var labelCountKeyPath: KeyPath<IssueLabel, Int> = \.memoCount
     var showBookmark: Bool = true
@@ -300,6 +301,28 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
+                }
+
+                // Promote to Task (optional, for memos)
+                if let onPromoteToTask = onPromoteToTask {
+                    Divider().padding(.leading, 16)
+
+                    Button(action: {
+                        dismiss()
+                        onPromoteToTask()
+                    }) {
+                        HStack {
+                            Text("Promote to Task")
+                                .font(.system(size: 15))
+                                .foregroundColor(.textPrimary)
+                            Spacer()
+                            Image(systemName: "arrow.up.forward.square")
+                                .font(.system(size: 15))
+                                .foregroundColor(.textSecondary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                    }
                 }
 
                 // Delete (optional, for tasks)
