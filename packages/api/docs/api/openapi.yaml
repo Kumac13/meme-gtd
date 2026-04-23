@@ -630,12 +630,34 @@ paths:
                   type: string
                   enum:
                     - inbox
-                    - someday
                     - open
                     - next
                     - waiting
                     - scheduled
-                  description: Initial status for the task
+                    - someday
+                    - done
+                    - canceled
+                  description: Initial status for the task (defaults to "inbox")
+                bodyMd:
+                  type: string
+                  description: Override body. When omitted, the memo body is copied.
+                taskKind:
+                  type: string
+                  enum:
+                    - event
+                    - action
+                  description: Task kind (defaults to "action")
+                scheduledStart:
+                  type: string
+                  pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$
+                  description: "Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS)"
+                scheduledEnd:
+                  type: string
+                  pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$
+                  description: "Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS)"
+                isAllDay:
+                  type: boolean
+                  description: Whether this is an all-day event
               required:
                 - title
               additionalProperties: false
@@ -650,11 +672,157 @@ paths:
           description: Memo ID
       responses:
         "200":
-          description: Promoted task
+          description: Default Response
           content:
             application/json:
               schema:
-                description: Promoted task
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique task ID
+                  type:
+                    type: string
+                    enum:
+                      - task
+                    description: Issue type (always "task")
+                  title:
+                    type: string
+                    description: Task title
+                  bodyMd:
+                    type: string
+                    description: Task description in Markdown format
+                  status:
+                    type: string
+                    enum:
+                      - inbox
+                      - open
+                      - next
+                      - waiting
+                      - scheduled
+                      - someday
+                      - done
+                      - canceled
+                    description: Current task status
+                  taskKind:
+                    type: string
+                    enum:
+                      - event
+                      - action
+                    description: Task kind (event or action)
+                  scheduledStart:
+                    type: string
+                    nullable: true
+                    description: "Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)"
+                  scheduledEnd:
+                    type: string
+                    nullable: true
+                    description: "Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)"
+                  isAllDay:
+                    type: boolean
+                    description: Whether this is an all-day event
+                  actualStart:
+                    type: string
+                    nullable: true
+                    description: Actual start datetime (ISO 8601, null if not started)
+                  actualEnd:
+                    type: string
+                    nullable: true
+                    description: Actual end datetime (ISO 8601, null if not completed)
+                  scheduledOn:
+                    type: string
+                    format: date
+                    nullable: true
+                    description: Scheduled date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
+                  startTime:
+                    type: string
+                    nullable: true
+                    description: Start time (HH:MM, null if not set) [DEPRECATED]
+                  endDate:
+                    type: string
+                    format: date
+                    nullable: true
+                    description: End date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
+                  endTime:
+                    type: string
+                    nullable: true
+                    description: End time (HH:MM, null if not set) [DEPRECATED]
+                  duration:
+                    type: integer
+                    nullable: true
+                    description: Duration in minutes (null if not set)
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                    description: Metadata object
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the task is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the task is soft-deleted
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this task
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - taskKind
+                  - scheduledStart
+                  - scheduledEnd
+                  - isAllDay
+                  - actualStart
+                  - actualEnd
+                  - scheduledOn
+                  - startTime
+                  - endDate
+                  - endTime
+                  - duration
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                  - labels
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
         "404":
           description: Default Response
           content:

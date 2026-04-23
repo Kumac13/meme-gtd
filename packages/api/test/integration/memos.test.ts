@@ -327,6 +327,134 @@ describe('Memo Promote Operation', () => {
 
     assert.strictEqual(response.statusCode, 404);
   });
+
+  it('should override body, kind, schedule, and isAllDay when provided', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Original memo body' }),
+    });
+    const memo = JSON.parse(createResponse.body);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/promote`,
+      payload: {
+        title: 'Promoted with overrides',
+        status: 'scheduled',
+        bodyMd: 'Edited body',
+        taskKind: 'event',
+        scheduledStart: '2026-05-01T10:00:00',
+        scheduledEnd: '2026-05-01T11:00:00',
+        isAllDay: true,
+      },
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const task = JSON.parse(response.body);
+    assert.strictEqual(task.bodyMd, 'Edited body');
+    assert.strictEqual(task.taskKind, 'event');
+    assert.strictEqual(task.scheduledStart, '2026-05-01T10:00:00');
+    assert.strictEqual(task.scheduledEnd, '2026-05-01T11:00:00');
+    assert.strictEqual(task.isAllDay, true);
+  });
+
+  it('should accept done and canceled status values', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Past work' }),
+    });
+    const memo = JSON.parse(createResponse.body);
+
+    for (const status of ['done', 'canceled'] as const) {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/memos/${memo.id}/promote`,
+        payload: { title: `Task ${status}`, status },
+      });
+      assert.strictEqual(response.statusCode, 200);
+      const task = JSON.parse(response.body);
+      assert.strictEqual(task.status, status);
+    }
+  });
+
+  it('should carry over memo labels to the promoted task', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Labelled memo' }),
+    });
+    const memo = JSON.parse(createResponse.body);
+
+    for (const name of ['urgent', 'review']) {
+      const labelResponse = await app.inject({
+        method: 'POST',
+        url: '/api/labels',
+        payload: { name },
+      });
+      const label = JSON.parse(labelResponse.body);
+      const assignResponse = await app.inject({
+        method: 'POST',
+        url: `/api/issues/${memo.id}/labels`,
+        payload: { labelId: label.id },
+      });
+      assert.strictEqual(assignResponse.statusCode, 200);
+    }
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/promote`,
+      payload: { title: 'Promoted with labels' },
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const task = JSON.parse(response.body);
+    assert.ok(Array.isArray(task.labels));
+    const labelNames = new Set(task.labels);
+    assert.ok(labelNames.has('urgent'));
+    assert.ok(labelNames.has('review'));
+  });
+
+  it('should carry over memo project memberships to the promoted task', async () => {
+    const projectResponse = await app.inject({
+      method: 'POST',
+      url: '/api/projects',
+      payload: { name: 'Carry Project' },
+    });
+    const project = JSON.parse(projectResponse.body);
+
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Project memo' }),
+    });
+    const memo = JSON.parse(createResponse.body);
+
+    await app.inject({
+      method: 'POST',
+      url: `/api/projects/${project.id}/items`,
+      payload: { issueId: memo.id },
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/promote`,
+      payload: { title: 'Promoted with project' },
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const task = JSON.parse(response.body);
+
+    const projectsResponse = await app.inject({
+      method: 'GET',
+      url: `/api/issues/${task.id}/projects`,
+    });
+    const projects = JSON.parse(projectsResponse.body);
+    assert.ok(Array.isArray(projects));
+    const projectIds = projects.map((p: { id: number }) => p.id);
+    assert.ok(projectIds.includes(project.id));
+  });
 });
 
 describe('Memo Bookmark Operations', () => {

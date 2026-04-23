@@ -190,7 +190,7 @@ export async function promoteMemoHandler(
   reply: FastifyReply
 ) {
   const memoId = parseInt(request.params.id, 10);
-  const { title, status = 'inbox' } = request.body;
+  const { title, status = 'inbox', bodyMd, taskKind, scheduledStart, scheduledEnd, isAllDay } = request.body;
   const memoService = new MemoService({ db: request.server.db });
   const taskService = new TaskService({ db: request.server.db });
 
@@ -199,6 +199,11 @@ export async function promoteMemoHandler(
       memoId,
       title,
       status,
+      bodyMd,
+      taskKind,
+      scheduledStart,
+      scheduledEnd,
+      isAllDay,
     });
 
     const task = taskService.show(taskId);

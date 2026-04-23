@@ -34,6 +34,7 @@ import {
   MemoCommentParamsSchema,
   MemoCommentIdParamsSchema,
 } from '../schemas/commentSchemas.js';
+import { TaskSchema } from '../schemas/taskSchemas.js';
 import { ErrorResponseSchema } from '../schemas/errorSchemas.js';
 
 /**
@@ -152,7 +153,8 @@ export async function memoRoutes(app: FastifyInstance) {
         params: MemoIdParamsSchema,
         body: PromoteMemoRequestSchema,
         response: {
-          200: z.unknown().describe('Promoted task'),
+          200: TaskSchema,
+          400: ErrorResponseSchema,
           404: ErrorResponseSchema,
         },
       },

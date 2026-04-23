@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TaskStatusSchema, TaskKindSchema, iso8601DatetimeRegex } from './taskSchemas.js';
 
 /**
  * Schema for creating a new memo
@@ -24,7 +25,12 @@ export type UpdateMemoRequest = z.infer<typeof UpdateMemoRequestSchema>;
  */
 export const PromoteMemoRequestSchema = z.object({
   title: z.string().min(1, 'Task title is required').describe('Title for the new task'),
-  status: z.enum(['inbox', 'someday', 'open', 'next', 'waiting', 'scheduled']).optional().describe('Initial status for the task'),
+  status: TaskStatusSchema.optional().describe('Initial status for the task (defaults to "inbox")'),
+  bodyMd: z.string().optional().describe('Override body. When omitted, the memo body is copied.'),
+  taskKind: TaskKindSchema.optional().describe('Task kind (defaults to "action")'),
+  scheduledStart: z.string().regex(iso8601DatetimeRegex, 'Invalid datetime format (YYYY-MM-DDTHH:MM:SS)').optional().describe('Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS)'),
+  scheduledEnd: z.string().regex(iso8601DatetimeRegex, 'Invalid datetime format (YYYY-MM-DDTHH:MM:SS)').optional().describe('Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS)'),
+  isAllDay: z.boolean().optional().describe('Whether this is an all-day event'),
 });
 
 export type PromoteMemoRequest = z.infer<typeof PromoteMemoRequestSchema>;

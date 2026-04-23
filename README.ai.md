@@ -23,6 +23,8 @@ Memo (Captured) → promote → Task (Inbox)
 - `memo`: 未整理のアイデアプール
 - `task`: 実行可能なアクション（ステータスで進捗管理）
 - `promote`: memo を task に昇格（derived_from リンクで追跡）
+  - `POST /api/memos/{id}/promote` が本文コピー・derived_from 作成・`memo.promoted` ログ・ラベル/プロジェクト引き継ぎをトランザクション内で実行
+  - 任意フィールド: `bodyMd`（省略時はメモ本文コピー）/ `status`（全8値）/ `taskKind` / `scheduledStart` / `scheduledEnd` / `isAllDay`
 
 ## データモデル
 

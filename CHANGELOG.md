@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.30.0 - 2026-04-23
+
+### New Features
+
+- **Memo-to-Task Promotion (iOS + API)**: Promote an existing memo to a task from the memo detail sheet
+  - New "Promote to Task" action in iOS memo detail (bottom sheet → single POST)
+  - `POST /api/memos/{id}/promote` now accepts optional `bodyMd`, `taskKind`, `scheduledStart`, `scheduledEnd`, `isAllDay`
+  - Accepts the full `TaskStatus` enum (including `done` and `canceled`) for initial promotion state
+  - Carries over memo labels and project memberships to the new task automatically
+  - Single atomic request replaces the previous two-step POST+PATCH flow
+
 ## 0.29.0 - 2026-04-03
 
 ### New Features

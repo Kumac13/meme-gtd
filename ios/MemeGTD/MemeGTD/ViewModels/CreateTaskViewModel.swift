@@ -106,29 +106,23 @@ class CreateTaskViewModel: ObservableObject {
             let task: TaskItem
             switch mode {
             case .promoteFromMemo(let memoId, let originalBody):
-                // 1-a: Promote via the memo endpoint. Server copies memo body,
-                // creates derived_from link, and logs `memo.promoted`.
+                // Single-call promote. Server copies the memo body when bodyMd
+                // is omitted, inherits labels/projects, creates derived_from
+                // link, and logs `memo.promoted` — all atomically.
+                let bodyChanged = bodyMd != originalBody
+                let request = PromoteMemoRequest(
+                    title: trimmedTitle,
+                    status: status.rawValue,
+                    bodyMd: bodyChanged ? bodyMd : nil,
+                    taskKind: taskKind.rawValue,
+                    scheduledStart: scheduledStart.map { Self.isoFormatter.string(from: $0) },
+                    scheduledEnd: scheduledEnd.map { Self.isoFormatter.string(from: $0) },
+                    isAllDay: isAllDay ? true : nil
+                )
                 task = try await APIClient.shared.post(
                     path: "/api/memos/\(memoId)/promote",
-                    body: PromoteMemoRequest(title: trimmedTitle, status: status.rawValue)
+                    body: request
                 )
-                // 1-b: `/promote` only accepts {title, status}. PATCH the remaining
-                // fields only if the user diverged from defaults.
-                let bodyChanged = bodyMd != originalBody
-                let kindChanged = taskKind != .action
-                let hasSchedule = scheduledStart != nil || scheduledEnd != nil || isAllDay
-                if bodyChanged || kindChanged || hasSchedule {
-                    let update = UpdateTaskRequest(
-                        bodyMd: bodyChanged ? bodyMd : nil,
-                        taskKind: kindChanged ? taskKind.rawValue : nil,
-                        scheduledStart: scheduledStart.map { Self.isoFormatter.string(from: $0) },
-                        scheduledEnd: scheduledEnd.map { Self.isoFormatter.string(from: $0) },
-                        isAllDay: isAllDay ? true : nil
-                    )
-                    let _: TaskItem = try await APIClient.shared.patch(
-                        path: "/api/tasks/\(task.id)", body: update
-                    )
-                }
             case .standard, .linkedTo, .quickChild:
                 let request = CreateTaskRequest(
                     title: trimmedTitle,

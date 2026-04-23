@@ -110,9 +110,6 @@ struct CreateTaskRequest: Codable {
 struct PromoteMemoRequest: Codable {
     let title: String
     let status: String?
-}
-
-struct UpdateTaskRequest: Codable {
     let bodyMd: String?
     let taskKind: String?
     let scheduledStart: String?

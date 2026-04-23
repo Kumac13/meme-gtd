@@ -389,6 +389,10 @@ export interface PromoteMemoInput {
   bodyMd?: string;
   labels?: string[];
   status?: string;
+  taskKind?: string;
+  scheduledStart?: string | null;
+  scheduledEnd?: string | null;
+  isAllDay?: boolean;
 }
 
 export const promoteMemo = (
@@ -399,14 +403,18 @@ export const promoteMemo = (
 
   const now = nowIso();
   const insertTask = db.prepare(
-    `INSERT INTO issues (type, title, body_md, status, scheduled_on, meta, created_at, updated_at, is_bookmarked, is_deleted)
-     VALUES ('task', @title, @body, @status, NULL, json('{}'), @createdAt, @createdAt, 0, 0)`
+    `INSERT INTO issues (type, title, body_md, status, task_kind, scheduled_start, scheduled_end, is_all_day, scheduled_on, meta, created_at, updated_at, is_bookmarked, is_deleted)
+     VALUES ('task', @title, @body, @status, @taskKind, @scheduledStart, @scheduledEnd, @isAllDay, NULL, json('{}'), @createdAt, @createdAt, 0, 0)`
   );
 
   const result = insertTask.run({
     title: input.title,
     body: input.bodyMd ?? memo.bodyMd,
     status: input.status ?? 'open',
+    taskKind: input.taskKind ?? 'action',
+    scheduledStart: input.scheduledStart ?? null,
+    scheduledEnd: input.scheduledEnd ?? null,
+    isAllDay: input.isAllDay ? 1 : 0,
     createdAt: now
   });
 
@@ -417,8 +425,16 @@ export const promoteMemo = (
      VALUES (@source, @target, 'derived_from', @createdAt)`
   ).run({ source: taskId, target: memo.id, createdAt: now });
 
-  if (input.labels?.length) {
-    attachLabels(db, taskId, input.labels);
+  const labelsToAttach = input.labels ?? listMemoLabels(db, memo.id);
+  if (labelsToAttach.length) {
+    attachLabels(db, taskId, labelsToAttach);
+  }
+
+  const memoProjectIds = db
+    .prepare(`SELECT project_id FROM project_items WHERE issue_id = @memoId ORDER BY position`)
+    .all({ memoId: memo.id }) as Array<{ project_id: number }>;
+  if (memoProjectIds.length) {
+    attachProjects(db, taskId, memoProjectIds.map((row) => row.project_id));
   }
 
   return { memo, taskId };
