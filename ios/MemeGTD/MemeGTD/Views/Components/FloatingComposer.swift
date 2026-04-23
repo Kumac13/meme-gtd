@@ -10,6 +10,7 @@ struct FloatingComposer: View {
     var onAttachImage: (() -> Void)? = nil
     var isUploadingImage: Bool = false
     var onExpand: (() -> Void)? = nil
+    var focusTrigger: Int = 0
     let onSubmit: () -> Void
 
     @FocusState private var isFocused: Bool
@@ -131,6 +132,12 @@ struct FloatingComposer: View {
         .animation(.easeInOut(duration: 0.2), value: isExpanded)
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             expanded = false
+        }
+        .onChange(of: focusTrigger) { _ in
+            expanded = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                isFocused = true
+            }
         }
     }
 }

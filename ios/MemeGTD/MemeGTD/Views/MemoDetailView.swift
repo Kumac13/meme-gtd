@@ -21,6 +21,7 @@ struct MemoDetailView: View {
     @State private var pickedImageData: Data? = nil
     @State private var pickedMimeType: String = "image/jpeg"
     @State private var pickedExtension: String = "jpg"
+    @State private var composerFocusTrigger: Int = 0
 
     init(memoId: Int, initialBody: String? = nil, onMenuTap: @escaping () -> Void, onNavigateToLinkedIssue: ((Int, String, String) -> Void)? = nil) {
         self.memoId = memoId
@@ -69,6 +70,7 @@ struct MemoDetailView: View {
                                         editingMemo = false
                                         editingCommentId = item.commentId
                                     }
+                                    composerFocusTrigger += 1
                                 },
                                 onDelete: {
                                     if item.isOriginal {
@@ -137,6 +139,7 @@ struct MemoDetailView: View {
                             withAnimation { proxy.scrollTo("threadBottom", anchor: .bottom) }
                         }
                     },
+                    focusTrigger: composerFocusTrigger,
                     onSubmit: {
                         if editingMemo {
                             Task {

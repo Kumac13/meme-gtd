@@ -22,6 +22,7 @@ struct TaskDetailView: View {
     @State private var pickedImageData: Data? = nil
     @State private var pickedMimeType: String = "image/jpeg"
     @State private var pickedExtension: String = "jpg"
+    @State private var composerFocusTrigger: Int = 0
 
     enum EditingMode: Equatable {
         case none
@@ -84,6 +85,7 @@ struct TaskDetailView: View {
                                         Button(action: {
                                             viewModel.replyBody = task.bodyMd.isEmpty ? "" : task.bodyMd
                                             editingMode = .body
+                                            composerFocusTrigger += 1
                                         }) {
                                             Label("Edit", systemImage: "pencil")
                                         }
@@ -148,6 +150,7 @@ struct TaskDetailView: View {
                                                 Button(action: {
                                                     viewModel.replyBody = comment.bodyMd
                                                     editingMode = .comment(comment.id)
+                                                    composerFocusTrigger += 1
                                                 }) {
                                                     Label("Edit", systemImage: "pencil")
                                                 }
@@ -235,6 +238,7 @@ struct TaskDetailView: View {
                             withAnimation { proxy.scrollTo("threadBottom", anchor: .bottom) }
                         }
                     },
+                    focusTrigger: composerFocusTrigger,
                     onSubmit: {
                         switch editingMode {
                         case .title:
@@ -292,6 +296,7 @@ struct TaskDetailView: View {
                     if let task = viewModel.task {
                         viewModel.replyBody = task.title
                         editingMode = .title
+                        composerFocusTrigger += 1
                     }
                 },
                 onDelete: { showDeleteConfirm = true },
