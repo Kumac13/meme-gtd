@@ -24,6 +24,17 @@ export interface Task {
  * Convert a task to a calendar event.
  * Priority: scheduledStart > actualStart (fallback for tasks without schedule but with execution time)
  */
+/**
+ * Parse an ISO 8601 datetime string to ZonedDateTime.
+ * Handles both UTC strings (ending with Z) and plain datetime strings.
+ */
+function parseToZonedDateTime(isoString: string, timezone: string): Temporal.ZonedDateTime {
+  if (isoString.endsWith('Z') || isoString.includes('+') || /T\d{2}:\d{2}:\d{2}(\.\d+)?[-+Z]/.test(isoString)) {
+    return Temporal.Instant.from(isoString).toZonedDateTimeISO(timezone);
+  }
+  return Temporal.PlainDateTime.from(isoString).toZonedDateTime(timezone);
+}
+
 export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
   // Determine which datetime to use for positioning
   // Priority: scheduledStart, then fallback to actualStart
@@ -60,10 +71,8 @@ export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
     end = Temporal.PlainDate.from(endDate);
   } else if (task.scheduledStart && task.scheduledEnd) {
     // Timed event with scheduled start and end (complete schedule)
-    const startDateTime = Temporal.PlainDateTime.from(task.scheduledStart);
-    start = startDateTime.toZonedDateTime(timezone);
-    const endDateTime = Temporal.PlainDateTime.from(task.scheduledEnd);
-    end = endDateTime.toZonedDateTime(timezone);
+    start = parseToZonedDateTime(task.scheduledStart, timezone);
+    end = parseToZonedDateTime(task.scheduledEnd, timezone);
   } else if (task.scheduledStart) {
     // Scheduled start without scheduled end → display as all-day
     // (actualEnd is ignored when scheduledStart exists without scheduledEnd)
@@ -72,10 +81,8 @@ export function taskToCalendarEvent(task: Task): CalendarEventExternal | null {
     end = Temporal.PlainDate.from(startDate);
   } else if (task.actualStart && task.actualEnd) {
     // No schedule, but has complete actual times → display actual times
-    const startDateTime = Temporal.PlainDateTime.from(task.actualStart);
-    start = startDateTime.toZonedDateTime(timezone);
-    const endDateTime = Temporal.PlainDateTime.from(task.actualEnd);
-    end = endDateTime.toZonedDateTime(timezone);
+    start = parseToZonedDateTime(task.actualStart, timezone);
+    end = parseToZonedDateTime(task.actualEnd, timezone);
   } else {
     // Only actualStart without end (task in progress) → don't show
     return null;
