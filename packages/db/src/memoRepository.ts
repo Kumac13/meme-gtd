@@ -410,7 +410,7 @@ export const promoteMemo = (
 
   const result = insertTask.run({
     title: input.title,
-    body: input.bodyMd ?? buildPromoteBody(memo, comments),
+    body: buildPromoteBody(input.bodyMd ?? memo.bodyMd, comments),
     status: input.status ?? 'open',
     taskKind: input.taskKind ?? 'action',
     scheduledStart: input.scheduledStart ?? null,
@@ -443,11 +443,11 @@ export const promoteMemo = (
   return { memo, taskId };
 };
 
-const buildPromoteBody = (memo: Memo, comments: Comment[]): string => {
+const buildPromoteBody = (baseBody: string, comments: Comment[]): string => {
   const parts: string[] = [];
 
-  if (memo.bodyMd) {
-    parts.push(memo.bodyMd);
+  if (baseBody) {
+    parts.push(baseBody);
   }
 
   if (comments.length > 0) {

@@ -8,7 +8,7 @@
   - New "Promote to Task" action in iOS memo detail (bottom sheet → single POST)
   - `POST /api/memos/{id}/promote` now accepts optional `bodyMd`, `taskKind`, `scheduledStart`, `scheduledEnd`, `isAllDay`
   - Accepts the full `TaskStatus` enum (including `done` and `canceled`) for initial promotion state
-  - Carries over memo labels, project memberships, outgoing/incoming links, and inlines memo comments into the task body (mirrors the demote → Archive to Memo flow)
+  - Carries over memo labels, project memberships, outgoing/incoming links, and always inlines memo comments into the task body (even when the caller supplies a custom `bodyMd`) so comments are never dropped during promotion
   - Single atomic request replaces the previous two-step POST+PATCH flow
 
 ## 0.29.0 - 2026-04-03

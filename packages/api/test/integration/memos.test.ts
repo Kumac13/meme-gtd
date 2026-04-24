@@ -449,6 +449,34 @@ describe('Memo Promote Operation', () => {
     assert.ok(task.bodyMd.includes('second thought'));
   });
 
+  it('should inline comments even when bodyMd is explicitly provided', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Memo body original' }),
+    });
+    const memo = JSON.parse(createResponse.body);
+
+    await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/comments`,
+      payload: { bodyMd: 'important discussion' },
+    });
+
+    const promoteResponse = await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/promote`,
+      payload: { title: 'Promoted with edited body', bodyMd: 'Memo body edited by user' },
+    });
+    assert.strictEqual(promoteResponse.statusCode, 200);
+    const task = JSON.parse(promoteResponse.body);
+
+    assert.ok(task.bodyMd.includes('Memo body edited by user'));
+    assert.ok(task.bodyMd.includes('## コメント'));
+    assert.ok(task.bodyMd.includes('important discussion'));
+    assert.ok(!task.bodyMd.includes('Memo body original'), 'user-supplied body should replace memo body, not be appended');
+  });
+
   it('should copy outgoing and incoming links to the promoted task', async () => {
     const otherResponse = await app.inject({
       method: 'POST',
