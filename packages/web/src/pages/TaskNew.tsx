@@ -10,6 +10,7 @@ export default function TaskNew() {
   const fromMemoId = searchParams.get('fromMemo');
 
   const [memo, setMemo] = useState<any>(null);
+  const [initialBody, setInitialBody] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,8 +20,12 @@ export default function TaskNew() {
         try {
           setLoading(true);
           setError(null);
-          const data = await MemosService.getMemo(fromMemoId as string);
-          setMemo(data);
+          const [memoData, preview] = await Promise.all([
+            MemosService.getMemo(fromMemoId as string),
+            MemosService.getPromotePreview(fromMemoId as string),
+          ]);
+          setMemo(memoData);
+          setInitialBody(preview.bodyMd);
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Failed to load memo');
           console.error('Error fetching memo:', err);
@@ -57,7 +62,7 @@ export default function TaskNew() {
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <TaskForm
           mode="create"
-          initialBodyMd={memo?.bodyMd}
+          initialBodyMd={initialBody ?? memo?.bodyMd}
           fromMemoId={memo?.id}
         />
       </div>

@@ -185,8 +185,19 @@ struct MemoDetailView: View {
                 viewModel: viewModel,
                 showCopiedFeedback: $showCopiedFeedback,
                 onPromoteToTask: {
-                    guard let body = viewModel.memo?.bodyMd else { return }
-                    createTaskMode = CreateTaskMode(kind: .promoteFromMemo(memoId: memoId, memoBody: body))
+                    let fallback = viewModel.memo?.bodyMd ?? ""
+                    Task { @MainActor in
+                        var resolvedBody = fallback
+                        do {
+                            let preview: PromotePreviewResponse = try await APIClient.shared.get(
+                                path: "/api/memos/\(memoId)/promote-preview"
+                            )
+                            resolvedBody = preview.bodyMd
+                        } catch {
+                            // Fall back to raw memo body on preview failure
+                        }
+                        createTaskMode = CreateTaskMode(kind: .promoteFromMemo(memoId: memoId, memoBody: resolvedBody))
+                    }
                 },
                 onNavigateToIssue: { target in
                     onNavigateToLinkedIssue?(target.id, target.type, target.title)

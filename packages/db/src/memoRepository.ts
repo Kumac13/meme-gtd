@@ -395,6 +395,15 @@ export interface PromoteMemoInput {
   isAllDay?: boolean;
 }
 
+export const getPromotePreview = (
+  db: Database.Database,
+  memoId: number
+): { bodyMd: string } => {
+  const memo = getMemo(db, memoId);
+  const comments = listComments(db, memoId);
+  return { bodyMd: buildPromoteBody(memo.bodyMd, comments) };
+};
+
 export const promoteMemo = (
   db: Database.Database,
   input: PromoteMemoInput
@@ -410,7 +419,7 @@ export const promoteMemo = (
 
   const result = insertTask.run({
     title: input.title,
-    body: buildPromoteBody(input.bodyMd ?? memo.bodyMd, comments),
+    body: input.bodyMd && input.bodyMd.length > 0 ? input.bodyMd : buildPromoteBody(memo.bodyMd, comments),
     status: input.status ?? 'open',
     taskKind: input.taskKind ?? 'action',
     scheduledStart: input.scheduledStart ?? null,
@@ -443,7 +452,7 @@ export const promoteMemo = (
   return { memo, taskId };
 };
 
-const buildPromoteBody = (baseBody: string, comments: Comment[]): string => {
+export const buildPromoteBody = (baseBody: string, comments: Comment[]): string => {
   const parts: string[] = [];
 
   if (baseBody) {

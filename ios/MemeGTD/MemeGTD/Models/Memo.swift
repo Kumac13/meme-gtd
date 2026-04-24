@@ -23,6 +23,10 @@ struct CreateMemoRequest: Codable {
     let bodyMd: String
 }
 
+struct PromotePreviewResponse: Codable {
+    let bodyMd: String
+}
+
 struct UpdateMemoRequest: Codable {
     let bodyMd: String?
     let isBookmarked: Bool?

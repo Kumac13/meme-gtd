@@ -449,7 +449,7 @@ describe('Memo Promote Operation', () => {
     assert.ok(task.bodyMd.includes('second thought'));
   });
 
-  it('should inline comments even when bodyMd is explicitly provided', async () => {
+  it('should use caller-supplied bodyMd verbatim (clients fetch preview, edit, and submit)', async () => {
     const createResponse = await app.inject({
       method: 'POST',
       url: '/api/memos',
@@ -471,10 +471,7 @@ describe('Memo Promote Operation', () => {
     assert.strictEqual(promoteResponse.statusCode, 200);
     const task = JSON.parse(promoteResponse.body);
 
-    assert.ok(task.bodyMd.includes('Memo body edited by user'));
-    assert.ok(task.bodyMd.includes('## コメント'));
-    assert.ok(task.bodyMd.includes('important discussion'));
-    assert.ok(!task.bodyMd.includes('Memo body original'), 'user-supplied body should replace memo body, not be appended');
+    assert.strictEqual(task.bodyMd, 'Memo body edited by user');
   });
 
   it('should copy outgoing and incoming links to the promoted task', async () => {
@@ -554,6 +551,109 @@ describe('Memo Promote Operation', () => {
     assert.ok(Array.isArray(projects));
     const projectIds = projects.map((p: { id: number }) => p.id);
     assert.ok(projectIds.includes(project.id));
+  });
+});
+
+describe('Memo Promote Preview Operation', () => {
+  let app: FastifyInstance;
+  let cleanup: () => Promise<void>;
+
+  beforeEach(async () => {
+    const testServer = await createTestServer();
+    app = testServer.app;
+    cleanup = testServer.cleanup;
+  });
+
+  afterEach(async () => {
+    await cleanup();
+  });
+
+  it('should return memo body with comments inlined (GET /api/memos/:id/promote-preview)', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Preview memo body' }),
+    });
+    const memo = JSON.parse(createResponse.body);
+
+    await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/comments`,
+      payload: { bodyMd: 'thought A' },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/comments`,
+      payload: { bodyMd: 'thought B' },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/memos/${memo.id}/promote-preview`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const preview = JSON.parse(response.body);
+    assert.ok(preview.bodyMd.includes('Preview memo body'));
+    assert.ok(preview.bodyMd.includes('## コメント'));
+    assert.ok(preview.bodyMd.includes('thought A'));
+    assert.ok(preview.bodyMd.includes('thought B'));
+  });
+
+  it('should return just memo body when there are no comments', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Lonely memo' }),
+    });
+    const memo = JSON.parse(createResponse.body);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/memos/${memo.id}/promote-preview`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const preview = JSON.parse(response.body);
+    assert.strictEqual(preview.bodyMd, 'Lonely memo');
+  });
+
+  it('should return 404 for a non-existent memo', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos/99999/promote-preview',
+    });
+    assert.strictEqual(response.statusCode, 404);
+  });
+
+  it('should produce a body that matches what POST /promote generates when bodyMd is omitted', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Roundtrip memo' }),
+    });
+    const memo = JSON.parse(createResponse.body);
+
+    await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/comments`,
+      payload: { bodyMd: 'shared comment' },
+    });
+
+    const previewResponse = await app.inject({
+      method: 'GET',
+      url: `/api/memos/${memo.id}/promote-preview`,
+    });
+    const preview = JSON.parse(previewResponse.body);
+
+    const promoteResponse = await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/promote`,
+      payload: { title: 'Roundtrip' },
+    });
+    const task = JSON.parse(promoteResponse.body);
+
+    assert.strictEqual(task.bodyMd, preview.bodyMd);
   });
 });
 

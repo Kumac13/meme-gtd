@@ -180,6 +180,28 @@ export async function deleteMemoHandler(
 }
 
 /**
+ * Return the body a task would have if the memo were promoted now,
+ * without creating anything. Read-only — safe to call repeatedly.
+ */
+export async function getPromotePreviewHandler(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  const memoId = parseInt(request.params.id, 10);
+  const memoService = new MemoService({ db: request.server.db });
+
+  try {
+    const preview = memoService.promotePreview(memoId);
+    return reply.status(200).send(preview);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw new NotFoundError('Memo', memoId);
+    }
+    throw error;
+  }
+}
+
+/**
  * Promote an existing memo to a task.
  */
 export async function promoteMemoHandler(

@@ -15,6 +15,7 @@ import {
   listMemos,
   countMemos,
   promoteMemo,
+  getPromotePreview,
   setBookmark,
   setMemoLabels,
   updateComment,
@@ -132,6 +133,10 @@ export class MemoService {
       this.logger.logMemoDeleted(id);
       return deleteMemo(this.db, id);
     })();
+  }
+
+  public promotePreview(memoId: number): { bodyMd: string } {
+    return getPromotePreview(this.db, memoId);
   }
 
   public promote(input: PromoteMemoInput) {

@@ -609,6 +609,58 @@ paths:
                   - error
                   - message
                 additionalProperties: false
+  /api/memos/{id}/promote-preview:
+    get:
+      operationId: getPromotePreview
+      summary: Preview promotion body
+      tags:
+        - Memos
+      description: Return the task body that would result from promoting this memo now (memo body with comments inlined). Read-only; no side effects.
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Memo ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bodyMd:
+                    type: string
+                    description: The task body that would be created by promoting this memo (memo body with comments inlined).
+                required:
+                  - bodyMd
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
   /api/memos/{id}/promote:
     post:
       operationId: promoteMemo

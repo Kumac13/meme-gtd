@@ -80,8 +80,8 @@ export default class MemoPromote extends Command {
       body = await loadBodyFromFile(flags['body-file']);
     }
     if (!body) {
-      const memo = service.show(args.id);
-      body = await promptEditor(memo.bodyMd);
+      const preview = service.promotePreview(args.id);
+      body = await promptEditor(preview.bodyMd);
     }
 
     const result = service.promote({

@@ -39,6 +39,8 @@ export {
   updateMemo,
   deleteMemo,
   promoteMemo,
+  buildPromoteBody,
+  getPromotePreview,
   addComment,
   updateComment,
   deleteComment,

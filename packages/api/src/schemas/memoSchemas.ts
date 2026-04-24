@@ -36,6 +36,15 @@ export const PromoteMemoRequestSchema = z.object({
 export type PromoteMemoRequest = z.infer<typeof PromoteMemoRequestSchema>;
 
 /**
+ * Schema for promote preview response — the body a task would have if promoted now.
+ */
+export const PromotePreviewResponseSchema = z.object({
+  bodyMd: z.string().describe('The task body that would be created by promoting this memo (memo body with comments inlined).'),
+});
+
+export type PromotePreviewResponse = z.infer<typeof PromotePreviewResponseSchema>;
+
+/**
  * Schema for memo response
  */
 export const MemoSchema = z.object({
