@@ -1,6 +1,6 @@
 import { Args, Command, Flags } from '@oclif/core';
 import { loadConfig } from 'meme-gtd-config';
-import { MemoService } from 'meme-gtd-core';
+import { LinkService, MemoService, TaskService } from 'meme-gtd-core';
 import { loadBodyFromFile } from '../../lib/io.js';
 import { promptEditor } from '../../lib/editor.js';
 import { detectLegacyFlags, formatLegacyFlagError } from '../../lib/legacy-flags.js';
@@ -62,7 +62,6 @@ export default class MemoPromote extends Command {
   } as const;
 
   async run(): Promise<void> {
-    // 旧フラグ検出
     const legacyResult = detectLegacyFlags({
       '--bodyFile': '--body-file'
     });
@@ -73,30 +72,46 @@ export default class MemoPromote extends Command {
 
     const { args, flags } = await this.parse(MemoPromote);
     const { config } = await loadConfig({ createIfMissing: true });
-    const service = new MemoService({ config });
+    const memoService = new MemoService({ config });
+    const taskService = new TaskService({ config });
+    const linkService = new LinkService({ config });
+
+    const preview = memoService.promotePreview(args.id);
 
     let body = flags.body;
     if (!body && flags['body-file']) {
       body = await loadBodyFromFile(flags['body-file']);
     }
     if (!body) {
-      const preview = service.promotePreview(args.id);
       body = await promptEditor(preview.bodyMd);
     }
 
-    const result = service.promote({
-      memoId: args.id,
+    const labels = flags.label ?? preview.labels;
+
+    const task = taskService.create({
       title: flags.title,
       bodyMd: body,
-      labels: flags.label,
-      status: flags.status
+      status: flags.status as 'inbox' | 'someday' | 'open' | 'next' | 'waiting' | 'scheduled',
+      labels,
+      projectIds: preview.projectIds,
     });
 
+    for (const link of preview.linkedIssues) {
+      const allowedTypes = ['parent', 'child', 'relates', 'derived_from'] as const;
+      const linkType = allowedTypes.find((t) => t === link.linkType);
+      if (!linkType) continue;
+      const sourceId = link.direction === 'outgoing' ? task.id : link.targetIssue.id;
+      const targetId = link.direction === 'outgoing' ? link.targetIssue.id : task.id;
+      linkService.create(sourceId, targetId, linkType);
+    }
+
+    linkService.create(task.id, args.id, 'derived_from');
+
     if (flags.json) {
-      this.log(JSON.stringify({ memo: result.memo, taskId: result.taskId }, null, 2));
+      this.log(JSON.stringify({ memoId: args.id, taskId: task.id }, null, 2));
       return;
     }
 
-    this.log(`Promoted memo #${args.id} to task #${result.taskId}`);
+    this.log(`Promoted memo #${args.id} to task #${task.id}`);
   }
 }

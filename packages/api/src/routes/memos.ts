@@ -7,7 +7,6 @@ import {
   getMemoHandler,
   updateMemoHandler,
   deleteMemoHandler,
-  promoteMemoHandler,
   getPromotePreviewHandler,
   bookmarkMemoHandler,
   unbookmarkMemoHandler,
@@ -21,7 +20,6 @@ import {
 import {
   CreateMemoRequestSchema,
   UpdateMemoRequestSchema,
-  PromoteMemoRequestSchema,
   PromotePreviewResponseSchema,
   MemoSchema,
   MemoDetailSchema,
@@ -36,7 +34,6 @@ import {
   MemoCommentParamsSchema,
   MemoCommentIdParamsSchema,
 } from '../schemas/commentSchemas.js';
-import { TaskSchema } from '../schemas/taskSchemas.js';
 import { ErrorResponseSchema } from '../schemas/errorSchemas.js';
 
 /**
@@ -160,27 +157,6 @@ export async function memoRoutes(app: FastifyInstance) {
       },
     },
     getPromotePreviewHandler
-  );
-
-  // POST /api/memos/:id/promote - Promote memo to task
-  server.post(
-    '/api/memos/:id/promote',
-    {
-      schema: {
-        tags: ['Memos'],
-        summary: 'Promote memo to task',
-        description: 'Promote memo to task',
-        operationId: 'promoteMemo',
-        params: MemoIdParamsSchema,
-        body: PromoteMemoRequestSchema,
-        response: {
-          200: TaskSchema,
-          400: ErrorResponseSchema,
-          404: ErrorResponseSchema,
-        },
-      },
-    },
-    promoteMemoHandler
   );
 
   // POST /api/memos/:id/bookmark - Bookmark memo

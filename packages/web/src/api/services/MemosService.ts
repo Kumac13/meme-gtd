@@ -389,6 +389,38 @@ export class MemosService {
          * The task body that would be created by promoting this memo (memo body with comments inlined).
          */
         bodyMd: string;
+        /**
+         * Label names attached to the memo, suggested as initial labels for the promoted task.
+         */
+        labels: Array<string>;
+        /**
+         * Project IDs the memo belongs to, suggested as initial projects for the promoted task.
+         */
+        projectIds: Array<number>;
+        /**
+         * Issue links attached to the memo, suggested as initial links for the promoted task.
+         */
+        linkedIssues: Array<{
+            /**
+             * Direction of the link relative to the memo
+             */
+            direction: 'outgoing' | 'incoming';
+            /**
+             * Link type (parent, child, relates, derived_from, etc.)
+             */
+            linkType: string;
+            targetIssue: {
+                id: number;
+                /**
+                 * Target issue type (memo, task, article)
+                 */
+                type: string;
+                /**
+                 * Target issue title or body excerpt for memos
+                 */
+                title: string;
+            };
+        }>;
     }> {
         return __request(OpenAPI, {
             method: 'GET',
@@ -397,150 +429,6 @@ export class MemosService {
                 'id': id,
             },
             errors: {
-                404: `Default Response`,
-            },
-        });
-    }
-    /**
-     * Promote memo to task
-     * Promote memo to task
-     * @param id Memo ID
-     * @param requestBody
-     * @returns any Default Response
-     * @throws ApiError
-     */
-    public static promoteMemo(
-        id: string,
-        requestBody: {
-            /**
-             * Title for the new task
-             */
-            title: string;
-            /**
-             * Initial status for the task (defaults to "inbox")
-             */
-            status?: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
-            /**
-             * Override body. When omitted, the memo body is copied.
-             */
-            bodyMd?: string;
-            /**
-             * Task kind (defaults to "action")
-             */
-            taskKind?: 'event' | 'action';
-            /**
-             * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS)
-             */
-            scheduledStart?: string;
-            /**
-             * Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS)
-             */
-            scheduledEnd?: string;
-            /**
-             * Whether this is an all-day event
-             */
-            isAllDay?: boolean;
-        },
-    ): CancelablePromise<{
-        /**
-         * Unique task ID
-         */
-        id: number;
-        /**
-         * Issue type (always "task")
-         */
-        type: 'task';
-        /**
-         * Task title
-         */
-        title: string;
-        /**
-         * Task description in Markdown format
-         */
-        bodyMd: string;
-        /**
-         * Current task status
-         */
-        status: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
-        /**
-         * Task kind (event or action)
-         */
-        taskKind: 'event' | 'action';
-        /**
-         * Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
-         */
-        scheduledStart: string | null;
-        /**
-         * Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS, null if not scheduled)
-         */
-        scheduledEnd: string | null;
-        /**
-         * Whether this is an all-day event
-         */
-        isAllDay: boolean;
-        /**
-         * Actual start datetime (ISO 8601, null if not started)
-         */
-        actualStart: string | null;
-        /**
-         * Actual end datetime (ISO 8601, null if not completed)
-         */
-        actualEnd: string | null;
-        /**
-         * Scheduled date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
-         */
-        scheduledOn: string | null;
-        /**
-         * Start time (HH:MM, null if not set) [DEPRECATED]
-         */
-        startTime: string | null;
-        /**
-         * End date for the task (YYYY-MM-DD, null if not scheduled) [DEPRECATED]
-         */
-        endDate: string | null;
-        /**
-         * End time (HH:MM, null if not set) [DEPRECATED]
-         */
-        endTime: string | null;
-        /**
-         * Duration in minutes (null if not set)
-         */
-        duration: number | null;
-        /**
-         * Metadata object
-         */
-        meta: Record<string, any>;
-        /**
-         * Whether the task is bookmarked
-         */
-        isBookmarked: boolean;
-        /**
-         * Whether the task is soft-deleted
-         */
-        isDeleted: boolean;
-        /**
-         * Creation timestamp
-         */
-        createdAt: string;
-        /**
-         * Last update timestamp
-         */
-        updatedAt: string;
-        /**
-         * Array of label names assigned to this task
-         */
-        labels: Array<string>;
-    }> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/memos/{id}/promote',
-            path: {
-                'id': id,
-            },
-            body: requestBody,
-            mediaType: 'application/json',
-            errors: {
-                400: `Default Response`,
                 404: `Default Response`,
             },
         });

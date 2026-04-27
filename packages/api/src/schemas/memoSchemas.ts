@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { TaskStatusSchema, TaskKindSchema, iso8601DatetimeRegex } from './taskSchemas.js';
 
 /**
  * Schema for creating a new memo
@@ -21,25 +20,21 @@ export const UpdateMemoRequestSchema = z.object({
 export type UpdateMemoRequest = z.infer<typeof UpdateMemoRequestSchema>;
 
 /**
- * Schema for promoting a memo to a task
- */
-export const PromoteMemoRequestSchema = z.object({
-  title: z.string().min(1, 'Task title is required').describe('Title for the new task'),
-  status: TaskStatusSchema.optional().describe('Initial status for the task (defaults to "inbox")'),
-  bodyMd: z.string().optional().describe('Override body. When omitted, the memo body is copied.'),
-  taskKind: TaskKindSchema.optional().describe('Task kind (defaults to "action")'),
-  scheduledStart: z.string().regex(iso8601DatetimeRegex, 'Invalid datetime format (YYYY-MM-DDTHH:MM:SS)').optional().describe('Scheduled start datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS)'),
-  scheduledEnd: z.string().regex(iso8601DatetimeRegex, 'Invalid datetime format (YYYY-MM-DDTHH:MM:SS)').optional().describe('Scheduled end datetime (ISO 8601: YYYY-MM-DDTHH:MM:SS)'),
-  isAllDay: z.boolean().optional().describe('Whether this is an all-day event'),
-});
-
-export type PromoteMemoRequest = z.infer<typeof PromoteMemoRequestSchema>;
-
-/**
- * Schema for promote preview response — the body a task would have if promoted now.
+ * Schema for promote preview response — the initial state a promoted task would inherit.
  */
 export const PromotePreviewResponseSchema = z.object({
   bodyMd: z.string().describe('The task body that would be created by promoting this memo (memo body with comments inlined).'),
+  labels: z.array(z.string()).describe('Label names attached to the memo, suggested as initial labels for the promoted task.'),
+  projectIds: z.array(z.number().int().positive()).describe('Project IDs the memo belongs to, suggested as initial projects for the promoted task.'),
+  linkedIssues: z.array(z.object({
+    direction: z.enum(['outgoing', 'incoming']).describe('Direction of the link relative to the memo'),
+    linkType: z.string().describe('Link type (parent, child, relates, derived_from, etc.)'),
+    targetIssue: z.object({
+      id: z.number().int().positive(),
+      type: z.string().describe('Target issue type (memo, task, article)'),
+      title: z.string().describe('Target issue title or body excerpt for memos'),
+    }),
+  })).describe('Issue links attached to the memo, suggested as initial links for the promoted task.'),
 });
 
 export type PromotePreviewResponse = z.infer<typeof PromotePreviewResponseSchema>;

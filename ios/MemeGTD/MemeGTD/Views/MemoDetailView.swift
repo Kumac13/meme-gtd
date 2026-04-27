@@ -188,15 +188,34 @@ struct MemoDetailView: View {
                     let fallback = viewModel.memo?.bodyMd ?? ""
                     Task { @MainActor in
                         var resolvedBody = fallback
+                        var initialLabelNames: [String] = []
+                        var initialProjectIds: [Int] = []
+                        var initialLinks: [PendingLink] = []
                         do {
                             let preview: PromotePreviewResponse = try await APIClient.shared.get(
                                 path: "/api/memos/\(memoId)/promote-preview"
                             )
                             resolvedBody = preview.bodyMd
+                            initialLabelNames = preview.labels
+                            initialProjectIds = preview.projectIds
+                            initialLinks = preview.linkedIssues.compactMap { link in
+                                guard let linkType = LinkType(rawValue: link.linkType) else { return nil }
+                                return PendingLink(
+                                    targetIssueId: link.targetIssue.id,
+                                    linkType: linkType,
+                                    title: link.targetIssue.title
+                                )
+                            }
                         } catch {
                             // Fall back to raw memo body on preview failure
                         }
-                        createTaskMode = CreateTaskMode(kind: .promoteFromMemo(memoId: memoId, memoBody: resolvedBody))
+                        createTaskMode = CreateTaskMode(kind: .promoteFromMemo(
+                            memoId: memoId,
+                            memoBody: resolvedBody,
+                            initialLabelNames: initialLabelNames,
+                            initialProjectIds: initialProjectIds,
+                            initialLinks: initialLinks
+                        ))
                     }
                 },
                 onNavigateToIssue: { target in

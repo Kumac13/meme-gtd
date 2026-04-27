@@ -383,73 +383,75 @@ export const deleteMemo = (db: Database.Database, id: number): void => {
   }
 };
 
-export interface PromoteMemoInput {
-  memoId: number;
-  title: string;
-  bodyMd?: string;
-  labels?: string[];
-  status?: string;
-  taskKind?: string;
-  scheduledStart?: string | null;
-  scheduledEnd?: string | null;
-  isAllDay?: boolean;
+export interface PromotePreviewLink {
+  direction: 'outgoing' | 'incoming';
+  linkType: string;
+  targetIssue: { id: number; type: string; title: string };
+}
+
+export interface PromotePreview {
+  bodyMd: string;
+  labels: string[];
+  projectIds: number[];
+  linkedIssues: PromotePreviewLink[];
 }
 
 export const getPromotePreview = (
   db: Database.Database,
   memoId: number
-): { bodyMd: string } => {
+): PromotePreview => {
   const memo = getMemo(db, memoId);
   const comments = listComments(db, memoId);
-  return { bodyMd: buildPromoteBody(memo.bodyMd, comments) };
-};
+  const labels = listMemoLabels(db, memoId);
 
-export const promoteMemo = (
-  db: Database.Database,
-  input: PromoteMemoInput
-): { memo: Memo; taskId: number } => {
-  const memo = getMemo(db, input.memoId);
-  const comments = listComments(db, input.memoId);
+  const projectRows = db
+    .prepare(`SELECT project_id FROM project_items WHERE issue_id = @memoId ORDER BY position`)
+    .all({ memoId }) as Array<{ project_id: number }>;
 
-  const now = nowIso();
-  const insertTask = db.prepare(
-    `INSERT INTO issues (type, title, body_md, status, task_kind, scheduled_start, scheduled_end, is_all_day, scheduled_on, meta, created_at, updated_at, is_bookmarked, is_deleted)
-     VALUES ('task', @title, @body, @status, @taskKind, @scheduledStart, @scheduledEnd, @isAllDay, NULL, json('{}'), @createdAt, @createdAt, 0, 0)`
-  );
+  const linkRows = db.prepare(`
+    SELECT
+      l.source_issue_id,
+      l.target_issue_id,
+      l.link_type,
+      i.type as target_type,
+      i.title as target_title,
+      i.body_md as target_body
+    FROM links l
+    LEFT JOIN issues i
+      ON i.id = (CASE WHEN l.source_issue_id = @memoId THEN l.target_issue_id ELSE l.source_issue_id END)
+    WHERE (l.source_issue_id = @memoId OR l.target_issue_id = @memoId)
+      AND (i.is_deleted IS NULL OR i.is_deleted = 0)
+    ORDER BY l.created_at
+  `).all({ memoId }) as Array<{
+    source_issue_id: number;
+    target_issue_id: number;
+    link_type: string;
+    target_type: string | null;
+    target_title: string | null;
+    target_body: string | null;
+  }>;
 
-  const result = insertTask.run({
-    title: input.title,
-    body: input.bodyMd && input.bodyMd.length > 0 ? input.bodyMd : buildPromoteBody(memo.bodyMd, comments),
-    status: input.status ?? 'open',
-    taskKind: input.taskKind ?? 'action',
-    scheduledStart: input.scheduledStart ?? null,
-    scheduledEnd: input.scheduledEnd ?? null,
-    isAllDay: input.isAllDay ? 1 : 0,
-    createdAt: now
+  const linkedIssues: PromotePreviewLink[] = linkRows.map((row) => {
+    const isOutgoing = row.source_issue_id === memoId;
+    const targetId = isOutgoing ? row.target_issue_id : row.source_issue_id;
+    const fallbackTitle = (row.target_body ?? '').replace(/\s+/g, ' ').trim().slice(0, 80);
+    return {
+      direction: isOutgoing ? 'outgoing' : 'incoming',
+      linkType: row.link_type,
+      targetIssue: {
+        id: targetId,
+        type: row.target_type ?? 'unknown',
+        title: row.target_title && row.target_title.length > 0 ? row.target_title : fallbackTitle,
+      },
+    };
   });
 
-  const taskId = Number(result.lastInsertRowid);
-
-  db.prepare(
-    `INSERT INTO links (source_issue_id, target_issue_id, link_type, created_at)
-     VALUES (@source, @target, 'derived_from', @createdAt)`
-  ).run({ source: taskId, target: memo.id, createdAt: now });
-
-  const labelsToAttach = input.labels ?? listMemoLabels(db, memo.id);
-  if (labelsToAttach.length) {
-    attachLabels(db, taskId, labelsToAttach);
-  }
-
-  const memoProjectIds = db
-    .prepare(`SELECT project_id FROM project_items WHERE issue_id = @memoId ORDER BY position`)
-    .all({ memoId: memo.id }) as Array<{ project_id: number }>;
-  if (memoProjectIds.length) {
-    attachProjects(db, taskId, memoProjectIds.map((row) => row.project_id));
-  }
-
-  copyMemoLinks(db, memo.id, taskId, now);
-
-  return { memo, taskId };
+  return {
+    bodyMd: buildPromoteBody(memo.bodyMd, comments),
+    labels,
+    projectIds: projectRows.map((row) => row.project_id),
+    linkedIssues,
+  };
 };
 
 export const buildPromoteBody = (baseBody: string, comments: Comment[]): string => {
@@ -473,47 +475,6 @@ export const buildPromoteBody = (baseBody: string, comments: Comment[]): string 
   }
 
   return parts.join('\n').trim();
-};
-
-const copyMemoLinks = (
-  db: Database.Database,
-  memoId: number,
-  taskId: number,
-  createdAt: string
-): void => {
-  const links = db.prepare(`
-    SELECT source_issue_id, target_issue_id, link_type
-    FROM links
-    WHERE (source_issue_id = @memoId OR target_issue_id = @memoId)
-      AND NOT (source_issue_id = @taskId AND link_type = 'derived_from')
-  `).all({ memoId, taskId }) as Array<{
-    source_issue_id: number;
-    target_issue_id: number;
-    link_type: string;
-  }>;
-
-  const insertLink = db.prepare(`
-    INSERT INTO links (source_issue_id, target_issue_id, link_type, created_at)
-    VALUES (@source, @target, @linkType, @createdAt)
-  `);
-
-  for (const link of links) {
-    if (link.source_issue_id === memoId) {
-      insertLink.run({
-        source: taskId,
-        target: link.target_issue_id,
-        linkType: link.link_type,
-        createdAt,
-      });
-    } else {
-      insertLink.run({
-        source: link.source_issue_id,
-        target: taskId,
-        linkType: link.link_type,
-        createdAt,
-      });
-    }
-  }
 };
 
 export const addComment = (

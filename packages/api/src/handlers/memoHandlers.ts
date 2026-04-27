@@ -1,10 +1,9 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { MemoService, TaskService } from 'meme-gtd-core';
+import { MemoService } from 'meme-gtd-core';
 import { NotFoundError } from '../errors/index.js';
 import type {
   CreateMemoRequest,
   UpdateMemoRequest,
-  PromoteMemoRequest,
 } from '../schemas/memoSchemas.js';
 
 /**
@@ -193,43 +192,6 @@ export async function getPromotePreviewHandler(
   try {
     const preview = memoService.promotePreview(memoId);
     return reply.status(200).send(preview);
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('not found')) {
-      throw new NotFoundError('Memo', memoId);
-    }
-    throw error;
-  }
-}
-
-/**
- * Promote an existing memo to a task.
- */
-export async function promoteMemoHandler(
-  request: FastifyRequest<{
-    Params: { id: string };
-    Body: PromoteMemoRequest;
-  }>,
-  reply: FastifyReply
-) {
-  const memoId = parseInt(request.params.id, 10);
-  const { title, status = 'inbox', bodyMd, taskKind, scheduledStart, scheduledEnd, isAllDay } = request.body;
-  const memoService = new MemoService({ db: request.server.db });
-  const taskService = new TaskService({ db: request.server.db });
-
-  try {
-    const { taskId } = memoService.promote({
-      memoId,
-      title,
-      status,
-      bodyMd,
-      taskKind,
-      scheduledStart,
-      scheduledEnd,
-      isAllDay,
-    });
-
-    const task = taskService.show(taskId);
-    return reply.status(200).send(task);
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
       throw new NotFoundError('Memo', memoId);

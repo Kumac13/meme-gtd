@@ -23,8 +23,23 @@ struct CreateMemoRequest: Codable {
     let bodyMd: String
 }
 
+struct PromotePreviewLinkTarget: Codable {
+    let id: Int
+    let type: String
+    let title: String
+}
+
+struct PromotePreviewLink: Codable {
+    let direction: String
+    let linkType: String
+    let targetIssue: PromotePreviewLinkTarget
+}
+
 struct PromotePreviewResponse: Codable {
     let bodyMd: String
+    let labels: [String]
+    let projectIds: [Int]
+    let linkedIssues: [PromotePreviewLink]
 }
 
 struct UpdateMemoRequest: Codable {

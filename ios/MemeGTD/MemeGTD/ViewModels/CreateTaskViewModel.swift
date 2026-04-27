@@ -45,8 +45,11 @@ class CreateTaskViewModel: ObservableObject {
             self.selectedLabelNames = Set(parentLabels)
             self.selectedProjectIds = Set(parentProjects.map(\.id))
             self.allProjects = parentProjects
-        case .promoteFromMemo(_, let body):
+        case .promoteFromMemo(_, let body, let labelNames, let projectIds, let links):
             self.bodyMd = body
+            self.selectedLabelNames = Set(labelNames)
+            self.selectedProjectIds = Set(projectIds)
+            self.pendingLinks = links
         }
     }
 
@@ -102,45 +105,21 @@ class CreateTaskViewModel: ObservableObject {
         error = nil
 
         do {
-            // Step 1: Create the task (mode-specific endpoint)
-            let task: TaskItem
-            switch mode {
-            case .promoteFromMemo(let memoId, let originalBody):
-                // Single-call promote. Server copies the memo body when bodyMd
-                // is omitted, inherits labels/projects, creates derived_from
-                // link, and logs `memo.promoted` — all atomically.
-                let bodyChanged = bodyMd != originalBody
-                let request = PromoteMemoRequest(
-                    title: trimmedTitle,
-                    status: status.rawValue,
-                    bodyMd: bodyChanged ? bodyMd : nil,
-                    taskKind: taskKind.rawValue,
-                    scheduledStart: scheduledStart.map { Self.isoFormatter.string(from: $0) },
-                    scheduledEnd: scheduledEnd.map { Self.isoFormatter.string(from: $0) },
-                    isAllDay: isAllDay ? true : nil
-                )
-                task = try await APIClient.shared.post(
-                    path: "/api/memos/\(memoId)/promote",
-                    body: request
-                )
-            case .standard, .linkedTo, .quickChild:
-                let request = CreateTaskRequest(
-                    title: trimmedTitle,
-                    bodyMd: bodyMd.isEmpty ? nil : bodyMd,
-                    status: status.rawValue,
-                    taskKind: taskKind.rawValue,
-                    scheduledStart: scheduledStart.map { Self.isoFormatter.string(from: $0) },
-                    scheduledEnd: scheduledEnd.map { Self.isoFormatter.string(from: $0) },
-                    isAllDay: isAllDay ? true : nil
-                )
-                task = try await APIClient.shared.post(
-                    path: "/api/tasks", body: request
-                )
-            }
+            // Standard create flow for all modes.
+            let request = CreateTaskRequest(
+                title: trimmedTitle,
+                bodyMd: bodyMd.isEmpty ? nil : bodyMd,
+                status: status.rawValue,
+                taskKind: taskKind.rawValue,
+                scheduledStart: scheduledStart.map { Self.isoFormatter.string(from: $0) },
+                scheduledEnd: scheduledEnd.map { Self.isoFormatter.string(from: $0) },
+                isAllDay: isAllDay ? true : nil
+            )
+            let task: TaskItem = try await APIClient.shared.post(
+                path: "/api/tasks", body: request
+            )
 
-            // Steps 2-4: Assign labels, projects, links in parallel
             await withTaskGroup(of: Void.self) { group in
-                // Labels
                 for name in selectedLabelNames {
                     if let label = allLabels.first(where: { $0.name == name }) {
                         group.addTask {
@@ -152,7 +131,6 @@ class CreateTaskViewModel: ObservableObject {
                     }
                 }
 
-                // Projects
                 for projectId in selectedProjectIds {
                     group.addTask {
                         let _: ProjectItem? = try? await APIClient.shared.post(
@@ -162,7 +140,6 @@ class CreateTaskViewModel: ObservableObject {
                     }
                 }
 
-                // Links
                 for link in pendingLinks {
                     group.addTask {
                         let _: CreateLinkResponse? = try? await APIClient.shared.post(
@@ -176,7 +153,6 @@ class CreateTaskViewModel: ObservableObject {
                     }
                 }
 
-                // URL Links
                 for urlLink in pendingUrlLinks {
                     group.addTask {
                         let _: UrlLink? = try? await APIClient.shared.post(
@@ -185,6 +161,18 @@ class CreateTaskViewModel: ObservableObject {
                         )
                     }
                 }
+            }
+
+            // Promotion-only: add derived_from link from new task to source memo.
+            if case .promoteFromMemo(let memoId, _, _, _, _) = mode {
+                let _: CreateLinkResponse? = try? await APIClient.shared.post(
+                    path: "/api/links",
+                    body: CreateLinkRequest(
+                        sourceIssueId: task.id,
+                        targetIssueId: memoId,
+                        linkType: .derivedFrom
+                    )
+                )
             }
 
             createdTask = task
