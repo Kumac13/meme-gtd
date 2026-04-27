@@ -22,6 +22,7 @@ struct CreateTaskModal: View {
     }
 
     private var headerTitle: String {
+        if case .promoteFromMemo = mode { return "Promote to Task" }
         if case .quickChild = mode { return "Add Child" }
         return "New Task"
     }

@@ -609,37 +609,13 @@ paths:
                   - error
                   - message
                 additionalProperties: false
-  /api/memos/{id}/promote:
-    post:
-      operationId: promoteMemo
-      summary: Promote memo to task
+  /api/memos/{id}/promote-preview:
+    get:
+      operationId: getPromotePreview
+      summary: Preview promotion body
       tags:
         - Memos
-      description: Promote memo to task
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                title:
-                  type: string
-                  minLength: 1
-                  description: Title for the new task
-                status:
-                  type: string
-                  enum:
-                    - inbox
-                    - someday
-                    - open
-                    - next
-                    - waiting
-                    - scheduled
-                  description: Initial status for the task
-              required:
-                - title
-              additionalProperties: false
-        required: true
+      description: Return the task body that would result from promoting this memo now (memo body with comments inlined). Read-only; no side effects.
       parameters:
         - schema:
             type: string
@@ -650,11 +626,71 @@ paths:
           description: Memo ID
       responses:
         "200":
-          description: Promoted task
+          description: Default Response
           content:
             application/json:
               schema:
-                description: Promoted task
+                type: object
+                properties:
+                  bodyMd:
+                    type: string
+                    description: The task body that would be created by promoting this memo (memo body with comments inlined).
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Label names attached to the memo, suggested as initial labels for the promoted task.
+                  projectIds:
+                    type: array
+                    items:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                    description: Project IDs the memo belongs to, suggested as initial projects for the promoted task.
+                  linkedIssues:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        direction:
+                          type: string
+                          enum:
+                            - outgoing
+                            - incoming
+                          description: Direction of the link relative to the memo
+                        linkType:
+                          type: string
+                          description: Link type (parent, child, relates, derived_from, etc.)
+                        targetIssue:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              exclusiveMinimum: true
+                              minimum: 0
+                            type:
+                              type: string
+                              description: Target issue type (memo, task, article)
+                            title:
+                              type: string
+                              description: Target issue title or body excerpt for memos
+                          required:
+                            - id
+                            - type
+                            - title
+                          additionalProperties: false
+                      required:
+                        - direction
+                        - linkType
+                        - targetIssue
+                      additionalProperties: false
+                    description: Issue links attached to the memo, suggested as initial links for the promoted task.
+                required:
+                  - bodyMd
+                  - labels
+                  - projectIds
+                  - linkedIssues
+                additionalProperties: false
         "404":
           description: Default Response
           content:

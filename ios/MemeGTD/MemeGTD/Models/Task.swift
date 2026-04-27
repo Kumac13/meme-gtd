@@ -135,6 +135,15 @@ enum CreateTaskModeKind {
     case linkedTo(sourceTaskId: Int)
     /// Full form, inherit parent's projects/labels/status, auto-create child link
     case quickChild(parentTask: TaskItem, parentProjects: [Project], parentLabels: [String])
+    /// Promote a memo to a task. The form is the same as `.standard`; pickers are pre-seeded
+    /// from the memo's labels/projects/links, and a derived_from link is created on submit.
+    case promoteFromMemo(
+        memoId: Int,
+        memoBody: String,
+        initialLabelNames: [String],
+        initialProjectIds: [Int],
+        initialLinks: [PendingLink]
+    )
 }
 
 struct PendingLink: Identifiable {

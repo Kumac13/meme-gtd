@@ -383,45 +383,98 @@ export const deleteMemo = (db: Database.Database, id: number): void => {
   }
 };
 
-export interface PromoteMemoInput {
-  memoId: number;
-  title: string;
-  bodyMd?: string;
-  labels?: string[];
-  status?: string;
+export interface PromotePreviewLink {
+  direction: 'outgoing' | 'incoming';
+  linkType: string;
+  targetIssue: { id: number; type: string; title: string };
 }
 
-export const promoteMemo = (
+export interface PromotePreview {
+  bodyMd: string;
+  labels: string[];
+  projectIds: number[];
+  linkedIssues: PromotePreviewLink[];
+}
+
+export const getPromotePreview = (
   db: Database.Database,
-  input: PromoteMemoInput
-): { memo: Memo; taskId: number } => {
-  const memo = getMemo(db, input.memoId);
+  memoId: number
+): PromotePreview => {
+  const memo = getMemo(db, memoId);
+  const comments = listComments(db, memoId);
+  const labels = listMemoLabels(db, memoId);
 
-  const now = nowIso();
-  const insertTask = db.prepare(
-    `INSERT INTO issues (type, title, body_md, status, scheduled_on, meta, created_at, updated_at, is_bookmarked, is_deleted)
-     VALUES ('task', @title, @body, @status, NULL, json('{}'), @createdAt, @createdAt, 0, 0)`
-  );
+  const projectRows = db
+    .prepare(`SELECT project_id FROM project_items WHERE issue_id = @memoId ORDER BY position`)
+    .all({ memoId }) as Array<{ project_id: number }>;
 
-  const result = insertTask.run({
-    title: input.title,
-    body: input.bodyMd ?? memo.bodyMd,
-    status: input.status ?? 'open',
-    createdAt: now
+  const linkRows = db.prepare(`
+    SELECT
+      l.source_issue_id,
+      l.target_issue_id,
+      l.link_type,
+      i.type as target_type,
+      i.title as target_title,
+      i.body_md as target_body
+    FROM links l
+    LEFT JOIN issues i
+      ON i.id = (CASE WHEN l.source_issue_id = @memoId THEN l.target_issue_id ELSE l.source_issue_id END)
+    WHERE (l.source_issue_id = @memoId OR l.target_issue_id = @memoId)
+      AND (i.is_deleted IS NULL OR i.is_deleted = 0)
+    ORDER BY l.created_at
+  `).all({ memoId }) as Array<{
+    source_issue_id: number;
+    target_issue_id: number;
+    link_type: string;
+    target_type: string | null;
+    target_title: string | null;
+    target_body: string | null;
+  }>;
+
+  const linkedIssues: PromotePreviewLink[] = linkRows.map((row) => {
+    const isOutgoing = row.source_issue_id === memoId;
+    const targetId = isOutgoing ? row.target_issue_id : row.source_issue_id;
+    const fallbackTitle = (row.target_body ?? '').replace(/\s+/g, ' ').trim().slice(0, 80);
+    return {
+      direction: isOutgoing ? 'outgoing' : 'incoming',
+      linkType: row.link_type,
+      targetIssue: {
+        id: targetId,
+        type: row.target_type ?? 'unknown',
+        title: row.target_title && row.target_title.length > 0 ? row.target_title : fallbackTitle,
+      },
+    };
   });
 
-  const taskId = Number(result.lastInsertRowid);
+  return {
+    bodyMd: buildPromoteBody(memo.bodyMd, comments),
+    labels,
+    projectIds: projectRows.map((row) => row.project_id),
+    linkedIssues,
+  };
+};
 
-  db.prepare(
-    `INSERT INTO links (source_issue_id, target_issue_id, link_type, created_at)
-     VALUES (@source, @target, 'derived_from', @createdAt)`
-  ).run({ source: taskId, target: memo.id, createdAt: now });
+export const buildPromoteBody = (baseBody: string, comments: Comment[]): string => {
+  const parts: string[] = [];
 
-  if (input.labels?.length) {
-    attachLabels(db, taskId, input.labels);
+  if (baseBody) {
+    parts.push(baseBody);
   }
 
-  return { memo, taskId };
+  if (comments.length > 0) {
+    parts.push('');
+    parts.push('---');
+    parts.push('## コメント');
+    parts.push('');
+
+    for (const comment of comments) {
+      parts.push(`### ${comment.createdAt}`);
+      parts.push(comment.bodyMd);
+      parts.push('');
+    }
+  }
+
+  return parts.join('\n').trim();
 };
 
 export const addComment = (

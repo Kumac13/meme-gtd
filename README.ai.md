@@ -23,6 +23,10 @@ Memo (Captured) → promote → Task (Inbox)
 - `memo`: 未整理のアイデアプール
 - `task`: 実行可能なアクション（ステータスで進捗管理）
 - `promote`: memo を task に昇格（derived_from リンクで追跡）
+  - `GET /api/memos/{id}/promote-preview` — サーバが昇格後の task body（メモ本文 + `## コメント` セクション inline）を返す read-only エンドポイント。Web UI / iOS / CLI すべてこれを使ってフォーム / エディタの初期値を埋める（本文整形ロジックをクライアントに複製しない）
+  - `POST /api/memos/{id}/promote` — トランザクション内で task 作成・derived_from 作成・`memo.promoted` ログ・ラベル/プロジェクト/他リンクの引き継ぎを実行
+  - 任意フィールド: `bodyMd`（省略時は preview と同じロジックでサーバが生成）/ `status`（全8値）/ `taskKind` / `scheduledStart` / `scheduledEnd` / `isAllDay`
+  - `bodyMd` 指定時は verbatim で採用（ユーザ編集結果を尊重）
 
 ## データモデル
 

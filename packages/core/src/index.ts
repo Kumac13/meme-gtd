@@ -14,7 +14,7 @@ import {
   listMemoLabels,
   listMemos,
   countMemos,
-  promoteMemo,
+  getPromotePreview,
   setBookmark,
   setMemoLabels,
   updateComment,
@@ -61,7 +61,7 @@ import {
   type ListArticleFilters,
   type ListMemoFilters,
   type ListTaskFilters,
-  type PromoteMemoInput,
+  type PromotePreview,
   type UpdateMemoInput,
   type UpdateTaskInput
 } from 'meme-gtd-db';
@@ -134,20 +134,8 @@ export class MemoService {
     })();
   }
 
-  public promote(input: PromoteMemoInput) {
-    return this.db.transaction(() => {
-      const memo = getMemo(this.db, input.memoId);
-      const result = promoteMemo(this.db, input);
-      const task = getTask(this.db, result.taskId);
-      this.logger.logMemoPromoted(
-        input.memoId,
-        memo?.bodyMd ?? '',
-        result.taskId,
-        task?.title ?? input.title,
-        task?.status ?? 'open'
-      );
-      return result;
-    })();
+  public promotePreview(memoId: number): PromotePreview {
+    return getPromotePreview(this.db, memoId);
   }
 
   public addComment(memoId: number, bodyMd: string) {

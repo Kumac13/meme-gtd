@@ -21,6 +21,7 @@ struct MemoDetailView: View {
     @State private var pickedImageData: Data? = nil
     @State private var pickedMimeType: String = "image/jpeg"
     @State private var pickedExtension: String = "jpg"
+    @State private var createTaskMode: CreateTaskMode? = nil
 
     init(memoId: Int, initialBody: String? = nil, onMenuTap: @escaping () -> Void, onNavigateToLinkedIssue: ((Int, String, String) -> Void)? = nil) {
         self.memoId = memoId
@@ -183,11 +184,69 @@ struct MemoDetailView: View {
             IssueInfoSheet(
                 viewModel: viewModel,
                 showCopiedFeedback: $showCopiedFeedback,
+                onPromoteToTask: {
+                    let fallback = viewModel.memo?.bodyMd ?? ""
+                    Task { @MainActor in
+                        var resolvedBody = fallback
+                        var initialLabelNames: [String] = []
+                        var initialProjectIds: [Int] = []
+                        var carriedLinks: [PendingLink] = []
+                        do {
+                            let preview: PromotePreviewResponse = try await APIClient.shared.get(
+                                path: "/api/memos/\(memoId)/promote-preview"
+                            )
+                            resolvedBody = preview.bodyMd
+                            initialLabelNames = preview.labels
+                            initialProjectIds = preview.projectIds
+                            carriedLinks = preview.linkedIssues.compactMap { link in
+                                guard let linkType = LinkType(rawValue: link.linkType) else { return nil }
+                                return PendingLink(
+                                    targetIssueId: link.targetIssue.id,
+                                    linkType: linkType,
+                                    title: link.targetIssue.title
+                                )
+                            }
+                        } catch {
+                            // Fall back to raw memo body on preview failure
+                        }
+                        // Show the derived_from link to the source memo as a regular pending link
+                        // so it appears in the Links picker alongside the carried-over links.
+                        let memoTitleSnippet: String = {
+                            let body = viewModel.memo?.bodyMd ?? resolvedBody
+                            let stripped = body.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression).trimmingCharacters(in: .whitespaces)
+                            let snippet = String(stripped.prefix(80))
+                            return snippet.isEmpty ? "Memo #\(memoId)" : snippet
+                        }()
+                        let derivedFromLink = PendingLink(
+                            targetIssueId: memoId,
+                            linkType: .derivedFrom,
+                            title: memoTitleSnippet
+                        )
+                        createTaskMode = CreateTaskMode(kind: .promoteFromMemo(
+                            memoId: memoId,
+                            memoBody: resolvedBody,
+                            initialLabelNames: initialLabelNames,
+                            initialProjectIds: initialProjectIds,
+                            initialLinks: [derivedFromLink] + carriedLinks
+                        ))
+                    }
+                },
                 onNavigateToIssue: { target in
                     onNavigateToLinkedIssue?(target.id, target.type, target.title)
                 }
             )
             .presentationDetents([.fraction(0.6), .large])
+        }
+        .sheet(item: $createTaskMode) { mode in
+            CreateTaskModal(
+                mode: mode.kind,
+                onCreated: { _ in
+                    createTaskMode = nil
+                    Task { await viewModel.loadMemo() }
+                },
+                onDismiss: { createTaskMode = nil }
+            )
+            .presentationDetents([.large])
         }
         .alert("Delete Memo", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) {}

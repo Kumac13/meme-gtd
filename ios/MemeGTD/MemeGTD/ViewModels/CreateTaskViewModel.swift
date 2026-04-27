@@ -45,6 +45,11 @@ class CreateTaskViewModel: ObservableObject {
             self.selectedLabelNames = Set(parentLabels)
             self.selectedProjectIds = Set(parentProjects.map(\.id))
             self.allProjects = parentProjects
+        case .promoteFromMemo(_, let body, let labelNames, let projectIds, let links):
+            self.bodyMd = body
+            self.selectedLabelNames = Set(labelNames)
+            self.selectedProjectIds = Set(projectIds)
+            self.pendingLinks = links
         }
     }
 
@@ -100,7 +105,7 @@ class CreateTaskViewModel: ObservableObject {
         error = nil
 
         do {
-            // Step 1: Create the task
+            // Standard create flow for all modes.
             let request = CreateTaskRequest(
                 title: trimmedTitle,
                 bodyMd: bodyMd.isEmpty ? nil : bodyMd,
@@ -114,9 +119,7 @@ class CreateTaskViewModel: ObservableObject {
                 path: "/api/tasks", body: request
             )
 
-            // Steps 2-4: Assign labels, projects, links in parallel
             await withTaskGroup(of: Void.self) { group in
-                // Labels
                 for name in selectedLabelNames {
                     if let label = allLabels.first(where: { $0.name == name }) {
                         group.addTask {
@@ -128,7 +131,6 @@ class CreateTaskViewModel: ObservableObject {
                     }
                 }
 
-                // Projects
                 for projectId in selectedProjectIds {
                     group.addTask {
                         let _: ProjectItem? = try? await APIClient.shared.post(
@@ -138,7 +140,6 @@ class CreateTaskViewModel: ObservableObject {
                     }
                 }
 
-                // Links
                 for link in pendingLinks {
                     group.addTask {
                         let _: CreateLinkResponse? = try? await APIClient.shared.post(
@@ -152,7 +153,6 @@ class CreateTaskViewModel: ObservableObject {
                     }
                 }
 
-                // URL Links
                 for urlLink in pendingUrlLinks {
                     group.addTask {
                         let _: UrlLink? = try? await APIClient.shared.post(

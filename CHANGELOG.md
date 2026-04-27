@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.30.0 - 2026-04-24
+
+### New Features
+
+- **Memo-to-Task Promotion (Web + iOS + CLI + API)**: Promote an existing memo to a task with all its context preserved
+  - New `GET /api/memos/{id}/promote-preview` endpoint returns the task body that would be produced by promotion (memo body with comments inlined under a `## コメント` section). Web UI, iOS, and the `mgtd memo promote` CLI all use this single server-owned formatter to pre-fill the promotion editor.
+  - `POST /api/memos/{id}/promote` now accepts optional `bodyMd`, `taskKind`, `scheduledStart`, `scheduledEnd`, `isAllDay`, and the full `TaskStatus` enum (including `done` and `canceled`). When `bodyMd` is omitted, the server builds the body via the same formatter as the preview; when supplied, the caller's body is used verbatim.
+  - Promotion automatically carries over memo labels, project memberships, and outgoing/incoming links to the new task.
+  - iOS "Promote to Task" action in the memo detail bottom sheet is a single atomic POST (no more two-step POST+PATCH).
+
 ## 0.29.0 - 2026-04-03
 
 ### New Features

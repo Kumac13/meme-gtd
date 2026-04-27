@@ -265,7 +265,7 @@ describe('Memo CRUD Operations', () => {
   });
 });
 
-describe('Memo Promote Operation', () => {
+describe('Memo Promote Preview Operation', () => {
   let app: FastifyInstance;
   let cleanup: () => Promise<void>;
 
@@ -279,53 +279,186 @@ describe('Memo Promote Operation', () => {
     await cleanup();
   });
 
-  it('should promote memo to task (POST /api/memos/:id/promote)', async () => {
+  it('should return memo body with comments inlined (GET /api/memos/:id/promote-preview)', async () => {
     const createResponse = await app.inject({
       method: 'POST',
       url: '/api/memos',
-      payload: createMemoFixture({ bodyMd: 'Memo to promote' }),
+      payload: createMemoFixture({ bodyMd: 'Preview memo body' }),
     });
     const memo = JSON.parse(createResponse.body);
 
-    const response = await app.inject({
+    await app.inject({
       method: 'POST',
-      url: `/api/memos/${memo.id}/promote`,
-      payload: { title: 'Promoted Task', status: 'next' },
+      url: `/api/memos/${memo.id}/comments`,
+      payload: { bodyMd: 'thought A' },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/comments`,
+      payload: { bodyMd: 'thought B' },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/memos/${memo.id}/promote-preview`,
     });
 
     assert.strictEqual(response.statusCode, 200);
-    const task = JSON.parse(response.body);
-    assert.strictEqual(task.type, 'task');
-    assert.strictEqual(task.title, 'Promoted Task');
-    assert.strictEqual(task.status, 'next');
-    assert.strictEqual(task.bodyMd, 'Memo to promote');
+    const preview = JSON.parse(response.body);
+    assert.ok(preview.bodyMd.includes('Preview memo body'));
+    assert.ok(preview.bodyMd.includes('## コメント'));
+    assert.ok(preview.bodyMd.includes('thought A'));
+    assert.ok(preview.bodyMd.includes('thought B'));
   });
 
-  it('should return 400 when promoting without title', async () => {
+  it('should return just memo body when there are no comments', async () => {
     const createResponse = await app.inject({
       method: 'POST',
       url: '/api/memos',
-      payload: createMemoFixture(),
+      payload: createMemoFixture({ bodyMd: 'Lonely memo' }),
     });
     const memo = JSON.parse(createResponse.body);
 
     const response = await app.inject({
-      method: 'POST',
-      url: `/api/memos/${memo.id}/promote`,
-      payload: {},
+      method: 'GET',
+      url: `/api/memos/${memo.id}/promote-preview`,
     });
 
-    assert.strictEqual(response.statusCode, 400);
+    assert.strictEqual(response.statusCode, 200);
+    const preview = JSON.parse(response.body);
+    assert.strictEqual(preview.bodyMd, 'Lonely memo');
   });
 
-  it('should return 404 when promoting non-existent memo', async () => {
+  it('should return 404 for a non-existent memo', async () => {
     const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos/99999/promote-preview',
+    });
+    assert.strictEqual(response.statusCode, 404);
+  });
+
+  it('should include memo labels in preview', async () => {
+    const createResponse = await app.inject({
       method: 'POST',
-      url: '/api/memos/99999/promote',
-      payload: { title: 'Test' },
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Labelled memo' }),
+    });
+    const memo = JSON.parse(createResponse.body);
+
+    for (const name of ['urgent', 'review']) {
+      const labelResponse = await app.inject({
+        method: 'POST',
+        url: '/api/labels',
+        payload: { name },
+      });
+      const label = JSON.parse(labelResponse.body);
+      await app.inject({
+        method: 'POST',
+        url: `/api/issues/${memo.id}/labels`,
+        payload: { labelId: label.id },
+      });
+    }
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/memos/${memo.id}/promote-preview`,
     });
 
-    assert.strictEqual(response.statusCode, 404);
+    assert.strictEqual(response.statusCode, 200);
+    const preview = JSON.parse(response.body);
+    assert.ok(Array.isArray(preview.labels));
+    assert.ok(preview.labels.includes('urgent'));
+    assert.ok(preview.labels.includes('review'));
+  });
+
+  it('should include memo project memberships in preview', async () => {
+    const projectResponse = await app.inject({
+      method: 'POST',
+      url: '/api/projects',
+      payload: { name: 'Preview Project' },
+    });
+    const project = JSON.parse(projectResponse.body);
+
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Project memo' }),
+    });
+    const memo = JSON.parse(createResponse.body);
+
+    await app.inject({
+      method: 'POST',
+      url: `/api/projects/${project.id}/items`,
+      payload: { issueId: memo.id },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/memos/${memo.id}/promote-preview`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const preview = JSON.parse(response.body);
+    assert.ok(Array.isArray(preview.projectIds));
+    assert.ok(preview.projectIds.includes(project.id));
+  });
+
+  it('should include outgoing and incoming links with target issue info', async () => {
+    const otherResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Other memo body' }),
+    });
+    const other = JSON.parse(otherResponse.body);
+
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Source memo' }),
+    });
+    const memo = JSON.parse(createResponse.body);
+
+    await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: { sourceIssueId: memo.id, targetIssueId: other.id, linkType: 'relates' },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/memos/${memo.id}/promote-preview`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const preview = JSON.parse(response.body);
+    assert.ok(Array.isArray(preview.linkedIssues));
+    assert.strictEqual(preview.linkedIssues.length, 1);
+    const link = preview.linkedIssues[0];
+    assert.strictEqual(link.direction, 'outgoing');
+    assert.strictEqual(link.linkType, 'relates');
+    assert.strictEqual(link.targetIssue.id, other.id);
+    assert.strictEqual(link.targetIssue.type, 'memo');
+    assert.ok(link.targetIssue.title.length > 0);
+  });
+
+  it('should return empty arrays when memo has no labels, projects, or links', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'Bare memo' }),
+    });
+    const memo = JSON.parse(createResponse.body);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/memos/${memo.id}/promote-preview`,
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const preview = JSON.parse(response.body);
+    assert.deepStrictEqual(preview.labels, []);
+    assert.deepStrictEqual(preview.projectIds, []);
+    assert.deepStrictEqual(preview.linkedIssues, []);
   });
 });
 

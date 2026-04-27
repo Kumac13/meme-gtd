@@ -376,34 +376,58 @@ export class MemosService {
         });
     }
     /**
-     * Promote memo to task
-     * Promote memo to task
+     * Preview promotion body
+     * Return the task body that would result from promoting this memo now (memo body with comments inlined). Read-only; no side effects.
      * @param id Memo ID
-     * @param requestBody
-     * @returns any Promoted task
+     * @returns any Default Response
      * @throws ApiError
      */
-    public static promoteMemo(
+    public static getPromotePreview(
         id: string,
-        requestBody: {
+    ): CancelablePromise<{
+        /**
+         * The task body that would be created by promoting this memo (memo body with comments inlined).
+         */
+        bodyMd: string;
+        /**
+         * Label names attached to the memo, suggested as initial labels for the promoted task.
+         */
+        labels: Array<string>;
+        /**
+         * Project IDs the memo belongs to, suggested as initial projects for the promoted task.
+         */
+        projectIds: Array<number>;
+        /**
+         * Issue links attached to the memo, suggested as initial links for the promoted task.
+         */
+        linkedIssues: Array<{
             /**
-             * Title for the new task
+             * Direction of the link relative to the memo
              */
-            title: string;
+            direction: 'outgoing' | 'incoming';
             /**
-             * Initial status for the task
+             * Link type (parent, child, relates, derived_from, etc.)
              */
-            status?: 'inbox' | 'someday' | 'open' | 'next' | 'waiting' | 'scheduled';
-        },
-    ): CancelablePromise<any> {
+            linkType: string;
+            targetIssue: {
+                id: number;
+                /**
+                 * Target issue type (memo, task, article)
+                 */
+                type: string;
+                /**
+                 * Target issue title or body excerpt for memos
+                 */
+                title: string;
+            };
+        }>;
+    }> {
         return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/memos/{id}/promote',
+            method: 'GET',
+            url: '/api/memos/{id}/promote-preview',
             path: {
                 'id': id,
             },
-            body: requestBody,
-            mediaType: 'application/json',
             errors: {
                 404: `Default Response`,
             },

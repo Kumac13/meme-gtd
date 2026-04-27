@@ -7,7 +7,7 @@ import {
   getMemoHandler,
   updateMemoHandler,
   deleteMemoHandler,
-  promoteMemoHandler,
+  getPromotePreviewHandler,
   bookmarkMemoHandler,
   unbookmarkMemoHandler,
 } from '../handlers/memoHandlers.js';
@@ -20,7 +20,7 @@ import {
 import {
   CreateMemoRequestSchema,
   UpdateMemoRequestSchema,
-  PromoteMemoRequestSchema,
+  PromotePreviewResponseSchema,
   MemoSchema,
   MemoDetailSchema,
   MemoIdParamsSchema,
@@ -140,24 +140,23 @@ export async function memoRoutes(app: FastifyInstance) {
     deleteMemoHandler
   );
 
-  // POST /api/memos/:id/promote - Promote memo to task
-  server.post(
-    '/api/memos/:id/promote',
+  // GET /api/memos/:id/promote-preview - Preview the body a task would have if promoted
+  server.get(
+    '/api/memos/:id/promote-preview',
     {
       schema: {
         tags: ['Memos'],
-        summary: 'Promote memo to task',
-        description: 'Promote memo to task',
-        operationId: 'promoteMemo',
+        summary: 'Preview promotion body',
+        description: 'Return the task body that would result from promoting this memo now (memo body with comments inlined). Read-only; no side effects.',
+        operationId: 'getPromotePreview',
         params: MemoIdParamsSchema,
-        body: PromoteMemoRequestSchema,
         response: {
-          200: z.unknown().describe('Promoted task'),
+          200: PromotePreviewResponseSchema,
           404: ErrorResponseSchema,
         },
       },
     },
-    promoteMemoHandler
+    getPromotePreviewHandler
   );
 
   // POST /api/memos/:id/bookmark - Bookmark memo

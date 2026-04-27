@@ -38,7 +38,8 @@ export {
   countMemos,
   updateMemo,
   deleteMemo,
-  promoteMemo,
+  buildPromoteBody,
+  getPromotePreview,
   addComment,
   updateComment,
   deleteComment,
@@ -49,7 +50,8 @@ export {
   type CreateMemoInput,
   type UpdateMemoInput,
   type ListMemoFilters,
-  type PromoteMemoInput
+  type PromotePreview,
+  type PromotePreviewLink
 } from './memoRepository.js';
 
 // Task repository exports

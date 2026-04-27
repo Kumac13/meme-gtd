@@ -2,7 +2,6 @@ import { useState, FormEvent, useEffect, useRef, DragEvent, ClipboardEvent } fro
 import { useNavigate } from 'react-router-dom';
 import type { TaskKind } from 'meme-gtd-shared';
 import { TasksService } from '../api/services/TasksService';
-import { MemosService } from '../api/services/MemosService';
 import { ProjectsService } from '../api/services/ProjectsService';
 import { LabelsService } from '../api/services/LabelsService';
 import { LinksService } from '../api/services/LinksService';
@@ -28,8 +27,9 @@ interface TaskFormProps {
   initialStatus?: TaskStatus;
   initialTaskKind?: TaskKind;
   initialLinks?: PendingLink[];
+  initialLabelIds?: number[];
+  initialProjectIds?: number[];
   taskId?: number;
-  fromMemoId?: number;
   mode: 'create' | 'edit';
   onTaskCreated?: (taskId: number) => void;
   /** Pre-select this project when the form loads */
@@ -67,8 +67,9 @@ export default function TaskForm({
   initialStatus = 'inbox',
   initialTaskKind = 'action',
   initialLinks = [],
+  initialLabelIds = [],
+  initialProjectIds,
   taskId,
-  fromMemoId,
   mode,
   onTaskCreated,
   initialProjectId,
@@ -96,9 +97,9 @@ export default function TaskForm({
 
   // Project/Label state
   const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>(
-    initialProjectId ? [initialProjectId] : []
+    initialProjectIds ?? (initialProjectId ? [initialProjectId] : [])
   );
-  const [selectedLabelIds, setSelectedLabelIds] = useState<number[]>([]);
+  const [selectedLabelIds, setSelectedLabelIds] = useState<number[]>(initialLabelIds);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allLabels, setAllLabels] = useState<Label[]>([]);
   const [loadingData, setLoadingData] = useState(false);
@@ -153,17 +154,9 @@ export default function TaskForm({
       setSubmitting(true);
       setError(null);
 
-      if (mode === 'create' && fromMemoId) {
-        // Promotion flow
-        const validStatuses = ['inbox', 'open', 'next', 'waiting', 'scheduled'] as const;
-        const promotionStatus = validStatuses.includes(status as any) ? status as 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' : 'inbox';
-        const response = await MemosService.promoteMemo(
-          fromMemoId.toString(),
-          { title, status: promotionStatus }
-        );
-        navigate(`/tasks/${response.id}`);
-      } else if (mode === 'create') {
-        // Normal create flow with schedule/project/label
+      if (mode === 'create') {
+        // Standard create flow — same path for both fresh task and memo promotion.
+        // The promotion case adds an extra derived_from link at the end.
         const task = await TasksService.createTask({
           title,
           bodyMd: bodyMd || undefined,
@@ -216,14 +209,12 @@ export default function TaskForm({
               ),
           ]);
 
-          // Check for any failed link creations
           const failedLinks = linkResults.filter(result => result.status === 'rejected');
           if (failedLinks.length > 0) {
             console.warn(`Failed to create ${failedLinks.length} link(s):`, failedLinks);
           }
         }
 
-        // Call onTaskCreated callback if provided (for modal usage)
         if (onTaskCreated) {
           onTaskCreated(task.id);
         } else {
@@ -488,7 +479,7 @@ export default function TaskForm({
       )}
 
       {/* Kind Section */}
-      {(mode === 'edit' || mode === 'create') && !fromMemoId && (
+      {(mode === 'edit' || mode === 'create') && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Kind
@@ -521,7 +512,7 @@ export default function TaskForm({
       )}
 
       {/* Schedule Section - Only for create mode */}
-      {mode === 'create' && !fromMemoId && (
+      {mode === 'create' && (
         <div className="border-b border-gray-200 pb-4">
           <button
             type="button"
@@ -564,7 +555,7 @@ export default function TaskForm({
       )}
 
       {/* Projects Section - Only for create mode */}
-      {mode === 'create' && !fromMemoId && (
+      {mode === 'create' && (
         <div className="border-b border-gray-200 pb-4">
           <div className="flex items-center justify-between mb-2">
             <button
@@ -711,7 +702,7 @@ export default function TaskForm({
       )}
 
       {/* Labels Section - Only for create mode */}
-      {mode === 'create' && !fromMemoId && (
+      {mode === 'create' && (
         <div className="border-b border-gray-200 pb-4">
           <div className="flex items-center justify-between mb-2">
             <button
@@ -897,7 +888,7 @@ export default function TaskForm({
       )}
 
       {/* Links Section - Only for create mode */}
-      {mode === 'create' && !fromMemoId && (
+      {mode === 'create' && (
         <div className="border-b border-gray-200 pb-4">
           <button
             type="button"

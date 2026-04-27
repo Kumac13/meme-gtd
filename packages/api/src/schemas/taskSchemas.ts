@@ -19,7 +19,7 @@ export type { TaskKind } from 'meme-gtd-shared';
 /**
  * ISO 8601 datetime regex pattern (YYYY-MM-DDTHH:MM:SS)
  */
-const iso8601DatetimeRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
+export const iso8601DatetimeRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
 
 /**
  * Schema for creating a new task

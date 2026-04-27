@@ -14,7 +14,7 @@ Build and deploy MemeGTD iOS app to both Simulator and physical device.
 | Project dir | `ios/MemeGTD/` |
 | Scheme | `MemeGTD` |
 | Simulator | `iPhone 17` |
-| Device ID | `00008140-00121D0C0238801C` |
+| Device ID | `711DF058-2471-5314-A487-F8682231A5F6` |
 | Bundle ID | `name.kumac.MemeGTD` |
 | DerivedData | `~/Library/Developer/Xcode/DerivedData/MemeGTD-anbnqzkhbpvbrqcsmlrystorxlsx` |
 
@@ -29,7 +29,7 @@ xcodebuild -scheme MemeGTD -destination 'platform=iOS Simulator,name=iPhone 17' 
 
 ### Build 2: Device
 ```bash
-xcodebuild -scheme MemeGTD -destination 'platform=iOS,id=00008140-00121D0C0238801C' build 2>&1 | grep -E '(error:|BUILD|FAILED)'
+xcodebuild -scheme MemeGTD -destination 'platform=iOS,id=711DF058-2471-5314-A487-F8682231A5F6' build 2>&1 | grep -E '(error:|BUILD|FAILED)'
 ```
 
 **IMPORTANT**: The working directory MUST be `ios/MemeGTD/` (absolute path: `/Users/kumac13/ghq/github.com/Kumac13/meme-gtd/ios/MemeGTD`). If not, `cd` there first.
@@ -43,7 +43,7 @@ xcrun simctl install "iPhone 17" ~/Library/Developer/Xcode/DerivedData/MemeGTD-a
 
 ### Install on Device
 ```bash
-xcrun devicectl device install app --device 00008140-00121D0C0238801C ~/Library/Developer/Xcode/DerivedData/MemeGTD-anbnqzkhbpvbrqcsmlrystorxlsx/Build/Products/Debug-iphoneos/MemeGTD.app 2>&1
+xcrun devicectl device install app --device 711DF058-2471-5314-A487-F8682231A5F6 ~/Library/Developer/Xcode/DerivedData/MemeGTD-anbnqzkhbpvbrqcsmlrystorxlsx/Build/Products/Debug-iphoneos/MemeGTD.app 2>&1
 ```
 
 ## Error handling

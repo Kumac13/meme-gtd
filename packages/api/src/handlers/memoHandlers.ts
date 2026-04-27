@@ -1,10 +1,9 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { MemoService, TaskService } from 'meme-gtd-core';
+import { MemoService } from 'meme-gtd-core';
 import { NotFoundError } from '../errors/index.js';
 import type {
   CreateMemoRequest,
   UpdateMemoRequest,
-  PromoteMemoRequest,
 } from '../schemas/memoSchemas.js';
 
 /**
@@ -180,29 +179,19 @@ export async function deleteMemoHandler(
 }
 
 /**
- * Promote an existing memo to a task.
+ * Return the body a task would have if the memo were promoted now,
+ * without creating anything. Read-only — safe to call repeatedly.
  */
-export async function promoteMemoHandler(
-  request: FastifyRequest<{
-    Params: { id: string };
-    Body: PromoteMemoRequest;
-  }>,
+export async function getPromotePreviewHandler(
+  request: FastifyRequest<{ Params: { id: string } }>,
   reply: FastifyReply
 ) {
   const memoId = parseInt(request.params.id, 10);
-  const { title, status = 'inbox' } = request.body;
   const memoService = new MemoService({ db: request.server.db });
-  const taskService = new TaskService({ db: request.server.db });
 
   try {
-    const { taskId } = memoService.promote({
-      memoId,
-      title,
-      status,
-    });
-
-    const task = taskService.show(taskId);
-    return reply.status(200).send(task);
+    const preview = memoService.promotePreview(memoId);
+    return reply.status(200).send(preview);
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
       throw new NotFoundError('Memo', memoId);
