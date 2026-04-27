@@ -42,7 +42,7 @@ export default function TaskNew() {
           setInitialProjectIds(preview.projectIds);
 
           const allowedLinkTypes = new Set(['parent', 'child', 'relates', 'derived_from']);
-          const links: PendingLink[] = preview.linkedIssues
+          const carriedLinks: PendingLink[] = preview.linkedIssues
             .filter((l) => allowedLinkTypes.has(l.linkType))
             .map((l) => ({
               linkKind: 'issue',
@@ -54,7 +54,21 @@ export default function TaskNew() {
                 title: l.targetIssue.title,
               },
             }));
-          setInitialLinks(links);
+
+          // Show the derived_from link the new task will have to its source memo,
+          // so it appears in the Links section alongside the carried-over links.
+          const memoIdNum = parseInt(fromMemoId as string, 10);
+          const memoTitle = (memoData.bodyMd ?? '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 80) || `Memo #${memoIdNum}`;
+          const derivedFromLink: PendingLink = {
+            linkKind: 'issue',
+            targetIssueId: memoIdNum,
+            linkType: 'derived_from',
+            targetIssue: { id: memoIdNum, type: 'memo', title: memoTitle },
+          };
+          setInitialLinks([derivedFromLink, ...carriedLinks]);
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Failed to load memo');
           console.error('Error fetching memo:', err);
@@ -95,7 +109,6 @@ export default function TaskNew() {
           initialLabelIds={initialLabelIds}
           initialProjectIds={initialProjectIds}
           initialLinks={initialLinks}
-          fromMemoId={memo?.id}
         />
       </div>
     </div>

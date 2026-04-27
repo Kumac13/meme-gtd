@@ -30,7 +30,6 @@ interface TaskFormProps {
   initialLabelIds?: number[];
   initialProjectIds?: number[];
   taskId?: number;
-  fromMemoId?: number;
   mode: 'create' | 'edit';
   onTaskCreated?: (taskId: number) => void;
   /** Pre-select this project when the form loads */
@@ -71,7 +70,6 @@ export default function TaskForm({
   initialLabelIds = [],
   initialProjectIds,
   taskId,
-  fromMemoId,
   mode,
   onTaskCreated,
   initialProjectId,
@@ -214,19 +212,6 @@ export default function TaskForm({
           const failedLinks = linkResults.filter(result => result.status === 'rejected');
           if (failedLinks.length > 0) {
             console.warn(`Failed to create ${failedLinks.length} link(s):`, failedLinks);
-          }
-        }
-
-        // For memo promotion: add derived_from link from the new task to the source memo
-        if (fromMemoId) {
-          try {
-            await LinksService.createLink({
-              sourceIssueId: task.id,
-              targetIssueId: fromMemoId,
-              linkType: 'derived_from',
-            });
-          } catch (err) {
-            console.warn('Failed to create derived_from link to source memo:', err);
           }
         }
 

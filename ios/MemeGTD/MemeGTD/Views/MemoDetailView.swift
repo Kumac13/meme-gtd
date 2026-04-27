@@ -190,7 +190,7 @@ struct MemoDetailView: View {
                         var resolvedBody = fallback
                         var initialLabelNames: [String] = []
                         var initialProjectIds: [Int] = []
-                        var initialLinks: [PendingLink] = []
+                        var carriedLinks: [PendingLink] = []
                         do {
                             let preview: PromotePreviewResponse = try await APIClient.shared.get(
                                 path: "/api/memos/\(memoId)/promote-preview"
@@ -198,7 +198,7 @@ struct MemoDetailView: View {
                             resolvedBody = preview.bodyMd
                             initialLabelNames = preview.labels
                             initialProjectIds = preview.projectIds
-                            initialLinks = preview.linkedIssues.compactMap { link in
+                            carriedLinks = preview.linkedIssues.compactMap { link in
                                 guard let linkType = LinkType(rawValue: link.linkType) else { return nil }
                                 return PendingLink(
                                     targetIssueId: link.targetIssue.id,
@@ -209,12 +209,25 @@ struct MemoDetailView: View {
                         } catch {
                             // Fall back to raw memo body on preview failure
                         }
+                        // Show the derived_from link to the source memo as a regular pending link
+                        // so it appears in the Links picker alongside the carried-over links.
+                        let memoTitleSnippet: String = {
+                            let body = viewModel.memo?.bodyMd ?? resolvedBody
+                            let stripped = body.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression).trimmingCharacters(in: .whitespaces)
+                            let snippet = String(stripped.prefix(80))
+                            return snippet.isEmpty ? "Memo #\(memoId)" : snippet
+                        }()
+                        let derivedFromLink = PendingLink(
+                            targetIssueId: memoId,
+                            linkType: .derivedFrom,
+                            title: memoTitleSnippet
+                        )
                         createTaskMode = CreateTaskMode(kind: .promoteFromMemo(
                             memoId: memoId,
                             memoBody: resolvedBody,
                             initialLabelNames: initialLabelNames,
                             initialProjectIds: initialProjectIds,
-                            initialLinks: initialLinks
+                            initialLinks: [derivedFromLink] + carriedLinks
                         ))
                     }
                 },

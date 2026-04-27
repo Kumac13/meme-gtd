@@ -163,18 +163,6 @@ class CreateTaskViewModel: ObservableObject {
                 }
             }
 
-            // Promotion-only: add derived_from link from new task to source memo.
-            if case .promoteFromMemo(let memoId, _, _, _, _) = mode {
-                let _: CreateLinkResponse? = try? await APIClient.shared.post(
-                    path: "/api/links",
-                    body: CreateLinkRequest(
-                        sourceIssueId: task.id,
-                        targetIssueId: memoId,
-                        linkType: .derivedFrom
-                    )
-                )
-            }
-
             createdTask = task
             HapticManager.notification(.success)
             isSubmitting = false
