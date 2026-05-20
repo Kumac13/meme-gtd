@@ -388,6 +388,12 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     // MARK: - Labels (confirm-based: apply diff on confirm)
 
+    func addNewLabel(_ label: IssueLabel) {
+        if !allLabels.contains(where: { $0.id == label.id }) {
+            allLabels.append(label)
+        }
+    }
+
     func confirmLabels(_ selectedNames: Set<String>) {
         let currentNames = Set(memo?.labels ?? [])
         let toAdd = selectedNames.subtracting(currentNames)

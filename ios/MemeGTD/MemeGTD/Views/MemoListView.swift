@@ -310,7 +310,11 @@ struct MemoListView: View {
                 selectedNames: $selectedLabelNames,
                 onDismiss: { showLabelPicker = false },
                 showClear: true,
-                countFor: { $0.memoCount }
+                countFor: { $0.memoCount },
+                onLabelCreated: { newLabel in
+                    viewModel.allLabels.append(newLabel)
+                    selectedLabelNames.insert(newLabel.name)
+                }
             )
             .presentationDetents([.medium, .large])
         }
