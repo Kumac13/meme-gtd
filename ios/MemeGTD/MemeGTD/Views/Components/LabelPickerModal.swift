@@ -12,6 +12,10 @@ struct LabelPickerModal: View {
     @State private var showCreateSheet = false
     @State private var newLabelName = ""
 
+    private var trimmedSearchText: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private var filteredLabels: [IssueLabel] {
         if searchText.isEmpty { return allLabels }
         let query = searchText.lowercased()
@@ -27,37 +31,27 @@ struct LabelPickerModal: View {
                         .symbolRenderingMode(.hierarchical)
                         .foregroundColor(Color(.tertiaryLabel))
                 }
-                
                 Spacer()
-                
+
                 Text("Labels")
                     .font(.system(size: 17, weight: .semibold))
-                
+
                 Spacer()
-                
-                HStack(spacing: 12) {
-                    if showClear {
-                        Button(action: {
-                            HapticManager.impact(.light)
-                            selectedNames.removeAll()
-                        }) {
-                            Text("Clear")
-                                .font(.system(size: 16))
-                                .foregroundColor(selectedNames.isEmpty ? Color(.systemGray3) : .accent)
-                        }
-                        .disabled(selectedNames.isEmpty)
-                    }
-                    
+
+                if showClear {
                     Button(action: {
                         HapticManager.impact(.light)
-                        newLabelName = searchText
-                        showCreateSheet = true
+                        selectedNames.removeAll()
                     }) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 28))
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundColor(.accent)
+                        Text("Clear")
+                            .font(.system(size: 16))
+                            .foregroundColor(selectedNames.isEmpty ? Color(.systemGray3) : .accent)
                     }
+                    .disabled(selectedNames.isEmpty)
+                } else {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 28))
+                        .hidden()
                 }
             }
             .padding(.horizontal, 16)
@@ -68,31 +62,25 @@ struct LabelPickerModal: View {
             ZStack(alignment: .bottom) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        if filteredLabels.isEmpty && !searchText.isEmpty {
-                            Button(action: {
-                                HapticManager.impact(.light)
-                                newLabelName = searchText
-                                showCreateSheet = true
-                            }) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 22))
-                                        .foregroundColor(.accent)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Create Label \"\(searchText)\"")
-                                            .font(.system(size: 15, weight: .semibold))
-                                            .foregroundColor(.accent)
-                                        Text("Add this new label to the list")
-                                            .font(.system(size: 12))
-                                            .foregroundColor(Color(.secondaryLabel))
-                                    }
-                                    Spacer()
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
+                        Button(action: {
+                            HapticManager.impact(.light)
+                            newLabelName = trimmedSearchText
+                            showCreateSheet = true
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "tag.badge.plus")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.accent)
+                                Text(trimmedSearchText.isEmpty ? "Add Label" : "Add Label \"\(trimmedSearchText)\"")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.accent)
+                                Spacer()
                             }
-                            Divider().padding(.leading, 16)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
                         }
+
+                        Divider().padding(.leading, 16)
 
                         ForEach(filteredLabels) { label in
                             let isSelected = selectedNames.contains(label.name)
