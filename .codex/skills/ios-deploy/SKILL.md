@@ -7,13 +7,22 @@ description: Use when the user asks to build, deploy, or install the iOS app. Al
 
 Build and install MemeGTD iOS app, prioritizing the physical device.
 
+## Critical local rule
+
+In this repo and environment, do not begin by running `xcrun devicectl`, `xcrun simctl`, or `xcodebuild`
+inside the sandbox when deploying to iOS. CoreDevice, Simulator services, signing assets, and SwiftPM
+caches are known to fail from the sandbox here.
+
+For iOS deploy commands that use `devicectl`, `simctl`, or `xcodebuild`, request escalated execution first
+with a concise justification. Do not do a sandbox-first attempt just to observe the predictable failure.
+
 ## Configuration
 
 | Key | Value |
 |-----|-------|
 | Project dir | `ios/MemeGTD/` |
 | Scheme | `MemeGTD` |
-| DerivedData | `./.codex-derived-data` |
+| DerivedData | Xcode default |
 
 ## Steps
 
@@ -42,27 +51,27 @@ DEVICE_ID="$(xcrun devicectl list devices | awk 'NR > 2 && $1 !~ /^-/ && $3 ~ /[
 - If `SIMULATOR_ID` is empty and Simulator deployment is in scope, report that no available simulator was found.
 - If the user explicitly asked for only one target, skip discovery and deployment for the other target.
 
-Use `-derivedDataPath ./.codex-derived-data` on every build so install paths are deterministic without depending on a user-specific Xcode cache path.
+Do not pass `-derivedDataPath` unless the user explicitly asks for it. Use Xcode's default DerivedData location and never create Codex-specific build output under `ios/` or the repository.
 
 When both targets are requested, start the physical device build first. Simulator work must not block physical device deployment.
 
 ### Build 1: Device
 ```bash
-xcodebuild -scheme MemeGTD -derivedDataPath ./.codex-derived-data -destination "platform=iOS,id=$DEVICE_ID" -allowProvisioningUpdates build 2>&1 | grep -E '(error:|BUILD|FAILED)'
+xcodebuild -scheme MemeGTD -destination "platform=iOS,id=$DEVICE_ID" -allowProvisioningUpdates build 2>&1 | grep -E '(error:|BUILD|FAILED)'
 ```
 
 ### Build 2: Simulator
 ```bash
-xcodebuild -scheme MemeGTD -derivedDataPath ./.codex-derived-data -destination "platform=iOS Simulator,id=$SIMULATOR_ID" build 2>&1 | grep -E '(error:|BUILD|FAILED)'
+xcodebuild -scheme MemeGTD -destination "platform=iOS Simulator,id=$SIMULATOR_ID" build 2>&1 | grep -E '(error:|BUILD|FAILED)'
 ```
 
-In this environment, `xcodebuild`, `simctl`, and `devicectl` often need to run outside the sandbox because they access SwiftPM caches, Simulator services, signing assets, and physical device services. If a sandboxed attempt fails with cache, simulator, or provisioning access errors, rerun the same command with escalated permissions.
+In this environment, `xcodebuild`, `simctl`, and `devicectl` must be treated as outside-sandbox commands for deploy work because they access SwiftPM caches, Simulator services, signing assets, and physical device services. Request escalated execution before running them. If one is accidentally run in the sandbox and fails with cache, simulator, CoreDevice, or provisioning access errors, rerun the same command with escalated permissions and avoid repeating the sandbox-first path.
 
 After the builds finish, install whatever succeeded. Do not block device deployment on Simulator issues, and do not block Simulator deployment on a device signing failure. Do not launch after install unless the user explicitly requested launch/run/open.
 
 ### Install on Simulator
 ```bash
-xcrun simctl install "$SIMULATOR_ID" ./.codex-derived-data/Build/Products/Debug-iphonesimulator/MemeGTD.app
+xcrun simctl install "$SIMULATOR_ID" "$(xcodebuild -scheme MemeGTD -destination "platform=iOS Simulator,id=$SIMULATOR_ID" -showBuildSettings | awk -F' = ' '/ TARGET_BUILD_DIR = / { dir=$2 } / WRAPPER_NAME = / { name=$2 } END { print dir "/" name }')"
 ```
 
 ### Launch on Simulator (only when explicitly requested)
@@ -73,7 +82,7 @@ xcrun simctl launch "$SIMULATOR_ID" "$BUNDLE_ID"
 
 ### Install on Device
 ```bash
-xcrun devicectl device install app --device "$DEVICE_ID" ./.codex-derived-data/Build/Products/Debug-iphoneos/MemeGTD.app 2>&1
+xcrun devicectl device install app --device "$DEVICE_ID" "$(xcodebuild -scheme MemeGTD -destination "platform=iOS,id=$DEVICE_ID" -showBuildSettings | awk -F' = ' '/ TARGET_BUILD_DIR = / { dir=$2 } / WRAPPER_NAME = / { name=$2 } END { print dir "/" name }')" 2>&1
 ```
 
 ### Launch on Device (only when explicitly requested)
@@ -83,11 +92,11 @@ xcrun devicectl device process launch --device "$DEVICE_ID" "$BUNDLE_ID" 2>&1
 
 ## Error handling
 
-- If a sandboxed build fails with `Operation not permitted`, SwiftPM cache errors, or Simulator service errors, rerun with escalated permissions.
+- Do not intentionally start a deploy build in the sandbox. If a sandboxed build happens by mistake and fails with `Operation not permitted`, SwiftPM cache errors, CoreDevice errors, or Simulator service errors, rerun with escalated permissions.
 - If a build fails, show the error output.
 - If the device build fails, capture the exact failing phase and error domain. Check signing settings, provisioning profile availability, bundle ID, entitlements, target deployment version, connected device OS version, and package resolution before changing anything.
 - If the device build fails with missing provisioning profiles, retry with `-allowProvisioningUpdates`.
-- If install fails, capture the full `devicectl` output, verify that `MemeGTD.app` exists under `./.codex-derived-data/Build/Products/Debug-iphoneos/`, verify code signing with `codesign --verify --deep --strict --verbose=4`, inspect app entitlements with `codesign -d --entitlements :-`, and decode `embedded.mobileprovision` with `security cms -D -i` when permissions allow.
+- If install fails, capture the full `devicectl` output, resolve the app path from `xcodebuild -showBuildSettings`, verify that `MemeGTD.app` exists, verify code signing with `codesign --verify --deep --strict --verbose=4`, inspect app entitlements with `codesign -d --entitlements :-`, and decode `embedded.mobileprovision` with `security cms -D -i` when permissions allow.
 - If launch was explicitly requested and launch fails with `Security`, `RequestDenied`, invalid code signature, inadequate entitlements, or profile not explicitly trusted, do not guess. Verify local signing/provisioning evidence, then web-search the exact error text using Apple Developer Documentation, Apple Developer Forums, and other credible sources. Form a hypothesis such as "developer profile is installed but not trusted on the device" only after comparing local evidence with the researched error. If trust is required, tell the user the exact iPhone path, for example Settings > General > VPN & Device Management > Developer App > Trust.
 - For every failure, perform web research after local evidence collection and before deciding the fix unless the error is a known sandbox permission issue already covered above.
 - Do not make random project changes to signing, entitlements, deployment target, bundle ID, or team settings. Each change must follow from a stated hypothesis and evidence.
