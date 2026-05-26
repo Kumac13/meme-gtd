@@ -135,20 +135,19 @@ struct MarkdownBody: View {
     // MARK: - Blockquote
 
     private func blockquoteView(content: String) -> some View {
-        HStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 2) {
+            let lines = content.components(separatedBy: "\n")
+            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                if !line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    inlineMarkdownText(line)
+                }
+            }
+        }
+        .padding(.leading, 10)
+        .overlay(alignment: .leading) {
             RoundedRectangle(cornerRadius: 1.5)
                 .fill(Color(.systemGray3))
                 .frame(width: 3)
-
-            VStack(alignment: .leading, spacing: 2) {
-                let lines = content.components(separatedBy: "\n")
-                ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                    if !line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        inlineMarkdownText(line)
-                    }
-                }
-            }
-            .padding(.leading, 10)
         }
         .padding(.vertical, 2)
     }
