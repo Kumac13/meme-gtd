@@ -7,6 +7,15 @@ description: Use when the user asks to build, deploy, or install the iOS app. Al
 
 Build and install MemeGTD iOS app, prioritizing the physical device.
 
+## Critical local rule
+
+In this repo and environment, do not begin by running `xcrun devicectl`, `xcrun simctl`, or `xcodebuild`
+inside the sandbox when deploying to iOS. CoreDevice, Simulator services, signing assets, and SwiftPM
+caches are known to fail from the sandbox here.
+
+For iOS deploy commands that use `devicectl`, `simctl`, or `xcodebuild`, request escalated execution first
+with a concise justification. Do not do a sandbox-first attempt just to observe the predictable failure.
+
 ## Configuration
 
 | Key | Value |
@@ -56,7 +65,7 @@ xcodebuild -scheme MemeGTD -derivedDataPath ./.codex-derived-data -destination "
 xcodebuild -scheme MemeGTD -derivedDataPath ./.codex-derived-data -destination "platform=iOS Simulator,id=$SIMULATOR_ID" build 2>&1 | grep -E '(error:|BUILD|FAILED)'
 ```
 
-In this environment, `xcodebuild`, `simctl`, and `devicectl` often need to run outside the sandbox because they access SwiftPM caches, Simulator services, signing assets, and physical device services. If a sandboxed attempt fails with cache, simulator, or provisioning access errors, rerun the same command with escalated permissions.
+In this environment, `xcodebuild`, `simctl`, and `devicectl` must be treated as outside-sandbox commands for deploy work because they access SwiftPM caches, Simulator services, signing assets, and physical device services. Request escalated execution before running them. If one is accidentally run in the sandbox and fails with cache, simulator, CoreDevice, or provisioning access errors, rerun the same command with escalated permissions and avoid repeating the sandbox-first path.
 
 After the builds finish, install whatever succeeded. Do not block device deployment on Simulator issues, and do not block Simulator deployment on a device signing failure. Do not launch after install unless the user explicitly requested launch/run/open.
 
@@ -83,7 +92,7 @@ xcrun devicectl device process launch --device "$DEVICE_ID" "$BUNDLE_ID" 2>&1
 
 ## Error handling
 
-- If a sandboxed build fails with `Operation not permitted`, SwiftPM cache errors, or Simulator service errors, rerun with escalated permissions.
+- Do not intentionally start a deploy build in the sandbox. If a sandboxed build happens by mistake and fails with `Operation not permitted`, SwiftPM cache errors, CoreDevice errors, or Simulator service errors, rerun with escalated permissions.
 - If a build fails, show the error output.
 - If the device build fails, capture the exact failing phase and error domain. Check signing settings, provisioning profile availability, bundle ID, entitlements, target deployment version, connected device OS version, and package resolution before changing anything.
 - If the device build fails with missing provisioning profiles, retry with `-allowProvisioningUpdates`.
