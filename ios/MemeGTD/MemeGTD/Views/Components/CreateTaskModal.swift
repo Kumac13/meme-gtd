@@ -166,7 +166,11 @@ struct CreateTaskModal: View {
                 allLabels: viewModel.allLabels,
                 selectedNames: $selectedLabelNames,
                 onDismiss: { showLabelPicker = false },
-                countFor: { $0.taskCount }
+                countFor: { $0.taskCount },
+                onLabelCreated: { newLabel in
+                    viewModel.allLabels.append(newLabel)
+                    selectedLabelNames.insert(newLabel.name)
+                }
             )
             .presentationDetents([.medium, .large])
         }

@@ -26,6 +26,7 @@ protocol IssueDetailProvider: ObservableObject {
     var issueLabels: [String] { get }
     var allLabels: [IssueLabel] { get }
     func confirmLabels(_ selectedNames: Set<String>)
+    func addNewLabel(_ label: IssueLabel)
 
     // Projects
     var associatedProjects: [Project] { get }

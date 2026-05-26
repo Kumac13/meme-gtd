@@ -17,3 +17,8 @@ struct AssignLabelRequest: Codable {
 struct AssignLabelResponse: Codable {
     let success: Bool
 }
+
+struct CreateLabelRequest: Codable {
+    let name: String
+    let description: String?
+}

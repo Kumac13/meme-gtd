@@ -363,7 +363,11 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                 allLabels: viewModel.allLabels,
                 selectedNames: $selectedLabelNames,
                 onDismiss: { showLabelPicker = false },
-                countFor: { $0[keyPath: labelCountKeyPath] }
+                countFor: { $0[keyPath: labelCountKeyPath] },
+                onLabelCreated: { newLabel in
+                    viewModel.addNewLabel(newLabel)
+                    selectedLabelNames.insert(newLabel.name)
+                }
             )
             .presentationDetents([.medium, .large])
         }

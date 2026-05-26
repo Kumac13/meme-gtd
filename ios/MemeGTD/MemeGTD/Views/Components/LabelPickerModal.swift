@@ -6,8 +6,15 @@ struct LabelPickerModal: View {
     let onDismiss: () -> Void
     var showClear: Bool = false
     var countFor: (IssueLabel) -> Int
+    var onLabelCreated: ((IssueLabel) -> Void)? = nil
 
     @State private var searchText = ""
+    @State private var showCreateSheet = false
+    @State private var newLabelName = ""
+
+    private var trimmedSearchText: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     private var filteredLabels: [IssueLabel] {
         if searchText.isEmpty { return allLabels }
@@ -25,9 +32,12 @@ struct LabelPickerModal: View {
                         .foregroundColor(Color(.tertiaryLabel))
                 }
                 Spacer()
+
                 Text("Labels")
                     .font(.system(size: 17, weight: .semibold))
+
                 Spacer()
+
                 if showClear {
                     Button(action: {
                         HapticManager.impact(.light)
@@ -39,7 +49,6 @@ struct LabelPickerModal: View {
                     }
                     .disabled(selectedNames.isEmpty)
                 } else {
-                    // Invisible spacer to keep title centered
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 28))
                         .hidden()
@@ -53,6 +62,26 @@ struct LabelPickerModal: View {
             ZStack(alignment: .bottom) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
+                        Button(action: {
+                            HapticManager.impact(.light)
+                            newLabelName = trimmedSearchText
+                            showCreateSheet = true
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "tag.badge.plus")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.accent)
+                                Text(trimmedSearchText.isEmpty ? "Add Label" : "Add Label \"\(trimmedSearchText)\"")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.accent)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                        }
+
+                        Divider().padding(.leading, 16)
+
                         ForEach(filteredLabels) { label in
                             let isSelected = selectedNames.contains(label.name)
                             Button(action: {
@@ -103,5 +132,89 @@ struct LabelPickerModal: View {
             }
         }
         .background(Color(.systemBackground))
+        .sheet(isPresented: $showCreateSheet) {
+            CreateLabelSheet(initialName: newLabelName) { newLabel in
+                onLabelCreated?(newLabel)
+            }
+            .presentationDetents([.medium])
+        }
+    }
+}
+
+struct CreateLabelSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var name: String
+    @State private var description: String = ""
+    @State private var isSaving = false
+    @State private var error: String? = nil
+
+    let onCreated: (IssueLabel) -> Void
+
+    init(initialName: String, onCreated: @escaping (IssueLabel) -> Void) {
+        _name = State(initialValue: initialName)
+        self.onCreated = onCreated
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Label Name", text: $name)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+
+                    TextField("Description (Optional)", text: $description)
+                } header: {
+                    Text("Label Info")
+                } footer: {
+                    if let error = error {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .font(.system(size: 13))
+                            .padding(.top, 4)
+                    }
+                }
+            }
+            .navigationTitle("New Label")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Create") {
+                        createLabel()
+                    }
+                    .bold()
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
+                }
+            }
+        }
+    }
+
+    private func createLabel() {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+
+        isSaving = true
+        error = nil
+
+        Task {
+            do {
+                let req = CreateLabelRequest(name: trimmedName, description: description.isEmpty ? nil : description)
+                let label: IssueLabel = try await APIClient.shared.post(path: "/api/labels", body: req)
+
+                HapticManager.notification(.success)
+                onCreated(label)
+                dismiss()
+            } catch {
+                HapticManager.notification(.error)
+                self.error = error.localizedDescription
+                isSaving = false
+            }
+        }
     }
 }
