@@ -22,21 +22,19 @@ Build and deploy MemeGTD iOS app to both Simulator and physical device.
 
 In this Codex sandbox, commands that use `xcodebuild`, `xcrun simctl`, or `xcrun devicectl` must be run with escalated execution. Do not try them in the sandbox first.
 
-## Previous Codex Deploy Failure Record
+## Failure boundary
 
-- Responsibility: the previous failure was Codex's fault, not the user's, not the iPhone's, and not the project's.
-- Working recipe: Codex ignored the known Claude-style fixed recipe; next time run this skill's fixed commands first.
-- Config values: Codex rediscovered bundle ID, simulator, device ID, and DerivedData despite known working values; next time use the configured values unless output proves they are stale.
-- Target scope: Codex deployed only to the physical device instead of Simulator and device in parallel; next time build both in parallel and install both in parallel.
-- Command shape: Codex added alternate flags and fallback commands before needed; next time keep the command shape shown in this skill.
-- DeviceLocked output: Codex treated `kAMDMobileImageMounterDeviceLocked` as user/device fault; next time do not blame device state without independent proof after the fixed recipe fails.
-- DDI diagnosis: Codex chased CoreDevice/DDI details before completing the fixed recipe; next time DDI work is fallback only.
-- Generic build fallback: Codex switched to generic iOS build as a detour; next time use it only after the fixed device build truly fails and diagnosis is requested.
-- Signing checks: Codex ran `codesign` and related checks too early; next time inspect signing only after the fixed install command fails.
-- App path resolution: Codex dynamically resolved paths despite known DerivedData paths; next time use the configured DerivedData path first.
-- Memory misuse: Codex tried to fix behavior in memory instead of the invoked skill; next time keep deploy rules in this skill.
-- Research scope: Codex researched broad Apple/DDI issues instead of the local CLI deploy method; next time research only after the fixed recipe fails.
-- User communication: Codex reported speculative causes and device actions too early; next time report exact command results and avoid speculation.
+The first job of this skill is to run the known local deploy recipe. Do not start by rediscovering bundle IDs, device IDs, app paths, signing state, DDI state, or generic Xcode behavior when the configured recipe already contains working local values.
+
+Diagnostics are allowed only after the configured build/install commands fail.
+
+## Known bad Codex behavior to avoid
+
+- Do not convert this deploy task into a DDI/CoreDevice investigation before running the fixed recipe.
+- Do not interpret `kAMDMobileImageMounterDeviceLocked` as proof of user/device fault without independent evidence.
+- Do not store deploy corrections in memory instead of this skill.
+- Do not web-search broad Apple/DDI topics when the task is local CLI deployment.
+- Do not change target scope from Simulator+device to device-only unless the user explicitly asks.
 
 ## Steps
 
