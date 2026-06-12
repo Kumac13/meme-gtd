@@ -1,4 +1,6 @@
-nstruction handling
+# AGENTS.md
+
+## Instruction handling
 
 * Do not change the user’s task into a broader diagnostic task.
 * When the user invokes a skill explicitly, treat that skill as the source of truth for the task procedure.
