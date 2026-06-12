@@ -17,7 +17,7 @@
 
 ## docsを見るタイミング
 
-- **実装開始前**: 要件・仕様の確認
+- **実装開始前**: `docs/architecture.md`（変更の波及範囲の把握）と `docs/requirement.md`（要件・仕様）を確認
 - **リリース前**: バージョニングルールの確認
 
 詳細は `docs/CLAUDE.md` を参照。
@@ -26,8 +26,21 @@
 
 - ファイル作成・更新前に内容を提示して承認を得る
 - コマンド・ファイルは全体を提示（部分的な省略禁止）
-- 実装前に`docs/requirement.md`を必ず参照
+- 実装前に`docs/architecture.md`と`docs/requirement.md`を必ず参照
 - **バックエンド（API/DB）を変更・追加する際は、必ず対応するテストを書くこと**（テストなしでのバックエンド変更は禁止）
+
+## 変更時のドキュメント・追随作業マップ
+
+**IMPORTANT: 以下に該当する変更をしたら、対応する追随作業まで完了して初めて作業完了とする**
+
+| 変更内容 | 必須の追随作業 |
+|---|---|
+| APIスキーマ（`packages/api/src/schemas/`）変更 | `openapi:generate` → Webクライアント再生成 → iOS Swiftモデル手動更新（チェックリスト: `docs/architecture.md`） |
+| DBスキーマ変更 | `schema/` に連番SQL追加（既存SQL変更禁止）+ shared型 + リポジトリ + テスト |
+| CLIコマンド追加 | `MULTIWORD_COMMANDS` 登録 + `docs/cli-commands.md` 更新 |
+| 記事抽出ロジック変更 | iOS用 `extractor.bundle.js` 再ビルド（手順: `ios/CLAUDE.md`） |
+| スキーマ変更・新機能追加 | `README.ai.md` 更新（他AIへ渡すコンテキストドキュメント） |
+| 新機能・機能変更 | `README.md` + 関連 `docs/` 更新 + バージョンバンプ |
 
 ## <critical-safety>Push前のローカル検証（必須）</critical-safety>
 
