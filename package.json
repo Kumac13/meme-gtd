@@ -17,7 +17,7 @@
     "dev": "pnpm --filter meme-gtd-cli dev",
     "format": "pnpm -r format",
     "mgtd": "pnpm --filter meme-gtd-cli exec node dist/index.js",
-    "mgtd:test": "DB_PATH=$PWD/test-data/test.db MGTD_CONFIG_PATH=$PWD/test-data/context.json pnpm mgtd",
+    "mgtd:test": "MGTD_ENV=test DB_PATH=$PWD/test-data/test.db MGTD_CONFIG_PATH=$PWD/test-data/context.json pnpm mgtd",
     "mgtd:dev": "pnpm --filter meme-gtd-cli exec tsx ./src/index.ts",
     "bootstrap": "pnpm install && pnpm build",
     "mgtd:install": "node ./scripts/install-cli.mjs",
