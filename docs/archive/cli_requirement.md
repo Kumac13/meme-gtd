@@ -1,5 +1,7 @@
 # Issues CLI 要件定義（GitHubオマージュ）
 
+> **注意（アーカイブ文書）**: 本書は初期実装時の要件定義であり、現在の実装を反映していない。現状のアーキテクチャは `docs/architecture.md`、CLIコマンドの現行仕様は `docs/cli-commands.md` を参照すること。
+
 ---
 
 ## 1. 概要
