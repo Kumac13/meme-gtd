@@ -13,20 +13,22 @@
 
 ## 2. スコープと前提条件
 
-- **クライアント**:
-  - CLI クライアント `mgtd` を最初に実装する。
-  - 公開 API（OpenAPI 準拠）を提供し、自動化や将来の MCP ベース AI クライアントから利用できるようにする。
-  - Web UI は提供しない（バックエンドと CLI のみで運用する）。
+- **クライアント**（実装済みのもの）:
+  - CLI クライアント `mgtd`（`packages/cli`）。
+  - 公開 API（OpenAPI 準拠、`packages/api`）。自動化や AI エージェントからの利用を想定。
+  - Web UI（`packages/web`、React SPA）。API サーバーが同一ポートで配信する。
+  - iOS アプリ + Safari Share Extension（`ios/MemeGTD`、SwiftUI）。
+  - Chrome 拡張（`packages/extension`、Web 記事の保存用）。
 - **データストア**:
-  - ローカル SQLite（単一ファイル）とリモート Web API は別運用。プロダクト導入時にどちらを使うか決め、運用中に切り替えや同期は行わない。
-  - CLI `mgtd` はローカル SQLite を前提としたインターフェイス。リモート API は自動化や外部クライアント（例: MCP 経由）向け。
+  - ローカル SQLite（単一ファイル）が唯一のデータストア。CLI と API サーバーは同じ DB ファイルを共有する。
+  - Web UI・iOS・拡張は API サーバー経由でアクセスする。CLI のみ API を経由せず直接 DB を操作する。
 - **ユーザー管理**:
-  - 単一ユーザー利用のため認証・権限管理は当面不要。
+  - 単一ユーザー利用のため認証・権限管理は当面不要。閉域ネットワーク（Tailscale 等）での運用を前提とする。
   - 将来 GitHub OAuth を利用して本人のみがアクセスする構成を検討する。
 - **CLI ポリシー**:
   - サブコマンド体系・オプション命名・UI 表示ルールは `gh` CLI に準拠する。
   - すべての一覧系コマンドは `--json` を必ず提供する。
-  - CLI 詳細要件は `docs/cli_requirement.md` に記載する（本書は全体要件のまとめ）。
+  - CLI コマンドの現行仕様は `docs/cli-commands.md` に記載する（本書は全体要件のまとめ）。
 
 ---
 
@@ -92,12 +94,12 @@ stateDiagram-v2
   - コメント・ラベルの付与と履歴管理。
   - メモをタスクへ昇格させ、`derived_from` リンクで元メモとの関連を保つ。
 - **制約**: メモ ID で `task` レコードを参照する操作は型不一致エラーとする。
-- **I/O チャネル**: CLI・API とも共通スキーマを利用し、詳細な操作フローは各インターフェイス仕様（例: `docs/cli_requirement.md`）で定義する。
+- **I/O チャネル**: CLI・API とも共通スキーマを利用し、詳細な操作フローは各インターフェイス仕様（`docs/cli-commands.md`、`packages/api/docs/api/openapi.yaml`）で定義する。
 
 ### 4.2 タスク（Task）
 
 - **役割**: Inbox 以降のアクション管理。Captured から昇格したメモ、または直接定義された作業項目を統一的に扱う。
-- **主要データ**: `issues.type = task`、`title` 必須、`status` は `open`, `next`, `waiting`, `scheduled`, `done`, `canceled` から選択。
+- **主要データ**: `issues.type = task`、`title` 必須、`status` は `inbox`, `open`, `next`, `waiting`, `scheduled`, `someday`, `done`, `canceled` の8値から選択。`task_kind` は `event`（予定）/ `action`（作業）の2値。
   - **スケジュール管理** (新形式 - ISO 8601):
     - `scheduled_start` (YYYY-MM-DDTHH:MM:SS): 予定開始日時
     - `scheduled_end` (YYYY-MM-DDTHH:MM:SS): 予定終了日時
@@ -175,13 +177,37 @@ stateDiagram-v2
 
 ### 4.8 バックエンド運用ポリシー
 
-- 初期導入時に「ローカルアプリ（SQLite）」か「リモート API サービス（Web）」のどちらかを選択し、運用中に切り替えや同期は行わない。
-- CLI `mgtd` はローカル SQLite のみを対象にするため、リモート API を利用する場合は別クライアント（例: MCP 経由の AI エージェント）を用意する。
+- ローカル SQLite が唯一のデータストア。API サーバーと CLI は同じ DB ファイル（WAL モード）を共有する。
+- Web UI・iOS アプリ・ブラウザ拡張は API サーバー（閉域ネットワーク上）経由でアクセスする。
 
 ### 4.9 例外・エラー
 
 - 共通エラーメッセージは CLI / API で統一。
 - ネットワーク失敗時は `API unreachable` を返し、ユーザーにバックエンド切替を促す。
+
+### 4.10 記事（Article）
+
+- **役割**: ブラウザ拡張（Chrome）や iOS Safari Share Extension から保存した Web 記事のアーカイブ。
+- **主要データ**: `issues.type = article`、`title` 必須、`meta` に `originalUrl`（必須）、`siteName`、`archivedAt` を JSON で保持。本文は Readability で抽出した Markdown。
+- **機能要件**: 保存（`POST /api/articles`）、一覧・詳細・削除、コメント・ラベル・プロジェクト・リンクの付与。
+
+### 4.11 検索（keyword / semantic）
+
+- **keyword 検索**: title / body_md / コメントを対象とした LIKE 部分一致。日本語の単語境界に対応するため FTS5 ではなく LIKE を採用。マッチ箇所を issue 単位でグルーピングして返す。
+- **semantic 検索**: ベクトル埋め込み（title + body + comments）のコサイン類似度。OpenAI 互換 `/v1/embeddings` API（Ollama 等）で生成し、`mgtd embedding sync` で同期する（オプトイン機能）。
+- CLI（`mgtd search keyword/semantic`）・API（`/api/search/*`）・Web・iOS の全クライアントから利用可能。
+
+### 4.12 添付ファイル（画像）
+
+- 画像アップロード（`POST /api/attachments`、multipart）と配信（`GET /api/attachments/{filename}`）を提供。
+- Web UI・iOS から Markdown 本文への画像埋め込みに使用する。
+
+### 4.13 アクティビティログ
+
+- 全 mutation を `activity_log` テーブルにイベントとして記録する（イベントソーシング、append-only）。
+- SQLite トリガーで UPDATE / DELETE を禁止し、不変性を保証する。
+- 更新系イベントは `{ old, new }` 形式の差分を保持。操作元（`cli`/`api`/`system`）を記録する。
+- `GET /api/activity-log` で参照でき、Web・iOS のタイムライン表示に使用する。
 
 ---
 
@@ -191,24 +217,29 @@ stateDiagram-v2
 - 体験方針は GitHub CLI (`gh`) に倣い、サブコマンド構造やオプション命名を踏襲する。
 - 表示はテキストベースを基本とし、機械可読な JSON 形式も提供する。
 - 本文編集やコメント入力など、複雑な入力は利用者のエディタ（`$EDITOR`）を起動する。
-- 詳細なコマンドツリーやオプション仕様は `docs/cli_requirement.md` に委譲する。
+- 詳細なコマンドツリーやオプション仕様は `docs/cli-commands.md` に委譲する。
 
 ## 6. API およびデータモデル
 
 - **共通スキーマ**: ローカル DB とリモート API は同じデータ構造を維持する。
 - **テーブル**:
-  - `issues`:
-    - 基本: `id`, `type`, `title`, `body_md`, `status`, `meta`, `created_at`, `updated_at`, `is_bookmarked`, `is_deleted`
+  - `issues`（memo / task / article 共用）:
+    - 基本: `id`, `type`, `title`, `body_md`, `status`, `meta`, `created_at`, `updated_at`, `is_bookmarked`, `is_deleted`, `task_kind`
     - スケジュール (新形式): `scheduled_start`, `scheduled_end`, `is_all_day`, `actual_start`, `actual_end`, `notify_before_minutes`
     - スケジュール (旧形式/非推奨): `scheduled_on`, `start_time`, `end_date`, `end_time`, `duration`
-  - `labels`, `issue_labels`, `comments`, `comment_revisions`, `links`, `projects`, `project_items`
+  - `labels`, `issue_labels`, `comments`, `comment_revisions`, `links`, `url_links`, `projects`, `project_items`, `activity_log`, `issues_fts`, `issue_embeddings`
+  - カラム定義の詳細は `README.ai.md`、マイグレーション SQL は `schema/` を参照。
 - **ID ルール**:
-  - すべてのエンティティで単一連番 ID を採用。CLI は `memo` / `task` で型チェックを実施。
-  - デプロイ単位で ID の権威を決める。ローカル運用では SQLite が唯一の ID 発行源となり、リモートサービス運用では API 側が一意 ID を発行する。モードを跨いだ同期は行わない。
-- **API**:
-  - 基本エンドポイント `/issues`（`type` クエリでフィルタ）。
-  - コメント、ラベル、リンク、プロジェクトなどは `/issues/{id}/comments`, `/issues/{id}/labels` 等で提供。
-  - `POST /issues/{id}/promote` により memo → task 昇格をハンドリング。
+  - すべてのエンティティで単一連番 ID を採用。CLI は `memo` / `task` / `article` で型チェックを実施。
+  - SQLite が唯一の ID 発行源。
+- **API**（タイプ別エンドポイント。契約の正は `packages/api/docs/api/openapi.yaml`）:
+  - Memos: `/api/memos`（CRUD、bookmark、promote、promote-preview、comments）
+  - Tasks: `/api/tasks`（CRUD、status 遷移、bookmark、demote、comments）
+  - Articles: `/api/articles`（保存・一覧・詳細・削除）
+  - Labels / Links / URL Links / Projects / Comments: `/api/labels`, `/api/links`, `/api/issues/{id}/url-links`, `/api/projects`, `/api/issues/{id}/comments` 等
+  - Search: `/api/search/keyword`, `/api/search/semantic`
+  - Attachments: `/api/attachments`
+  - Activity Log: `/api/activity-log`
   - `GET /api/tasks` のレスポンスには各タスクの `projectIds` と `linkIds` を含み、AIエージェントが関連情報を参照可能。
 
 ---
@@ -217,7 +248,7 @@ stateDiagram-v2
 
 - **ローカル専用 CLI**: CLI はローカル SQLite に対して即時反映する。リモート環境での同期は行わない。
 - **即時反映**: CLI での操作は即座に DB / API へ反映。書き込みエラー時は詳細メッセージを返す。
-- **検索性能**: SQLite FTS5 を利用した全文検索を提供。
+- **検索性能**: 横断 keyword 検索は LIKE（日本語対応のため意図的に FTS5 不使用）、semantic 検索はベクトル類似度（4.11 参照）。
 - **拡張性**: API は OpenAPI 仕様を公開し、将来のクライアントから再利用できる。
 - **CLI 補完**: `fish`, `zsh` 用補完スクリプトを提供。
 
@@ -226,8 +257,8 @@ stateDiagram-v2
 ## 8. 将来検討事項 / 非対応
 
 - Google カレンダー連携（`task` の期限をカレンダーに登録）。現状は非対応、将来要件として記載。
-- GUI クライアント（Web など）の提供は現行スコープ外。必要になれば別計画で検討。
-- 添付ファイル・画像管理。必要になった段階で別ストレージ戦略を検討。
+- マルチユーザー・共有機能。単一ユーザーを前提とする。
+- アプリケーションレベルの認証（GitHub OAuth 等）。現状は閉域ネットワーク前提。
 
 ## 9. HTTP API サーバー概要
 
@@ -239,21 +270,22 @@ stateDiagram-v2
   - Labels: `/api/labels`, `/api/issues/{id}/labels`
   - Links: `/api/links`, `/api/issues/{id}/links`
 - **ドキュメント**: `pnpm openapi:generate` で `packages/api/docs/api/openapi.yaml` を生成。Swagger UI は `/api-docs` で提供。`pnpm openapi:validate` で Redocly 検証を実施。
-- **運用想定**: 単一ユーザー／閉域ネットワーク（TailScale 等）上で稼働。アプリケーションレベルの認証は今後の拡張事項とする。
-- マルチユーザー・共有機能。単一ユーザーを前提とする。- MCP (Model Context Protocol) の採用検討。AI クライアントが CLI/API を安全に操作できるように、運用ポリシーと制御チャンネルを設計する（将来計画）。
-
+- **運用想定**: 単一ユーザー／閉域ネットワーク（Tailscale 等）上で稼働。アプリケーションレベルの認証は今後の拡張事項とする。
+- **Web UI 配信**: API サーバーが `packages/web/dist` を同一ポートで静的配信する（SPA フォールバック付き）。
 
 ---
 
-## 9. 参照資料
+## 10. 参照資料
 
-- `docs/cli_requirement.md`: CLI コマンド仕様（`memo`, `task` ほか）
+- `docs/architecture.md`: リポジトリ全体のアーキテクチャと変更の波及範囲
+- `docs/cli-commands.md`: CLI コマンドリファレンス
+- `docs/api-filtering.md`: API フィルタリング仕様
 - GTD フロー図（本ドキュメント 3章）
 - GitHub CLI 公式ドキュメント
 
 ---
 
-## 10. 用語集
+## 11. 用語集
 
 - **Inbox**: `memo` で収集された未整理事項の集合。
 - **Next Actions**: 実行待ちタスク。`task` の `status=next` で表現。
@@ -263,4 +295,4 @@ stateDiagram-v2
 
 ---
 
-この文書は、`meme-gtd` プロジェクト全体の要件をまとめたものであり、CLI 専用の詳細仕様は `docs/cli_requirement.md` を参照すること。
+この文書は、`meme-gtd` プロジェクト全体の要件をまとめたものであり、CLI コマンドの詳細仕様は `docs/cli-commands.md` を、実装アーキテクチャは `docs/architecture.md` を参照すること。

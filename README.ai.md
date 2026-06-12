@@ -6,17 +6,30 @@ GTD (Getting Things Done) ベースのローカルファースト個人タスク
 
 - **Memo**: 頭の中のアイデア・未整理事項を素早く取り込む（Inboxに入る前の状態）
 - **Task**: トリアージ後の実行可能なアクション
+- **Article**: ブラウザ拡張 / iOS Share Extension で保存したWeb記事のアーカイブ
 - **ローカルファースト**: SQLiteでデータ完全ローカル保持
 - **単一ユーザー前提**: 認証なし、個人利用
+
+## クライアント
+
+| クライアント | 場所 | バックエンドへの経路 |
+|-------------|------|---------------------|
+| CLI `mgtd` | `packages/cli` | core サービス直接呼び出し（HTTP非経由） |
+| Web UI | `packages/web` | REST API（OpenAPIから自動生成したクライアント） |
+| iOS アプリ + Share Extension | `ios/MemeGTD` | REST API（手書きSwiftモデル・要手動同期） |
+| Chrome 拡張 | `packages/extension` | REST API（`POST /api/articles`） |
+
+リポジトリ構造と変更の波及範囲は `docs/architecture.md` を参照。
 
 ## GTDワークフロー
 
 ```
 Memo (Captured) → promote → Task (Inbox)
                               ↓
-                    open → next → done
+            inbox → open → next → done
                          → waiting
                          → scheduled
+                         → someday
                          → canceled
 ```
 
@@ -30,18 +43,19 @@ Memo (Captured) → promote → Task (Inbox)
 
 ## データモデル
 
-### issues（メモ・タスク共通）
+### issues（メモ・タスク・記事 共通）
 
 | カラム | 型 | 説明 |
 |--------|-----|------|
 | id | INTEGER PK | 自動採番 |
-| type | TEXT | `memo` or `task` |
-| title | TEXT | タスクのみ必須、メモはNULL |
+| type | TEXT | `memo` / `task` / `article` |
+| title | TEXT | task/articleは必須、メモはNULL |
 | body_md | TEXT | 本文（Markdown） |
-| status | TEXT | タスクのみ: `open`/`next`/`waiting`/`scheduled`/`done`/`canceled` |
+| status | TEXT | タスクのみ: `inbox`/`open`/`next`/`waiting`/`scheduled`/`someday`/`done`/`canceled` |
+| task_kind | TEXT | タスクのみ: `event`（予定）/`action`（作業、デフォルト） |
 | is_bookmarked | INTEGER | ブックマークフラグ (0/1) |
 | is_deleted | INTEGER | 論理削除フラグ (0/1) |
-| meta | TEXT | JSON形式の追加情報 |
+| meta | TEXT | JSON形式の追加情報。articleは `originalUrl`/`siteName`/`archivedAt` を保持 |
 | created_at | TEXT | 作成日時 (ISO 8601) |
 | updated_at | TEXT | 更新日時 (ISO 8601) |
 | **スケジュール（新形式）** |||
@@ -223,24 +237,40 @@ mgtd search semantic <query> --types <types> --limit <n> --json
 |---------------|------|
 | `GET/POST /api/memos` | メモ一覧・作成 |
 | `GET/PATCH/DELETE /api/memos/{id}` | メモ詳細・更新・削除 |
+| `GET /api/memos/{id}/promote-preview` | 昇格後のtask本文プレビュー（read-only） |
 | `POST /api/memos/{id}/promote` | メモ→タスク昇格 |
 | `GET/POST /api/tasks` | タスク一覧・作成 |
 | `GET/PATCH/DELETE /api/tasks/{id}` | タスク詳細・更新・削除 |
+| `POST /api/tasks/{id}/demote` | タスク→メモ降格 |
+| `GET/POST /api/articles` | 記事一覧・保存（拡張/Share Extensionから） |
+| `GET/DELETE /api/articles/{id}` | 記事詳細・削除 |
 | `GET/POST /api/labels` | ラベル一覧・作成 |
 | `GET/POST /api/projects` | プロジェクト一覧・作成 |
 | `GET/POST /api/links` | リンク一覧・作成 |
 | `GET/POST /api/issues/{id}/url-links` | 外部URLリンク一覧・作成 |
 | `DELETE /api/url-links/{id}` | URLリンク削除 |
 | `GET/POST /api/issues/{id}/comments` | コメント一覧・作成 |
+| `POST /api/attachments` | 画像アップロード（multipart） |
+| `GET /api/attachments/{filename}` | 画像配信 |
 | `GET /api/activity-log` | アクティビティログ一覧（フィルタ対応） |
+| `GET /api/search/keyword` | キーワード検索（LIKE部分一致） |
 | `GET /api/search/semantic` | セマンティック検索（ベクトル類似度） |
+
+契約の正は `packages/api/docs/api/openapi.yaml`（Zodスキーマから自動生成）。
 
 ### Web UI
 
-- タスク/メモ一覧・詳細・編集
+- タスク/メモ/記事 一覧・詳細・編集
 - カンバンボード（ステータス別表示）
 - カレンダー表示（予定/実績）
 - プロジェクト管理
+- アクティビティログ表示
+
+### iOS アプリ（`ios/MemeGTD`）
+
+- SwiftUI製。メモ/タスク/記事の一覧・詳細・作成・編集、検索（keyword/semantic）、昇格フロー、画像添付
+- Safari Share Extension でWeb記事を保存（`POST /api/articles`）
+- SwiftモデルはAPIスキーマの手書きミラー。API変更時は手動同期が必要（`docs/architecture.md` の対応表参照）
 
 ## 検索アーキテクチャ
 
@@ -275,10 +305,12 @@ mgtd search semantic <query> --types <types> --limit <n> --json
 
 ## 技術スタック
 
-- **言語**: TypeScript
+- **言語**: TypeScript / Swift（iOS）
 - **ランタイム**: Node.js 22+
 - **DB**: SQLite (better-sqlite3)
-- **API**: Fastify 5
+- **API**: Fastify 5（Zodバリデーション、OpenAPI自動生成）
 - **Web**: React 19 / Vite / Tailwind CSS
+- **iOS**: SwiftUI（iOS 16+）+ Safari Share Extension
 - **CLI**: oclif
+- **拡張**: Chrome Extension（Readability + Turndown で記事抽出）
 - **検索**: SQLite FTS5（タイプ内検索） / LIKE（横断keyword検索） / ベクトル検索（embedding + コサイン類似度）
