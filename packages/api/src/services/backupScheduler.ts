@@ -2,7 +2,7 @@ import { setInterval, clearInterval } from 'node:timers';
 import type { FastifyBaseLogger } from 'fastify';
 import { createBackup, latestBackupTime, defaultBackupDir } from 'meme-gtd-db';
 
-export interface BackupSchedulerOptions {
+interface BackupSchedulerOptions {
   dbPath: string;
   backupDir?: string;
   keep?: number;
@@ -10,7 +10,7 @@ export interface BackupSchedulerOptions {
   logger: FastifyBaseLogger;
 }
 
-export interface BackupScheduler {
+interface BackupScheduler {
   stop: () => void;
 }
 
