@@ -1,3 +1,4 @@
+import { setInterval, clearInterval } from 'node:timers';
 import type { FastifyBaseLogger } from 'fastify';
 import { createBackup, latestBackupTime, defaultBackupDir } from 'meme-gtd-db';
 
