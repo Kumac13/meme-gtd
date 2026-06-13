@@ -104,15 +104,17 @@ test('MemoService.list total ignores limit and offset', async () => {
   fs.removeSync(dir);
 });
 
-test('MemoService promote', async () => {
+test('MemoService promotePreview', async () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'mgtd-core-'));
   const { configPath } = await setupConfig(dir);
   process.env.MGTD_CONFIG_PATH = configPath;
   const { config } = await loadConfig({ configPath });
   const service = new MemoService({ config });
   const memo = service.create({ bodyMd: 'promote me' });
-  const result = service.promote({ memoId: memo.id, title: 'task title' });
-  assert.ok(result.taskId > 0);
+  const preview = service.promotePreview(memo.id);
+  assert.equal(preview.bodyMd, 'promote me');
+  assert.deepEqual(preview.labels, []);
+  assert.deepEqual(preview.projectIds, []);
   delete process.env.MGTD_CONFIG_PATH;
   fs.removeSync(dir);
 });

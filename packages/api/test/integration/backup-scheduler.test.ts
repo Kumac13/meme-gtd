@@ -70,7 +70,9 @@ describe('Backup scheduler', () => {
       scheduler.stop();
     }
 
-    // After stop, no further backups are taken
+    // After stop, no further backups are taken. A backup that started just
+    // before stop() may still be in flight, so let it settle first.
+    await delay(500);
     const countAfterStop = countBackups(backupDir);
     await delay(700);
     assert.equal(countBackups(backupDir), countAfterStop);
