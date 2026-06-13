@@ -2,51 +2,115 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "workspaces": {
     ".": {
-      "entry": ["scripts/*.mjs"]
+      "entry": [
+        "scripts/*.mjs"
+      ]
     },
     "packages/api": {
-      "entry": ["src/index.ts", "src/server.ts"],
-      "project": ["src/**/*.ts"],
-      "ignore": ["src/schemas/**"]
+      "entry": [
+        "src/index.ts",
+        "src/server.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ],
+      "ignore": [
+        "src/schemas/**"
+      ]
     },
     "packages/cli": {
-      "entry": ["src/index.ts", "src/commands/**/*.ts"],
-      "project": ["src/**/*.ts"]
+      "entry": [
+        "src/index.ts",
+        "src/commands/**/*.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
     },
     "packages/config": {
-      "entry": ["src/index.ts"],
-      "project": ["src/**/*.ts"]
+      "entry": [
+        "src/index.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
     },
     "packages/core": {
-      "entry": ["src/index.ts"],
-      "project": ["src/**/*.ts"],
-      "ignore": ["test/**"]
+      "entry": [
+        "src/index.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ],
+      "ignore": [
+        "test/**"
+      ]
     },
     "packages/db": {
-      "entry": ["src/index.ts"],
-      "project": ["src/**/*.ts"],
-      "ignore": ["test/**"]
+      "entry": [
+        "src/index.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ],
+      "ignore": [
+        "test/**"
+      ]
     },
     "packages/logger": {
-      "entry": ["src/index.ts"],
-      "project": ["src/**/*.ts"],
-      "ignoreDependencies": ["pino-pretty"]
+      "entry": [
+        "src/index.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ],
+      "ignoreDependencies": [
+        "pino-pretty",
+        "pino-roll"
+      ]
     },
     "packages/shared": {
-      "entry": ["src/index.ts"],
-      "project": ["src/**/*.ts"]
+      "entry": [
+        "src/index.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
     },
     "packages/web": {
-      "entry": ["src/main.tsx"],
-      "project": ["src/**/*.{ts,tsx}"],
-      "ignoreDependencies": ["openapi-typescript-codegen"],
-      "ignore": ["src/api/**"]
+      "entry": [
+        "src/main.tsx"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}"
+      ],
+      "ignoreDependencies": [
+        "openapi-typescript-codegen"
+      ],
+      "ignore": [
+        "src/api/**"
+      ]
     },
     "packages/extension": {
-      "entry": ["src/background/index.ts", "src/content/index.ts", "src/popup/index.tsx", "src/options/index.tsx", "src/ios-extractor.ts"],
-      "project": ["src/**/*.{ts,tsx}"],
-      "ignoreDependencies": ["@types/chrome", "esbuild"]
+      "entry": [
+        "src/background/index.ts",
+        "src/content/index.ts",
+        "src/popup/index.tsx",
+        "src/options/index.tsx",
+        "src/ios-extractor.ts"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}"
+      ],
+      "ignoreDependencies": [
+        "@types/chrome",
+        "esbuild"
+      ]
     }
   },
-  "ignore": ["specs/**", "test-data/**", "ios/**"]
+  "ignore": [
+    "specs/**",
+    "test-data/**",
+    "ios/**"
+  ]
 }

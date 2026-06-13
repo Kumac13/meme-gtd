@@ -26,6 +26,7 @@ async function start() {
       logger: {
         level: config.logLevel,
         prettyPrint: config.nodeEnv === 'development',
+        logFile: config.logFile,
       },
     });
 

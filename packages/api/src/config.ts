@@ -6,6 +6,7 @@ interface ServerConfig {
   host: string;
   corsAllowedOrigins: string[];
   logLevel: string;
+  logFile?: string;
   nodeEnv: string;
   mgtdConfig: MgtdConfig;
 }
@@ -60,11 +61,14 @@ export async function loadConfig(): Promise<ServerConfig> {
   const port = typeof values.port === 'string' ? values.port : process.env.PORT ?? '3000';
   const host = typeof values.host === 'string' ? values.host : process.env.HOST ?? '0.0.0.0';
 
+  const logFileEnv = process.env.MGTD_LOG_FILE;
+
   return {
     port: parseInt(port, 10),
     host,
     corsAllowedOrigins,
     logLevel: process.env.LOG_LEVEL ?? 'info',
+    logFile: logFileEnv && logFileEnv.trim().length > 0 ? logFileEnv : undefined,
     nodeEnv: process.env.NODE_ENV ?? 'development',
     mgtdConfig,
   };

@@ -36,6 +36,7 @@
     "meme-gtd-config": "workspace:*",
     "meme-gtd-core": "workspace:*",
     "meme-gtd-db": "workspace:*",
+    "meme-gtd-logger": "workspace:*",
     "meme-gtd-shared": "workspace:*",
     "yaml": "^2.8.1",
     "zod": "^3.23.8"
