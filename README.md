@@ -38,6 +38,22 @@ corepack prepare pnpm@9.0.0 --activate
      mgtd memo comment --help
      ```
 
+## 運用（バックアップ・常駐化・ヘルスチェック）
+
+```bash
+# DBバックアップ（WAL安全。<DBディレクトリ>/backups に世代管理付きで保存）
+mgtd db backup
+mgtd db backup --list
+
+# ヘルスチェック（APIサーバー起動中）
+curl http://localhost:3000/api/health
+```
+
+- APIサーバー稼働中は24時間ごとに自動バックアップされます（`MGTD_BACKUP_ENABLED=false` で無効化）
+- systemd によるAPIサーバーの常駐化テンプレート: `deploy/systemd/mgtd-api.service`
+- `MGTD_LOG_FILE` を設定するとログをファイルにも出力（日次ローテーション・7世代保持）
+- 詳細な手順・環境変数一覧・リストア手順は [docs/operations.md](./docs/operations.md) を参照してください
+
 ## ブラウザ拡張機能（Webクリッパー）
 
 Web閲覧中の記事を保存するためのChrome拡張機能が利用可能です。

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.31.0 - 2026-06-13
+
+### New Features
+
+- **Production DB safety guards** (Issue #48 follow-up):
+  - `MGTD_ENV=test` now refuses to run when the resolved DB path is inside the production data directory (`~/.local/share/mgtd/`). `pnpm mgtd:test` and `pnpm server:dev` set it automatically.
+  - `DB_PATH` is now honored even when the config file is missing (previously this silently fell back to the production database).
+- **Database backup**:
+  - New `mgtd db backup` command using SQLite's online backup API (WAL-safe, generation-managed pruning via `--keep`, `--list`, `--output`).
+  - The API server now takes automatic periodic backups (`MGTD_BACKUP_ENABLED` / `MGTD_BACKUP_INTERVAL_HOURS` / `MGTD_BACKUP_KEEP` / `MGTD_BACKUP_DIR`).
+  - `mgtd db migrate` pre-migration backups now use the online backup API instead of a plain file copy (which missed uncheckpointed WAL content) and are stored in `<db dir>/backups`.
+- **Health check**: New `GET /api/health` endpoint reporting server version, uptime, and database connectivity (503 when the database is unreachable).
+- **Log file output**: Optional `MGTD_LOG_FILE` writes JSON logs to a file with daily rotation (7 generations kept) in addition to stdout.
+- **Process management**: systemd user unit template at `deploy/systemd/mgtd-api.service`; operational runbook in `docs/operations.md`.
+
+### Behavior Changes
+
+- `mgtd init --force` on an existing database now requires `--yes` in non-interactive mode (scripts, CI, AI agents) and shows a confirmation prompt on a TTY. Non-interactive overwrites without `--yes` exit with status 1.
+
 ## 0.30.0 - 2026-04-24
 
 ### New Features
