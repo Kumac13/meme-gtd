@@ -188,6 +188,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
         },
       ],
       tags: [
+        { name: 'System', description: 'Health and operational endpoints' },
         { name: 'Memos', description: 'Memo management endpoints' },
         { name: 'Tasks', description: 'Task management endpoints' },
         { name: 'Labels', description: 'Label management endpoints' },
@@ -218,6 +219,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   app.setErrorHandler(errorHandler);
 
   // Register routes
+  const { healthRoutes } = await import('./routes/health.js');
+  await app.register(healthRoutes);
+
   const { memoRoutes } = await import('./routes/memos.js');
   await app.register(memoRoutes);
 
