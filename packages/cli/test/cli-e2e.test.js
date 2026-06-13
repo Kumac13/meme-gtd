@@ -46,7 +46,7 @@ test('mgtd end-to-end memo lifecycle', () => {
   const list = runCli(['memo', 'list', '-j'], { env });
   assert.equal(list.status, 0, list.stderr);
   const memos = JSON.parse(list.stdout);
-  const bodies = memos.memos.map((memo) => memo.bodyMd);
+  const bodies = memos.data.map((memo) => memo.bodyMd);
   assert.ok(bodies.includes('e2e memo'));
   assert.ok(bodies.includes('positional memo'));
 

@@ -64,6 +64,7 @@ const MULTIWORD_COMMANDS = [
   ['search'],
   ['embedding', 'sync'],
   ['embedding'],
+  ['db', 'backup'],
   ['db', 'migrate'],
   ['db']
 ] as const;

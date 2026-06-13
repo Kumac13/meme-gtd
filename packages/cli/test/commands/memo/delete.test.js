@@ -81,7 +81,7 @@ describe('memo delete command (User Story 1, 2, 3)', () => {
 
     // Verify memo is NOT deleted
     const list = runCli(['memo', 'list', '-j'], { env });
-    const memos = JSON.parse(list.stdout).memos;
+    const memos = JSON.parse(list.stdout).data;
     const memo = memos.find(m => m.id === memoId);
     assert.ok(memo && !memo.isDeleted, 'Memo should NOT be deleted in non-TTY without --yes');
   });
@@ -105,7 +105,7 @@ describe('memo delete command (User Story 1, 2, 3)', () => {
 
     // Verify memo is deleted
     const list = runCli(['memo', 'list', '-j'], { env });
-    const memos = JSON.parse(list.stdout).memos;
+    const memos = JSON.parse(list.stdout).data;
     const deletedMemo = memos.find(m => m.id === memoId);
     assert.ok(!deletedMemo || deletedMemo.isDeleted, 'Memo should be deleted');
   });
@@ -121,7 +121,7 @@ describe('memo delete command (User Story 1, 2, 3)', () => {
 
     // Verify memo is deleted
     const list = runCli(['memo', 'list', '-j'], { env });
-    const memos = JSON.parse(list.stdout).memos;
+    const memos = JSON.parse(list.stdout).data;
     const deletedMemo = memos.find(m => m.id === memoId);
     assert.ok(!deletedMemo || deletedMemo.isDeleted, 'Memo should be deleted');
   });
@@ -138,7 +138,7 @@ describe('memo delete command (User Story 1, 2, 3)', () => {
 
     // Verify memo is deleted
     const list = runCli(['memo', 'list', '-j'], { env });
-    const memos = JSON.parse(list.stdout).memos;
+    const memos = JSON.parse(list.stdout).data;
     const deletedMemo = memos.find(m => m.id === memoId);
     assert.ok(!deletedMemo || deletedMemo.isDeleted, 'Memo should be deleted');
   });
@@ -154,7 +154,7 @@ describe('memo delete command (User Story 1, 2, 3)', () => {
 
     // Verify memo is deleted
     const list = runCli(['memo', 'list', '-j'], { env });
-    const memos = JSON.parse(list.stdout).memos;
+    const memos = JSON.parse(list.stdout).data;
     const deletedMemo = memos.find(m => m.id === memoId);
     assert.ok(!deletedMemo || deletedMemo.isDeleted, 'Memo should be deleted');
   });

@@ -143,7 +143,7 @@ describe('memo bookmark command (User Story 1)', () => {
     assert.equal(list.status, 0, list.stderr);
 
     const result = JSON.parse(list.stdout);
-    const memos = result.memos;
+    const memos = result.data;
     assert.ok(Array.isArray(memos), 'Should return array');
 
     // All returned memos should be bookmarked
@@ -175,7 +175,7 @@ describe('memo bookmark command (User Story 1)', () => {
     assert.equal(list.status, 0, list.stderr);
 
     const result = JSON.parse(list.stdout);
-    const memos = result.memos;
+    const memos = result.data;
 
     // Should only have memos that are both bookmarked AND have urgent label
     assert.ok(memos.length >= 1, 'Should have at least one result');

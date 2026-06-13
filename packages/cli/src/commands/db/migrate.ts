@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import path from 'node:path';
 import { Command, Flags } from '@oclif/core';
 import { loadConfig } from 'meme-gtd-config';
-import { applyMigrations } from 'meme-gtd-db';
+import { applyMigrations, createBackup } from 'meme-gtd-db';
 
 export default class DbMigrate extends Command {
   static summary = 'Apply database migrations safely';
@@ -92,15 +92,12 @@ Unlike 'mgtd init --force', this command will NOT delete your database.`;
       return;
     }
 
-    // Create backup if requested
+    // Create backup if requested. Uses the SQLite online backup API instead
+    // of a file copy: a plain copy misses uncheckpointed WAL content.
     let backupPath: string | null = null;
     if (flags.backup) {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      const dbDir = path.dirname(dbPath);
-      const dbName = path.basename(dbPath, '.db');
-      backupPath = path.join(dbDir, `${dbName}.backup-${timestamp}.db`);
-
-      await fs.copy(dbPath, backupPath);
+      const result = await createBackup(dbPath, { keep: 0 });
+      backupPath = result.backupPath;
 
       if (!flags.json) {
         this.log(`Backup created: ${backupPath}`);

@@ -11,7 +11,7 @@
     "build": "pnpm run clean && tsc -p tsconfig.json && node ./scripts/copy-assets.mjs",
     "clean": "rimraf dist",
     "dev": "tsx src/index.ts",
-    "test": "pnpm run -s build && node --test test/*.test.js test/commands/task/*.test.js test/commands/memo/*.test.js test/commands/project/*.test.js"
+    "test": "pnpm run -s build && node --test test/*.test.js test/commands/task/*.test.js test/commands/memo/*.test.js test/commands/project/*.test.js test/commands/db/*.test.js"
   },
   "dependencies": {
     "@oclif/core": "^4.0.0",
