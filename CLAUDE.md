@@ -199,8 +199,10 @@ pnpm mgtd:test project list --json
 
 **First-time test DB initialization**:
 ```bash
-pnpm mgtd:test init -d $PWD/test-data/test.db -f
+pnpm mgtd:test init -d $PWD/test-data/test.db -f --yes
 ```
+
+Note: `init --force` on an existing DB now requires `--yes` in non-interactive mode (destructive-operation guard). `pnpm mgtd:test` also sets `MGTD_ENV=test`, which makes the CLI refuse to run if the DB path resolves to the production data directory.
 
 #### 自動テスト（統合テスト）
 ```javascript

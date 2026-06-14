@@ -5,6 +5,18 @@ import { applyMigrations } from './migrate.js';
 
 export { applyMigrations } from './migrate.js';
 
+// Backup exports
+export {
+  createBackup,
+  listBackups,
+  pruneBackups,
+  latestBackupTime,
+  defaultBackupDir,
+  type BackupOptions,
+  type BackupResult,
+  type BackupInfo
+} from './backup.js';
+
 export interface DatabaseOptions {
   readonly dbPath: string;
   readonly pragma?: Record<string, string | number>;

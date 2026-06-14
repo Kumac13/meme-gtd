@@ -9,7 +9,7 @@ import {
   createMemo,
   listMemos,
   countMemos,
-  promoteMemo,
+  getPromotePreview,
   addComment,
   deleteComment,
   listComments,
@@ -37,11 +37,14 @@ test('create/list memo with labels', () => {
   fs.removeSync(dir);
 });
 
-test('promote memo to task', () => {
+test('promote preview returns memo body and labels', () => {
   const { dir, db } = createTempDb();
-  const memo = createMemo(db, { bodyMd: 'draft task' });
-  const result = promoteMemo(db, { memoId: memo.id, title: 'task title' });
-  assert.ok(result.taskId > 0);
+  const memo = createMemo(db, { bodyMd: 'draft task', labels: ['idea'] });
+  const preview = getPromotePreview(db, memo.id);
+  assert.equal(preview.bodyMd, 'draft task');
+  assert.deepEqual(preview.labels, ['idea']);
+  assert.deepEqual(preview.projectIds, []);
+  assert.deepEqual(preview.linkedIssues, []);
   db.close();
   fs.removeSync(dir);
 });

@@ -7,6 +7,7 @@ import {
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { MgtdConfig } from 'meme-gtd-config';
 import { ensureDatabase } from 'meme-gtd-db';
+import { buildLogTargets } from 'meme-gtd-logger';
 import type Database from 'better-sqlite3';
 
 export interface BuildAppOptions {
@@ -17,6 +18,7 @@ export interface BuildAppOptions {
     | {
         level?: string;
         prettyPrint?: boolean;
+        logFile?: string;
       };
   requestTimeoutMs?: number;
 }
@@ -33,18 +35,25 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   if (logger && typeof (logger as any).info === 'function') {
     fastifyLogger = logger as FastifyServerOptions['logger'];
   } else {
-    const loggerOptions = (logger as { level?: string; prettyPrint?: boolean; stream?: NodeJS.WritableStream }) ?? {};
+    const loggerOptions =
+      (logger as {
+        level?: string;
+        prettyPrint?: boolean;
+        logFile?: string;
+        stream?: NodeJS.WritableStream;
+      }) ?? {};
+    // An explicit stream (test log capture) takes precedence over transports
+    const useTransport =
+      !loggerOptions.stream && (loggerOptions.prettyPrint || loggerOptions.logFile);
     fastifyLogger = {
       level: loggerOptions.level ?? 'info',
       ...(loggerOptions.stream ? { stream: loggerOptions.stream } : {}),
-      ...(loggerOptions.prettyPrint && {
+      ...(useTransport && {
         transport: {
-          target: 'pino-pretty',
-          options: {
-            colorize: true,
-            translateTime: 'HH:MM:ss Z',
-            ignore: 'pid,hostname',
-          },
+          targets: buildLogTargets({
+            pretty: loggerOptions.prettyPrint,
+            logFile: loggerOptions.logFile,
+          }),
         },
       }),
     };
@@ -188,6 +197,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
         },
       ],
       tags: [
+        { name: 'System', description: 'Health and operational endpoints' },
         { name: 'Memos', description: 'Memo management endpoints' },
         { name: 'Tasks', description: 'Task management endpoints' },
         { name: 'Labels', description: 'Label management endpoints' },
@@ -218,6 +228,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   app.setErrorHandler(errorHandler);
 
   // Register routes
+  const { healthRoutes } = await import('./routes/health.js');
+  await app.register(healthRoutes);
+
   const { memoRoutes } = await import('./routes/memos.js');
   await app.register(memoRoutes);
 

@@ -4,15 +4,16 @@ import { Command, Flags } from '@oclif/core';
 import { loadConfig, mergeConfigWithFlags, writeConfig } from 'meme-gtd-config';
 import { applyMigrations } from 'meme-gtd-db';
 import { createLogger } from 'meme-gtd-logger';
+import { confirmDestructive } from '../lib/confirm.js';
 
 export default class Init extends Command {
   static summary = 'Bootstrap local mgtd storage';
   static description = 'Initialize the local mgtd database and configuration';
-  static usage = ['<%= command.id %> [--db <path>] [--force] [--dry-run] [--json]'];
+  static usage = ['<%= command.id %> [--db <path>] [--force] [--yes] [--dry-run] [--json]'];
   static examples = [
     '$ mgtd init',
     '$ mgtd init --db ~/.local/share/mgtd/issues.db',
-    '$ mgtd init --force --json'
+    '$ mgtd init --force --yes --json'
   ];
 
   static flags = {
@@ -27,6 +28,14 @@ export default class Init extends Command {
       char: 'f',
       summary: 'Overwrite any existing database',
       description: 'Remove the current database before re-creating it from migrations.',
+      default: false
+    }),
+    yes: Flags.boolean({
+      char: 'y',
+      summary: 'Skip the confirmation prompt when overwriting an existing database',
+      description:
+        'Required to overwrite an existing database in non-interactive mode (scripts, CI). ' +
+        'In interactive mode it skips the confirmation prompt.',
       default: false
     }),
     dryRun: Flags.boolean({
@@ -91,6 +100,26 @@ export default class Init extends Command {
     }
 
     if (dbExists && flags.force) {
+      if (!flags.yes) {
+        const stats = await fs.stat(dbPath);
+        const confirmed = await confirmDestructive(
+          `This will PERMANENTLY DELETE the existing database:\n` +
+            `  path: ${dbPath}\n` +
+            `  size: ${stats.size} bytes`
+        );
+        if (!confirmed) {
+          const message = process.stdin.isTTY
+            ? 'Aborted. Existing database was not modified.'
+            : 'Refusing to overwrite existing database in non-interactive mode. Pass --yes to confirm.';
+          if (flags.json) {
+            this.log(JSON.stringify({ error: message, dbPath }, null, 2));
+          } else {
+            this.log(message);
+          }
+          process.exitCode = 1;
+          return;
+        }
+      }
       await fs.remove(dbPath);
       if (!flags.json) {
         logger.warn({ dbPath }, 'Removed existing database');

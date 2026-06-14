@@ -1,6 +1,6 @@
 {
   "name": "meme-gtd-logger",
-  "version": "0.30.0",
+  "version": "0.31.0",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
@@ -8,12 +8,13 @@
   "scripts": {
     "build": "pnpm run clean && tsc -p tsconfig.json",
     "clean": "rimraf dist",
-    "test": "node -e \"console.log('no tests for this package yet')\""
+    "test": "pnpm run -s build && node --test test/*.test.js"
   },
   "dependencies": {
     "meme-gtd-config": "workspace:*",
     "pino": "^9.2.0",
-    "pino-pretty": "^11.2.0"
+    "pino-pretty": "^11.2.0",
+    "pino-roll": "^2.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

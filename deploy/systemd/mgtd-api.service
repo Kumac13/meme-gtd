@@ -1,0 +1,35 @@
+# meme-gtd API server - systemd user unit
+#
+# Install:
+#   1. Adjust WorkingDirectory and ExecStart below for your environment
+#   2. cp deploy/systemd/mgtd-api.service ~/.config/systemd/user/
+#   3. systemctl --user daemon-reload
+#   4. systemctl --user enable --now mgtd-api
+#   5. loginctl enable-linger $USER   # keep it running after logout
+#
+# Logs:
+#   journalctl --user -u mgtd-api -f
+#
+# Note: if node is managed by nvm/asdf, "/usr/bin/env node" may not resolve
+# inside systemd. Use the absolute path printed by "which node" instead.
+
+[Unit]
+Description=meme-gtd API server
+After=network.target
+
+[Service]
+Type=simple
+# Path to your meme-gtd checkout (must contain packages/api/dist after `pnpm build`)
+WorkingDirectory=%h/meme-gtd
+ExecStart=/usr/bin/env node packages/api/dist/index.js
+Restart=on-failure
+RestartSec=5
+Environment=NODE_ENV=production
+# Optional overrides (see docs/operations.md):
+# Environment=PORT=3000
+# Environment=MGTD_LOG_FILE=%h/.local/state/mgtd/api.log
+# Environment=MGTD_BACKUP_INTERVAL_HOURS=24
+# Environment=MGTD_BACKUP_KEEP=7
+
+[Install]
+WantedBy=default.target

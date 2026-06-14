@@ -26,6 +26,7 @@ async function start() {
       logger: {
         level: config.logLevel,
         prettyPrint: config.nodeEnv === 'development',
+        logFile: config.logFile,
       },
     });
 
@@ -40,6 +41,19 @@ async function start() {
     );
     app.log.info(`API documentation available at http://${config.host}:${config.port}/api-docs`);
 
+    // Periodic database backup (disable with MGTD_BACKUP_ENABLED=false)
+    let backupScheduler: { stop: () => void } | undefined;
+    if (config.backup.enabled) {
+      const { startBackupScheduler } = await import('./services/backupScheduler.js');
+      backupScheduler = startBackupScheduler({
+        dbPath: config.mgtdConfig.dbPath,
+        backupDir: config.backup.backupDir,
+        keep: config.backup.keep,
+        intervalMs: config.backup.intervalHours * 60 * 60 * 1000,
+        logger: app.log,
+      });
+    }
+
     // Graceful shutdown handler
     let isShuttingDown = false;
     const signals = ['SIGINT', 'SIGTERM'] as const;
@@ -51,6 +65,7 @@ async function start() {
       isShuttingDown = true;
 
       app.log.info(`Received ${signal}, starting graceful shutdown...`);
+      backupScheduler?.stop();
       try {
         await app.close();
         app.log.info('Server closed successfully');

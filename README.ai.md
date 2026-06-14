@@ -229,12 +229,16 @@ mgtd embedding sync --model <model> --json
 # 横断検索
 mgtd search keyword <query> --types <types> --limit <n> --json
 mgtd search semantic <query> --types <types> --limit <n> --json
+
+# DBバックアップ（オンラインバックアップAPI・WAL安全・世代管理）
+mgtd db backup --keep <n> --output <dir> --list --json
 ```
 
 ### REST API
 
 | エンドポイント | 説明 |
 |---------------|------|
+| `GET /api/health` | ヘルスチェック（DB接続・スキーマバージョン。異常時503） |
 | `GET/POST /api/memos` | メモ一覧・作成 |
 | `GET/PATCH/DELETE /api/memos/{id}` | メモ詳細・更新・削除 |
 | `GET /api/memos/{id}/promote-preview` | 昇格後のtask本文プレビュー（read-only） |
@@ -302,6 +306,15 @@ mgtd search semantic <query> --types <types> --limit <n> --json
 - embedding生成のインターフェース: `generateEmbedding(text, config) → Float32Array`
 - ベクトル検索: 全embeddingをメモリにロードし、コサイン類似度を計算（~1,500件規模で実用的）
 - content hashによる変更検知: 内容が変わったissueのみ再生成
+
+## 運用（Operations）
+
+- **本番DBガード**: `MGTD_ENV=test` 設定時、dbPath が本番データディレクトリ（`~/.local/share/mgtd/`）に解決される場合は起動を拒否。`mgtd init --force` は非対話モードで `--yes` 必須
+- **自動バックアップ**: APIサーバー稼働中、`MGTD_BACKUP_INTERVAL_HOURS`（既定24h）ごとに `<DBディレクトリ>/backups` へ世代管理付きでバックアップ
+- **ヘルスチェック**: `GET /api/health`
+- **常駐化**: systemd user unit テンプレート `deploy/systemd/mgtd-api.service`
+- **ログ**: `MGTD_LOG_FILE` で日次ローテーション付きファイル出力（オプトイン）
+- 詳細は `docs/operations.md`
 
 ## 技術スタック
 

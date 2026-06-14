@@ -32,6 +32,25 @@ const DEFAULT_CONFIG: MgtdConfig = {
   updatedAt: new Date().toISOString()
 };
 
+export const PRODUCTION_DATA_DIR = path.join(homedir(), '.local', 'share', 'mgtd');
+
+export const isProductionDbPath = (dbPath: string): boolean => {
+  const relative = path.relative(PRODUCTION_DATA_DIR, path.resolve(dbPath));
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+};
+
+// Hard guard against Issue #48 (production DB wiped during testing):
+// when the caller declares a test session via MGTD_ENV=test, never allow
+// the resolved dbPath to land in the production data directory.
+const assertTestEnvSafety = (dbPath: string, env: NodeJS.ProcessEnv): void => {
+  if (env.MGTD_ENV === 'test' && isProductionDbPath(dbPath)) {
+    throw new Error(
+      `MGTD_ENV=test but dbPath resolves to the production data directory (${path.resolve(dbPath)}). ` +
+        'Refusing to continue. Set DB_PATH to a test database or unset MGTD_ENV.'
+    );
+  }
+};
+
 export const resolveConfigPath = (env: NodeJS.ProcessEnv = process.env): string => {
   const fromEnv = env.MGTD_CONFIG_PATH;
   if (fromEnv && fromEnv.trim().length > 0) {
@@ -47,11 +66,17 @@ export const loadConfig = async (
   const configPath = path.resolve(options.configPath ?? resolveConfigPath(env));
 
   if (!(await fs.pathExists(configPath))) {
-    if (options.createIfMissing) {
-      await writeConfig(DEFAULT_CONFIG, configPath);
-      return { config: DEFAULT_CONFIG, path: configPath };
+    const fallback: MgtdConfig = { ...DEFAULT_CONFIG };
+    // DB_PATH must take effect even without a config file; previously this
+    // branch ignored it and silently fell back to the production database
+    if (env.DB_PATH && env.DB_PATH.trim().length > 0) {
+      fallback.dbPath = path.resolve(env.DB_PATH);
     }
-    return { config: DEFAULT_CONFIG, path: configPath };
+    assertTestEnvSafety(fallback.dbPath, env);
+    if (options.createIfMissing) {
+      await writeConfig(fallback, configPath);
+    }
+    return { config: fallback, path: configPath };
   }
 
   const raw = await fs.readFile(configPath, 'utf-8');
@@ -68,6 +93,8 @@ export const loadConfig = async (
   if (env.DB_PATH && env.DB_PATH.trim().length > 0) {
     parsed.dbPath = path.resolve(env.DB_PATH);
   }
+
+  assertTestEnvSafety(parsed.dbPath, env);
 
   return { config: parsed, path: configPath };
 };

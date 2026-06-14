@@ -520,6 +520,62 @@ Returns the original task (unchanged) and the new memo ID:
 
 ## Database Commands
 
+### Database Backup
+
+Create a consistent, timestamped snapshot of the SQLite database using the online backup API. Safe to run while the API server or CLI is using the database (WAL mode): uncheckpointed writes are included in the snapshot.
+
+```bash
+# Create a backup in <db dir>/backups (default keeps 7 generations)
+mgtd db backup
+
+# Keep more generations
+mgtd db backup --keep 14
+
+# Store backups in a custom directory
+mgtd db backup --output ~/backups/mgtd
+
+# List existing backups (newest first)
+mgtd db backup --list
+
+# Specify database path
+mgtd db backup --db ~/.local/share/mgtd/issues.db
+
+# JSON output for scripting
+mgtd db backup --json
+```
+
+**Options:**
+- `--db, -d <path>` - SQLite database file path (defaults to configured path)
+- `--output, -o <dir>` - Backup destination directory (default: `backups` directory next to the database file)
+- `--keep <n>` - Number of backup generations to keep; older ones are pruned (default: 7, `0` disables pruning)
+- `--list, -l` - List existing backups instead of creating one
+- `--json, -j` - Output in JSON format
+
+**Features:**
+- **WAL-safe**: Uses SQLite's online backup API, so the snapshot includes uncheckpointed WAL content (a plain `cp` does not)
+- **No accidental DB creation**: The source database is opened read-only with `fileMustExist`, so a wrong path never creates an empty database
+- **Generation management**: Backups are named `<name>-YYYYMMDD-HHmmssSSS.db`; pruning only ever deletes files matching this pattern
+
+**Restore procedure:**
+
+```bash
+# Stop the API server first, then:
+cp ~/.local/share/mgtd/backups/issues-20260612-103000123.db ~/.local/share/mgtd/issues.db
+rm -f ~/.local/share/mgtd/issues.db-wal ~/.local/share/mgtd/issues.db-shm
+```
+
+**Example Output:**
+
+```json
+{
+  "success": true,
+  "dbPath": "/Users/name/.local/share/mgtd/issues.db",
+  "backupPath": "/Users/name/.local/share/mgtd/backups/issues-20260612-103000123.db",
+  "sizeBytes": 176128,
+  "prunedFiles": []
+}
+```
+
 ### Database Migrate
 
 Apply pending database migrations safely without deleting existing data.
@@ -548,7 +604,7 @@ mgtd db migrate --json
 - `--json, -j` - Output in JSON format
 
 **Features:**
-- **Automatic Backup**: Creates timestamped backup (e.g., `issues.backup-2025-12-07T05-16-06.db`) before applying migrations
+- **Automatic Backup**: Creates a WAL-safe snapshot in `<db dir>/backups` (e.g., `issues-20260612-103000123.db`) before applying migrations, using the same mechanism as `mgtd db backup`
 - **Safe Operation**: Unlike `mgtd init --force`, this command never deletes your database
 - **Idempotent**: Already applied migrations are skipped
 - **Error Recovery**: Shows backup restore command on failure
@@ -560,7 +616,7 @@ mgtd db migrate --json
   "success": true,
   "dbPath": "/Users/name/.local/share/mgtd/issues.db",
   "dbSizeKB": 172,
-  "backupPath": "/Users/name/.local/share/mgtd/issues.backup-2025-12-07T05-16-06.db",
+  "backupPath": "/Users/name/.local/share/mgtd/backups/issues-20260612-103000123.db",
   "appliedMigrations": ["007_add_calendar_datetime_fields"],
   "skippedMigrations": ["001_init", "002_add_project_view_meta", ...]
 }

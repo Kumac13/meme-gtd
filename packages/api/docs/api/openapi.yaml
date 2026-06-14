@@ -6,6 +6,108 @@ info:
 components:
   schemas: {}
 paths:
+  /api/health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      tags:
+        - System
+      description: Report server and database health. Returns 200 when healthy, 503 when the database is unreachable.
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - ok
+                      - error
+                    description: Overall server health
+                  version:
+                    type: string
+                    description: API server version
+                  uptimeSeconds:
+                    type: number
+                    description: Process uptime in seconds
+                  timestamp:
+                    type: string
+                    description: Current server time (ISO 8601)
+                  db:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum:
+                          - ok
+                          - error
+                        description: Database connectivity
+                      schemaVersion:
+                        type: string
+                        nullable: true
+                        description: Latest applied migration version, null if unavailable
+                    required:
+                      - status
+                      - schemaVersion
+                    additionalProperties: false
+                    description: Database health details
+                required:
+                  - status
+                  - version
+                  - uptimeSeconds
+                  - timestamp
+                  - db
+                additionalProperties: false
+        "503":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - ok
+                      - error
+                    description: Overall server health
+                  version:
+                    type: string
+                    description: API server version
+                  uptimeSeconds:
+                    type: number
+                    description: Process uptime in seconds
+                  timestamp:
+                    type: string
+                    description: Current server time (ISO 8601)
+                  db:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum:
+                          - ok
+                          - error
+                        description: Database connectivity
+                      schemaVersion:
+                        type: string
+                        nullable: true
+                        description: Latest applied migration version, null if unavailable
+                    required:
+                      - status
+                      - schemaVersion
+                    additionalProperties: false
+                    description: Database health details
+                required:
+                  - status
+                  - version
+                  - uptimeSeconds
+                  - timestamp
+                  - db
+                additionalProperties: false
   /api/memos:
     post:
       operationId: createMemo
@@ -8245,6 +8347,8 @@ servers:
   - url: http://localhost:3000
     description: Development server
 tags:
+  - name: System
+    description: Health and operational endpoints
   - name: Memos
     description: Memo management endpoints
   - name: Tasks
