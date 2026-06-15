@@ -31,6 +31,18 @@ class MemoListViewModel: ObservableObject {
 
     var store: MemoStore?
 
+    /// LocalStore-backed repositories used by the offline-capable create
+    /// path. We construct them lazily because they touch
+    /// `LocalDatabase.shared`, and we only want to materialize the database
+    /// the first time the memo list is actually used.
+    private lazy var localMemos = LocalMemoRepository()
+    private lazy var outbox = OutboxRepository()
+    private lazy var iso: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
     private let pageSize = 20
 
     private static let dateFormatter: DateFormatter = {
@@ -291,6 +303,16 @@ class MemoListViewModel: ObservableObject {
         isLoadingMore = false
     }
 
+    /// Offline-safe memo creation. Always lands in the local SQLite first so
+    /// the UI updates regardless of network state. The SyncEngine takes care
+    /// of actually delivering it to the server when reachable and stamping
+    /// `server_id` back onto the local row.
+    ///
+    /// Auto-linking to filtered projects is deferred until after the memo is
+    /// confirmed by the server, because the linking endpoints address memos
+    /// by their INTEGER server id (which doesn't exist yet for pending rows).
+    /// v1.x can extend the outbox to carry follow-up ops if this becomes a
+    /// real problem.
     func createMemo() async {
         let body = newMemoBody.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !body.isEmpty else { return }
@@ -298,25 +320,33 @@ class MemoListViewModel: ObservableObject {
         isCreating = true
 
         do {
-            let request = CreateMemoRequest(bodyMd: body)
-            let memo: Memo = try await APIClient.shared.post(
-                path: "/api/memos",
-                body: request
+            let localMemo = try localMemos.createPendingMemo(bodyMd: body)
+            let payload = try JSONEncoder().encode(localMemo.toCreatePayload())
+            try outbox.enqueue(
+                opType: .memoCreate,
+                targetId: localMemo.id,
+                payload: payload
             )
-            store?.insertItem(memo, at: 0)
 
-            // Auto-link to filtered projects
-            if !projectFilters.isEmpty {
-                for projectId in projectFilters {
-                    let _: ProjectItem? = try? await APIClient.shared.post(
-                        path: "/api/projects/\(projectId)/items",
-                        body: AddProjectItemRequest(issueId: memo.id)
-                    )
-                }
-            }
+            // Synthesize a Memo for the UI list. Pending rows get a negative
+            // synthetic id derived from the ULID hash; tapping them while
+            // pending will fail (MemoDetailView fetches from the API), which
+            // we accept as a v1 limitation. A subsequent loadMemos() after
+            // sync replaces it with the real server-issued Memo.
+            store?.insertItem(localMemo.toMemo(iso: iso), at: 0)
 
             newMemoBody = ""
             HapticManager.notification(.success)
+
+            // Kick the engine immediately so an online user sees the memo
+            // settle to "synced" within a heartbeat instead of waiting for
+            // the next foreground event.
+            SyncEngine.shared.requestSync(reason: "memo-create")
+
+            // Auto-link to filtered projects only if we got a server id
+            // back synchronously (shouldn't happen here in v1, but the hook
+            // is left as a TODO for v1.x).
+            _ = projectFilters
         } catch {
             self.error = error.localizedDescription
             HapticManager.notification(.error)
