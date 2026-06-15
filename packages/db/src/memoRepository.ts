@@ -5,6 +5,12 @@ export interface CreateMemoInput {
   bodyMd: string;
   labels?: string[];
   projectIds?: number[];
+  /**
+   * Client-generated ULID used by the iOS offline outbox to make retries
+   * idempotent. When present, a row with the same client_id is treated as
+   * the existing memo rather than producing a duplicate.
+   */
+  clientId?: string;
 }
 
 export interface UpdateMemoInput {
@@ -153,13 +159,32 @@ const commentRowToComment = (row: any): Comment => ({
   isDeleted: toBoolean(row.is_deleted)
 });
 
+export const findMemoByClientId = (
+  db: Database.Database,
+  clientId: string
+): Memo | null => {
+  const row = db
+    .prepare(
+      `SELECT * FROM issues WHERE client_id = @clientId AND type = 'memo' AND is_deleted = 0`
+    )
+    .get({ clientId });
+  if (!row) {
+    return null;
+  }
+  return memoRowToMemo(row);
+};
+
 export const createMemo = (db: Database.Database, input: CreateMemoInput): Memo => {
   const now = nowIso();
   const stmt = db.prepare(
-    `INSERT INTO issues (type, title, body_md, status, scheduled_on, meta, created_at, updated_at, is_bookmarked, is_deleted)
-     VALUES ('memo', NULL, @body, NULL, NULL, json('{}'), @createdAt, @createdAt, 0, 0)`
+    `INSERT INTO issues (type, title, body_md, status, scheduled_on, meta, created_at, updated_at, is_bookmarked, is_deleted, client_id)
+     VALUES ('memo', NULL, @body, NULL, NULL, json('{}'), @createdAt, @createdAt, 0, 0, @clientId)`
   );
-  const result = stmt.run({ body: input.bodyMd, createdAt: now });
+  const result = stmt.run({
+    body: input.bodyMd,
+    createdAt: now,
+    clientId: input.clientId ?? null
+  });
   const memoId = Number(result.lastInsertRowid);
 
   if (input.labels?.length) {

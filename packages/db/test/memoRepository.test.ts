@@ -7,6 +7,7 @@ import fs from 'fs-extra';
 import { applyMigrations, openDatabase } from '../src/index';
 import {
   createMemo,
+  findMemoByClientId,
   listMemos,
   countMemos,
   getPromotePreview,
@@ -261,6 +262,56 @@ test('listMemos() offset works with search filter', () => {
   assert.equal(memos.length, 2);
   assert.equal(memos[0].bodyMd, 'Meeting notes 2');
   assert.equal(memos[1].bodyMd, 'Meeting notes 3');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('createMemo stores clientId and findMemoByClientId returns the row', () => {
+  const { dir, db } = createTempDb();
+  const clientId = '01HMBS6YZK0F1V8N1JKZ8R3MP4';
+
+  const memo = createMemo(db, { bodyMd: 'offline capture', clientId });
+  const found = findMemoByClientId(db, clientId);
+
+  assert.ok(found);
+  assert.equal(found.id, memo.id);
+  assert.equal(found.bodyMd, 'offline capture');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('findMemoByClientId returns null for unknown clientId', () => {
+  const { dir, db } = createTempDb();
+  assert.equal(findMemoByClientId(db, '01HMBS6YZK0F1V8N1JKZ8R3MP4'), null);
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('UNIQUE index on client_id rejects duplicate clientId at the db layer', () => {
+  const { dir, db } = createTempDb();
+  const clientId = '01HMBS6YZK0F1V8N1JKZ8R3MP4';
+
+  createMemo(db, { bodyMd: 'first', clientId });
+  assert.throws(
+    () => createMemo(db, { bodyMd: 'second', clientId }),
+    /UNIQUE/
+  );
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('memos without clientId can coexist (NULL allowed multiple times)', () => {
+  const { dir, db } = createTempDb();
+
+  // partial UNIQUE index excludes NULLs, so multiple unclientId memos must coexist
+  createMemo(db, { bodyMd: 'a' });
+  createMemo(db, { bodyMd: 'b' });
+  createMemo(db, { bodyMd: 'c' });
+
+  assert.equal(countMemos(db), 3);
 
   db.close();
   fs.removeSync(dir);

@@ -8,7 +8,7 @@ import { request as __request } from '../core/request';
 export class MemosService {
     /**
      * Create memo
-     * Create a new memo
+     * Create a new memo. When a `clientId` (ULID) is supplied and a memo with that clientId already exists, returns the existing memo with status 200 instead of creating a duplicate. This makes retries from the iOS offline outbox idempotent.
      * @param requestBody
      * @returns any Default Response
      * @throws ApiError
@@ -19,6 +19,10 @@ export class MemosService {
              * Memo content in Markdown format
              */
             bodyMd: string;
+            /**
+             * Optional client-generated ULID used to make retries from an offline outbox idempotent. When the same clientId is sent twice, the server returns the existing memo with HTTP 200 instead of creating a duplicate.
+             */
+            clientId?: string;
         },
     ): CancelablePromise<{
         /**
