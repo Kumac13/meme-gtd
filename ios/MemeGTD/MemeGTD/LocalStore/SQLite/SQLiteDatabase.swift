@@ -20,6 +20,7 @@ final class SQLiteDatabase {
     private let path: String
     private let handle: OpaquePointer
     private let queue: DispatchQueue
+    private let queueKey = DispatchSpecificKey<Bool>()
 
     /// Opens (or creates) the SQLite file at `path`. WAL mode is enabled so
     /// that read transactions don't block writes — important because the iOS
@@ -36,11 +37,23 @@ final class SQLiteDatabase {
         self.path = path
         self.handle = opened
         self.queue = DispatchQueue(label: "name.kumac.MemeGTD.SQLite.\((path as NSString).lastPathComponent)")
+        self.queue.setSpecific(key: queueKey, value: true)
 
         // WAL + foreign keys + busy timeout — same posture the server uses.
         try execute("PRAGMA journal_mode = WAL;")
         try execute("PRAGMA foreign_keys = ON;")
         try execute("PRAGMA busy_timeout = 5000;")
+    }
+
+    /// Runs `block` on the serialization queue, but only enters `queue.sync`
+    /// if we aren't already on it. Without this, `transaction { execute(...) }`
+    /// deadlocks: the outer transaction holds the queue and the inner execute
+    /// tries to acquire the same queue from the same thread.
+    private func runOnQueue<T>(_ block: () throws -> T) rethrows -> T {
+        if DispatchQueue.getSpecific(key: queueKey) == true {
+            return try block()
+        }
+        return try queue.sync(execute: block)
     }
 
     deinit {
@@ -54,7 +67,7 @@ final class SQLiteDatabase {
     /// Executes one or more SQL statements that take no parameters and return
     /// no rows — DDL, PRAGMA, etc. For parameterized writes use `write(_:bind:)`.
     func execute(_ sql: String) throws {
-        try queue.sync {
+        try runOnQueue {
             let rc = sqlite3_exec(handle, sql, nil, nil, nil)
             guard rc == SQLITE_OK else {
                 throw SQLiteError.step(sql: sql, code: rc, message: lastErrorMessage)
@@ -68,7 +81,7 @@ final class SQLiteDatabase {
     /// uses ULID primary keys so callers usually ignore this.
     @discardableResult
     func write(_ sql: String, bind: (SQLiteStatement) throws -> Void = { _ in }) throws -> Int64 {
-        try queue.sync {
+        try runOnQueue {
             let stmt = try SQLiteStatement(database: handle, sql: sql)
             defer { stmt.finalize() }
             try bind(stmt)
@@ -85,7 +98,7 @@ final class SQLiteDatabase {
         bind: (SQLiteStatement) throws -> Void = { _ in },
         rowHandler: (SQLiteStatement) throws -> Void
     ) throws {
-        try queue.sync {
+        try runOnQueue {
             let stmt = try SQLiteStatement(database: handle, sql: sql)
             defer { stmt.finalize() }
             try bind(stmt)
@@ -110,7 +123,7 @@ final class SQLiteDatabase {
     /// stay safe even if `work` is called while an outer transaction is
     /// already open — which can happen during migrations.
     func transaction<T>(_ work: () throws -> T) throws -> T {
-        try queue.sync {
+        try runOnQueue {
             let rc = sqlite3_exec(handle, "SAVEPOINT tx;", nil, nil, nil)
             guard rc == SQLITE_OK else {
                 throw SQLiteError.step(sql: "SAVEPOINT tx;", code: rc, message: lastErrorMessage)
