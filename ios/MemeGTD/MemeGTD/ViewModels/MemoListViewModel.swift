@@ -216,14 +216,37 @@ class MemoListViewModel: ObservableObject {
                     queryItems: buildListQueryItems(offset: 0)
                 )
             }
-            store?.setItems(response.data, total: response.total)
-            logger.info("loadMemos done: count=\(response.data.count), total=\(response.total)")
+            // Re-read pending memos AFTER the network call: the SyncEngine
+            // may have settled some of them in parallel while we were awaiting
+            // the API. If we read before the await, we'd double-display any
+            // memo that synced during the request.
+            let pendingMemos = pendingLocalMemos()
+            let combined = pendingMemos + response.data
+            store?.setItems(combined, total: response.total + pendingMemos.count)
+            logger.info("loadMemos done: count=\(combined.count), total=\(response.total + pendingMemos.count), pending=\(pendingMemos.count)")
         } catch {
-            self.error = error.localizedDescription
-            logger.error("loadMemos error: \(error.localizedDescription)")
+            // Network or server failure: fall back to showing only the local
+            // pending memos so the user at least sees what they captured.
+            let pendingMemos = pendingLocalMemos()
+            store?.setItems(pendingMemos, total: pendingMemos.count)
+            self.error = pendingMemos.isEmpty ? error.localizedDescription : nil
+            logger.error("loadMemos error: \(error.localizedDescription) — showing \(pendingMemos.count) pending memo(s) from LocalStore")
         }
 
         isLoading = false
+    }
+
+    /// Pulls the un-synced memos out of LocalStore and converts them into
+    /// `Memo` for the list view. Empty array on failure — pending display
+    /// is best-effort and shouldn't crash the list path.
+    private func pendingLocalMemos() -> [Memo] {
+        do {
+            let rows = try localMemos.listMemos(limit: 200).filter { $0.isPendingSync }
+            return rows.map { $0.toMemo(iso: iso) }
+        } catch {
+            logger.error("pendingLocalMemos error: \(error.localizedDescription)")
+            return []
+        }
     }
 
     // MARK: - Fetch without UI update (for pull-to-refresh)
