@@ -1,10 +1,25 @@
 import { z } from 'zod';
 
 /**
+ * ULID format: 26 characters of Crockford Base32 (no I, L, O, U).
+ * iOS clients generate one per memo before sending, so the server can
+ * detect retries from the offline outbox and return the existing memo
+ * instead of creating a duplicate.
+ */
+const ULID_REGEX = /^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$/;
+
+/**
  * Schema for creating a new memo
  */
 export const CreateMemoRequestSchema = z.object({
   bodyMd: z.string().min(1, 'Memo body cannot be empty').describe('Memo content in Markdown format'),
+  clientId: z
+    .string()
+    .regex(ULID_REGEX, 'clientId must be a ULID (26 Crockford Base32 chars)')
+    .optional()
+    .describe(
+      'Optional client-generated ULID used to make retries from an offline outbox idempotent. When the same clientId is sent twice, the server returns the existing memo with HTTP 200 instead of creating a duplicate.'
+    ),
 });
 
 export type CreateMemoRequest = z.infer<typeof CreateMemoRequestSchema>;

@@ -114,7 +114,7 @@ paths:
       summary: Create memo
       tags:
         - Memos
-      description: Create a new memo
+      description: Create a new memo. When a `clientId` (ULID) is supplied and a memo with that clientId already exists, returns the existing memo with status 200 instead of creating a duplicate. This makes retries from the iOS offline outbox idempotent.
       requestBody:
         content:
           application/json:
@@ -125,11 +125,85 @@ paths:
                   type: string
                   minLength: 1
                   description: Memo content in Markdown format
+                clientId:
+                  type: string
+                  pattern: ^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$
+                  description: Optional client-generated ULID used to make retries from an offline outbox idempotent. When the same clientId is sent twice, the server returns the existing memo with HTTP 200 instead of creating a duplicate.
               required:
                 - bodyMd
               additionalProperties: false
         required: true
       responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique memo ID
+                  type:
+                    type: string
+                    enum:
+                      - memo
+                    description: Issue type (always "memo")
+                  title:
+                    type: string
+                    nullable: true
+                    description: Title (always null for memos)
+                  bodyMd:
+                    type: string
+                    description: Memo content in Markdown format
+                  status:
+                    type: string
+                    nullable: true
+                    description: Status (always null for memos)
+                  scheduledOn:
+                    type: string
+                    format: date
+                    nullable: true
+                    description: Scheduled date (always null for memos)
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                    description: Metadata object
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the memo is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the memo is soft-deleted
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this memo
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - status
+                  - scheduledOn
+                  - meta
+                  - isBookmarked
+                  - isDeleted
+                  - createdAt
+                  - updatedAt
+                  - labels
+                additionalProperties: false
         "201":
           description: Default Response
           content:

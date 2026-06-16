@@ -7,6 +7,7 @@ import {
   // Memo functions
   addComment,
   createMemo,
+  findMemoByClientId,
   deleteComment,
   deleteMemo,
   getMemo,
@@ -88,10 +89,27 @@ export class MemoService {
   }
 
   public create(input: CreateMemoInput) {
+    return this.createOrGet(input).memo;
+  }
+
+  /**
+   * Idempotent memo creation used by the iOS offline outbox.
+   * When `input.clientId` matches an existing memo, returns it without
+   * creating a duplicate or emitting another activity log entry.
+   * Callers that need to distinguish a fresh insert from a retry hit
+   * (e.g. the API handler choosing between 201 and 200) should use this.
+   */
+  public createOrGet(input: CreateMemoInput): { memo: ReturnType<typeof createMemo>; created: boolean } {
     return this.db.transaction(() => {
+      if (input.clientId) {
+        const existing = findMemoByClientId(this.db, input.clientId);
+        if (existing) {
+          return { memo: existing, created: false };
+        }
+      }
       const memo = createMemo(this.db, input);
       this.logger.logMemoCreated(memo.id, input.bodyMd ?? '');
-      return memo;
+      return { memo, created: true };
     })();
   }
 

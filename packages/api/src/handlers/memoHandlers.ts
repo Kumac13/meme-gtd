@@ -8,18 +8,21 @@ import type {
 
 /**
  * Create a new memo using the request payload.
+ * When `clientId` is supplied and matches an existing memo, returns the
+ * existing one with HTTP 200 (idempotent) so the iOS offline outbox can
+ * safely retry without duplicating data.
  */
 export async function createMemoHandler(
   request: FastifyRequest<{ Body: CreateMemoRequest }>,
   reply: FastifyReply
 ) {
-  const { bodyMd } = request.body;
+  const { bodyMd, clientId } = request.body;
   const memoService = new MemoService({ db: request.server.db });
 
   try {
-    const memo = memoService.create({ bodyMd });
+    const { memo, created } = memoService.createOrGet({ bodyMd, clientId });
     const labels = memoService.listLabels(memo.id);
-    return reply.status(201).send({ ...memo, labels });
+    return reply.status(created ? 201 : 200).send({ ...memo, labels });
   } catch (error) {
     throw error;
   }

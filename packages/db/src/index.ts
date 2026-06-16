@@ -45,6 +45,7 @@ export type SqliteRow = Record<string, unknown>;
 // Memo repository exports
 export {
   createMemo,
+  findMemoByClientId,
   getMemo,
   listMemos,
   countMemos,

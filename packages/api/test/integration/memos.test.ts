@@ -916,3 +916,109 @@ describe('Memo Date Filtering', () => {
     assert.strictEqual(result.total, 2);
   });
 });
+
+describe('Memo Idempotent Create (clientId)', () => {
+  let app: FastifyInstance;
+  let cleanup: () => Promise<void>;
+
+  // Valid ULID (Crockford Base32, 26 chars)
+  const validClientId = '01HMBS6YZK0F1V8N1JKZ8R3MP4';
+
+  beforeEach(async () => {
+    const testServer = await createTestServer();
+    app = testServer.app;
+    cleanup = testServer.cleanup;
+  });
+
+  afterEach(async () => {
+    await cleanup();
+  });
+
+  it('should create memo with a client-supplied ULID and return 201', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'first capture from the train', clientId: validClientId },
+    });
+
+    assert.strictEqual(response.statusCode, 201);
+    const memo = JSON.parse(response.body);
+    assert.strictEqual(memo.bodyMd, 'first capture from the train');
+    assert.ok(memo.id);
+  });
+
+  it('should return the existing memo with status 200 on retry with the same clientId', async () => {
+    const first = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'offline memo', clientId: validClientId },
+    });
+    assert.strictEqual(first.statusCode, 201);
+    const original = JSON.parse(first.body);
+
+    const retry = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      // Body is intentionally different to prove the server returns the
+      // ORIGINAL row, not whatever the retry payload happens to carry.
+      payload: { bodyMd: 'this body should be ignored', clientId: validClientId },
+    });
+
+    assert.strictEqual(retry.statusCode, 200);
+    const reread = JSON.parse(retry.body);
+    assert.strictEqual(reread.id, original.id);
+    assert.strictEqual(reread.bodyMd, 'offline memo');
+
+    // And the list should still show exactly one memo.
+    const list = await app.inject({ method: 'GET', url: '/api/memos' });
+    const result = JSON.parse(list.body);
+    assert.strictEqual(result.total, 1);
+  });
+
+  it('should reject a clientId that is not a valid ULID', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'bad client id', clientId: 'not-a-ulid' },
+    });
+
+    assert.strictEqual(response.statusCode, 400);
+    const error = JSON.parse(response.body);
+    assert.strictEqual(error.code, 'VALIDATION_ERROR');
+  });
+
+  it('should still auto-generate id when no clientId is supplied (backwards compat)', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'no client id' },
+    });
+
+    assert.strictEqual(response.statusCode, 201);
+    const memo = JSON.parse(response.body);
+    assert.ok(memo.id);
+    assert.strictEqual(memo.bodyMd, 'no client id');
+  });
+
+  it('should accept different clientIds as distinct memos', async () => {
+    const idA = '01HMBS6YZK0F1V8N1JKZ8R3MPA';
+    const idB = '01HMBS6YZK0F1V8N1JKZ8R3MPB';
+
+    const a = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'memo A', clientId: idA },
+    });
+    const b = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'memo B', clientId: idB },
+    });
+
+    assert.strictEqual(a.statusCode, 201);
+    assert.strictEqual(b.statusCode, 201);
+    const memoA = JSON.parse(a.body);
+    const memoB = JSON.parse(b.body);
+    assert.notStrictEqual(memoA.id, memoB.id);
+  });
+});
