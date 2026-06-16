@@ -16,9 +16,11 @@ struct ArticleRoute: Hashable {
 }
 
 struct RootView: View {
+    @EnvironmentObject private var syncEngine: SyncEngine
     @State private var selectedTab: AppTab = .memos
     @State private var isMenuOpen: Bool = false
     @State private var navigationPath = NavigationPath()
+    @State private var failedMemosSheetPresented: Bool = false
 
     private let menuWidth: CGFloat = 280
     // iPhone 16 Pro screen corner radius (~55pt)
@@ -122,6 +124,26 @@ struct RootView: View {
             .ignoresSafeArea()
         }
         .background(Color.menuBackground)
+        .overlay(alignment: .top) {
+            // Only surface the banner when something actually failed —
+            // otherwise the offline path is meant to be silent.
+            if syncEngine.failedCount > 0 && !isMenuOpen {
+                FailedMemosBanner(count: syncEngine.failedCount) {
+                    failedMemosSheetPresented = true
+                }
+            }
+        }
+        .sheet(isPresented: $failedMemosSheetPresented) {
+            NavigationStack {
+                FailedMemosView()
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") { failedMemosSheetPresented = false }
+                        }
+                    }
+            }
+            .environmentObject(syncEngine)
+        }
     }
 
     private func openMenu() {

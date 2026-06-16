@@ -5,6 +5,7 @@ struct TaskListView: View {
     @Binding var navigationPath: NavigationPath
 
     @EnvironmentObject var taskStore: TaskStore
+    @EnvironmentObject private var networkMonitor: NetworkMonitor
     @StateObject private var viewModel = TaskListViewModel()
     @State private var showStatusPicker: Bool = false
     @State private var isSearching: Bool = false
@@ -169,9 +170,11 @@ struct TaskListView: View {
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.white)
                         .frame(width: 52, height: 52)
-                        .background(Color.accent)
+                        .background(networkMonitor.hasPath ? Color.accent : Color.gray.opacity(0.55))
                         .clipShape(Circle())
                 }
+                .disabled(!networkMonitor.hasPath)
+                .accessibilityHint(networkMonitor.hasPath ? "Create task" : "Online required to create tasks")
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 10)

@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     let onMenuTap: () -> Void
 
+    @EnvironmentObject private var syncEngine: SyncEngine
     @State private var apiUrl: String = Settings.shared.apiUrl ?? Settings.defaultApiUrl
     @State private var isSaved: Bool = false
     @State private var isTestingConnection: Bool = false
@@ -88,6 +89,57 @@ struct SettingsView: View {
                             .cornerRadius(10)
                         }
                     }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+
+                Divider().padding(.leading, 16)
+
+                // Offline support section — only shows the Failed memos
+                // entry, which is the one bit of offline state the user
+                // ever needs to act on. Sync status is intentionally
+                // invisible while everything is working.
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Offline support")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.textSecondary)
+                        .textCase(.uppercase)
+
+                    NavigationLink {
+                        FailedMemosView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.system(size: 14))
+                                .foregroundColor(syncEngine.failedCount > 0 ? .red : .textSecondary)
+                            Text("Failed memos")
+                                .font(.system(size: 15))
+                                .foregroundColor(.textPrimary)
+                            Spacer()
+                            if syncEngine.failedCount > 0 {
+                                Text("\(syncEngine.failedCount)")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.red)
+                            }
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12))
+                                .foregroundColor(.textSecondary)
+                        }
+                    }
+
+                    Button {
+                        syncEngine.requestSync(reason: "manual-settings")
+                    } label: {
+                        HStack {
+                            Image(systemName: syncEngine.isSyncing ? "arrow.triangle.2.circlepath" : "arrow.clockwise")
+                                .font(.system(size: 14))
+                            Text(syncEngine.isSyncing ? "Syncing…" : "Sync now")
+                                .font(.system(size: 15, weight: .medium))
+                            Spacer()
+                        }
+                        .foregroundColor(.accent)
+                    }
+                    .disabled(syncEngine.isSyncing)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 16)
