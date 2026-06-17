@@ -4,6 +4,7 @@ struct SettingsView: View {
     let onMenuTap: () -> Void
 
     @EnvironmentObject private var syncEngine: SyncEngine
+    @EnvironmentObject private var networkMonitor: NetworkMonitor
     @State private var apiUrl: String = Settings.shared.apiUrl ?? Settings.defaultApiUrl
     @State private var isSaved: Bool = false
     @State private var isTestingConnection: Bool = false
@@ -131,15 +132,15 @@ struct SettingsView: View {
                         syncEngine.requestSync(reason: "manual-settings")
                     } label: {
                         HStack {
-                            Image(systemName: syncEngine.isSyncing ? "arrow.triangle.2.circlepath" : "arrow.clockwise")
+                            Image(systemName: syncNowIconName)
                                 .font(.system(size: 14))
-                            Text(syncEngine.isSyncing ? "Syncing…" : "Sync now")
+                            Text(syncNowLabel)
                                 .font(.system(size: 15, weight: .medium))
                             Spacer()
                         }
-                        .foregroundColor(.accent)
+                        .foregroundColor(networkMonitor.hasPath ? .accent : .textSecondary)
                     }
-                    .disabled(syncEngine.isSyncing)
+                    .disabled(syncEngine.isSyncing || !networkMonitor.hasPath)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 16)
@@ -208,5 +209,17 @@ struct SettingsView: View {
                 HapticManager.notification(success ? .success : .error)
             }
         }
+    }
+
+    /// Sync-now affordance state. Picks the right glyph for each of
+    /// (offline / syncing / idle) so the button never silently no-ops.
+    private var syncNowIconName: String {
+        if !networkMonitor.hasPath { return "wifi.slash" }
+        return syncEngine.isSyncing ? "arrow.triangle.2.circlepath" : "arrow.clockwise"
+    }
+
+    private var syncNowLabel: String {
+        if !networkMonitor.hasPath { return "Offline — sync paused" }
+        return syncEngine.isSyncing ? "Syncing…" : "Sync now"
     }
 }
