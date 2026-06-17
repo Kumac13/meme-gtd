@@ -56,7 +56,7 @@ final class OutboxRepository {
             FROM outbox
             WHERE state = 'pending'
                OR (state = 'failed' AND next_retry_at IS NOT NULL AND next_retry_at <= ?)
-            ORDER BY created_at ASC
+            ORDER BY created_at ASC, id ASC
             LIMIT ?;
             """, bind: { stmt in
                 try stmt.bind(1, nowStr)
@@ -121,6 +121,29 @@ final class OutboxRepository {
                 try stmt.bind(3, nextRetryAt.map(self.isoFormatter.string(from:)))
                 try stmt.bind(4, id)
             }
+    }
+
+    /// Bootstrap recovery: any row stuck in `'syncing'` is the leftover of a
+    /// previous process that died mid-send (after `markSyncing` but before
+    /// `delete` or `markFailed`). Without this reset they would never be
+    /// picked up again because `dueOperations` only scans `pending`/`failed`.
+    /// Safe to call at app launch only — calling it while a drain is mid-flight
+    /// would steal a row from under the engine.
+    @discardableResult
+    func resetStuckSyncing() throws -> Int {
+        let now = isoFormatter.string(from: Date())
+        var changes = 0
+        try db.write("""
+            UPDATE outbox
+            SET state = 'pending', next_retry_at = ?
+            WHERE state = 'syncing';
+            """) { stmt in
+                try stmt.bind(1, now)
+            }
+        try db.query("SELECT changes();") { row in
+            changes = row.int(at: 0)
+        }
+        return changes
     }
 
     /// User-driven manual retry from FailedMemosView: clear the failure

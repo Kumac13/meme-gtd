@@ -58,6 +58,19 @@ final class SyncEngine: ObservableObject {
     /// foreground/background notifications, then kicks an initial sync so
     /// anything left in the outbox from a previous session moves quickly.
     func bootstrap() {
+        // Any row stuck in 'syncing' is the leftover of a prior process
+        // that died between markSyncing and delete/markFailed. Without
+        // this reset, dueOperations would never see it again. Safe here
+        // because bootstrap runs before any drain task.
+        do {
+            let recovered = try outbox.resetStuckSyncing()
+            if recovered > 0 {
+                Self.logger.info("recovered \(recovered) stuck syncing op(s) from previous session")
+            }
+        } catch {
+            Self.logger.error("resetStuckSyncing failed: \(error.localizedDescription)")
+        }
+
         NetworkMonitor.shared.$hasPath
             .removeDuplicates()
             .sink { [weak self] hasPath in

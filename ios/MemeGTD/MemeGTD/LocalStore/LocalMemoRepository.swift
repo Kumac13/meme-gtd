@@ -125,8 +125,7 @@ final class LocalMemoRepository {
 
     private func decode(row: SQLiteStatement) throws -> LocalMemo {
         let id = try row.requiredString(at: 0, name: "id")
-        let serverIdRaw = row.int64(at: 1)
-        let serverId: Int64? = serverIdRaw == 0 && row.string(at: 1) == nil ? nil : serverIdRaw
+        let serverId: Int64? = row.isNull(at: 1) ? nil : row.int64(at: 1)
         let bodyMd = try row.requiredString(at: 2, name: "body_md")
         let isBookmarked = row.bool(at: 3)
         let isDeleted = row.bool(at: 4)
@@ -134,18 +133,9 @@ final class LocalMemoRepository {
         let updatedAt = try parseDate(row.string(at: 6), name: "updated_at")
         let syncedAt: Date? = row.string(at: 7).flatMap(isoFormatter.date(from:))
 
-        // SQLite returns 0 for both "NULL" and "0" via int64. To distinguish
-        // we re-read the column as text; if nil, it really was NULL.
-        let serverIdNormalized: Int64?
-        if row.string(at: 1) == nil {
-            serverIdNormalized = nil
-        } else {
-            serverIdNormalized = serverId
-        }
-
         return LocalMemo(
             id: id,
-            serverId: serverIdNormalized,
+            serverId: serverId,
             bodyMd: bodyMd,
             isBookmarked: isBookmarked,
             isDeleted: isDeleted,

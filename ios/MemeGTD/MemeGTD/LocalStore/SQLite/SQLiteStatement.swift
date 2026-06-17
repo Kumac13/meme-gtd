@@ -120,6 +120,13 @@ final class SQLiteStatement {
         return String(cString: cString)
     }
 
+    /// True iff the column is SQL NULL. Distinguishes NULL from numeric zero,
+    /// which `int64(at:)` would otherwise collapse together.
+    func isNull(at column: Int32) -> Bool {
+        guard let stmt = stmt else { return true }
+        return sqlite3_column_type(stmt, column) == SQLITE_NULL
+    }
+
     func requiredString(at column: Int32, name: String) throws -> String {
         guard let value = string(at: column) else {
             throw SQLiteError.unexpectedNullColumn(name: name)
