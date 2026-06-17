@@ -45,6 +45,27 @@ class MemoListViewModel: ObservableObject {
 
     private let pageSize = 20
 
+    private var cancellables: Set<AnyCancellable> = []
+
+    init() {
+        // Swap the optimistically-inserted pending memo for the server-issued
+        // one when SyncEngine finishes its create. Without this, the row keeps
+        // its synthetic negative id until the next loadMemos() and tapping it
+        // 404s against MemoDetailView's GET.
+        NotificationCenter.default.publisher(for: .memoDidSync)
+            .sink { [weak self] note in
+                guard
+                    let self = self,
+                    let localId = note.userInfo?["localId"] as? String,
+                    let memo = note.userInfo?["memo"] as? Memo
+                else { return }
+                Task { @MainActor in
+                    self.store?.replacePendingMemo(localId: localId, with: memo)
+                }
+            }
+            .store(in: &cancellables)
+    }
+
     private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"

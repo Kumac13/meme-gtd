@@ -3,6 +3,14 @@ import Foundation
 import UIKit
 import os
 
+extension Notification.Name {
+    /// Fired by `SyncEngine` after a memo create succeeds. `userInfo` carries
+    /// `"localId": String` (the iOS ULID) and `"memo": Memo` (the server
+    /// response). Subscribers use this to swap an optimistically-inserted
+    /// pending row for its server-confirmed twin without forcing a reload.
+    static let memoDidSync = Notification.Name("name.kumac.MemeGTD.memoDidSync")
+}
+
 /// Single source of truth for "is iOS allowed to talk to the server right
 /// now, and if so are there pending writes to send?". The engine is a
 /// long-lived `@MainActor` object that listens to network changes and app
@@ -179,17 +187,21 @@ final class SyncEngine: ObservableObject {
         let payload = try decoder.decode(LocalMemo.CreatePayload.self, from: op.payload)
 
         // Server returns the saved memo whether we got 201 (fresh insert)
-        // or 200 (idempotent retry hit). Either way, the response carries
-        // the INTEGER server id we want to stash locally.
-        struct ServerMemo: Decodable {
-            let id: Int64
-            let bodyMd: String
-            let createdAt: String
-            let updatedAt: String
-        }
+        // or 200 (idempotent retry hit). Decoding straight into the existing
+        // `Memo` wire-shape lets us hand the result to MemoStore directly.
+        let memo: Memo = try await api.post(path: "/api/memos", body: payload)
+        try memos.markSynced(localId: op.targetId, serverId: Int64(memo.id), syncedAt: Date())
 
-        let response: ServerMemo = try await api.post(path: "/api/memos", body: payload)
-        try memos.markSynced(localId: op.targetId, serverId: response.id, syncedAt: Date())
+        // Notify the UI so the optimistically-inserted pending row can swap
+        // its synthetic negative id for the real server one. The observer
+        // (MemoListViewModel) hops to the main actor before touching the
+        // store; we don't enforce that here so background-only callers can
+        // still observe the event for telemetry.
+        NotificationCenter.default.post(
+            name: .memoDidSync,
+            object: nil,
+            userInfo: ["localId": op.targetId, "memo": memo]
+        )
     }
 
     private func recordFailure(op: OutboxOperation, error: Error) async {

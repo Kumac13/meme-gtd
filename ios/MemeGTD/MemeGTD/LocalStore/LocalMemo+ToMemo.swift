@@ -15,15 +15,23 @@ extension String {
 }
 
 extension LocalMemo {
+    /// Synthetic negative integer id derived purely from a local ULID.
+    /// Exposed so other layers (MemoStore, SyncEngine) can locate the same
+    /// pending row in the in-memory list without having to retain a full
+    /// `LocalMemo` value.
+    static func syntheticDisplayId(forLocalId id: String) -> Int {
+        let raw = id.stableHash
+        if raw == Int.min { return Int.min + 1 }   // -Int.min would overflow
+        return -abs(raw)
+    }
+
     /// Integer id the SwiftUI list should use for this memo. Falls back to a
     /// negative ULID-derived synthetic id while the row is still pending sync,
     /// so the list row has a stable identity through the optimistic-display
     /// window. Once `serverId` is populated, the real server id takes over.
     var displayId: Int {
         if let serverId = serverId { return Int(serverId) }
-        let raw = id.stableHash
-        if raw == Int.min { return Int.min + 1 }   // -Int.min would overflow
-        return -abs(raw)
+        return Self.syntheticDisplayId(forLocalId: id)
     }
 
     /// Bridges a `LocalMemo` row into the existing wire-shape `Memo` struct
