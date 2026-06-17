@@ -5,6 +5,7 @@ struct CreateTaskModal: View {
     let onCreated: (TaskItem) -> Void
     let onDismiss: () -> Void
 
+    @EnvironmentObject private var networkMonitor: NetworkMonitor
     @StateObject private var viewModel: CreateTaskViewModel
 
     @State private var showStatusPicker = false
@@ -31,6 +32,23 @@ struct CreateTaskModal: View {
         VStack(spacing: 0) {
             // Header
             header
+
+            // Offline notice. Tasks need a live API round-trip, so we surface
+            // the reason the Create button is greyed instead of leaving it
+            // looking like a stale form bug.
+            if !networkMonitor.hasPath {
+                HStack(spacing: 6) {
+                    Image(systemName: "wifi.slash")
+                        .font(.system(size: 13, weight: .medium))
+                    Text("Offline — tasks resume when reconnected")
+                        .font(.system(size: 13))
+                    Spacer()
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Color(.systemGray6))
+                .foregroundColor(.textSecondary)
+            }
 
             Divider()
 
@@ -73,16 +91,30 @@ struct CreateTaskModal: View {
                 } else {
                     Text("Create")
                         .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(
-                            viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                ? Color(.systemGray3) : .accent
-                        )
+                        .foregroundColor(createButtonColor)
                 }
             }
-            .disabled(viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isSubmitting)
+            .disabled(
+                viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    || viewModel.isSubmitting
+                    || !networkMonitor.hasPath
+            )
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
+    }
+
+    /// Picks the right Create label color depending on online state and
+    /// whether the title is filled. Offline mirrors the empty-title disabled
+    /// look so it doesn't read as a fresh failure.
+    private var createButtonColor: Color {
+        if !networkMonitor.hasPath {
+            return Color(.systemGray3)
+        }
+        if viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return Color(.systemGray3)
+        }
+        return .accent
     }
 
     // MARK: - Full Form

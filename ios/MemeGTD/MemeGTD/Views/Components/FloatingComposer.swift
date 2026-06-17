@@ -12,11 +12,26 @@ struct FloatingComposer: View {
     var onExpand: (() -> Void)? = nil
     let onSubmit: () -> Void
 
+    @EnvironmentObject private var networkMonitor: NetworkMonitor
     @FocusState private var isFocused: Bool
     @State private var expanded: Bool = false
 
+    /// Commenting talks to the server live (no outbox), so offline blocks
+    /// the action. Surfacing the reason via the notice line below keeps the
+    /// behaviour transparent.
+    private var effectiveDisabled: Bool {
+        disabled || !networkMonitor.hasPath
+    }
+
     private var canSubmit: Bool {
-        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !disabled && !submitting
+        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !effectiveDisabled && !submitting
+    }
+
+    private var effectiveNotice: String? {
+        if !networkMonitor.hasPath {
+            return "Offline — comments and edits resume when reconnected"
+        }
+        return notice
     }
 
     private var isExpanded: Bool {
@@ -28,7 +43,7 @@ struct FloatingComposer: View {
     var body: some View {
         VStack(spacing: 0) {
             // Notice banner (only when expanded and editing)
-            if let notice = notice, isExpanded {
+            if let notice = effectiveNotice, isExpanded {
                 HStack(spacing: 6) {
                     Text(notice)
                         .font(.system(size: 13))
@@ -66,7 +81,7 @@ struct FloatingComposer: View {
                 .frame(maxHeight: isExpanded ? nil : 0, alignment: .top)
                 .clipped()
                 .focused($isFocused)
-                .disabled(disabled || submitting)
+                .disabled(effectiveDisabled || submitting)
                 .onSubmit {
                     if canSubmit { onSubmit() }
                 }
@@ -89,7 +104,7 @@ struct FloatingComposer: View {
                                 .foregroundColor(.textSecondary)
                                 .frame(width: 28, height: 28)
                         }
-                        .disabled(disabled)
+                        .disabled(effectiveDisabled)
                     }
                 }
 

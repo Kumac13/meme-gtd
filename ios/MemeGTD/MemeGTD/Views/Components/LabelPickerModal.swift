@@ -143,6 +143,7 @@ struct LabelPickerModal: View {
 
 struct CreateLabelSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var networkMonitor: NetworkMonitor
     @State private var name: String
     @State private var description: String = ""
     @State private var isSaving = false
@@ -167,6 +168,12 @@ struct CreateLabelSheet: View {
                 } header: {
                     Text("Label Info")
                 } footer: {
+                    if !networkMonitor.hasPath {
+                        Text("Online required to create labels")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 13))
+                            .padding(.top, 4)
+                    }
                     if let error = error {
                         Text(error)
                             .foregroundColor(.red)
@@ -189,7 +196,11 @@ struct CreateLabelSheet: View {
                         createLabel()
                     }
                     .bold()
-                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
+                    .disabled(
+                        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            || isSaving
+                            || !networkMonitor.hasPath
+                    )
                 }
             }
         }
