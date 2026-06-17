@@ -1,16 +1,19 @@
 import Foundation
 
 extension String {
-    /// Stable, run-independent hash (djb2). Swift's built-in `hashValue` is
-    /// salted with a per-process seed so it would produce different synthetic
-    /// memo ids after each app restart — useless for UI continuity across
-    /// background sync.
-    var stableHash: Int {
-        var hash: UInt64 = 5381
+    /// Stable, run-independent FNV-1a 64-bit hash. Swift's built-in `hashValue`
+    /// is salted with a per-process seed so it would produce different
+    /// synthetic memo ids after each app restart — useless for UI continuity
+    /// across background sync. Upgraded from djb2 (32-bit effective output)
+    /// to make collision probability across a user's full pending queue
+    /// astronomically small.
+    var stableHash: UInt64 {
+        var hash: UInt64 = 0xcbf29ce484222325 // FNV offset basis
+        let prime: UInt64 = 0x100000001b3     // FNV prime
         for byte in self.utf8 {
-            hash = ((hash &* 33) &+ UInt64(byte))
+            hash = (hash ^ UInt64(byte)) &* prime
         }
-        return Int(bitPattern: UInt(truncatingIfNeeded: hash))
+        return hash
     }
 }
 
@@ -18,11 +21,12 @@ extension LocalMemo {
     /// Synthetic negative integer id derived purely from a local ULID.
     /// Exposed so other layers (MemoStore, SyncEngine) can locate the same
     /// pending row in the in-memory list without having to retain a full
-    /// `LocalMemo` value.
+    /// `LocalMemo` value. Masking off the top bit keeps the value in the
+    /// representable range of `Int` on 64-bit platforms so negation never
+    /// overflows.
     static func syntheticDisplayId(forLocalId id: String) -> Int {
-        let raw = id.stableHash
-        if raw == Int.min { return Int.min + 1 }   // -Int.min would overflow
-        return -abs(raw)
+        let lower63 = id.stableHash & 0x7FFF_FFFF_FFFF_FFFF
+        return -Int(lower63)
     }
 
     /// Integer id the SwiftUI list should use for this memo. Falls back to a

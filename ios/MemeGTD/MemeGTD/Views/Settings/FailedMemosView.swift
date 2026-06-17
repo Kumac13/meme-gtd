@@ -44,6 +44,17 @@ struct FailedMemosView: View {
         .navigationTitle("Failed memos")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { reload() }
+        // Re-read the table whenever SyncEngine finishes a drain or its
+        // failure tally changes. Avoids the previous foot-gun where Retry
+        // was a fire-and-forget kick but reload() ran immediately, so the
+        // user never saw `attempts` update or the row disappear without a
+        // manual pull.
+        .onChange(of: syncEngine.isSyncing) { _, syncing in
+            if !syncing { reload() }
+        }
+        .onChange(of: syncEngine.failedCount) { _, _ in
+            reload()
+        }
         .confirmationDialog(
             "Delete this memo?",
             isPresented: Binding(
@@ -72,8 +83,9 @@ struct FailedMemosView: View {
     }
 
     private func retry(_ op: OutboxOperation) async {
+        // The reactive reload (.onChange of isSyncing / failedCount) refreshes
+        // the list once the drain finishes, so we don't call reload() here.
         await syncEngine.retryFailed(operationId: op.id)
-        reload()
     }
 
     private func deleteConfirmed(_ op: OutboxOperation) {
