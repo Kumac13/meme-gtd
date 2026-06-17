@@ -16,14 +16,20 @@ export async function createMemoHandler(
   request: FastifyRequest<{ Body: CreateMemoRequest }>,
   reply: FastifyReply
 ) {
-  const { bodyMd, clientId } = request.body;
+  const { bodyMd, clientId, projectIds } = request.body;
   const memoService = new MemoService({ db: request.server.db });
 
   try {
-    const { memo, created } = memoService.createOrGet({ bodyMd, clientId });
+    const { memo, created } = memoService.createOrGet({ bodyMd, clientId, projectIds });
     const labels = memoService.listLabels(memo.id);
     return reply.status(created ? 201 : 200).send({ ...memo, labels });
   } catch (error) {
+    if (error instanceof Error) {
+      const match = /^Project #(\d+) not found$/.exec(error.message);
+      if (match) {
+        throw new NotFoundError('Project', Number(match[1]));
+      }
+    }
     throw error;
   }
 }

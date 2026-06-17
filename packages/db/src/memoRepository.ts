@@ -192,7 +192,7 @@ export const createMemo = (db: Database.Database, input: CreateMemoInput): Memo 
   }
 
   if (input.projectIds?.length) {
-    attachProjects(db, memoId, input.projectIds);
+    attachMemoProjects(db, memoId, input.projectIds);
   }
 
   return getMemo(db, memoId);
@@ -592,7 +592,11 @@ const detachLabels = (db: Database.Database, issueId: number, labels: string[]):
   }
 };
 
-const attachProjects = (db: Database.Database, issueId: number, projectIds: number[]): void => {
+export const attachMemoProjects = (
+  db: Database.Database,
+  issueId: number,
+  projectIds: number[]
+): void => {
   const stmt = db.prepare(
     `INSERT INTO project_items (project_id, issue_id, position, view_meta, created_at, updated_at)
      VALUES (@projectId, @issueId, @position, json('{}'), @createdAt, @createdAt)
@@ -631,7 +635,7 @@ const resetProjects = (db: Database.Database, issueId: number, projectIds: numbe
   if (projectIds.length === 0) {
     return;
   }
-  attachProjects(db, issueId, projectIds);
+  attachMemoProjects(db, issueId, projectIds);
 };
 
 export const setBookmark = (db: Database.Database, id: number, isBookmarked: boolean): void => {

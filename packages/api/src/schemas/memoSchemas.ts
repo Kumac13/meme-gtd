@@ -20,6 +20,13 @@ export const CreateMemoRequestSchema = z.object({
     .describe(
       'Optional client-generated ULID used to make retries from an offline outbox idempotent. When the same clientId is sent twice, the server returns the existing memo with HTTP 200 instead of creating a duplicate.'
     ),
+  projectIds: z
+    .array(z.number().int().positive())
+    .max(50)
+    .optional()
+    .describe(
+      'Optional project IDs to link the memo to immediately after creation. When combined with clientId, retries idempotently merge missing links without duplicating existing ones.'
+    ),
 });
 
 export type CreateMemoRequest = z.infer<typeof CreateMemoRequestSchema>;

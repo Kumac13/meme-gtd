@@ -1022,3 +1022,115 @@ describe('Memo Idempotent Create (clientId)', () => {
     assert.notStrictEqual(memoA.id, memoB.id);
   });
 });
+
+describe('Memo Create with projectIds', () => {
+  let app: FastifyInstance;
+  let cleanup: () => Promise<void>;
+
+  beforeEach(async () => {
+    const testServer = await createTestServer();
+    app = testServer.app;
+    cleanup = testServer.cleanup;
+  });
+
+  afterEach(async () => {
+    await cleanup();
+  });
+
+  const createProject = async (name: string): Promise<number> => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/projects',
+      payload: { name, viewMeta: { viewType: 'board', columns: ['To Do', 'Done'] } },
+    });
+    return JSON.parse(res.body).id;
+  };
+
+  it('should link memo to specified projects on fresh create', async () => {
+    const projectA = await createProject('Inbox A');
+    const projectB = await createProject('Inbox B');
+
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'multi-project memo', projectIds: [projectA, projectB] },
+    });
+    assert.strictEqual(create.statusCode, 201);
+    const memo = JSON.parse(create.body);
+
+    const listA = await app.inject({ method: 'GET', url: `/api/memos?projectId=${projectA}` });
+    assert.ok(JSON.parse(listA.body).data.some((m: any) => m.id === memo.id));
+    const listB = await app.inject({ method: 'GET', url: `/api/memos?projectId=${projectB}` });
+    assert.ok(JSON.parse(listB.body).data.some((m: any) => m.id === memo.id));
+  });
+
+  it('should not duplicate links on idempotent retry with the same projectIds', async () => {
+    const clientId = '01HMBS6YZK0F1V8N1JKZ8R3M01';
+    const project = await createProject('Retry Inbox');
+
+    const first = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'retry memo', clientId, projectIds: [project] },
+    });
+    assert.strictEqual(first.statusCode, 201);
+    const memo = JSON.parse(first.body);
+
+    const retry = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'ignored body', clientId, projectIds: [project] },
+    });
+    assert.strictEqual(retry.statusCode, 200);
+
+    const listed = await app.inject({ method: 'GET', url: `/api/memos?projectId=${project}` });
+    const matched = JSON.parse(listed.body).data.filter((m: any) => m.id === memo.id);
+    assert.strictEqual(matched.length, 1);
+  });
+
+  it('should merge in missing links on retry with a superset of projectIds', async () => {
+    const clientId = '01HMBS6YZK0F1V8N1JKZ8R3M02';
+    const projectA = await createProject('First Inbox');
+    const projectB = await createProject('Added Inbox');
+
+    const first = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'evolving memo', clientId, projectIds: [projectA] },
+    });
+    assert.strictEqual(first.statusCode, 201);
+    const memo = JSON.parse(first.body);
+
+    const retry = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'evolving memo', clientId, projectIds: [projectA, projectB] },
+    });
+    assert.strictEqual(retry.statusCode, 200);
+
+    const listA = await app.inject({ method: 'GET', url: `/api/memos?projectId=${projectA}` });
+    const listB = await app.inject({ method: 'GET', url: `/api/memos?projectId=${projectB}` });
+    assert.ok(JSON.parse(listA.body).data.some((m: any) => m.id === memo.id));
+    assert.ok(JSON.parse(listB.body).data.some((m: any) => m.id === memo.id));
+  });
+
+  it('should return 404 when a projectId does not exist', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'bad project', projectIds: [99999] },
+    });
+    assert.strictEqual(response.statusCode, 404);
+    const error = JSON.parse(response.body);
+    assert.strictEqual(error.code, 'NOT_FOUND');
+  });
+
+  it('should accept empty projectIds array as a no-op', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'no projects', projectIds: [] },
+    });
+    assert.strictEqual(response.statusCode, 201);
+  });
+});

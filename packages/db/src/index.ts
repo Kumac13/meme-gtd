@@ -59,6 +59,7 @@ export {
   listComments,
   listMemoLabels,
   setMemoLabels,
+  attachMemoProjects,
   setBookmark,
   type CreateMemoInput,
   type UpdateMemoInput,

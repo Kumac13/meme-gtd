@@ -114,7 +114,7 @@ paths:
       summary: Create memo
       tags:
         - Memos
-      description: Create a new memo. When a `clientId` (ULID) is supplied and a memo with that clientId already exists, returns the existing memo with status 200 instead of creating a duplicate. This makes retries from the iOS offline outbox idempotent.
+      description: Create a new memo. When a `clientId` (ULID) is supplied and a memo with that clientId already exists, returns the existing memo with status 200 instead of creating a duplicate. Optional `projectIds` link the memo to projects immediately after creation; on retry with the same `clientId` they are merged idempotently.
       requestBody:
         content:
           application/json:
@@ -129,6 +129,14 @@ paths:
                   type: string
                   pattern: ^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$
                   description: Optional client-generated ULID used to make retries from an offline outbox idempotent. When the same clientId is sent twice, the server returns the existing memo with HTTP 200 instead of creating a duplicate.
+                projectIds:
+                  type: array
+                  items:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  maxItems: 50
+                  description: Optional project IDs to link the memo to immediately after creation. When combined with clientId, retries idempotently merge missing links without duplicating existing ones.
               required:
                 - bodyMd
               additionalProperties: false
@@ -275,6 +283,29 @@ paths:
                   - labels
                 additionalProperties: false
         "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
           description: Default Response
           content:
             application/json:

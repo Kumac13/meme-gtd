@@ -6,6 +6,7 @@ import { ActivityLogger } from './activity-log/activity-logger.js';
 import {
   // Memo functions
   addComment,
+  attachMemoProjects,
   createMemo,
   findMemoByClientId,
   deleteComment,
@@ -101,9 +102,15 @@ export class MemoService {
    */
   public createOrGet(input: CreateMemoInput): { memo: ReturnType<typeof createMemo>; created: boolean } {
     return this.db.transaction(() => {
+      if (input.projectIds?.length) {
+        this.assertProjectsExist(input.projectIds);
+      }
       if (input.clientId) {
         const existing = findMemoByClientId(this.db, input.clientId);
         if (existing) {
+          if (input.projectIds?.length) {
+            attachMemoProjects(this.db, existing.id, input.projectIds);
+          }
           return { memo: existing, created: false };
         }
       }
@@ -111,6 +118,22 @@ export class MemoService {
       this.logger.logMemoCreated(memo.id, input.bodyMd ?? '');
       return { memo, created: true };
     })();
+  }
+
+  private assertProjectsExist(projectIds: number[]): void {
+    const placeholders = projectIds.map((_, i) => `@p${i}`).join(',');
+    const params: Record<string, number> = {};
+    projectIds.forEach((id, i) => {
+      params[`p${i}`] = id;
+    });
+    const rows = this.db
+      .prepare(`SELECT id FROM projects WHERE id IN (${placeholders})`)
+      .all(params) as Array<{ id: number }>;
+    const found = new Set(rows.map((r) => r.id));
+    const missing = projectIds.find((id) => !found.has(id));
+    if (missing !== undefined) {
+      throw new Error(`Project #${missing} not found`);
+    }
   }
 
   public list(filters: ListMemoFilters = {}) {

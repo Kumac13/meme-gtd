@@ -51,13 +51,14 @@ export async function memoRoutes(app: FastifyInstance) {
         tags: ['Memos'],
         summary: 'Create memo',
         description:
-          'Create a new memo. When a `clientId` (ULID) is supplied and a memo with that clientId already exists, returns the existing memo with status 200 instead of creating a duplicate. This makes retries from the iOS offline outbox idempotent.',
+          'Create a new memo. When a `clientId` (ULID) is supplied and a memo with that clientId already exists, returns the existing memo with status 200 instead of creating a duplicate. Optional `projectIds` link the memo to projects immediately after creation; on retry with the same `clientId` they are merged idempotently.',
         operationId: 'createMemo',
         body: CreateMemoRequestSchema,
         response: {
           200: MemoSchema,
           201: MemoSchema,
           400: ErrorResponseSchema,
+          404: ErrorResponseSchema,
         },
       },
     },
