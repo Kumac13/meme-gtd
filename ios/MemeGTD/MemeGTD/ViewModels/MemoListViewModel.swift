@@ -331,31 +331,31 @@ class MemoListViewModel: ObservableObject {
     /// of actually delivering it to the server when reachable and stamping
     /// `server_id` back onto the local row.
     ///
-    /// Auto-linking to filtered projects is deferred until after the memo is
-    /// confirmed by the server, because the linking endpoints address memos
-    /// by their INTEGER server id (which doesn't exist yet for pending rows).
-    /// v1.x can extend the outbox to carry follow-up ops if this becomes a
-    /// real problem.
+    /// Active project filters are snapshotted into the outbox payload so
+    /// the server links the memo to those projects on insert. Retries with
+    /// the same clientId merge missing links idempotently, so even if the
+    /// memo capture and the eventual send happen in different sessions the
+    /// linkage matches what the user saw at capture time.
     func createMemo() async {
         let body = newMemoBody.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !body.isEmpty else { return }
 
         isCreating = true
 
+        let capturedProjectIds: [Int]? = projectFilters.isEmpty ? nil : Array(projectFilters)
+
         do {
             let localMemo = try localMemos.createPendingMemo(bodyMd: body)
-            let payload = try JSONEncoder().encode(localMemo.toCreatePayload())
+            let payload = try JSONEncoder().encode(localMemo.toCreatePayload(projectIds: capturedProjectIds))
             try outbox.enqueue(
                 opType: .memoCreate,
                 targetId: localMemo.id,
                 payload: payload
             )
 
-            // Synthesize a Memo for the UI list. Pending rows get a negative
-            // synthetic id derived from the ULID hash; tapping them while
-            // pending will fail (MemoDetailView fetches from the API), which
-            // we accept as a v1 limitation. A subsequent loadMemos() after
-            // sync replaces it with the real server-issued Memo.
+            // Synthesize a Memo for the UI list. The synthetic negative id is
+            // replaced by the real server-issued id once SyncEngine confirms
+            // the create — see MemoListViewModel.init's .memoDidSync observer.
             store?.insertItem(localMemo.toMemo(iso: iso), at: 0)
 
             newMemoBody = ""
@@ -365,11 +365,6 @@ class MemoListViewModel: ObservableObject {
             // settle to "synced" within a heartbeat instead of waiting for
             // the next foreground event.
             SyncEngine.shared.requestSync(reason: "memo-create")
-
-            // Auto-link to filtered projects only if we got a server id
-            // back synchronously (shouldn't happen here in v1, but the hook
-            // is left as a TODO for v1.x).
-            _ = projectFilters
         } catch {
             self.error = error.localizedDescription
             HapticManager.notification(.error)

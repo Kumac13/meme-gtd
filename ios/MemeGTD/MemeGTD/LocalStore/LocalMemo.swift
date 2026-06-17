@@ -20,12 +20,18 @@ struct LocalMemo: Equatable {
     /// build the payload that gets POSTed. The encoder is configured to
     /// emit `clientId` (not `client_id`) because the server contract is
     /// camelCase JSON.
+    ///
+    /// `projectIds` carries the project filters that were active at capture
+    /// time so the server can link the memo to those projects on insert.
+    /// On retries with the same clientId the server merges missing links
+    /// without duplicating existing ones.
     struct CreatePayload: Codable {
         let clientId: String
         let bodyMd: String
+        let projectIds: [Int]?
     }
 
-    func toCreatePayload() -> CreatePayload {
-        CreatePayload(clientId: id, bodyMd: bodyMd)
+    func toCreatePayload(projectIds: [Int]? = nil) -> CreatePayload {
+        CreatePayload(clientId: id, bodyMd: bodyMd, projectIds: projectIds)
     }
 }
