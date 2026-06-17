@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.32.0 - 2026-06-17
+
+### New Features
+
+- **iOS offline memo capture**: memos can now be captured while offline. The iOS app writes to a local SQLite mirror first, queues a `memo.create` op in a persistent outbox, and drains to the server when reachable.
+  - `POST /api/memos` accepts an optional `clientId` (26-char Crockford Base32 ULID) to make outbox retries idempotent. Same `clientId` → same memo; the second call returns the existing record with HTTP 200 instead of creating a duplicate.
+  - `POST /api/memos` accepts an optional `projectIds: number[]` that links the memo to the named projects at insert time. On idempotent retries, missing links are merged in; existing links are not duplicated. Unknown project IDs return 404.
+  - New schema migration `014_add_client_id_to_issues.sql` adds `issues.client_id` with a partial UNIQUE index that excludes NULL.
+- **iOS sync engine**: `NWPathMonitor` + `/api/health` probe + exponential backoff (1s → 5min, 10 attempts). Foreground re-triggers a drain; failed rows surface via a Failed Memos banner so the user can manually retry or discard.
+- **iOS offline guardrails**: every non-memo write surface (task create, label create, the comment composer shared across memo/task/article detail views, "Sync now" in Settings) disables when offline and explains why ("Offline — sync paused" / "Offline — comments and edits resume when reconnected" / "Online required to create labels").
+
+### Behavior Changes
+
+- iOS memo create now goes through the LocalStore + SyncEngine path even when online. The optimistically-inserted pending row keeps its list position and is swapped for the server-confirmed memo as soon as the engine finishes its first drain (no more visible negative ids when tapping a freshly-created memo).
+- `POST /api/memos` responses now include both 200 (idempotent retry hit) and 201 (fresh insert) status codes. Clients that previously only handled 201 should treat 200 the same way.
+- TaskListView's create FAB disables when offline (Type B: memo is the only offline write).
+
+### Internal
+
+- `MemoService.createOrGet` replaces `MemoService.create` as the canonical create path (`create` is kept as a thin alias for CLI back-compat).
+- `attachMemoProjects` is now exported from `meme-gtd-db` so callers outside the memo repository can use the same `ON CONFLICT` idempotent merge.
+- iOS `LocalMemo` synthetic id moves from djb2-32 to FNV-1a 64bit; collision probability over a realistic pending queue drops from ~10⁻³ to ~10⁻¹⁵.
+- iOS outbox `dueOperations` orders by `(created_at, id)` so two enqueues in the same millisecond have a deterministic ULID-lex ordering.
+- iOS bootstrap auto-resets any outbox row stuck in `'syncing'` from a prior crashed process so the row is not lost.
+
 ## 0.31.0 - 2026-06-13
 
 ### New Features

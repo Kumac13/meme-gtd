@@ -56,6 +56,7 @@ Memo (Captured) → promote → Task (Inbox)
 | is_bookmarked | INTEGER | ブックマークフラグ (0/1) |
 | is_deleted | INTEGER | 論理削除フラグ (0/1) |
 | meta | TEXT | JSON形式の追加情報。articleは `originalUrl`/`siteName`/`archivedAt` を保持 |
+| client_id | TEXT | 任意。iOSオフラインoutboxからの冪等POST再送をサーバが識別するためのクライアント生成ULID（部分UNIQUEインデックス、非NULL値のみ一意） |
 | created_at | TEXT | 作成日時 (ISO 8601) |
 | updated_at | TEXT | 更新日時 (ISO 8601) |
 | **スケジュール（新形式）** |||
@@ -276,7 +277,16 @@ mgtd db backup --keep <n> --output <dir> --list --json
 - Safari Share Extension でWeb記事を保存（`POST /api/articles`）
 - SwiftモデルはAPIスキーマの手書きミラー。API変更時は手動同期が必要（`docs/architecture.md` の対応表参照）
 
-## 検索アーキテクチャ
+### iOSオフラインメモ取り込み
+
+- **対象範囲**: メモ作成のみ。タスク・プロジェクト・コメント・ラベル等は引き続きオンライン必須（UI側で自動 disable + offline notice 表示）
+- **ローカルDB**: `ios/MemeGTD/MemeGTD/LocalStore/` 配下に raw SQLite (`local_memos` / `outbox` / 将来用 `local_*` キャッシュ)。GRDB等の依存は意図的に持たない
+- **ULID + clientId**: 端末側で 26文字 Crockford Base32 ULID を生成し、`POST /api/memos` の `clientId` として送信。サーバは `issues.client_id` の部分 UNIQUE インデックスで突合し、同一 clientId の再送は **既存memoを 200 で返す**（fresh insert は 201）
+- **projectIds**: `POST /api/memos` の任意 `projectIds: number[]` で memo を作成時にプロジェクトに紐付け可能。idempotent 再送時は欠けているリンクだけ追加（冪等マージ）。iOS のメモ作成画面でプロジェクトフィルタ中だった場合、その filter snapshot が outbox payload に乗る
+- **SyncEngine**: NWPathMonitor + `/api/health` 健全性プローブ + 永続 outbox。`pending` / `syncing` / `failed` の状態機械、指数バックオフ（1s〜5min）、10試行で停止。プロセスがクラッシュして `syncing` のまま残った行は bootstrap で `pending` に自動復帰
+- **失敗の見せ方**: 全件 `failed` になったときだけバナー＋ Settings の "Failed memos" 画面に出現。リトライ・削除（型したテキストごと）は手動操作
+- **同期完了UI**: SyncEngine が memo 作成に成功すると `Notification.Name.memoDidSync` を post し、`MemoListViewModel` が MemoStore の合成負id（FNV-1a 64bit の ULID ハッシュ）を実サーバ memo に in-place で差し替え
+- 詳細設計: `docs/plan_ios_offline.md`
 
 ### 2つの検索モード
 
