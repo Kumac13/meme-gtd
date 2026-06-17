@@ -5,8 +5,12 @@ struct MemeGTDApp: App {
     @StateObject private var taskStore = TaskStore()
     @StateObject private var memoStore = MemoStore()
     @StateObject private var articleStore = ArticleStore()
-    @StateObject private var syncEngine = SyncEngine.shared
-    @StateObject private var networkMonitor = NetworkMonitor.shared
+    // `SyncEngine.shared` and `NetworkMonitor.shared` are singletons that own
+    // their own lifetime — wrapping them in @StateObject would imply the App
+    // created them, which is misleading. @ObservedObject correctly says
+    // "observe these published changes without claiming ownership."
+    @ObservedObject private var syncEngine = SyncEngine.shared
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
 
     var body: some Scene {
         WindowGroup {

@@ -28,6 +28,12 @@ final class NetworkMonitor: ObservableObject {
             }
         }
         monitor.start(queue: queue)
+        // Seed `hasPath` from the path NWPathMonitor already knows about
+        // before we get our first async update callback. Without this, the UI
+        // briefly renders "offline" (greyed FAB, disabled actions) for the
+        // ~50–200ms between `start()` and the first callback even when the
+        // network is actually fine.
+        self.hasPath = monitor.currentPath.status == .satisfied
     }
 
     deinit {
