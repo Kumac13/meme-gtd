@@ -45,6 +45,9 @@ struct MemoListView: View {
         ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
+                        Color.clear.frame(height: 1)
+                            .id("top")
+
                         if !memoStore.hasMore && !memoStore.memos.isEmpty {
                         Text("No older memos")
                             .font(.caption)
@@ -105,6 +108,23 @@ struct MemoListView: View {
                         HapticManager.impact(.medium)
 
                         let start = Date()
+
+                        if viewModel.isDateFiltered {
+                            // Schedule filter active: keep the full filtered
+                            // range loaded instead of resetting to the newest
+                            // page. loadAllMemos updates the store directly.
+                            await viewModel.loadAllMemos()
+
+                            let elapsed = Date().timeIntervalSince(start)
+                            let remaining = 0.75 - elapsed
+                            if remaining > 0 {
+                                try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+                            }
+                            HapticManager.notification(.success)
+                            continuation.resume()
+                            return
+                        }
+
                         let hasMore = memoStore.hasMore
                         let response: MemoListResponse?
                         if hasMore {
@@ -141,6 +161,15 @@ struct MemoListView: View {
                         withAnimation {
                             proxy.scrollTo("bottom", anchor: .bottom)
                         }
+                    }
+                }
+            }
+            .onChange(of: viewModel.scrollToOldestRequest) { _, _ in
+                // After a full filtered load, surface the oldest item (top of
+                // the reversed timeline).
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation {
+                        proxy.scrollTo("top", anchor: .top)
                     }
                 }
             }
@@ -294,7 +323,7 @@ struct MemoListView: View {
         .onChange(of: memoStore.needsReload) { _, needsReload in
             if needsReload {
                 memoStore.needsReload = false
-                Task { await viewModel.loadMemos() }
+                Task { await viewModel.reloadMemos() }
             }
         }
         .onChange(of: isSearching) { _, newValue in
