@@ -108,6 +108,7 @@ export const MemoQuerySchema = z.object({
   createdTo: z.string().date().optional().describe('Filter memos created on or before this date (YYYY-MM-DD)'),
   limit: z.coerce.number().int().min(1).max(1000).optional().describe('Maximum number of memos to return (default: 100, max: 1000)'),
   offset: z.coerce.number().int().min(0).optional().describe('Number of memos to skip (default: 0)'),
+  order: z.enum(['asc', 'desc']).optional().describe('Sort order by created_at (default: desc — newest first)'),
 });
 
 export type MemoQuery = z.infer<typeof MemoQuerySchema>;

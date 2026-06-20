@@ -286,6 +286,15 @@ paths:
           name: offset
           required: false
           description: "Number of memos to skip (default: 0)"
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+          in: query
+          name: order
+          required: false
+          description: "Sort order by created_at (default: desc — newest first)"
       responses:
         "200":
           description: Default Response
