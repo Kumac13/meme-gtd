@@ -106,6 +106,12 @@ struct MemoListView: View {
             .scrollDismissesKeyboard(.immediately)
             .scrollEdgeEffectStyle(.soft, for: .bottom)
             .defaultScrollAnchor(viewModel.isDateFiltered ? .top : .bottom)
+            // Recreate the ScrollView when the filter mode toggles so the
+            // initial scroll offset is taken from defaultScrollAnchor again
+            // (.top for filtered → oldest at top; .bottom for the chat-style
+            // unfiltered feed). Without this, the prior mode's pixel offset
+            // bleeds into the new mode and lands the user mid-list.
+            .id(viewModel.isDateFiltered ? "filtered" : "feed")
             .refreshable {
                 await withCheckedContinuation { continuation in
                     Task { @MainActor in

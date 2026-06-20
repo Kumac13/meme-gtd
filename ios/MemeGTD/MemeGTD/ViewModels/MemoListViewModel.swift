@@ -252,31 +252,37 @@ class MemoListViewModel: ObservableObject {
             relevanceScores = [:]
             semanticSearchTimeMs = nil
 
-            try Task.checkCancellation()
-            let first: MemoListResponse = try await APIClient.shared.get(
-                path: "/api/memos",
-                queryItems: buildListQueryItems(offset: 0)
-            )
-            try Task.checkCancellation()
-            store.setItems(first.data, total: first.total)
+            // Clear immediately so the spinner overlay (memos.isEmpty &&
+            // isLoading) shows and the previous (un-filtered) content doesn't
+            // bleed into the new filter while we page. Single batched setItems
+            // at the end ensures the ScrollView re-anchors only once, instead
+            // of chasing every appendItems mid-load.
+            store.setItems([], total: 0)
 
-            while store.hasMore {
+            var accumulated: [Memo] = []
+            var finalTotal = 0
+
+            while true {
                 try Task.checkCancellation()
-                let next: MemoListResponse = try await APIClient.shared.get(
+                let resp: MemoListResponse = try await APIClient.shared.get(
                     path: "/api/memos",
-                    queryItems: buildListQueryItems(offset: store.memos.count)
+                    queryItems: buildListQueryItems(offset: accumulated.count)
                 )
                 try Task.checkCancellation()
-                if next.data.isEmpty {
-                    // Server reported more items than it returned. Normalize
-                    // `total` so `hasMore` becomes false and the UI settles.
-                    store.sealTotal()
+                if resp.data.isEmpty {
+                    // Server reported more items than it returned. Trust the
+                    // accumulated count so `hasMore` settles to false.
+                    finalTotal = accumulated.count
                     break
                 }
-                store.appendItems(next.data, total: next.total)
+                accumulated.append(contentsOf: resp.data)
+                finalTotal = resp.total
+                if accumulated.count >= finalTotal { break }
             }
 
-            logger.info("loadAllMemos done: count=\(store.memos.count), total=\(store.total)")
+            store.setItems(accumulated, total: finalTotal)
+
+            logger.info("loadAllMemos done: count=\(accumulated.count), total=\(finalTotal)")
         } catch is CancellationError {
             // A newer reload task is taking over; leave `isLoading` true so the
             // replacement owns the spinner lifecycle.
