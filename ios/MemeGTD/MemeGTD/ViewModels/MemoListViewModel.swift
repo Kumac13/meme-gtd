@@ -93,6 +93,12 @@ class MemoListViewModel: ObservableObject {
             URLQueryItem(name: "limit", value: String(pageSize)),
             URLQueryItem(name: "offset", value: String(offset)),
         ]
+        // Schedule (date) filter active → request ascending so the oldest of
+        // the range arrives first. Aligns array order with display order so the
+        // ScrollView's natural top position shows the oldest, no scrolling.
+        if isDateFiltered {
+            queryItems.append(URLQueryItem(name: "order", value: "asc"))
+        }
         if bookmarkFilter {
             queryItems.append(URLQueryItem(name: "bookmarked", value: "true"))
         }

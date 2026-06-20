@@ -2,9 +2,13 @@
 
 ## 0.32.0 - 2026-06-18
 
+### New Features
+
+- **`GET /api/memos` accepts `order=asc|desc`**: Lets clients fetch memos in ascending creation order. Default remains `desc` (newest first) so existing consumers are unaffected.
+
 ### Behavior Changes
 
-- **iOS Memo Schedule Filter**: When a schedule (created-date range) filter is active, the memo timeline now loads the entire filtered range up front and scrolls to its oldest entry, instead of only showing the newest page and forcing repeated manual loading. Pull-to-refresh while the filter is active reloads the full range rather than resetting back to the newest page (the previous behavior). Loading the whole range trades a short delay for completeness.
+- **iOS Memo Schedule Filter**: When a schedule (created-date range) filter is active, the memo timeline now fetches the range in ascending order (oldest first) and loads the full filtered range. The oldest entry is the natural top of the list — no programmatic scrolling, so wide ranges open instantly instead of waiting for an animated scroll through hundreds of cells. Pull-to-refresh while the filter is active reloads the full range. Loading the whole range trades a short delay for completeness.
 
 ### Reliability
 

@@ -38,6 +38,12 @@ struct MemoListView: View {
         if viewModel.searchMode == .semantic && isSearching {
             return memoStore.memos
         }
+        // Date filter fetches ascending from the API (see buildListQueryItems),
+        // so the array already runs oldest → newest. Keep order; otherwise the
+        // API's newest-first array gets reversed for the chat-style layout.
+        if viewModel.isDateFiltered {
+            return memoStore.memos
+        }
         return memoStore.memos.reversed()
     }
 
@@ -45,9 +51,6 @@ struct MemoListView: View {
         ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        Color.clear.frame(height: 1)
-                            .id("top")
-
                         if !memoStore.hasMore && !memoStore.memos.isEmpty {
                         Text("No older memos")
                             .font(.caption)
