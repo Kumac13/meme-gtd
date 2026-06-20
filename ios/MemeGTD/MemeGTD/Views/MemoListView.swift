@@ -165,12 +165,11 @@ struct MemoListView: View {
                 }
             }
             .onChange(of: viewModel.scrollToOldestRequest) { _, _ in
-                // After a full filtered load, surface the oldest item (top of
-                // the reversed timeline).
+                // After a full filtered load, jump to the oldest item without
+                // animation — for wide date ranges the animated scroll across
+                // hundreds of items is slow enough to feel like a hang.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    withAnimation {
-                        proxy.scrollTo("top", anchor: .top)
-                    }
+                    proxy.scrollTo("top", anchor: .top)
                 }
             }
             .safeAreaBar(edge: .bottom) {
