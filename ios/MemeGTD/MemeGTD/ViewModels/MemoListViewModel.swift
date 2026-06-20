@@ -29,10 +29,6 @@ class MemoListViewModel: ObservableObject {
     @Published var relevanceScores: [Int: Double] = [:]
     @Published var semanticSearchTimeMs: Double?
 
-    // Incremented after a full (load-all) fetch completes so the view can
-    // scroll to the oldest item. Used by the schedule/date filter flow.
-    @Published var scrollToOldestRequest: Int = 0
-
     var store: MemoStore?
 
     private let pageSize = 20
@@ -275,7 +271,6 @@ class MemoListViewModel: ObservableObject {
             }
 
             logger.info("loadAllMemos done: count=\(store.memos.count), total=\(store.total)")
-            scrollToOldestRequest += 1
         } catch is CancellationError {
             // A newer reload task is taking over; leave `isLoading` true so the
             // replacement owns the spinner lifecycle.
