@@ -6,6 +6,10 @@
 
 - **iOS Memo Schedule Filter**: When a schedule (created-date range) filter is active, the memo timeline now loads the entire filtered range up front and scrolls to its oldest entry, instead of only showing the newest page and forcing repeated manual loading. Pull-to-refresh while the filter is active reloads the full range rather than resetting back to the newest page (the previous behavior). Loading the whole range trades a short delay for completeness.
 
+### Reliability
+
+- **iOS Memo Reload Race Fix**: Filter changes while a full-range load is in flight now cancel the prior load to keep the timeline consistent. When the server reports a higher `total` than it actually returns, the list now settles `hasMore` to false so "No older memos" appears correctly.
+
 ## 0.31.0 - 2026-06-13
 
 ### New Features

@@ -37,6 +37,11 @@ class MemoListViewModel: ObservableObject {
 
     private let pageSize = 20
 
+    /// Tracks the most recently spawned reload task so a new filter change can
+    /// cancel an in-flight `loadAllMemos`/`loadMemos` and prevent races where
+    /// the prior load appends stale pages to the store.
+    private var activeReloadTask: Task<Void, Never>?
+
     private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
@@ -214,7 +219,14 @@ class MemoListViewModel: ObservableObject {
             }
             store?.setItems(response.data, total: response.total)
             logger.info("loadMemos done: count=\(response.data.count), total=\(response.total)")
+        } catch is CancellationError {
+            logger.info("loadMemos cancelled")
+            return
         } catch {
+            if Task.isCancelled {
+                logger.info("loadMemos cancelled (URLError)")
+                return
+            }
             self.error = error.localizedDescription
             logger.error("loadMemos error: \(error.localizedDescription)")
         }
@@ -238,28 +250,42 @@ class MemoListViewModel: ObservableObject {
             relevanceScores = [:]
             semanticSearchTimeMs = nil
 
+            try Task.checkCancellation()
             let first: MemoListResponse = try await APIClient.shared.get(
                 path: "/api/memos",
                 queryItems: buildListQueryItems(offset: 0)
             )
+            try Task.checkCancellation()
             store.setItems(first.data, total: first.total)
 
             while store.hasMore {
+                try Task.checkCancellation()
                 let next: MemoListResponse = try await APIClient.shared.get(
                     path: "/api/memos",
                     queryItems: buildListQueryItems(offset: store.memos.count)
                 )
-                // Guard against an infinite loop if the server reports more
-                // items than it returns.
-                if next.data.isEmpty { break }
+                try Task.checkCancellation()
+                if next.data.isEmpty {
+                    // Server reported more items than it returned. Normalize
+                    // `total` so `hasMore` becomes false and the UI settles.
+                    store.sealTotal()
+                    break
+                }
                 store.appendItems(next.data, total: next.total)
             }
 
             logger.info("loadAllMemos done: count=\(store.memos.count), total=\(store.total)")
             scrollToOldestRequest += 1
         } catch is CancellationError {
+            // A newer reload task is taking over; leave `isLoading` true so the
+            // replacement owns the spinner lifecycle.
             logger.info("loadAllMemos cancelled")
+            return
         } catch {
+            if Task.isCancelled {
+                logger.info("loadAllMemos cancelled (URLError)")
+                return
+            }
             self.error = error.localizedDescription
             logger.error("loadAllMemos error: \(error.localizedDescription)")
         }
@@ -274,6 +300,16 @@ class MemoListViewModel: ObservableObject {
             await loadAllMemos()
         } else {
             await loadMemos()
+        }
+    }
+
+    /// Fire-and-forget reload that cancels any in-flight reload first. Use this
+    /// from synchronous mutators (filter toggles, view onChange handlers) so
+    /// rapid filter changes don't interleave their loads.
+    func reload() {
+        activeReloadTask?.cancel()
+        activeReloadTask = Task { @MainActor [weak self] in
+            await self?.reloadMemos()
         }
     }
 
@@ -421,34 +457,34 @@ class MemoListViewModel: ObservableObject {
 
     func toggleBookmarkFilter() {
         bookmarkFilter.toggle()
-        Task { await reloadMemos() }
+        reload()
     }
 
     func setLabelFilters(_ labels: Set<String>) {
         labelFilters = labels
-        Task { await reloadMemos() }
+        reload()
     }
 
     func setDateFilter(from: Date?, to: Date?) {
         createdFrom = from
         createdTo = to
-        Task { await reloadMemos() }
+        reload()
     }
 
     func clearDateFilter() {
         createdFrom = nil
         createdTo = nil
-        Task { await reloadMemos() }
+        reload()
     }
 
     func setProjectFilters(_ projectIds: Set<Int>, includeNone: Bool) {
         projectFilters = projectIds
         includeNoProject = includeNone
-        Task { await reloadMemos() }
+        reload()
     }
 
     func search() {
-        Task { await reloadMemos() }
+        reload()
     }
 
     // MARK: - Copy / export search results

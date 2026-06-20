@@ -323,7 +323,7 @@ struct MemoListView: View {
         .onChange(of: memoStore.needsReload) { _, needsReload in
             if needsReload {
                 memoStore.needsReload = false
-                Task { await viewModel.reloadMemos() }
+                viewModel.reload()
             }
         }
         .onChange(of: isSearching) { _, newValue in

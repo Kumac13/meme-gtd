@@ -34,4 +34,11 @@ class MemoStore: ObservableObject {
         memos.removeAll { $0.id == id }
         total = max(0, total - 1)
     }
+
+    /// Normalizes `total` to the actually-loaded count. Used after a paginated
+    /// "load all" exits early because the server reported more items than it
+    /// returned, so `hasMore` correctly becomes false.
+    func sealTotal() {
+        total = memos.count
+    }
 }
