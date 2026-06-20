@@ -33,6 +33,11 @@ class MemoListViewModel: ObservableObject {
 
     private let pageSize = 20
 
+    /// Tracks the most recently spawned reload task so a new filter change can
+    /// cancel an in-flight `loadAllMemos`/`loadMemos` and prevent races where
+    /// the prior load appends stale pages to the store.
+    private var activeReloadTask: Task<Void, Never>?
+
     private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
@@ -79,11 +84,21 @@ class MemoListViewModel: ObservableObject {
     /// Whether semantic search is active
     var isSemanticSearching: Bool { isSearching && searchMode == .semantic }
 
+    /// Whether a schedule (created date range) filter is active. Search ignores
+    /// the date filter (see buildSearchQueryItems), so this is false while searching.
+    var isDateFiltered: Bool { (createdFrom != nil || createdTo != nil) && !isSearching }
+
     private func buildListQueryItems(offset: Int) -> [URLQueryItem] {
         var queryItems: [URLQueryItem] = [
             URLQueryItem(name: "limit", value: String(pageSize)),
             URLQueryItem(name: "offset", value: String(offset)),
         ]
+        // Schedule (date) filter active → request ascending so the oldest of
+        // the range arrives first. Aligns array order with display order so the
+        // ScrollView's natural top position shows the oldest, no scrolling.
+        if isDateFiltered {
+            queryItems.append(URLQueryItem(name: "order", value: "asc"))
+        }
         if bookmarkFilter {
             queryItems.append(URLQueryItem(name: "bookmarked", value: "true"))
         }
@@ -206,12 +221,103 @@ class MemoListViewModel: ObservableObject {
             }
             store?.setItems(response.data, total: response.total)
             logger.info("loadMemos done: count=\(response.data.count), total=\(response.total)")
+        } catch is CancellationError {
+            logger.info("loadMemos cancelled")
+            return
         } catch {
+            if Task.isCancelled {
+                logger.info("loadMemos cancelled (URLError)")
+                return
+            }
             self.error = error.localizedDescription
             logger.error("loadMemos error: \(error.localizedDescription)")
         }
 
         isLoading = false
+    }
+
+    /// Loads every memo matching the current (non-search) filters by paging
+    /// until `hasMore` is exhausted, then signals the view to scroll to the
+    /// oldest item. Used when a schedule/date filter is active so the user sees
+    /// the full filtered range starting from its oldest entry. The extra
+    /// requests trade latency for completeness, which is acceptable here.
+    func loadAllMemos() async {
+        guard let store else { return }
+        logger.info("loadAllMemos called")
+        isLoading = true
+        error = nil
+
+        do {
+            searchMatchInfos = [:]
+            relevanceScores = [:]
+            semanticSearchTimeMs = nil
+
+            // Clear immediately so the spinner overlay (memos.isEmpty &&
+            // isLoading) shows and the previous (un-filtered) content doesn't
+            // bleed into the new filter while we page. Single batched setItems
+            // at the end ensures the ScrollView re-anchors only once, instead
+            // of chasing every appendItems mid-load.
+            store.setItems([], total: 0)
+
+            var accumulated: [Memo] = []
+            var finalTotal = 0
+
+            while true {
+                try Task.checkCancellation()
+                let resp: MemoListResponse = try await APIClient.shared.get(
+                    path: "/api/memos",
+                    queryItems: buildListQueryItems(offset: accumulated.count)
+                )
+                try Task.checkCancellation()
+                if resp.data.isEmpty {
+                    // Server reported more items than it returned. Trust the
+                    // accumulated count so `hasMore` settles to false.
+                    finalTotal = accumulated.count
+                    break
+                }
+                accumulated.append(contentsOf: resp.data)
+                finalTotal = resp.total
+                if accumulated.count >= finalTotal { break }
+            }
+
+            store.setItems(accumulated, total: finalTotal)
+
+            logger.info("loadAllMemos done: count=\(accumulated.count), total=\(finalTotal)")
+        } catch is CancellationError {
+            // A newer reload task is taking over; leave `isLoading` true so the
+            // replacement owns the spinner lifecycle.
+            logger.info("loadAllMemos cancelled")
+            return
+        } catch {
+            if Task.isCancelled {
+                logger.info("loadAllMemos cancelled (URLError)")
+                return
+            }
+            self.error = error.localizedDescription
+            logger.error("loadAllMemos error: \(error.localizedDescription)")
+        }
+
+        isLoading = false
+    }
+
+    /// Reloads the list, loading the full filtered range when a schedule/date
+    /// filter is active and a single newest page otherwise.
+    func reloadMemos() async {
+        if isDateFiltered {
+            await loadAllMemos()
+        } else {
+            await loadMemos()
+        }
+    }
+
+    /// Fire-and-forget reload that cancels any in-flight reload first. Use this
+    /// from synchronous mutators (filter toggles, view onChange handlers) so
+    /// rapid filter changes don't interleave their loads.
+    func reload() {
+        activeReloadTask?.cancel()
+        activeReloadTask = Task { @MainActor [weak self] in
+            await self?.reloadMemos()
+        }
     }
 
     // MARK: - Fetch without UI update (for pull-to-refresh)
@@ -358,34 +464,34 @@ class MemoListViewModel: ObservableObject {
 
     func toggleBookmarkFilter() {
         bookmarkFilter.toggle()
-        Task { await loadMemos() }
+        reload()
     }
 
     func setLabelFilters(_ labels: Set<String>) {
         labelFilters = labels
-        Task { await loadMemos() }
+        reload()
     }
 
     func setDateFilter(from: Date?, to: Date?) {
         createdFrom = from
         createdTo = to
-        Task { await loadMemos() }
+        reload()
     }
 
     func clearDateFilter() {
         createdFrom = nil
         createdTo = nil
-        Task { await loadMemos() }
+        reload()
     }
 
     func setProjectFilters(_ projectIds: Set<Int>, includeNone: Bool) {
         projectFilters = projectIds
         includeNoProject = includeNone
-        Task { await loadMemos() }
+        reload()
     }
 
     func search() {
-        Task { await loadMemos() }
+        reload()
     }
 
     // MARK: - Copy / export search results

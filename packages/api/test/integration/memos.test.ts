@@ -916,3 +916,113 @@ describe('Memo Date Filtering', () => {
     assert.strictEqual(result.total, 2);
   });
 });
+
+describe('Memo Order Parameter', () => {
+  let app: FastifyInstance;
+  let cleanup: () => Promise<void>;
+
+  beforeEach(async () => {
+    const testServer = await createTestServer();
+    app = testServer.app;
+    cleanup = testServer.cleanup;
+  });
+
+  afterEach(async () => {
+    await cleanup();
+  });
+
+  it('should default to descending order (newest first)', async () => {
+    const memo1 = createMemo(app.db, { bodyMd: 'Oldest' });
+    const memo2 = createMemo(app.db, { bodyMd: 'Middle' });
+    const memo3 = createMemo(app.db, { bodyMd: 'Newest' });
+
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2024-01-01T10:00:00Z', memo1.id);
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2024-06-15T10:00:00Z', memo2.id);
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2025-03-01T10:00:00Z', memo3.id);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.data.length, 3);
+    assert.strictEqual(result.data[0].bodyMd, 'Newest');
+    assert.strictEqual(result.data[1].bodyMd, 'Middle');
+    assert.strictEqual(result.data[2].bodyMd, 'Oldest');
+  });
+
+  it('should return memos in ascending order when order=asc', async () => {
+    const memo1 = createMemo(app.db, { bodyMd: 'Oldest' });
+    const memo2 = createMemo(app.db, { bodyMd: 'Middle' });
+    const memo3 = createMemo(app.db, { bodyMd: 'Newest' });
+
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2024-01-01T10:00:00Z', memo1.id);
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2024-06-15T10:00:00Z', memo2.id);
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2025-03-01T10:00:00Z', memo3.id);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos?order=asc',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.data.length, 3);
+    assert.strictEqual(result.data[0].bodyMd, 'Oldest');
+    assert.strictEqual(result.data[1].bodyMd, 'Middle');
+    assert.strictEqual(result.data[2].bodyMd, 'Newest');
+  });
+
+  it('should return memos in descending order when order=desc', async () => {
+    const memo1 = createMemo(app.db, { bodyMd: 'Oldest' });
+    const memo2 = createMemo(app.db, { bodyMd: 'Newest' });
+
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2024-01-01T10:00:00Z', memo1.id);
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2025-03-01T10:00:00Z', memo2.id);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos?order=desc',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.data[0].bodyMd, 'Newest');
+    assert.strictEqual(result.data[1].bodyMd, 'Oldest');
+  });
+
+  it('should combine order=asc with date filter for oldest-first range view', async () => {
+    const memo1 = createMemo(app.db, { bodyMd: 'Out of range (too old)' });
+    const memo2 = createMemo(app.db, { bodyMd: 'In range oldest' });
+    const memo3 = createMemo(app.db, { bodyMd: 'In range middle' });
+    const memo4 = createMemo(app.db, { bodyMd: 'In range newest' });
+
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2023-12-15T10:00:00Z', memo1.id);
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2024-02-01T10:00:00Z', memo2.id);
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2024-06-10T10:00:00Z', memo3.id);
+    app.db.prepare('UPDATE issues SET created_at = ? WHERE id = ?').run('2024-11-20T10:00:00Z', memo4.id);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos?createdFrom=2024-01-01&createdTo=2024-12-31&order=asc',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.data.length, 3);
+    assert.strictEqual(result.data[0].bodyMd, 'In range oldest');
+    assert.strictEqual(result.data[1].bodyMd, 'In range middle');
+    assert.strictEqual(result.data[2].bodyMd, 'In range newest');
+  });
+
+  it('should reject invalid order value', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/memos?order=random',
+    });
+
+    assert.strictEqual(response.statusCode, 400);
+  });
+});

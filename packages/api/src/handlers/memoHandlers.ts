@@ -45,12 +45,13 @@ export async function listMemosHandler(
       createdTo?: string;
       limit?: number;
       offset?: number;
+      order?: 'asc' | 'desc';
     };
   }>,
   reply: FastifyReply
 ) {
   const memoService = new MemoService({ db: request.server.db });
-  const { bookmarked, label, projectId, search, createdFrom, createdTo, limit, offset } = request.query;
+  const { bookmarked, label, projectId, search, createdFrom, createdTo, limit, offset, order } = request.query;
 
   const actualLimit = limit ?? DEFAULT_LIMIT;
   const actualOffset = offset ?? DEFAULT_OFFSET;
@@ -59,6 +60,9 @@ export async function listMemosHandler(
     limit: actualLimit,
     offset: actualOffset,
   };
+  if (order === 'asc' || order === 'desc') {
+    filters.order = order;
+  }
   if (bookmarked === 'true') {
     filters.isBookmarked = true;
   }

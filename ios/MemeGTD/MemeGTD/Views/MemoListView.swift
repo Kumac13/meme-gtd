@@ -38,6 +38,12 @@ struct MemoListView: View {
         if viewModel.searchMode == .semantic && isSearching {
             return memoStore.memos
         }
+        // Date filter fetches ascending from the API (see buildListQueryItems),
+        // so the array already runs oldest → newest. Keep order; otherwise the
+        // API's newest-first array gets reversed for the chat-style layout.
+        if viewModel.isDateFiltered {
+            return memoStore.memos
+        }
         return memoStore.memos.reversed()
     }
 
@@ -99,12 +105,36 @@ struct MemoListView: View {
             }
             .scrollDismissesKeyboard(.immediately)
             .scrollEdgeEffectStyle(.soft, for: .bottom)
+            .defaultScrollAnchor(viewModel.isDateFiltered ? .top : .bottom)
+            // Recreate the ScrollView when the filter mode toggles so the
+            // initial scroll offset is taken from defaultScrollAnchor again
+            // (.top for filtered → oldest at top; .bottom for the chat-style
+            // unfiltered feed). Without this, the prior mode's pixel offset
+            // bleeds into the new mode and lands the user mid-list.
+            .id(viewModel.isDateFiltered ? "filtered" : "feed")
             .refreshable {
                 await withCheckedContinuation { continuation in
                     Task { @MainActor in
                         HapticManager.impact(.medium)
 
                         let start = Date()
+
+                        if viewModel.isDateFiltered {
+                            // Schedule filter active: keep the full filtered
+                            // range loaded instead of resetting to the newest
+                            // page. loadAllMemos updates the store directly.
+                            await viewModel.loadAllMemos()
+
+                            let elapsed = Date().timeIntervalSince(start)
+                            let remaining = 0.75 - elapsed
+                            if remaining > 0 {
+                                try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+                            }
+                            HapticManager.notification(.success)
+                            continuation.resume()
+                            return
+                        }
+
                         let hasMore = memoStore.hasMore
                         let response: MemoListResponse?
                         if hasMore {
@@ -294,7 +324,7 @@ struct MemoListView: View {
         .onChange(of: memoStore.needsReload) { _, needsReload in
             if needsReload {
                 memoStore.needsReload = false
-                Task { await viewModel.loadMemos() }
+                viewModel.reload()
             }
         }
         .onChange(of: isSearching) { _, newValue in
