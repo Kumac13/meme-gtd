@@ -4,7 +4,7 @@ Native iOS app for meme-gtd. Includes a memo timeline, thread detail view, and a
 
 ## Requirements
 
-- Xcode 16.0+
+- Xcode 26.0+
 - iOS 26.0+
 - Tailscale (for API connection)
 

@@ -44,9 +44,9 @@ ios/MemeGTD/
 
 ## 開発環境
 
-- Xcode 15.0+
-- iOS 16.0+
-- Swift 5.9
+- Xcode 26.0+
+- iOS 26.0+（デプロイメントターゲットは `project.pbxproj` の `IPHONEOS_DEPLOYMENT_TARGET = 26.2`）
+- Swift 5 言語モード（`SWIFT_VERSION = 5.0`）
 
 ## JavaScript Bundle更新
 

@@ -323,7 +323,7 @@ mgtd db backup --keep <n> --output <dir> --list --json
 - **DB**: SQLite (better-sqlite3)
 - **API**: Fastify 5（Zodバリデーション、OpenAPI自動生成）
 - **Web**: React 19 / Vite / Tailwind CSS
-- **iOS**: SwiftUI（iOS 16+）+ Safari Share Extension
+- **iOS**: SwiftUI（iOS 26+）+ Safari Share Extension
 - **CLI**: oclif
 - **拡張**: Chrome Extension（Readability + Turndown で記事抽出）
 - **検索**: SQLite FTS5（タイプ内検索） / LIKE（横断keyword検索） / ベクトル検索（embedding + コサイン類似度）
