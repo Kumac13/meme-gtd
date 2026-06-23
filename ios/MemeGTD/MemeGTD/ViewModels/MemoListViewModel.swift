@@ -398,7 +398,10 @@ class MemoListViewModel: ObservableObject {
         isCreating = true
 
         do {
-            let request = CreateMemoRequest(bodyMd: body)
+            let request = CreateMemoRequest(
+                bodyMd: body,
+                clientUuid: UUID().uuidString.lowercased()
+            )
             let memo: Memo = try await APIClient.shared.post(
                 path: "/api/memos",
                 body: request
