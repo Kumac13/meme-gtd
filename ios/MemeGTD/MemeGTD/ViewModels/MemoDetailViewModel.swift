@@ -283,7 +283,10 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
         isSubmittingReply = true
 
         do {
-            let request = CreateCommentRequest(bodyMd: body)
+            let request = CreateCommentRequest(
+                bodyMd: body,
+                clientUuid: UUID().uuidString.lowercased()
+            )
             let comment: Comment = try await APIClient.shared.post(
                 path: "/api/memos/\(memoId)/comments",
                 body: request
