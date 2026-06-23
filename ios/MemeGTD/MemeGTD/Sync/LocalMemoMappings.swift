@@ -5,14 +5,14 @@ import Foundation
 /// for compatibility with existing Views — once the View layer reads
 /// `LocalMemo` directly via `@Query`, these helpers can be removed.
 extension LocalMemo {
-    /// Build a DTO for use in the existing view layer. Memos that have not
-    /// yet been confirmed by the server (no `remoteId`) are returned with
-    /// `id == 0`; callers that present pending memos should pair the DTO
-    /// with `localId` for identity. List-view code skips zero-id memos
-    /// today (PR 4 cache is read-only against the server).
+    /// Build a DTO for use in the existing view layer. Rows that have not
+    /// yet been confirmed by the server (no `remoteId`) get a stable
+    /// negative ID derived from the row's `localId` so SwiftUI's
+    /// Identifiable conformance still works. Positive IDs are reserved for
+    /// server-assigned PKs.
     func toMemo() -> Memo {
         Memo(
-            id: remoteId ?? 0,
+            id: remoteId ?? localId.stableLocalId,
             type: "memo",
             bodyMd: bodyMd,
             isBookmarked: isBookmarked,
@@ -28,8 +28,8 @@ extension LocalMemo {
 extension LocalComment {
     func toComment() -> Comment {
         Comment(
-            id: remoteId ?? 0,
-            issueId: memo?.remoteId ?? 0,
+            id: remoteId ?? localId.stableLocalId,
+            issueId: memo?.remoteId ?? (memo?.localId.stableLocalId ?? 0),
             bodyMd: bodyMd,
             createdAt: LocalMemoMappings.isoString(from: createdAt),
             updatedAt: LocalMemoMappings.isoString(from: updatedAt)

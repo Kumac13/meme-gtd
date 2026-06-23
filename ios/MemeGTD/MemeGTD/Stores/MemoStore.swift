@@ -7,6 +7,9 @@ class MemoStore: ObservableObject {
     @Published var memos: [Memo] = []
     @Published var total: Int = 0
     @Published var needsReload: Bool = false
+    /// Number of operations queued for offline send. Drives the
+    /// "Offline · N pending" badge in the top banner.
+    @Published var pendingCount: Int = 0
 
     /// SwiftData context for offline cache reads. Injected by the App once
     /// at launch; before injection the store works in pure-memory mode for
@@ -50,19 +53,35 @@ class MemoStore: ObservableObject {
 
     // MARK: - SwiftData cache hookup
 
+    private var cancellables: Set<AnyCancellable> = []
+
     func setModelContext(_ context: ModelContext) {
         self.modelContext = context
     }
 
+    /// Subscribe to SyncEngine completion events so the in-memory list is
+    /// refreshed whenever a pull or push changes the underlying SwiftData
+    /// rows. Safe to call multiple times.
+    func bindToSyncEngine(_ engine: SyncEngine) {
+        engine.didFinishSyncStep
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.refreshFromCache()
+            }
+            .store(in: &cancellables)
+    }
+
     /// Replace the in-memory list with whatever the local SwiftData cache
-    /// currently holds (newest-first, synced rows only). Safe to call when
-    /// no context has been injected — it becomes a no-op.
+    /// currently holds (newest-first, both synced and pending rows). Safe
+    /// to call when no context has been injected — it becomes a no-op.
     func refreshFromCache() {
         guard let modelContext else { return }
         let repo = LocalMemoRepository(context: modelContext)
-        let locals = repo.fetchMemos().filter { $0.remoteId != nil }
+        let outbox = OutboxRepository(context: modelContext)
+        let locals = repo.fetchMemos()
         self.memos = locals.map { $0.toMemo() }
         self.total = repo.memoCount
+        self.pendingCount = outbox.count
     }
 
     /// Write server-fresh memos into the local cache so they remain visible
@@ -104,5 +123,168 @@ class MemoStore: ObservableObject {
         let local = repo.upsertFromServer(memo)
         repo.replaceComments(comments, for: local)
         try? repo.save()
+    }
+
+    // MARK: - Offline-capable writes (Outbox-backed)
+    //
+    // The methods below write to the SwiftData cache immediately and enqueue
+    // an OutboxOperation. The in-memory `memos` array is refreshed from the
+    // cache afterwards so SwiftUI re-renders with the optimistic state. The
+    // SyncEngine is kicked to push the queue in the background.
+
+    /// Create a memo locally and enqueue a server POST. Returns the DTO for
+    /// the new (locally-only) row — the caller can insert it into the UI.
+    @discardableResult
+    func enqueueCreateMemo(body: String) -> Memo? {
+        guard let modelContext else { return nil }
+        let memos = LocalMemoRepository(context: modelContext)
+        let outbox = OutboxRepository(context: modelContext)
+        let now = Date()
+        let clientUuid = UUID().lowercasedString
+        let local = LocalMemo(
+            clientUuid: clientUuid,
+            bodyMd: body,
+            createdAt: now,
+            updatedAt: now,
+            syncState: .pendingCreate
+        )
+        modelContext.insert(local)
+        outbox.enqueueCreateMemo(memoLocalId: local.localId, clientUuid: clientUuid, bodyMd: body, at: now)
+        try? memos.save()
+        refreshFromCache()
+        SyncEngine.shared.kick()
+        return local.toMemo()
+    }
+
+    /// Update a memo's body locally and enqueue a server PATCH. Returns the
+    /// updated DTO so the caller can replace the in-memory copy.
+    @discardableResult
+    func enqueueUpdateMemoBody(memoId: Int, body: String) -> Memo? {
+        guard let modelContext else { return nil }
+        let memos = LocalMemoRepository(context: modelContext)
+        let outbox = OutboxRepository(context: modelContext)
+        guard let local = memos.fetchMemo(byAnyId: memoId) else { return nil }
+        local.bodyMd = body
+        local.updatedAt = Date()
+        if local.syncState != .pendingCreate {
+            local.syncState = .pendingUpdate
+        }
+        outbox.enqueueUpdateMemo(memoLocalId: local.localId, bodyMd: body, at: Date())
+        try? memos.save()
+        refreshFromCache()
+        SyncEngine.shared.kick()
+        return local.toMemo()
+    }
+
+    /// Delete a memo locally and enqueue a server DELETE (or remove both
+    /// the create and delete ops if the memo was never sent yet).
+    func enqueueDeleteMemo(memoId: Int) {
+        guard let modelContext else { return }
+        let memos = LocalMemoRepository(context: modelContext)
+        let outbox = OutboxRepository(context: modelContext)
+        guard let local = memos.fetchMemo(byAnyId: memoId) else { return }
+        let cancelled = outbox.enqueueDeleteMemo(memoLocalId: local.localId, at: Date())
+        if cancelled {
+            modelContext.delete(local)
+        } else {
+            local.isDeleted = true
+            local.syncState = .pendingDelete
+            local.updatedAt = Date()
+        }
+        try? memos.save()
+        refreshFromCache()
+        removeItem(memoId)
+        SyncEngine.shared.kick()
+    }
+
+    /// Append a comment locally and enqueue a server POST. Returns the DTO
+    /// (with a synthesized negative id) so the detail view can show it.
+    @discardableResult
+    func enqueueCreateComment(memoId: Int, body: String) -> Comment? {
+        guard let modelContext else { return nil }
+        let memos = LocalMemoRepository(context: modelContext)
+        let outbox = OutboxRepository(context: modelContext)
+        guard let parent = memos.fetchMemo(byAnyId: memoId) else { return nil }
+        let now = Date()
+        let clientUuid = UUID().lowercasedString
+        let local = LocalComment(
+            clientUuid: clientUuid,
+            bodyMd: body,
+            createdAt: now,
+            updatedAt: now,
+            syncState: .pendingCreate,
+            memo: parent
+        )
+        modelContext.insert(local)
+        parent.commentCount += 1
+        outbox.enqueueCreateComment(
+            memoLocalId: parent.localId,
+            commentLocalId: local.localId,
+            clientUuid: clientUuid,
+            bodyMd: body,
+            at: now
+        )
+        try? memos.save()
+        refreshPending()
+        SyncEngine.shared.kick()
+        return local.toComment()
+    }
+
+    /// Update a comment body locally and enqueue a PATCH.
+    @discardableResult
+    func enqueueUpdateComment(memoId: Int, commentId: Int, body: String) -> Comment? {
+        guard let modelContext else { return nil }
+        let memos = LocalMemoRepository(context: modelContext)
+        let outbox = OutboxRepository(context: modelContext)
+        guard let parent = memos.fetchMemo(byAnyId: memoId),
+              let local = memos.fetchComment(byAnyId: commentId, in: parent) else { return nil }
+        local.bodyMd = body
+        local.updatedAt = Date()
+        if local.syncState != .pendingCreate {
+            local.syncState = .pendingUpdate
+        }
+        outbox.enqueueUpdateComment(
+            memoLocalId: parent.localId,
+            commentLocalId: local.localId,
+            bodyMd: body,
+            at: Date()
+        )
+        try? memos.save()
+        refreshPending()
+        SyncEngine.shared.kick()
+        return local.toComment()
+    }
+
+    /// Remove a comment locally and enqueue a DELETE (or cancel the create
+    /// when the comment never reached the server).
+    func enqueueDeleteComment(memoId: Int, commentId: Int) {
+        guard let modelContext else { return }
+        let memos = LocalMemoRepository(context: modelContext)
+        let outbox = OutboxRepository(context: modelContext)
+        guard let parent = memos.fetchMemo(byAnyId: memoId),
+              let local = memos.fetchComment(byAnyId: commentId, in: parent) else { return }
+        let cancelled = outbox.enqueueDeleteComment(
+            memoLocalId: parent.localId,
+            commentLocalId: local.localId,
+            at: Date()
+        )
+        if cancelled {
+            modelContext.delete(local)
+        } else {
+            local.isDeleted = true
+            local.syncState = .pendingDelete
+            local.updatedAt = Date()
+        }
+        parent.commentCount = max(0, parent.commentCount - 1)
+        try? memos.save()
+        refreshPending()
+        SyncEngine.shared.kick()
+    }
+
+    /// Recompute the pending-operation count from SwiftData. Called by sync
+    /// callbacks and after each Outbox mutation.
+    func refreshPending() {
+        guard let modelContext else { return }
+        self.pendingCount = OutboxRepository(context: modelContext).count
     }
 }

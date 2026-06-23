@@ -295,20 +295,12 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
         isSubmittingReply = true
 
-        do {
-            let request = CreateCommentRequest(
-                bodyMd: body,
-                clientUuid: UUID().uuidString.lowercased()
-            )
-            let comment: Comment = try await APIClient.shared.post(
-                path: "/api/memos/\(memoId)/comments",
-                body: request
-            )
+        if let comment = memoStore?.enqueueCreateComment(memoId: memoId, body: body) {
             comments.append(comment)
             replyBody = ""
             HapticManager.notification(.success)
-        } catch {
-            self.error = error.localizedDescription
+        } else {
+            self.error = "Could not save the comment locally."
             HapticManager.notification(.error)
         }
 
@@ -316,59 +308,35 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
     }
 
     func updateComment(_ commentId: Int, bodyMd: String) async {
-        do {
-            let request = UpdateCommentRequest(bodyMd: bodyMd)
-            let updated: Comment = try await APIClient.shared.patch(
-                path: "/api/memos/\(memoId)/comments/\(commentId)",
-                body: request
-            )
+        if let updated = memoStore?.enqueueUpdateComment(memoId: memoId, commentId: commentId, body: bodyMd) {
             if let index = comments.firstIndex(where: { $0.id == commentId }) {
                 comments[index] = updated
             }
-        } catch {
-            self.error = error.localizedDescription
+        } else {
+            self.error = "Could not update the comment locally."
         }
     }
 
     // MARK: - Update Memo
 
     func updateMemo(bodyMd: String) async {
-        do {
-            let request = UpdateMemoRequest(bodyMd: bodyMd, isBookmarked: nil)
-            let updated: Memo = try await APIClient.shared.patch(
-                path: "/api/memos/\(memoId)",
-                body: request
-            )
+        if let updated = memoStore?.enqueueUpdateMemoBody(memoId: memoId, body: bodyMd) {
             memo = updated
-            memoStore?.updateItem(updated)
             HapticManager.notification(.success)
-        } catch {
-            self.error = error.localizedDescription
+        } else {
+            self.error = "Could not update the memo locally."
             HapticManager.notification(.error)
         }
     }
 
     func deleteComment(_ commentId: Int) async {
-        do {
-            try await APIClient.shared.delete(
-                path: "/api/memos/\(memoId)/comments/\(commentId)"
-            )
-            comments.removeAll { $0.id == commentId }
-        } catch {
-            self.error = error.localizedDescription
-        }
+        memoStore?.enqueueDeleteComment(memoId: memoId, commentId: commentId)
+        comments.removeAll { $0.id == commentId }
     }
 
     func deleteMemo() async -> Bool {
-        do {
-            try await APIClient.shared.delete(path: "/api/memos/\(memoId)")
-            memoStore?.removeItem(memoId)
-            memoStore?.removeFromCache(remoteId: memoId)
-            return true
-        } catch {
-            self.error = error.localizedDescription
-            return false
-        }
+        memoStore?.enqueueDeleteMemo(memoId: memoId)
+        return true
     }
 
     // MARK: - Projects (confirm-based: apply diff on confirm)

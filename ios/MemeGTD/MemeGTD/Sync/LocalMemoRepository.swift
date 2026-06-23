@@ -41,6 +41,31 @@ struct LocalMemoRepository {
         return (try? context.fetch(descriptor))?.first
     }
 
+    /// Look up a memo using whatever ID the UI happens to hold. Positive
+    /// values address rows that already exist on the server; negative values
+    /// are the stable IDs we synthesize for pending-create rows. The
+    /// negative path scans up to 500 rows — fine for personal-app scale.
+    func fetchMemo(byAnyId id: Int) -> LocalMemo? {
+        if id > 0 {
+            return fetchMemo(byRemoteId: id)
+        }
+        for local in fetchMemos() where local.localId.stableLocalId == id {
+            return local
+        }
+        return nil
+    }
+
+    /// Same as `fetchMemo(byAnyId:)` but for comments.
+    func fetchComment(byAnyId id: Int, in memo: LocalMemo) -> LocalComment? {
+        if id > 0 {
+            return fetchComment(byRemoteId: id)
+        }
+        for c in fetchComments(forMemo: memo) where c.localId.stableLocalId == id {
+            return c
+        }
+        return nil
+    }
+
     var memoCount: Int {
         (try? context.fetchCount(FetchDescriptor<LocalMemo>(
             predicate: #Predicate { !$0.isDeleted }
