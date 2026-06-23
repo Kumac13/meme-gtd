@@ -203,6 +203,11 @@ class MemoListViewModel: ObservableObject {
         defer { isLoading = false }
         error = nil
 
+        // Phase 1: paint the SwiftData cache so the list is usable even when
+        // offline. No-op until the App has injected a ModelContext.
+        store?.refreshFromCache()
+        let hadCachedMemos = !(store?.memos.isEmpty ?? true)
+
         do {
             let response: MemoListResponse
             if isSemanticSearching {
@@ -219,6 +224,9 @@ class MemoListViewModel: ObservableObject {
                     path: "/api/memos",
                     queryItems: buildListQueryItems(offset: 0)
                 )
+                // Persist the fresh first page so the next offline launch
+                // shows what the user just saw.
+                store?.persistToCache(response.data)
             }
             store?.setItems(response.data, total: response.total)
             logger.info("loadMemos done: count=\(response.data.count), total=\(response.total)")
@@ -229,7 +237,12 @@ class MemoListViewModel: ObservableObject {
                 logger.info("loadMemos cancelled (URLError)")
                 return
             }
-            self.error = error.localizedDescription
+            // Silent failure when the cache already has something visible.
+            // The list stays usable; surfacing an error on top would just
+            // create noise during normal offline browsing.
+            if !hadCachedMemos {
+                self.error = error.localizedDescription
+            }
             logger.error("loadMemos error: \(error.localizedDescription)")
         }
     }
@@ -407,6 +420,9 @@ class MemoListViewModel: ObservableObject {
                 body: request
             )
             store?.insertItem(memo, at: 0)
+            // Keep the local cache in step with the server so the new memo
+            // remains visible on the next offline launch.
+            store?.persistToCache([memo])
 
             // Auto-link to filtered projects
             if !projectFilters.isEmpty {
@@ -432,6 +448,7 @@ class MemoListViewModel: ObservableObject {
         do {
             try await APIClient.shared.delete(path: "/api/memos/\(id)")
             store?.removeItem(id)
+            store?.removeFromCache(remoteId: id)
         } catch {
             self.error = error.localizedDescription
         }

@@ -209,6 +209,7 @@ struct MemoListView: View {
         }
         .safeAreaInset(edge: .top) {
             VStack(spacing: 4) {
+                OfflineBanner()
                 if isSearching {
                     Picker("Search Mode", selection: $viewModel.searchMode) {
                         ForEach(SearchMode.allCases, id: \.self) { mode in
