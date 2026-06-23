@@ -49,14 +49,27 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
         isLoading = true
         error = nil
 
+        // Phase 1: cache (instant, offline-friendly).
+        if let cached = memoStore?.cachedDetail(remoteId: memoId) {
+            self.memo = cached.memo
+            self.comments = cached.comments
+        }
+        let hadCache = (self.memo != nil)
+
         do {
-            memo = try await APIClient.shared.get(path: "/api/memos/\(memoId)")
+            let freshMemo: Memo = try await APIClient.shared.get(path: "/api/memos/\(memoId)")
             let commentList: [Comment] = try await APIClient.shared.get(
                 path: "/api/memos/\(memoId)/comments"
             )
-            comments = commentList
+            self.memo = freshMemo
+            self.comments = commentList
+            memoStore?.persistDetailToCache(memo: freshMemo, comments: commentList)
         } catch {
-            self.error = error.localizedDescription
+            // Silent failure when we already painted from cache; the user
+            // can still read the memo and its existing comments offline.
+            if !hadCache {
+                self.error = error.localizedDescription
+            }
         }
 
         // Load projects, labels & links in parallel
@@ -350,6 +363,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
         do {
             try await APIClient.shared.delete(path: "/api/memos/\(memoId)")
             memoStore?.removeItem(memoId)
+            memoStore?.removeFromCache(remoteId: memoId)
             return true
         } catch {
             self.error = error.localizedDescription
