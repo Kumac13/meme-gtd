@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// Tiny status bar shown above the memo list when the device is offline or a
-/// sync is in flight. Hides itself completely on the happy path.
+/// Tiny status bar shown above the memo list when the device is offline, a
+/// sync is in flight, or there are queued writes waiting to be sent. Hides
+/// itself completely on the happy path (online + caught up + idle).
 struct OfflineBanner: View {
     @EnvironmentObject var networkMonitor: NetworkMonitor
     @EnvironmentObject var syncEngine: SyncEngine
+    @EnvironmentObject var memoStore: MemoStore
 
     var body: some View {
         if let text = bannerText {
@@ -24,20 +26,27 @@ struct OfflineBanner: View {
     }
 
     private var bannerText: String? {
+        let pending = memoStore.pendingCount
         if !networkMonitor.isOnline {
-            return "Offline"
+            return pending > 0 ? "Offline · \(pending) pending" : "Offline"
         }
         if syncEngine.isSyncing {
-            return "Syncing..."
+            return pending > 0 ? "Syncing · \(pending) pending" : "Syncing..."
+        }
+        if pending > 0 {
+            return "\(pending) pending"
         }
         return nil
     }
 
     private var iconName: String {
-        networkMonitor.isOnline ? "arrow.triangle.2.circlepath" : "wifi.slash"
+        if !networkMonitor.isOnline { return "wifi.slash" }
+        if syncEngine.isSyncing { return "arrow.triangle.2.circlepath" }
+        return "clock.arrow.circlepath"
     }
 
     private var bannerColor: Color {
-        networkMonitor.isOnline ? .accentColor : .secondary
+        if !networkMonitor.isOnline { return .secondary }
+        return .accentColor
     }
 }

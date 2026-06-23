@@ -410,22 +410,14 @@ class MemoListViewModel: ObservableObject {
 
         isCreating = true
 
-        do {
-            let request = CreateMemoRequest(
-                bodyMd: body,
-                clientUuid: UUID().uuidString.lowercased()
-            )
-            let memo: Memo = try await APIClient.shared.post(
-                path: "/api/memos",
-                body: request
-            )
-            store?.insertItem(memo, at: 0)
-            // Keep the local cache in step with the server so the new memo
-            // remains visible on the next offline launch.
-            store?.persistToCache([memo])
-
-            // Auto-link to filtered projects
-            if !projectFilters.isEmpty {
+        // Optimistic: write the memo and an OutboxOperation locally. The
+        // SyncEngine ships it to the server on its own; if offline, the
+        // memo still shows up immediately and is flushed once we reconnect.
+        if let memo = store?.enqueueCreateMemo(body: body) {
+            // Auto-link to filtered projects (online-only path). When offline
+            // this silently no-ops — project linkage will be re-applied by
+            // the user once back online (Tier 3 keeps project ops simple).
+            if !projectFilters.isEmpty, memo.id > 0 {
                 for projectId in projectFilters {
                     let _: ProjectItem? = try? await APIClient.shared.post(
                         path: "/api/projects/\(projectId)/items",
@@ -436,8 +428,8 @@ class MemoListViewModel: ObservableObject {
 
             newMemoBody = ""
             HapticManager.notification(.success)
-        } catch {
-            self.error = error.localizedDescription
+        } else {
+            self.error = "Could not save memo locally."
             HapticManager.notification(.error)
         }
 
@@ -445,13 +437,8 @@ class MemoListViewModel: ObservableObject {
     }
 
     func deleteMemo(_ id: Int) async {
-        do {
-            try await APIClient.shared.delete(path: "/api/memos/\(id)")
-            store?.removeItem(id)
-            store?.removeFromCache(remoteId: id)
-        } catch {
-            self.error = error.localizedDescription
-        }
+        // Optimistic delete via Outbox. Works the same way online or off.
+        store?.enqueueDeleteMemo(memoId: id)
     }
 
     // MARK: - Load labels for filter picker
