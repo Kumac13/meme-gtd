@@ -5,6 +5,13 @@ import { z } from 'zod';
  */
 export const CreateMemoRequestSchema = z.object({
   bodyMd: z.string().min(1, 'Memo body cannot be empty').describe('Memo content in Markdown format'),
+  clientUuid: z
+    .string()
+    .uuid()
+    .optional()
+    .describe(
+      'Client-generated UUID v4 for idempotent creation. Offline-capable clients send the same UUID when retrying so duplicate POSTs return the original memo instead of creating new ones.'
+    ),
 });
 
 export type CreateMemoRequest = z.infer<typeof CreateMemoRequestSchema>;

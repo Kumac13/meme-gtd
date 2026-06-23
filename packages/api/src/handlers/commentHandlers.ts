@@ -38,11 +38,11 @@ export async function createMemoCommentHandler(
   reply: FastifyReply
 ) {
   const memoId = parseInt(request.params.memoId, 10);
-  const { bodyMd } = request.body;
+  const { bodyMd, clientUuid } = request.body;
   const memoService = new MemoService({ db: request.server.db });
 
   try {
-    const comment = memoService.addComment(memoId, bodyMd);
+    const comment = memoService.addComment(memoId, bodyMd, clientUuid);
     return reply.status(201).send(comment);
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {

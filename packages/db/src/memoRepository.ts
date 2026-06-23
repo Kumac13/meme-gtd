@@ -5,6 +5,12 @@ export interface CreateMemoInput {
   bodyMd: string;
   labels?: string[];
   projectIds?: number[];
+  /**
+   * Client-generated UUID for idempotent creation. Offline-capable clients
+   * (iOS) send the same UUID when retrying a failed POST so duplicates
+   * created by partial network failures are de-duplicated server-side.
+   */
+  clientUuid?: string;
 }
 
 export interface UpdateMemoInput {
@@ -154,12 +160,27 @@ const commentRowToComment = (row: any): Comment => ({
 });
 
 export const createMemo = (db: Database.Database, input: CreateMemoInput): Memo => {
+  if (input.clientUuid) {
+    const existing = db
+      .prepare(
+        `SELECT id FROM issues WHERE client_uuid = @clientUuid AND type = 'memo' AND is_deleted = 0`
+      )
+      .get({ clientUuid: input.clientUuid }) as { id: number } | undefined;
+    if (existing) {
+      return getMemo(db, existing.id);
+    }
+  }
+
   const now = nowIso();
   const stmt = db.prepare(
-    `INSERT INTO issues (type, title, body_md, status, scheduled_on, meta, created_at, updated_at, is_bookmarked, is_deleted)
-     VALUES ('memo', NULL, @body, NULL, NULL, json('{}'), @createdAt, @createdAt, 0, 0)`
+    `INSERT INTO issues (type, title, body_md, status, scheduled_on, meta, created_at, updated_at, is_bookmarked, is_deleted, client_uuid)
+     VALUES ('memo', NULL, @body, NULL, NULL, json('{}'), @createdAt, @createdAt, 0, 0, @clientUuid)`
   );
-  const result = stmt.run({ body: input.bodyMd, createdAt: now });
+  const result = stmt.run({
+    body: input.bodyMd,
+    createdAt: now,
+    clientUuid: input.clientUuid ?? null,
+  });
   const memoId = Number(result.lastInsertRowid);
 
   if (input.labels?.length) {
@@ -171,6 +192,40 @@ export const createMemo = (db: Database.Database, input: CreateMemoInput): Memo 
   }
 
   return getMemo(db, memoId);
+};
+
+/**
+ * Look up an existing memo by its client-generated UUID. Returns undefined if
+ * no memo has been created with that UUID yet. Used by the service layer to
+ * implement idempotent create — the caller can detect a duplicate POST without
+ * relying on side effects.
+ */
+export const findMemoByClientUuid = (
+  db: Database.Database,
+  clientUuid: string
+): Memo | undefined => {
+  const row = db
+    .prepare(
+      `SELECT * FROM issues WHERE client_uuid = @clientUuid AND type = 'memo' AND is_deleted = 0`
+    )
+    .get({ clientUuid }) as any;
+  return row ? memoRowToMemo(row) : undefined;
+};
+
+/**
+ * Look up an existing comment by its client-generated UUID. See
+ * findMemoByClientUuid for rationale.
+ */
+export const findCommentByClientUuid = (
+  db: Database.Database,
+  clientUuid: string
+): Comment | undefined => {
+  const row = db
+    .prepare(
+      `SELECT * FROM comments WHERE client_uuid = @clientUuid AND is_deleted = 0`
+    )
+    .get({ clientUuid }) as any;
+  return row ? commentRowToComment(row) : undefined;
 };
 
 export const getMemo = (db: Database.Database, id: number): Memo => {
@@ -480,15 +535,27 @@ export const buildPromoteBody = (baseBody: string, comments: Comment[]): string 
 export const addComment = (
   db: Database.Database,
   memoId: number,
-  bodyMd: string
+  bodyMd: string,
+  clientUuid?: string
 ): Comment => {
+  if (clientUuid) {
+    const existing = db
+      .prepare(
+        `SELECT * FROM comments WHERE client_uuid = @clientUuid AND is_deleted = 0`
+      )
+      .get({ clientUuid }) as any;
+    if (existing) {
+      return commentRowToComment(existing);
+    }
+  }
+
   const now = nowIso();
   const result = db
     .prepare(
-      `INSERT INTO comments (issue_id, body_md, created_at, updated_at, is_deleted)
-       VALUES (@issueId, @bodyMd, @createdAt, @createdAt, 0)`
+      `INSERT INTO comments (issue_id, body_md, created_at, updated_at, is_deleted, client_uuid)
+       VALUES (@issueId, @bodyMd, @createdAt, @createdAt, 0, @clientUuid)`
     )
-    .run({ issueId: memoId, bodyMd, createdAt: now });
+    .run({ issueId: memoId, bodyMd, createdAt: now, clientUuid: clientUuid ?? null });
 
   return commentRowToComment(
     db.prepare('SELECT * FROM comments WHERE id = @id').get({ id: result.lastInsertRowid }) as any

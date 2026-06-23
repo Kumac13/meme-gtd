@@ -13,11 +13,11 @@ export async function createMemoHandler(
   request: FastifyRequest<{ Body: CreateMemoRequest }>,
   reply: FastifyReply
 ) {
-  const { bodyMd } = request.body;
+  const { bodyMd, clientUuid } = request.body;
   const memoService = new MemoService({ db: request.server.db });
 
   try {
-    const memo = memoService.create({ bodyMd });
+    const memo = memoService.create({ bodyMd, clientUuid });
     const labels = memoService.listLabels(memo.id);
     return reply.status(201).send({ ...memo, labels });
   } catch (error) {

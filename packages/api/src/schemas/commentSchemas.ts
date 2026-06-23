@@ -5,6 +5,13 @@ import { z } from 'zod';
  */
 export const CreateCommentRequestSchema = z.object({
   bodyMd: z.string().min(1, 'Comment body cannot be empty').describe('Comment content in Markdown format'),
+  clientUuid: z
+    .string()
+    .uuid()
+    .optional()
+    .describe(
+      'Client-generated UUID v4 for idempotent creation. Offline-capable clients send the same UUID when retrying so duplicate POSTs return the original comment instead of creating new ones.'
+    ),
 });
 
 export type CreateCommentRequest = z.infer<typeof CreateCommentRequestSchema>;
