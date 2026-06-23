@@ -1025,4 +1025,58 @@ describe('Memo Order Parameter', () => {
 
     assert.strictEqual(response.statusCode, 400);
   });
+
+  // ============================================================
+  // clientUuid idempotency (offline-capable clients)
+  // ============================================================
+
+  it('should return existing memo when POST is retried with the same clientUuid', async () => {
+    const uuid = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+    const first = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'Offline draft', clientUuid: uuid },
+    });
+    assert.strictEqual(first.statusCode, 201);
+    const firstBody = JSON.parse(first.body);
+
+    const second = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'Offline draft', clientUuid: uuid },
+    });
+    assert.strictEqual(second.statusCode, 201);
+    const secondBody = JSON.parse(second.body);
+
+    assert.strictEqual(firstBody.id, secondBody.id, 'retry should return the same memo id');
+
+    const listResponse = await app.inject({ method: 'GET', url: '/api/memos' });
+    const list = JSON.parse(listResponse.body);
+    assert.strictEqual(list.total, 1, 'only one memo row should exist');
+  });
+
+  it('should accept POST without clientUuid (backwards compatibility)', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'Legacy client request' },
+    });
+
+    assert.strictEqual(response.statusCode, 201);
+    const memo = JSON.parse(response.body);
+    assert.strictEqual(memo.bodyMd, 'Legacy client request');
+  });
+
+  it('should reject POST with a malformed clientUuid', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: { bodyMd: 'Bad UUID', clientUuid: 'not-a-uuid' },
+    });
+
+    assert.strictEqual(response.statusCode, 400);
+    const error = JSON.parse(response.body);
+    assert.strictEqual(error.code, 'VALIDATION_ERROR');
+  });
 });

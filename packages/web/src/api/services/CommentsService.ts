@@ -63,6 +63,10 @@ export class CommentsService {
              * Comment content in Markdown format
              */
             bodyMd: string;
+            /**
+             * Client-generated UUID v4 for idempotent creation. Offline-capable clients send the same UUID when retrying so duplicate POSTs return the original comment instead of creating new ones.
+             */
+            clientUuid?: string;
         },
     ): CancelablePromise<{
         /**
@@ -236,6 +240,10 @@ export class CommentsService {
              * Comment content in Markdown format
              */
             bodyMd: string;
+            /**
+             * Client-generated UUID v4 for idempotent creation. Offline-capable clients send the same UUID when retrying so duplicate POSTs return the original comment instead of creating new ones.
+             */
+            clientUuid?: string;
         },
     ): CancelablePromise<{
         /**

@@ -7,6 +7,8 @@ import {
   // Memo functions
   addComment,
   createMemo,
+  findMemoByClientUuid,
+  findCommentByClientUuid,
   deleteComment,
   deleteMemo,
   getMemo,
@@ -89,6 +91,12 @@ export class MemoService {
 
   public create(input: CreateMemoInput) {
     return this.db.transaction(() => {
+      if (input.clientUuid) {
+        const existing = findMemoByClientUuid(this.db, input.clientUuid);
+        if (existing) {
+          return existing;
+        }
+      }
       const memo = createMemo(this.db, input);
       this.logger.logMemoCreated(memo.id, input.bodyMd ?? '');
       return memo;
@@ -138,9 +146,15 @@ export class MemoService {
     return getPromotePreview(this.db, memoId);
   }
 
-  public addComment(memoId: number, bodyMd: string) {
+  public addComment(memoId: number, bodyMd: string, clientUuid?: string) {
     return this.db.transaction(() => {
-      const comment = addComment(this.db, memoId, bodyMd);
+      if (clientUuid) {
+        const existing = findCommentByClientUuid(this.db, clientUuid);
+        if (existing) {
+          return existing;
+        }
+      }
+      const comment = addComment(this.db, memoId, bodyMd, clientUuid);
       this.logger.logCommentCreated(comment.id, memoId, bodyMd);
       return comment;
     })();

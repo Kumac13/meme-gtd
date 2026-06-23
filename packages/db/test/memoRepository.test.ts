@@ -15,7 +15,9 @@ import {
   listComments,
   listMemoLabels,
   deleteMemo,
-  setBookmark
+  setBookmark,
+  findMemoByClientUuid,
+  findCommentByClientUuid
 } from '../src/memoRepository';
 
 const createTempDb = () => {
@@ -261,6 +263,107 @@ test('listMemos() offset works with search filter', () => {
   assert.equal(memos.length, 2);
   assert.equal(memos[0].bodyMd, 'Meeting notes 2');
   assert.equal(memos[1].bodyMd, 'Meeting notes 3');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+// ============================================================
+// clientUuid idempotency (offline-capable clients)
+// ============================================================
+
+test('createMemo with clientUuid stores the UUID', () => {
+  const { dir, db } = createTempDb();
+  const uuid = '11111111-1111-4111-8111-111111111111';
+
+  const memo = createMemo(db, { bodyMd: 'Offline draft', clientUuid: uuid });
+  const found = findMemoByClientUuid(db, uuid);
+
+  assert.ok(found, 'should find memo by clientUuid');
+  assert.equal(found!.id, memo.id);
+  assert.equal(found!.bodyMd, 'Offline draft');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('createMemo is idempotent when called with the same clientUuid', () => {
+  const { dir, db } = createTempDb();
+  const uuid = '22222222-2222-4222-8222-222222222222';
+
+  const first = createMemo(db, { bodyMd: 'Retry me', clientUuid: uuid });
+  const second = createMemo(db, { bodyMd: 'Retry me', clientUuid: uuid });
+
+  assert.equal(first.id, second.id, 'duplicate POST should return the same memo id');
+  assert.equal(countMemos(db, {}), 1, 'only one memo row should exist');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('createMemo without clientUuid keeps existing non-idempotent behavior', () => {
+  const { dir, db } = createTempDb();
+
+  const a = createMemo(db, { bodyMd: 'first' });
+  const b = createMemo(db, { bodyMd: 'first' });
+
+  assert.notEqual(a.id, b.id, 'two memos with no clientUuid should produce distinct rows');
+  assert.equal(countMemos(db, {}), 2);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('findMemoByClientUuid returns undefined when no match exists', () => {
+  const { dir, db } = createTempDb();
+  createMemo(db, { bodyMd: 'unrelated' });
+
+  const result = findMemoByClientUuid(db, '33333333-3333-4333-8333-333333333333');
+  assert.equal(result, undefined);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('addComment with clientUuid stores the UUID', () => {
+  const { dir, db } = createTempDb();
+  const memo = createMemo(db, { bodyMd: 'parent' });
+  const uuid = '44444444-4444-4444-8444-444444444444';
+
+  const comment = addComment(db, memo.id, 'offline reply', uuid);
+  const found = findCommentByClientUuid(db, uuid);
+
+  assert.ok(found, 'should find comment by clientUuid');
+  assert.equal(found!.id, comment.id);
+  assert.equal(found!.bodyMd, 'offline reply');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('addComment is idempotent when called with the same clientUuid', () => {
+  const { dir, db } = createTempDb();
+  const memo = createMemo(db, { bodyMd: 'parent' });
+  const uuid = '55555555-5555-4555-8555-555555555555';
+
+  const first = addComment(db, memo.id, 'reply', uuid);
+  const second = addComment(db, memo.id, 'reply', uuid);
+
+  assert.equal(first.id, second.id, 'duplicate POST should return the same comment id');
+  assert.equal(listComments(db, memo.id).length, 1);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('addComment without clientUuid keeps existing non-idempotent behavior', () => {
+  const { dir, db } = createTempDb();
+  const memo = createMemo(db, { bodyMd: 'parent' });
+
+  addComment(db, memo.id, 'reply');
+  addComment(db, memo.id, 'reply');
+
+  assert.equal(listComments(db, memo.id).length, 2);
 
   db.close();
   fs.removeSync(dir);

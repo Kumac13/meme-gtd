@@ -58,6 +58,7 @@ Memo (Captured) → promote → Task (Inbox)
 | meta | TEXT | JSON形式の追加情報。articleは `originalUrl`/`siteName`/`archivedAt` を保持 |
 | created_at | TEXT | 作成日時 (ISO 8601) |
 | updated_at | TEXT | 更新日時 (ISO 8601) |
+| client_uuid | TEXT | オフライン対応クライアント（iOS）が POST 時に渡す UUID v4。`POST /api/memos` で重複 UUID を検出した場合は既存メモを返す（冪等性）。Web/CLI 経由の作成では NULL のまま。部分 UNIQUE インデックス（`WHERE client_uuid IS NOT NULL`）で衝突を防止 |
 | **スケジュール（新形式）** |||
 | scheduled_start | TEXT | 予定開始日時 (ISO 8601) |
 | scheduled_end | TEXT | 予定終了日時 (ISO 8601) |
@@ -144,6 +145,7 @@ Memo (Captured) → promote → Task (Inbox)
 | is_deleted | INTEGER | 論理削除フラグ |
 | created_at | TEXT | 作成日時 |
 | updated_at | TEXT | 更新日時 |
+| client_uuid | TEXT | issues 同様、オフラインクライアントが POST する冪等性キー（UUID v4）。Web/CLI 経由は NULL。部分 UNIQUE インデックスで一意性保証 |
 
 ### comment_revisions（編集履歴）
 

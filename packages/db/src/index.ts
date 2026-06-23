@@ -56,6 +56,8 @@ export {
   updateComment,
   deleteComment,
   listComments,
+  findMemoByClientUuid,
+  findCommentByClientUuid,
   listMemoLabels,
   setMemoLabels,
   setBookmark,

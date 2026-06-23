@@ -189,4 +189,77 @@ describe('Memo Comment Operations', () => {
 
     assert.strictEqual(response.statusCode, 404);
   });
+
+  // ============================================================
+  // clientUuid idempotency (offline-capable clients)
+  // ============================================================
+
+  it('should return existing comment when POST is retried with the same clientUuid', async () => {
+    const memoResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture(),
+    });
+    const memo = JSON.parse(memoResponse.body);
+    const uuid = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+    const first = await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/comments`,
+      payload: { bodyMd: 'Offline reply', clientUuid: uuid },
+    });
+    assert.strictEqual(first.statusCode, 201);
+    const firstBody = JSON.parse(first.body);
+
+    const second = await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/comments`,
+      payload: { bodyMd: 'Offline reply', clientUuid: uuid },
+    });
+    assert.strictEqual(second.statusCode, 201);
+    const secondBody = JSON.parse(second.body);
+
+    assert.strictEqual(firstBody.id, secondBody.id, 'retry should return the same comment id');
+
+    const listResponse = await app.inject({
+      method: 'GET',
+      url: `/api/memos/${memo.id}/comments`,
+    });
+    const list = JSON.parse(listResponse.body);
+    assert.strictEqual(list.length, 1, 'only one comment row should exist');
+  });
+
+  it('should accept comment POST without clientUuid (backwards compatibility)', async () => {
+    const memoResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture(),
+    });
+    const memo = JSON.parse(memoResponse.body);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/comments`,
+      payload: { bodyMd: 'Legacy client comment' },
+    });
+
+    assert.strictEqual(response.statusCode, 201);
+  });
+
+  it('should reject comment POST with a malformed clientUuid', async () => {
+    const memoResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture(),
+    });
+    const memo = JSON.parse(memoResponse.body);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/memos/${memo.id}/comments`,
+      payload: { bodyMd: 'Bad UUID', clientUuid: 'not-a-uuid' },
+    });
+
+    assert.strictEqual(response.statusCode, 400);
+  });
 });
