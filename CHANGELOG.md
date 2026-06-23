@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.33.0 - 2026-06-24
+
+### New Features
+
+- **iOS offline support for memos (Tier 1–3)**: Memos can now be browsed, created, edited, deleted, and commented on while the device is offline. Writes are persisted to a local SwiftData cache and queued in an Outbox; the SyncEngine drains the queue automatically when network returns. The first launch performs a one-time full pull so the user can browse every memo offline (Story 6). A minimal "Offline · N pending" banner shows status above the memo list.
+- **`client_uuid` on POST /api/memos and POST /api/memos/:id/comments**: Optional UUID v4 field used by offline-capable clients to make writes idempotent — retries with the same `client_uuid` return the original row instead of duplicating it. Web and CLI clients are unaffected (field is optional, default behavior unchanged).
+
+### Database
+
+- New migration `014_add_client_uuid.sql` adds a nullable `client_uuid` column on `issues` and `comments` with a partial UNIQUE index (`WHERE client_uuid IS NOT NULL`), so existing NULL-only rows do not collide.
+
 ## 0.32.1 - 2026-06-23
 
 ### Bug Fixes
