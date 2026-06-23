@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 @main
 struct MemeGTDApp: App {
@@ -14,5 +15,6 @@ struct MemeGTDApp: App {
                 .environmentObject(articleStore)
                 .preferredColorScheme(.light)
         }
+        .modelContainer(AppDatabase.shared)
     }
 }
