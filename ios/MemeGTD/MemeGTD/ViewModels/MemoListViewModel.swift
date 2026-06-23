@@ -200,6 +200,7 @@ class MemoListViewModel: ObservableObject {
     func loadMemos() async {
         logger.info("loadMemos called")
         isLoading = true
+        defer { isLoading = false }
         error = nil
 
         do {
@@ -223,7 +224,6 @@ class MemoListViewModel: ObservableObject {
             logger.info("loadMemos done: count=\(response.data.count), total=\(response.total)")
         } catch is CancellationError {
             logger.info("loadMemos cancelled")
-            return
         } catch {
             if Task.isCancelled {
                 logger.info("loadMemos cancelled (URLError)")
@@ -232,8 +232,6 @@ class MemoListViewModel: ObservableObject {
             self.error = error.localizedDescription
             logger.error("loadMemos error: \(error.localizedDescription)")
         }
-
-        isLoading = false
     }
 
     /// Loads every memo matching the current (non-search) filters by paging
@@ -245,6 +243,7 @@ class MemoListViewModel: ObservableObject {
         guard let store else { return }
         logger.info("loadAllMemos called")
         isLoading = true
+        defer { isLoading = false }
         error = nil
 
         do {
@@ -284,10 +283,7 @@ class MemoListViewModel: ObservableObject {
 
             logger.info("loadAllMemos done: count=\(accumulated.count), total=\(finalTotal)")
         } catch is CancellationError {
-            // A newer reload task is taking over; leave `isLoading` true so the
-            // replacement owns the spinner lifecycle.
             logger.info("loadAllMemos cancelled")
-            return
         } catch {
             if Task.isCancelled {
                 logger.info("loadAllMemos cancelled (URLError)")
@@ -296,8 +292,6 @@ class MemoListViewModel: ObservableObject {
             self.error = error.localizedDescription
             logger.error("loadAllMemos error: \(error.localizedDescription)")
         }
-
-        isLoading = false
     }
 
     /// Reloads the list, loading the full filtered range when a schedule/date

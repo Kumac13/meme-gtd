@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.32.1 - 2026-06-23
+
+### Bug Fixes
+
+- **iOS Memo Loading Indicator Stuck**: `loadMemos` / `loadAllMemos` left `isLoading` at `true` when cancelled, on the assumption that a replacement reload task would take over the spinner. Cancellations from outside that path (e.g. SwiftUI tearing down the `.task` when the `ScrollView` `.id` flips, or any other view-driven `.task` cancel) had no replacement, so the "Loading memos…" overlay could remain on screen indefinitely. Both methods now clear `isLoading` via `defer` so the spinner is always released.
+
 ## 0.32.0 - 2026-06-18
 
 ### New Features
