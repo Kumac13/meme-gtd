@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.33.2 - 2026-06-24
+
+### Bug Fixes
+
+- **iOS search field animation**: The toolbar's search-close transition (right-to-left slide) stuttered visibly, and the "Memos" title was delayed catching up. Three sources of main-thread invalidation during the animation window were removed:
+  - `MemeGTDApp` no longer holds `NetworkMonitor.shared` / `SyncEngine.shared` with `@StateObject`; they are plain `private let` references so the App body does not re-evaluate on every `@Published` change from those singletons. Views that need to observe them still opt in via `@EnvironmentObject`.
+  - `NetworkMonitor.pathUpdateHandler` now skips assigning `isOnline` when the value did not actually change, suppressing redundant `objectWillChange` emissions.
+  - `MemoStore.bindToSyncEngine(_:)` is no longer called from `MemeGTDApp.task`; the Combine subscription that called `refreshFromCache` on every `didFinishSyncStep` is gone.
+  - `WindowGroup` no longer applies `.modelContainer(AppDatabase.shared)`. No view uses `@Query` / `@Environment(\.modelContext)`; the `ModelContext` is passed manually to `SyncEngine` and `MemoStore`.
+  - `MemoListViewModel.loadMemos` no longer calls `store?.refreshFromCache()` synchronously at the start of the function. That path is reused as the search field's `onSearch` close handler and the synchronous SwiftData read set `@Published` properties mid-frame.
+  - After the API responds, `store?.persistToCache(_:)` is now deferred via `Task { @MainActor }` instead of running synchronously on the main thread. The local-network API often returned inside the 300 ms spring window; the per-row SwiftData upserts blocked the main thread and delayed the title.
+
 ## 0.33.1 - 2026-06-24
 
 ### New Features (completing 0.33.0)
