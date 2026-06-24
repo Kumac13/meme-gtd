@@ -193,6 +193,44 @@ struct OutboxRepository {
         op.lastTriedAt = Date()
     }
 
+    /// Drop an op from the queue without sending. Also rolls the LocalMemo /
+    /// LocalComment back to a sane terminal state where possible: a
+    /// pendingCreate row is removed (it was never on the server), a
+    /// pendingUpdate / pendingDelete row is reset to `.synced` so the cache
+    /// matches the server's last known good state. Used by the user-facing
+    /// "Discard" action in OutboxStatusSheet.
+    func discard(_ op: OutboxOperation, memos: LocalMemoRepository) {
+        switch op.kind {
+        case .createMemo:
+            if let local = memos.fetchMemo(byLocalId: op.memoLocalId) {
+                context.delete(local)
+            }
+        case .updateMemo, .deleteMemo:
+            if let local = memos.fetchMemo(byLocalId: op.memoLocalId) {
+                local.syncState = local.remoteId != nil ? .synced : .pendingCreate
+                local.lastSyncError = nil
+                if op.kind == .deleteMemo {
+                    local.isDeleted = false
+                }
+            }
+        case .createComment:
+            if let commentId = op.commentLocalId,
+               let local = memos.fetchComment(byAnyLocalId: commentId) {
+                context.delete(local)
+            }
+        case .updateComment, .deleteComment:
+            if let commentId = op.commentLocalId,
+               let local = memos.fetchComment(byAnyLocalId: commentId) {
+                local.syncState = local.remoteId != nil ? .synced : .pendingCreate
+                local.lastSyncError = nil
+                if op.kind == .deleteComment {
+                    local.isDeleted = false
+                }
+            }
+        }
+        context.delete(op)
+    }
+
     // MARK: - Helpers
 
     private func encode<T: Encodable>(_ value: T) -> String {

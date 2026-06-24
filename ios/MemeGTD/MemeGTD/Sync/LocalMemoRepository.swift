@@ -66,6 +66,15 @@ struct LocalMemoRepository {
         return nil
     }
 
+    /// Lookup a comment by its `localId` directly. Used when an Outbox op
+    /// holds the comment's UUID but we have no surrounding memo handle.
+    func fetchComment(byAnyLocalId localId: UUID) -> LocalComment? {
+        let descriptor = FetchDescriptor<LocalComment>(
+            predicate: #Predicate { $0.localId == localId }
+        )
+        return (try? context.fetch(descriptor))?.first
+    }
+
     var memoCount: Int {
         (try? context.fetchCount(FetchDescriptor<LocalMemo>(
             predicate: #Predicate { !$0.isDeleted }

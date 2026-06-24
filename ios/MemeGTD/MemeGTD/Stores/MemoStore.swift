@@ -10,6 +10,9 @@ class MemoStore: ObservableObject {
     /// Number of operations queued for offline send. Drives the
     /// "Offline · N pending" badge in the top banner.
     @Published var pendingCount: Int = 0
+    /// Number of memos currently flagged as conflicts. Drives the red
+    /// "Sync paused — Tap to resolve" banner.
+    @Published var conflictCount: Int = 0
 
     /// SwiftData context for offline cache reads. Injected by the App once
     /// at launch; before injection the store works in pure-memory mode for
@@ -82,6 +85,7 @@ class MemoStore: ObservableObject {
         self.memos = locals.map { $0.toMemo() }
         self.total = repo.memoCount
         self.pendingCount = outbox.count
+        self.conflictCount = locals.filter { $0.syncState == .conflict }.count
     }
 
     /// Write server-fresh memos into the local cache so they remain visible
@@ -286,5 +290,132 @@ class MemoStore: ObservableObject {
     func refreshPending() {
         guard let modelContext else { return }
         self.pendingCount = OutboxRepository(context: modelContext).count
+    }
+
+    // MARK: - Conflict resolution
+
+    /// All non-deleted memos in `.conflict` state. Drives the red banner.
+    func conflictMemos() -> [Memo] {
+        guard let modelContext else { return [] }
+        let repo = LocalMemoRepository(context: modelContext)
+        return repo.fetchMemos()
+            .filter { $0.syncState == .conflict }
+            .map { $0.toMemo() }
+    }
+
+    /// "Keep local copy": the server-side row is gone, but the user wants
+    /// the local edit preserved. Re-create the memo on the server with a
+    /// fresh clientUuid so it appears as a new row. Returns true if the
+    /// reset succeeded.
+    @discardableResult
+    func resolveConflictKeepLocal(memoId: Int) -> Bool {
+        guard let modelContext else { return false }
+        let repo = LocalMemoRepository(context: modelContext)
+        let outbox = OutboxRepository(context: modelContext)
+        guard let local = repo.fetchMemo(byAnyId: memoId), local.syncState == .conflict else {
+            return false
+        }
+        local.remoteId = nil
+        local.clientUuid = UUID().lowercasedString
+        local.syncState = .pendingCreate
+        local.lastSyncError = nil
+        outbox.enqueueCreateMemo(
+            memoLocalId: local.localId,
+            clientUuid: local.clientUuid,
+            bodyMd: local.bodyMd,
+            at: Date()
+        )
+        try? repo.save()
+        refreshFromCache()
+        SyncEngine.shared.kick()
+        return true
+    }
+
+    /// "Discard local copy": throw away the local row entirely. The server
+    /// truth (deleted) wins.
+    func resolveConflictDiscard(memoId: Int) {
+        guard let modelContext else { return }
+        let repo = LocalMemoRepository(context: modelContext)
+        guard let local = repo.fetchMemo(byAnyId: memoId), local.syncState == .conflict else { return }
+        modelContext.delete(local)
+        try? repo.save()
+        refreshFromCache()
+    }
+
+    // MARK: - Outbox detail view support
+
+    /// Snapshot of the Outbox queue for the OutboxStatusSheet. Includes the
+    /// body excerpt of each op's target so the user can recognise which
+    /// memo / comment is stuck.
+    struct OutboxRow: Identifiable, Hashable {
+        let id: UUID            // OutboxOperation.id
+        let kind: String        // raw value of OutboxKindRaw
+        let targetType: String
+        let preview: String     // body excerpt
+        let retryCount: Int
+        let lastError: String?
+        let lastTriedAt: Date?
+        let enqueuedAt: Date
+    }
+
+    func outboxRows() -> [OutboxRow] {
+        guard let modelContext else { return [] }
+        let outbox = OutboxRepository(context: modelContext)
+        let memos = LocalMemoRepository(context: modelContext)
+        return outbox.pendingOperations().map { op in
+            let preview = previewFor(op: op, memos: memos)
+            return OutboxRow(
+                id: op.id,
+                kind: op.kindRaw,
+                targetType: op.targetType,
+                preview: preview,
+                retryCount: op.retryCount,
+                lastError: op.lastError,
+                lastTriedAt: op.lastTriedAt,
+                enqueuedAt: op.enqueuedAt
+            )
+        }
+    }
+
+    private func previewFor(op: OutboxOperation, memos: LocalMemoRepository) -> String {
+        if op.targetType == "comment", let commentId = op.commentLocalId,
+           let c = memos.fetchComment(byAnyLocalId: commentId) {
+            return excerpt(c.bodyMd)
+        }
+        if let m = memos.fetchMemo(byLocalId: op.memoLocalId) {
+            return excerpt(m.bodyMd)
+        }
+        return "(no preview)"
+    }
+
+    private func excerpt(_ body: String) -> String {
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.count <= 80 { return trimmed }
+        return String(trimmed.prefix(80)) + "…"
+    }
+
+    /// Drop a single Outbox row and roll the LocalMemo / LocalComment back
+    /// to the sync state appropriate for whatever the server last knew.
+    func discardOutboxRow(id: UUID) {
+        guard let modelContext else { return }
+        let outbox = OutboxRepository(context: modelContext)
+        let memos = LocalMemoRepository(context: modelContext)
+        guard let op = outbox.pendingOperations().first(where: { $0.id == id }) else { return }
+        outbox.discard(op, memos: memos)
+        try? memos.save()
+        refreshFromCache()
+    }
+
+    /// Drop every Outbox row. Local memos / comments are rolled back as
+    /// `discardOutboxRow(id:)` does.
+    func discardAllOutbox() {
+        guard let modelContext else { return }
+        let outbox = OutboxRepository(context: modelContext)
+        let memos = LocalMemoRepository(context: modelContext)
+        for op in outbox.pendingOperations() {
+            outbox.discard(op, memos: memos)
+        }
+        try? memos.save()
+        refreshFromCache()
     }
 }
