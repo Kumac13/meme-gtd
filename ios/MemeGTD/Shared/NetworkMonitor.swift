@@ -12,11 +12,13 @@ import Combine
 final class NetworkMonitor: ObservableObject {
     static let shared = NetworkMonitor()
 
-    /// Reachability flag. The very first read can happen before the first
-    /// pathUpdateHandler callback arrives, so we seed it from the
-    /// synchronous currentPath snapshot to avoid the brief "shows online
-    /// while actually offline" window at launch.
-    @Published private(set) var isOnline: Bool
+    /// Reachability flag. Defaults to `true` so the OfflineBanner does not
+    /// flash on launch — `NWPathMonitor.currentPath` is unreliable before
+    /// `start()` has had a chance to deliver its first callback, so reading
+    /// it synchronously here would frequently produce a false `.unsatisfied`
+    /// result. The real value lands within milliseconds of `start()` via the
+    /// pathUpdateHandler.
+    @Published private(set) var isOnline: Bool = true
 
     private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "name.kumac.MemeGTD.NetworkMonitor")
@@ -27,9 +29,7 @@ final class NetworkMonitor: ObservableObject {
 
     private var didStart = false
 
-    private init() {
-        self.isOnline = monitor.currentPath.status == .satisfied
-    }
+    private init() {}
 
     /// Starts monitoring. Idempotent — safe to call multiple times.
     func start() {
