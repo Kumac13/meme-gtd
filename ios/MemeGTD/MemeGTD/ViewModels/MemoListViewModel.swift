@@ -247,15 +247,19 @@ class MemoListViewModel: ObservableObject {
                     path: "/api/memos",
                     queryItems: buildListQueryItems(offset: 0)
                 )
-                // Persist the fresh first page so the next offline launch
-                // shows what the user just saw, then update the in-memory
-                // store directly with the server data. We deliberately do
-                // not call refreshFromCache here either — the same @Published
-                // cascade applies, and any pending offline rows will get a
-                // chance to display the next time MemoListView's `.task`
-                // fires (or after an explicit user mutation).
-                store?.persistToCache(response.data)
+                // Update the in-memory store FIRST so the UI sees the new
+                // memos as fast as possible. The SwiftData write that backs
+                // the offline cache is deferred to the next run loop turn —
+                // running it synchronously here blocked the main thread for
+                // long enough (especially against a local-network API that
+                // can respond in single-digit ms) to drag the toolbar's
+                // search-close spring animation. Persistence is best-effort
+                // for offline reuse; deferring it has no correctness impact.
                 store?.setItems(response.data, total: response.total)
+                let snapshot = response.data
+                Task { @MainActor [weak store] in
+                    store?.persistToCache(snapshot)
+                }
             }
             logger.info("loadMemos done")
         } catch is CancellationError {
