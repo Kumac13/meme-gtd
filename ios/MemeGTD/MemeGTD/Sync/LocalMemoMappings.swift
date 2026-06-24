@@ -20,7 +20,8 @@ extension LocalMemo {
             createdAt: LocalMemoMappings.isoString(from: createdAt),
             updatedAt: LocalMemoMappings.isoString(from: updatedAt),
             labels: labels,
-            commentCount: commentCount
+            commentCount: commentCount,
+            syncState: syncState == .synced ? nil : syncState.rawValue
         )
     }
 }
@@ -32,7 +33,8 @@ extension LocalComment {
             issueId: memo?.remoteId ?? (memo?.localId.stableLocalId ?? 0),
             bodyMd: bodyMd,
             createdAt: LocalMemoMappings.isoString(from: createdAt),
-            updatedAt: LocalMemoMappings.isoString(from: updatedAt)
+            updatedAt: LocalMemoMappings.isoString(from: updatedAt),
+            syncState: syncState == .synced ? nil : syncState.rawValue
         )
     }
 }

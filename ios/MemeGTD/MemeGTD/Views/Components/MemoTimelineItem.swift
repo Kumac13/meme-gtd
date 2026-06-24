@@ -13,6 +13,11 @@ struct MemoTimelineItem: View {
 
                 Spacer(minLength: 0)
 
+                // Sync indicator (clock / warning) for offline-tracked rows
+                syncGlyph
+                    .font(.system(size: 11))
+                    .padding(.top, 2)
+
                 // Comment count (right edge)
                 if let count = memo.commentCount, count > 0 {
                     Image(systemName: "bubble.right")
@@ -30,5 +35,19 @@ struct MemoTimelineItem: View {
         }
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var syncGlyph: some View {
+        switch memo.syncState {
+        case "pendingCreate", "pendingUpdate", "pendingDelete":
+            Image(systemName: "clock.arrow.circlepath")
+                .foregroundColor(.textSecondary)
+        case "conflict":
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.red)
+        default:
+            EmptyView()
+        }
     }
 }
