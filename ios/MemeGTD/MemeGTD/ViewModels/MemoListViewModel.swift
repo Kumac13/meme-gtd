@@ -216,9 +216,18 @@ class MemoListViewModel: ObservableObject {
         defer { isLoading = false }
         error = nil
 
-        // Phase 1: paint the SwiftData cache so the list is usable even when
-        // offline. No-op until the App has injected a ModelContext.
-        store?.refreshFromCache()
+        // Snapshot existing visibility so the catch branch can decide
+        // whether to surface an error. App.task already painted the cache
+        // once at launch, so the in-memory `memos` array is the canonical
+        // "did the user already have something to look at" signal.
+        //
+        // IMPORTANT: do NOT call `store?.refreshFromCache()` synchronously
+        // here. This function runs from MemoListView.task on appear AND
+        // from the search field's `onSearch` closure when the user clears
+        // the search query. A synchronous refresh on the close path sets
+        // @Published memos / pendingCount / conflictCount mid-frame and
+        // forces a re-render that visibly stutters the search field's
+        // right-to-left close animation and drags the hamburger menu.
         let hadCachedMemos = !(store?.memos.isEmpty ?? true)
 
         do {
@@ -239,22 +248,14 @@ class MemoListViewModel: ObservableObject {
                     queryItems: buildListQueryItems(offset: 0)
                 )
                 // Persist the fresh first page so the next offline launch
-                // shows what the user just saw.
+                // shows what the user just saw, then update the in-memory
+                // store directly with the server data. We deliberately do
+                // not call refreshFromCache here either — the same @Published
+                // cascade applies, and any pending offline rows will get a
+                // chance to display the next time MemoListView's `.task`
+                // fires (or after an explicit user mutation).
                 store?.persistToCache(response.data)
-                if hasNonSearchFilters {
-                    // Filters cannot be honoured by the unscoped cache view,
-                    // so trust the server-filtered response verbatim. Local
-                    // pending memos may not match the filter and are not
-                    // shown until the filter is cleared.
-                    store?.setItems(response.data, total: response.total)
-                } else {
-                    // Default browse: refresh from cache so the list is the
-                    // union of the server's first page and any local pending
-                    // rows. This avoids the visible blink where pending
-                    // memos disappear from the list during a successful
-                    // refresh.
-                    store?.refreshFromCache()
-                }
+                store?.setItems(response.data, total: response.total)
             }
             logger.info("loadMemos done")
         } catch is CancellationError {
@@ -264,9 +265,6 @@ class MemoListViewModel: ObservableObject {
                 logger.info("loadMemos cancelled (URLError)")
                 return
             }
-            // Silent failure when the cache already has something visible.
-            // The list stays usable; surfacing an error on top would just
-            // create noise during normal offline browsing.
             if !hadCachedMemos {
                 self.error = error.localizedDescription
             }
