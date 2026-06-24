@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.33.1 - 2026-06-24
+
+### New Features (completing 0.33.0)
+
+- **Per-row sync indicator**: Memo and comment rows render a small clock icon for any pending state and a red warning glyph for conflicts, so the user can see at a glance which items have not yet reached the server.
+- **Conflict resolution sheet**: When a pending PATCH/DELETE finds the memo missing on the server (404), the row is now flagged `.conflict` and the top banner turns red — "Sync paused — N conflicts. Tap to resolve." Tapping opens a sheet that offers, per memo, **Keep local** (re-create on the server as a new row with a fresh clientUuid) or **Discard** (accept the server's deletion).
+- **Outbox detail sheet**: The banner is now tappable when anything is queued. The sheet lists every pending op (create / edit / delete for memos and comments) with a body excerpt, retry count, and last error. Per-row swipe-to-discard, plus "Retry all now" and "Discard all" actions. Discard rolls the LocalMemo / LocalComment back to a safe state (pendingCreate rows are removed; pendingUpdate / pendingDelete rows return to `.synced`).
+
 ## 0.33.0 - 2026-06-24
 
 ### New Features
