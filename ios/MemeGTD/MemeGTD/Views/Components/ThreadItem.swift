@@ -58,32 +58,15 @@ struct ThreadItem: View {
     private var syncIndicator: some View {
         switch syncState {
         case "pendingCreate", "pendingUpdate", "pendingDelete":
-            HStack(spacing: 4) {
-                Image(systemName: "clock.arrow.circlepath")
-                    .font(.caption2)
-                Text(pendingLabel)
-                    .font(.caption2)
-            }
-            .foregroundStyle(.secondary)
+            Image(systemName: "clock.arrow.circlepath")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         case "conflict":
-            HStack(spacing: 4) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.caption2)
-                Text("Conflict")
-                    .font(.caption2)
-            }
-            .foregroundStyle(.red)
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.caption2)
+                .foregroundStyle(.red)
         default:
             EmptyView()
-        }
-    }
-
-    private var pendingLabel: String {
-        switch syncState {
-        case "pendingCreate": return "Pending — will sync"
-        case "pendingUpdate": return "Edit pending"
-        case "pendingDelete": return "Delete pending"
-        default: return "Pending"
         }
     }
 }

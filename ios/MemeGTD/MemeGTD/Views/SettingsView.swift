@@ -3,10 +3,13 @@ import SwiftUI
 struct SettingsView: View {
     let onMenuTap: () -> Void
 
+    @EnvironmentObject var memoStore: MemoStore
     @State private var apiUrl: String = Settings.shared.apiUrl ?? Settings.defaultApiUrl
     @State private var isSaved: Bool = false
     @State private var isTestingConnection: Bool = false
     @State private var connectionStatus: ConnectionStatus = .unknown
+    @State private var showOutboxSheet: Bool = false
+    @State private var showConflictSheet: Bool = false
 
     enum ConnectionStatus {
         case unknown
@@ -94,6 +97,49 @@ struct SettingsView: View {
 
                 Divider().padding(.leading, 16)
 
+                // Sync section — entry points to the offline queue and any
+                // unresolved conflicts. Both rows hide themselves when the
+                // queue is empty / no conflicts exist, so the section is
+                // invisible on the happy path.
+                if memoStore.pendingCount > 0 || memoStore.conflictCount > 0 {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Sync")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.textSecondary)
+                            .textCase(.uppercase)
+
+                        if memoStore.conflictCount > 0 {
+                            syncRow(
+                                icon: "exclamationmark.triangle.fill",
+                                iconColor: .red,
+                                title: "Resolve sync conflicts",
+                                detail: memoStore.conflictCount == 1
+                                    ? "1 memo could not be synced"
+                                    : "\(memoStore.conflictCount) memos could not be synced"
+                            ) {
+                                showConflictSheet = true
+                            }
+                        }
+
+                        if memoStore.pendingCount > 0 {
+                            syncRow(
+                                icon: "clock.arrow.circlepath",
+                                iconColor: .textSecondary,
+                                title: "View pending operations",
+                                detail: memoStore.pendingCount == 1
+                                    ? "1 pending"
+                                    : "\(memoStore.pendingCount) pending"
+                            ) {
+                                showOutboxSheet = true
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 16)
+
+                    Divider().padding(.leading, 16)
+                }
+
                 // How to use section
                 VStack(alignment: .leading, spacing: 12) {
                     Text("How to use")
@@ -128,6 +174,46 @@ struct SettingsView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showOutboxSheet) { OutboxStatusSheet() }
+        .sheet(isPresented: $showConflictSheet) { ConflictResolveSheet() }
+    }
+
+    @ViewBuilder
+    private func syncRow(
+        icon: String,
+        iconColor: Color,
+        title: String,
+        detail: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            HapticManager.impact(.light)
+            action()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(iconColor)
+                    .frame(width: 24)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 15))
+                        .foregroundColor(.textPrimary)
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.textSecondary)
+            }
+            .padding(12)
+            .background(Color(.tertiarySystemFill))
+            .cornerRadius(10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private func saveSettings() {
