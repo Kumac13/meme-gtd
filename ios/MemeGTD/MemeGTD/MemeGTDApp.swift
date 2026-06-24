@@ -6,8 +6,15 @@ struct MemeGTDApp: App {
     @StateObject private var taskStore = TaskStore()
     @StateObject private var memoStore = MemoStore()
     @StateObject private var articleStore = ArticleStore()
-    @StateObject private var networkMonitor = NetworkMonitor.shared
-    @StateObject private var syncEngine = SyncEngine.shared
+    // NOTE: NetworkMonitor.shared / SyncEngine.shared are intentionally
+    // NOT held with @StateObject here. @StateObject makes this App's body
+    // recompute on every @Published change on those singletons (isOnline,
+    // isSyncing, …), which propagates view invalidation through the entire
+    // tree and was visibly disrupting the search field's open / close
+    // animation. They are still injected via .environmentObject so views
+    // that explicitly opt-in with @EnvironmentObject can observe them.
+    private let networkMonitor = NetworkMonitor.shared
+    private let syncEngine = SyncEngine.shared
 
     var body: some Scene {
         WindowGroup {

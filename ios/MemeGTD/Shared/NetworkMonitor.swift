@@ -39,10 +39,17 @@ final class NetworkMonitor: ObservableObject {
             let nextOnline = path.status == .satisfied
             Task { @MainActor [weak self] in
                 guard let self else { return }
+                // De-dupe: @Published would fire objectWillChange even when
+                // the new value equals the old one, which would re-render
+                // anything observing this singleton (and in turn anything
+                // observing those observers). NWPathMonitor delivers updates
+                // freely; we only want to propagate a real edge change.
                 let wasOnline = self.isOnline
-                self.isOnline = nextOnline
-                if !wasOnline && nextOnline {
-                    self.didComeOnline.send(())
+                if wasOnline != nextOnline {
+                    self.isOnline = nextOnline
+                    if !wasOnline && nextOnline {
+                        self.didComeOnline.send(())
+                    }
                 }
             }
         }
