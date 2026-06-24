@@ -50,34 +50,41 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
         error = nil
 
         // Phase 1: cache (instant, offline-friendly).
-        if let cached = memoStore?.cachedDetail(remoteId: memoId) {
+        if let cached = memoStore?.cachedDetail(memoId: memoId) {
             self.memo = cached.memo
             self.comments = cached.comments
         }
         let hadCache = (self.memo != nil)
 
-        do {
-            let freshMemo: Memo = try await APIClient.shared.get(path: "/api/memos/\(memoId)")
-            let commentList: [Comment] = try await APIClient.shared.get(
-                path: "/api/memos/\(memoId)/comments"
-            )
-            self.memo = freshMemo
-            self.comments = commentList
-            memoStore?.persistDetailToCache(memo: freshMemo, comments: commentList)
-        } catch {
-            // Silent failure when we already painted from cache; the user
-            // can still read the memo and its existing comments offline.
-            if !hadCache {
-                self.error = error.localizedDescription
+        // memoId < 0 means the memo only exists locally (pending create
+        // not yet confirmed by the server). Skip the network round-trip —
+        // the cache is the only source of truth until the SyncEngine
+        // assigns a remoteId.
+        if memoId > 0 {
+            do {
+                let freshMemo: Memo = try await APIClient.shared.get(path: "/api/memos/\(memoId)")
+                let commentList: [Comment] = try await APIClient.shared.get(
+                    path: "/api/memos/\(memoId)/comments"
+                )
+                self.memo = freshMemo
+                self.comments = commentList
+                memoStore?.persistDetailToCache(memo: freshMemo, comments: commentList)
+            } catch {
+                // Silent failure when we already painted from cache; the user
+                // can still read the memo and its existing comments offline.
+                if !hadCache {
+                    self.error = error.localizedDescription
+                }
             }
-        }
 
-        // Load projects, labels & links in parallel
-        async let projectsResult: () = loadProjects()
-        async let labelsResult: () = loadAllLabels()
-        async let linksResult: () = loadLinks()
-        async let urlLinksResult: () = loadUrlLinks()
-        _ = await (projectsResult, labelsResult, linksResult, urlLinksResult)
+            // Load projects, labels & links in parallel (online-only;
+            // these endpoints are not cached locally).
+            async let projectsResult: () = loadProjects()
+            async let labelsResult: () = loadAllLabels()
+            async let linksResult: () = loadLinks()
+            async let urlLinksResult: () = loadUrlLinks()
+            _ = await (projectsResult, labelsResult, linksResult, urlLinksResult)
+        }
 
         isLoading = false
     }

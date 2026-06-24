@@ -110,12 +110,14 @@ class MemoStore: ObservableObject {
         }
     }
 
-    /// Pull a memo and its cached comments from SwiftData. Returns nil when
-    /// no context is available or the row is unknown locally.
-    func cachedDetail(remoteId: Int) -> (memo: Memo, comments: [Comment])? {
+    /// Pull a memo and its cached comments from SwiftData. Accepts either a
+    /// positive server-assigned ID or the negative stableLocalId we
+    /// synthesize for pending rows, so freshly-created offline memos can be
+    /// opened in the detail view before they have a remoteId.
+    func cachedDetail(memoId: Int) -> (memo: Memo, comments: [Comment])? {
         guard let modelContext else { return nil }
         let repo = LocalMemoRepository(context: modelContext)
-        guard let local = repo.fetchMemo(byRemoteId: remoteId) else { return nil }
+        guard let local = repo.fetchMemo(byAnyId: memoId) else { return nil }
         let comments = repo.fetchComments(forMemo: local).map { $0.toComment() }
         return (local.toMemo(), comments)
     }

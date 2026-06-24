@@ -197,6 +197,19 @@ class MemoListViewModel: ObservableObject {
 
     // MARK: - Load
 
+    /// Whether any filter that the cache cannot honour is active. When true,
+    /// `loadMemos` falls back to showing only the server-side filtered
+    /// response and skips the cache merge — otherwise the user would see
+    /// "memos outside my filter" appear from the cache.
+    private var hasNonSearchFilters: Bool {
+        bookmarkFilter
+            || !labelFilters.isEmpty
+            || !projectFilters.isEmpty
+            || includeNoProject
+            || createdFrom != nil
+            || createdTo != nil
+    }
+
     func loadMemos() async {
         logger.info("loadMemos called")
         isLoading = true
@@ -209,27 +222,41 @@ class MemoListViewModel: ObservableObject {
         let hadCachedMemos = !(store?.memos.isEmpty ?? true)
 
         do {
-            let response: MemoListResponse
             if isSemanticSearching {
-                response = try await fetchSemanticSearch()
+                let response = try await fetchSemanticSearch()
+                store?.setItems(response.data, total: response.total)
             } else if isSearching {
                 relevanceScores = [:]
                 semanticSearchTimeMs = nil
-                response = try await fetchKeywordSearch(offset: 0)
+                let response = try await fetchKeywordSearch(offset: 0)
+                store?.setItems(response.data, total: response.total)
             } else {
                 searchMatchInfos = [:]
                 relevanceScores = [:]
                 semanticSearchTimeMs = nil
-                response = try await APIClient.shared.get(
+                let response: MemoListResponse = try await APIClient.shared.get(
                     path: "/api/memos",
                     queryItems: buildListQueryItems(offset: 0)
                 )
                 // Persist the fresh first page so the next offline launch
                 // shows what the user just saw.
                 store?.persistToCache(response.data)
+                if hasNonSearchFilters {
+                    // Filters cannot be honoured by the unscoped cache view,
+                    // so trust the server-filtered response verbatim. Local
+                    // pending memos may not match the filter and are not
+                    // shown until the filter is cleared.
+                    store?.setItems(response.data, total: response.total)
+                } else {
+                    // Default browse: refresh from cache so the list is the
+                    // union of the server's first page and any local pending
+                    // rows. This avoids the visible blink where pending
+                    // memos disappear from the list during a successful
+                    // refresh.
+                    store?.refreshFromCache()
+                }
             }
-            store?.setItems(response.data, total: response.total)
-            logger.info("loadMemos done: count=\(response.data.count), total=\(response.total)")
+            logger.info("loadMemos done")
         } catch is CancellationError {
             logger.info("loadMemos cancelled")
         } catch {
