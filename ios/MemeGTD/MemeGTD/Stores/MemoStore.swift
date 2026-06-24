@@ -56,23 +56,18 @@ class MemoStore: ObservableObject {
 
     // MARK: - SwiftData cache hookup
 
-    private var cancellables: Set<AnyCancellable> = []
-
     func setModelContext(_ context: ModelContext) {
         self.modelContext = context
     }
 
-    /// Subscribe to SyncEngine completion events so the in-memory list is
-    /// refreshed whenever a pull or push changes the underlying SwiftData
-    /// rows. Safe to call multiple times.
-    func bindToSyncEngine(_ engine: SyncEngine) {
-        engine.didFinishSyncStep
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.refreshFromCache()
-            }
-            .store(in: &cancellables)
-    }
+    // NOTE: bindToSyncEngine was removed deliberately. Subscribing to
+    // SyncEngine.didFinishSyncStep made every background pull/push call
+    // refreshFromCache(), which sets `@Published var memos` and triggers
+    // a re-render of MemoListView. When initial hydration was still in
+    // flight, those re-renders interrupted the toolbar search field's
+    // open / close animation. Refresh now happens at well-defined points:
+    // app launch (end of MemeGTDApp.task), each list view's `.task`, and
+    // explicit user mutations through the enqueueXxx methods below.
 
     /// Replace the in-memory list with whatever the local SwiftData cache
     /// currently holds (newest-first, both synced and pending rows). Safe

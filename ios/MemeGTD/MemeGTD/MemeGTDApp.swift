@@ -22,9 +22,17 @@ struct MemeGTDApp: App {
                     // First-run wiring. ModelContext must come from the
                     // attached container; capturing it inside `.task`
                     // guarantees we are on the main actor.
+                    //
+                    // We deliberately do NOT attach `.modelContainer(...)` to
+                    // WindowGroup, and do NOT bind MemoStore to SyncEngine's
+                    // didFinishSyncStep. Both hooked the SwiftUI render cycle
+                    // into background SwiftData / Combine activity, which
+                    // interrupted the toolbar search field's open / close
+                    // animation. UI state is refreshed only at well-defined
+                    // points: app launch (end of this .task), each list
+                    // view's `.task`, and after explicit user actions.
                     let context = AppDatabase.shared.mainContext
                     memoStore.setModelContext(context)
-                    memoStore.bindToSyncEngine(syncEngine)
                     syncEngine.attach(context: context)
                     syncEngine.bindToNetworkMonitor(networkMonitor)
                     networkMonitor.start()
@@ -42,6 +50,5 @@ struct MemeGTDApp: App {
                     memoStore.refreshFromCache()
                 }
         }
-        .modelContainer(AppDatabase.shared)
     }
 }
