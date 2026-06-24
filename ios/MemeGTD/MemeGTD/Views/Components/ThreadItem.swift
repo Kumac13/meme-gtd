@@ -6,14 +6,21 @@ struct ThreadItem: View {
     let bodyMd: String
     var labels: [String]?
     var showMenu: Bool = true
+    /// One of the SyncStateRaw raw values for rows backed by a LocalMemo /
+    /// LocalComment, or `nil` for fully-synced rows. Drives the small clock
+    /// or warning glyph rendered next to the body.
+    var syncState: String?
     var onEdit: (() -> Void)?
     var onDelete: (() -> Void)?
     var onCopy: (() -> Void)?
 
     var body: some View {
         HStack(alignment: .top, spacing: 4) {
-            MemoBody(bodyMd: bodyMd, labels: labels)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                MemoBody(bodyMd: bodyMd, labels: labels)
+                syncIndicator
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             if showMenu {
                 // Three-dot menu
@@ -45,5 +52,38 @@ struct ThreadItem: View {
         .padding(.vertical, 10)
         .padding(.horizontal, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var syncIndicator: some View {
+        switch syncState {
+        case "pendingCreate", "pendingUpdate", "pendingDelete":
+            HStack(spacing: 4) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.caption2)
+                Text(pendingLabel)
+                    .font(.caption2)
+            }
+            .foregroundStyle(.secondary)
+        case "conflict":
+            HStack(spacing: 4) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.caption2)
+                Text("Conflict")
+                    .font(.caption2)
+            }
+            .foregroundStyle(.red)
+        default:
+            EmptyView()
+        }
+    }
+
+    private var pendingLabel: String {
+        switch syncState {
+        case "pendingCreate": return "Pending — will sync"
+        case "pendingUpdate": return "Edit pending"
+        case "pendingDelete": return "Delete pending"
+        default: return "Pending"
+        }
     }
 }

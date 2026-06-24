@@ -6,6 +6,29 @@ struct Comment: Codable, Identifiable {
     let bodyMd: String
     let createdAt: String
     let updatedAt: String
+    /// Local-only field. See `Memo.syncState` for rationale.
+    var syncState: String?
+
+    init(
+        id: Int,
+        issueId: Int,
+        bodyMd: String,
+        createdAt: String,
+        updatedAt: String,
+        syncState: String? = nil
+    ) {
+        self.id = id
+        self.issueId = issueId
+        self.bodyMd = bodyMd
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.syncState = syncState
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, issueId, bodyMd, createdAt, updatedAt
+        // syncState excluded — local-only.
+    }
 }
 
 struct CreateCommentRequest: Codable {

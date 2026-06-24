@@ -61,6 +61,7 @@ struct MemoDetailView: View {
                             ThreadItem(
                                 bodyMd: item.bodyMd,
                                 labels: nil,
+                                syncState: item.syncState,
                                 onEdit: {
                                     viewModel.replyBody = item.bodyMd
                                     if item.isOriginal {
@@ -362,7 +363,8 @@ struct MemoDetailView: View {
             createdAt: memo.createdAt,
             labels: memo.labels,
             isOriginal: true,
-            commentId: nil
+            commentId: nil,
+            syncState: memo.syncState
         ))
 
         for comment in comments {
@@ -372,7 +374,8 @@ struct MemoDetailView: View {
                 createdAt: comment.createdAt,
                 labels: nil,
                 isOriginal: false,
-                commentId: comment.id
+                commentId: comment.id,
+                syncState: comment.syncState
             ))
         }
 
@@ -389,4 +392,5 @@ private struct ThreadTimelineItem: Identifiable {
     let labels: [String]?
     let isOriginal: Bool
     let commentId: Int?
+    let syncState: String?
 }

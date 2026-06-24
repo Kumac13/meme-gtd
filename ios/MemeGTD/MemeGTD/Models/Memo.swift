@@ -10,6 +10,40 @@ struct Memo: Codable, Identifiable {
     let updatedAt: String
     let labels: [String]?
     let commentCount: Int?
+    /// Local-only field. Set when the DTO is produced from a LocalMemo with
+    /// a non-`.synced` state; `nil` for memos that come straight from the
+    /// API. The View uses this to draw the pending / conflict indicator.
+    var syncState: String?
+
+    init(
+        id: Int,
+        type: String,
+        bodyMd: String,
+        isBookmarked: Bool,
+        isDeleted: Bool,
+        createdAt: String,
+        updatedAt: String,
+        labels: [String]? = nil,
+        commentCount: Int? = nil,
+        syncState: String? = nil
+    ) {
+        self.id = id
+        self.type = type
+        self.bodyMd = bodyMd
+        self.isBookmarked = isBookmarked
+        self.isDeleted = isDeleted
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.labels = labels
+        self.commentCount = commentCount
+        self.syncState = syncState
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, type, bodyMd, isBookmarked, isDeleted, createdAt, updatedAt, labels, commentCount
+        // syncState is intentionally excluded: it is local-only and must
+        // not be sent to or expected from the API.
+    }
 }
 
 struct MemoListResponse: Codable {
