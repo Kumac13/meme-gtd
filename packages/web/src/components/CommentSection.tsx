@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, DragEvent, ClipboardEvent } from 'react';
+import type { IssueType } from 'meme-gtd-shared';
 import EditableContent from './EditableContent';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
@@ -27,6 +28,8 @@ interface CommentSectionProps {
   onDeleteComment: (commentId: number) => Promise<void>;
   activities?: ActivityLogEntry[];
   issueId?: number;
+  /** Click handler for `#id` links inside rendered comment bodies. */
+  onIssueLinkClick?: (id: number, type: IssueType) => void;
 }
 
 export default function CommentSection({
@@ -37,6 +40,7 @@ export default function CommentSection({
   onDeleteComment,
   activities = [],
   issueId,
+  onIssueLinkClick,
 }: CommentSectionProps) {
   const [newCommentBody, setNewCommentBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -176,6 +180,7 @@ export default function CommentSection({
                     updatedAt={entry.comment.updatedAt}
                     onSave={(newBody) => onUpdateComment(entry.comment.id, newBody)}
                     onDelete={() => onDeleteComment(entry.comment.id)}
+                    onIssueLinkClick={onIssueLinkClick}
                   />
                 );
               }

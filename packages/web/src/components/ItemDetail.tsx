@@ -264,6 +264,7 @@ export default function ItemDetail({
             onDelete={handleDeleteBody}
             title={item.title}
             showTitleEdit={itemType === 'task'}
+            onIssueLinkClick={onItemClick}
           />
 
           {/* Links section */}
@@ -291,6 +292,7 @@ export default function ItemDetail({
               onDeleteComment={handleDeleteComment}
               activities={activities}
               issueId={item.id}
+              onIssueLinkClick={onItemClick}
             />
           )}
         </div>
