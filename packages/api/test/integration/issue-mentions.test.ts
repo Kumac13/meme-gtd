@@ -147,6 +147,26 @@ describe('Issue mention auto-link', () => {
     assert.strictEqual(links[0].targetIssue?.id, target.id);
   });
 
+  it('does not create an inverse relates link when one already exists in the other direction', async () => {
+    // A mentions B → outgoing relates A→B is created.
+    const b = await createTask(s.app, 'B', 'body');
+    const a = await createMemo(s.app, `points to #${b.id}`);
+
+    // Now B mentions A — without dedup this would create B→A, doubling the row.
+    const patch = await s.app.inject({
+      method: 'PATCH',
+      url: `/api/tasks/${b.id}`,
+      payload: { bodyMd: `back ref #${a.id}` },
+    });
+    assert.strictEqual(patch.statusCode, 200, patch.body);
+
+    // Both sides should see exactly one relates link representing the same relationship.
+    const aLinks = (await getLinks(s.app, a.id)).filter((l) => l.linkType === 'relates');
+    const bLinks = (await getLinks(s.app, b.id)).filter((l) => l.linkType === 'relates');
+    assert.strictEqual(aLinks.length, 1, 'A should still see exactly one relates link');
+    assert.strictEqual(bLinks.length, 1, 'B should still see exactly one relates link');
+  });
+
   it('rewrites task body to a memo URL when the mentioned id is a memo', async () => {
     const targetMemo = await createMemo(s.app, 'target memo');
     const task = await createTask(s.app, 'caller', `relates to #${targetMemo.id}`);
