@@ -194,12 +194,25 @@ struct MarkdownBody: View {
             markdown: content,
             options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
         ) {
-            // Recolor links to accent
+            // Recolor links to accent + promote path-only URLs so SwiftUI fires OpenURLAction
             for run in attributed.runs {
-                if run.link != nil {
+                if let url = run.link {
                     let range = run.range
                     attributed[range].foregroundColor = UIColor(red: 0x2d/255.0, green: 0xa4/255.0, blue: 0x4e/255.0, alpha: 1.0)
                     attributed[range].underlineStyle = .single
+                    // `[#63](/tasks/63)` parses with `scheme == nil`. SwiftUI's Text
+                    // silently no-ops such links because there's nothing to "open".
+                    // Wrap the path under a custom scheme so OpenURLAction always
+                    // gets called — we still route through the same parser.
+                    if url.scheme == nil, !url.path.isEmpty {
+                        var components = URLComponents()
+                        components.scheme = "memegtd-internal"
+                        components.host = "internal"
+                        components.path = url.path.hasPrefix("/") ? url.path : "/\(url.path)"
+                        if let promoted = components.url {
+                            attributed[range].link = promoted
+                        }
+                    }
                 }
             }
             // Highlight search keywords
@@ -228,9 +241,14 @@ struct MarkdownBody: View {
 // MARK: - Internal issue URL parser
 
 private func parseInternalIssueURL(_ url: URL) -> (id: Int, type: String)? {
-    // Accept both relative (`/tasks/63`) and absolute (`https://x/tasks/63`) forms.
+    // Accept three forms:
+    //   1. relative path-only (`/tasks/63`) from raw AttributedString
+    //   2. our promoted custom scheme (`memegtd-internal://internal/tasks/63`)
+    //   3. fully absolute URLs that happen to match the internal path shape
     let path: String
-    if url.scheme == nil, url.host == nil {
+    if url.scheme == "memegtd-internal" {
+        path = url.path
+    } else if url.scheme == nil, url.host == nil {
         path = url.absoluteString
     } else {
         path = url.path
