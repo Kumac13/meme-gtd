@@ -10,19 +10,22 @@ struct MarkdownBody: View {
     let color: Color
     let searchQuery: String?
     let onIssueTap: ((Int, String) -> Void)?
+    let onTodoToggle: ((Int, Bool) -> Void)?
 
     init(
         _ text: String,
         fontSize: CGFloat = 14,
         color: Color = Color(.label).opacity(0.75),
         searchQuery: String? = nil,
-        onIssueTap: ((Int, String) -> Void)? = nil
+        onIssueTap: ((Int, String) -> Void)? = nil,
+        onTodoToggle: ((Int, Bool) -> Void)? = nil
     ) {
         self.text = text
         self.fontSize = fontSize
         self.color = color
         self.searchQuery = searchQuery
         self.onIssueTap = onIssueTap
+        self.onTodoToggle = onTodoToggle
     }
 
     private var blocks: [MarkdownBlock] {
@@ -59,6 +62,8 @@ struct MarkdownBody: View {
             blockquoteView(content: content)
         case .listItem(let content, let indent):
             listItemView(content: content, indent: indent)
+        case .todoItem(let checked, let content, let indent, let todoIndex):
+            todoItemView(checked: checked, content: content, indent: indent, todoIndex: todoIndex)
         case .image(let alt, let url):
             imageView(alt: alt, url: url)
         case .text(let content):
@@ -179,6 +184,36 @@ struct MarkdownBody: View {
         .padding(.leading, CGFloat(indent) * 16)
     }
 
+    // MARK: - Todo item
+
+    @ViewBuilder
+    private func todoItemView(checked: Bool, content: String, indent: Int, todoIndex: Int) -> some View {
+        if let onToggle = onTodoToggle {
+            HStack(alignment: .top, spacing: 6) {
+                Button {
+                    HapticManager.impact(.light)
+                    onToggle(todoIndex, !checked)
+                } label: {
+                    Image(systemName: checked ? "checkmark.square.fill" : "square")
+                        .font(.system(size: fontSize + 1))
+                        .foregroundColor(checked ? .accent : .textSecondary)
+                }
+                .buttonStyle(.plain)
+                inlineMarkdownText(content)
+            }
+            .padding(.leading, CGFloat(indent) * 16)
+        } else {
+            // Non-interactive context: render the same bullet shape as a regular list item
+            HStack(alignment: .top, spacing: 6) {
+                Text("\u{2022}")
+                    .font(.system(size: fontSize))
+                    .foregroundColor(color)
+                inlineMarkdownText("[\(checked ? "x" : " ")] \(content)")
+            }
+            .padding(.leading, CGFloat(indent) * 16)
+        }
+    }
+
     // MARK: - Inline markdown text (with accent-colored links)
 
     private func inlineMarkdownText(_ content: String) -> some View {
@@ -284,6 +319,7 @@ private enum MarkdownBlock {
     case mermaidBlock(code: String)
     case blockquote(String)
     case listItem(content: String, indent: Int)
+    case todoItem(checked: Bool, content: String, indent: Int, todoIndex: Int)
     case image(alt: String, url: String)
 }
 
@@ -295,6 +331,7 @@ private func parseBlocks(_ markdown: String) -> [MarkdownBlock] {
     var codeLanguage = ""
     var codeContent = ""
     var quoteLines: [String] = []
+    var todoCounter = 0
 
     func flushText() {
         if !currentText.isEmpty {
@@ -369,6 +406,31 @@ private func parseBlocks(_ markdown: String) -> [MarkdownBlock] {
             flushText()
             let content = line.hasPrefix("> ") ? String(line.dropFirst(2)) : ""
             quoteLines.append(content)
+            continue
+        }
+
+        // Todo item (- [ ] / - [x]) — must be checked BEFORE plain list item
+        if let match = line.range(of: #"^(\s*)[*\-+]\s+\[[ xX]\]\s+(.+)$"#, options: .regularExpression) {
+            flushText()
+            flushQuote()
+            let fullMatch = String(line[match])
+            let leadingSpaces = fullMatch.prefix(while: { $0 == " " || $0 == "\t" }).count
+            let indent = leadingSpaces / 2
+            // Find the bracket char to determine checked state
+            let trimmed = fullMatch.drop(while: { $0 == " " || $0 == "\t" })
+            // trimmed starts with `- [ ] ` or `- [x] ` etc. Skip marker + space, peek bracket char.
+            // Marker is 1 char (- * +). Space follows. Then `[`, then bracket char, then `]`, then space.
+            let afterMarker = trimmed.dropFirst() // drop -, *, or +
+            let afterMarkerSpace = afterMarker.drop(while: { $0 == " " || $0 == "\t" })
+            // afterMarkerSpace now starts with `[X] content` or `[ ] content`
+            guard afterMarkerSpace.count >= 4 else { continue }
+            let bracketChar = afterMarkerSpace[afterMarkerSpace.index(afterMarkerSpace.startIndex, offsetBy: 1)]
+            let checked = bracketChar == "x" || bracketChar == "X"
+            // Content starts after `[X] ` — that's 4 characters after the bracket starts
+            let contentStart = afterMarkerSpace.index(afterMarkerSpace.startIndex, offsetBy: 3)
+            let contentTrimmed = afterMarkerSpace[contentStart...].drop(while: { $0 == " " || $0 == "\t" })
+            blocks.append(.todoItem(checked: checked, content: String(contentTrimmed), indent: indent, todoIndex: todoCounter))
+            todoCounter += 1
             continue
         }
 

@@ -382,6 +382,62 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
         }
     }
 
+    // MARK: - Interactive todo toggle
+
+    /// Toggle the N-th `- [ ]` / `- [x]` in the task body, persisting via PATCH.
+    /// Optimistically updates `task` and rolls back on error.
+    func toggleBodyTodo(at todoIndex: Int) async {
+        guard let current = task else { return }
+        guard let next = TodoMarkdown.toggleTodo(current.bodyMd, at: todoIndex) else { return }
+        guard next != current.bodyMd else { return }
+
+        // Optimistic update
+        let previousBody = current.bodyMd
+        task = current.withBody(next)
+
+        do {
+            let request = UpdateTaskRequest(title: nil, bodyMd: next, status: nil)
+            let updated: TaskItem = try await APIClient.shared.patch(
+                path: "/api/tasks/\(taskId)",
+                body: request
+            )
+            task = updated
+            taskStore?.updateItem(updated)
+            await loadActivityLog()
+        } catch {
+            // Rollback
+            task = current.withBody(previousBody)
+            self.error = error.localizedDescription
+            HapticManager.notification(.error)
+        }
+    }
+
+    /// Toggle the N-th `- [ ]` / `- [x]` in a comment body.
+    func toggleCommentTodo(commentId: Int, todoIndex: Int) async {
+        guard let index = comments.firstIndex(where: { $0.id == commentId }) else { return }
+        let original = comments[index]
+        guard let next = TodoMarkdown.toggleTodo(original.bodyMd, at: todoIndex) else { return }
+        guard next != original.bodyMd else { return }
+
+        // Optimistic update
+        comments[index] = original.withBody(next)
+
+        do {
+            let request = UpdateCommentRequest(bodyMd: next)
+            let updated: Comment = try await APIClient.shared.patch(
+                path: "/api/tasks/\(taskId)/comments/\(commentId)",
+                body: request
+            )
+            if let idx = comments.firstIndex(where: { $0.id == commentId }) {
+                comments[idx] = updated
+            }
+        } catch {
+            comments[index] = original
+            self.error = error.localizedDescription
+            HapticManager.notification(.error)
+        }
+    }
+
     func deleteComment(_ commentId: Int) async {
         do {
             try await APIClient.shared.delete(

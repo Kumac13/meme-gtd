@@ -2,16 +2,26 @@
  * Markdown rendering utilities for meme-gtd Web UI
  */
 
-import { useState, useRef, type ReactNode } from 'react';
+import { Children, isValidElement, useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import type { IssueType } from 'meme-gtd-shared';
 import ReactMarkdown from 'react-markdown';
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import type { Components } from 'react-markdown';
 import type { Element } from 'hast';
+import { InteractiveTodoItem, todoIndexFromSortableId, todoSortableId } from '../components/InteractiveTodoItem';
+import { enumerateTodos, type MoveTodoResult } from './todoMarkdown';
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import jsLang from 'react-syntax-highlighter/dist/esm/languages/prism/javascript';
@@ -246,12 +256,19 @@ const defaultComponents: Components = {
   em: ({ children }) => <em className="italic text-gray-700">{children}</em>,
 
   // Lists
-  ul: ({ children }) => <ul className="list-disc list-inside mb-4 space-y-1 text-gray-700">{children}</ul>,
+  ul: ({ children, className }) => {
+    const isTaskList =
+      typeof className === 'string' && className.split(' ').includes('contains-task-list');
+    if (isTaskList) {
+      // Task lists: flush to content edge so the row itself can be the drag handle
+      return <ul className="list-none pl-0 mb-4 space-y-1 text-gray-700">{children}</ul>;
+    }
+    return <ul className="list-disc list-inside mb-4 space-y-1 text-gray-700">{children}</ul>;
+  },
   ol: ({ children }) => <ol className="list-decimal list-inside mb-4 space-y-1 text-gray-700">{children}</ol>,
   li: ({ children }) => <li className="ml-4">{children}</li>,
 
-  // Links — default behavior, overridden in MarkdownRenderer / InlineMarkdownRenderer
-  // when an `onIssueLinkClick` callback is supplied (e.g. ItemDetail page mode).
+  // Links
   a: ({ href, children }) => {
     if (href && /^\/(memos|tasks|articles)\/\d+/.test(href)) {
       return (
@@ -373,7 +390,7 @@ interface IssueAnchorProps {
  * matching the LinkSection behavior). External URLs still open in a new tab.
  */
 function makeIssueAwareAnchor(
-  onIssueLinkClick: (id: number, type: IssueType) => void
+  onIssueLinkClick: (id: number, type: IssueType) => void,
 ): (props: IssueAnchorProps) => ReactNode {
   return ({ href, children }) => {
     if (href) {
@@ -420,47 +437,142 @@ function makeIssueAwareAnchor(
   };
 }
 
+interface InteractiveTodosOptions {
+  enabled: boolean;
+  onToggle: (idx: number, nextChecked: boolean) => void;
+  onReorder?: (from: number, to: number) => MoveTodoResult['reason'] | null;
+}
+
 interface MarkdownRendererProps {
-  /**
-   * Markdown content to render
-   */
   content: string;
-  /**
-   * Optional custom components to override defaults
-   */
   components?: Components;
-  /**
-   * Optional CSS class name for the wrapper div
-   */
   className?: string;
+  interactiveTodos?: InteractiveTodosOptions;
   /**
-   * Optional click handler invoked when the user clicks an internal issue
-   * link (`/memos/:id` / `/tasks/:id` / `/articles/:id`). When supplied,
-   * such links render as a button instead of navigating, so callers can
-   * mirror the LinkSection's modal-open behavior. External URLs are not
-   * affected.
+   * When supplied, internal issue links (`/memos/:id` etc.) render as a
+   * button that calls this handler instead of navigating. Mirrors
+   * LinkSection's open-in-modal behavior.
    */
   onIssueLinkClick?: (id: number, type: IssueType) => void;
 }
 
-/**
- * Render markdown content with GFM support and Tailwind CSS styling
- * @param props Markdown renderer props
- * @returns JSX element with rendered markdown
- */
-export function MarkdownRenderer({ content, components, className = '', onIssueLinkClick }: MarkdownRendererProps) {
-  const resolved: Components = onIssueLinkClick
-    ? { ...defaultComponents, a: makeIssueAwareAnchor(onIssueLinkClick), ...components }
-    : { ...defaultComponents, ...components };
+function hasTaskListClass(className: unknown): boolean {
+  if (typeof className !== 'string') return false;
+  return className.split(' ').includes('task-list-item');
+}
+
+function readCheckedFromChildren(children: ReactNode): boolean {
+  for (const child of Children.toArray(children)) {
+    if (isValidElement(child) && child.type === 'input') {
+      const props = child.props as { checked?: boolean };
+      return Boolean(props.checked);
+    }
+  }
+  return false;
+}
+
+export function MarkdownRenderer({
+  content,
+  components,
+  className = '',
+  interactiveTodos,
+  onIssueLinkClick,
+}: MarkdownRendererProps) {
+  const counterRef = useRef(0);
+  counterRef.current = 0;
+  const [reorderNotice, setReorderNotice] = useState<string | null>(null);
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const sortable = Boolean(interactiveTodos?.enabled && interactiveTodos.onReorder);
+
+  const todoIds = useMemo(() => {
+    if (!sortable) return [] as string[];
+    return enumerateTodos(content).map((t) => todoSortableId(t.todoIndex));
+  }, [content, sortable]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+  );
+
+  const showNotice = useCallback((msg: string) => {
+    setReorderNotice(msg);
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = setTimeout(() => setReorderNotice(null), 2500);
+  }, []);
+
+  const onReorderRef = useRef(interactiveTodos?.onReorder);
+  onReorderRef.current = interactiveTodos?.onReorder;
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over) return;
+      const from = todoIndexFromSortableId(active.id);
+      const to = todoIndexFromSortableId(over.id);
+      if (from === null || to === null || from === to) return;
+      const reason = onReorderRef.current?.(from, to);
+      if (reason === 'cross-parent') {
+        showNotice('Cannot move across nesting boundaries.');
+      }
+    },
+    [showNotice],
+  );
+
+  const mergedComponents = useMemo<Components>(() => {
+    const result: Components = { ...defaultComponents };
+    if (onIssueLinkClick) {
+      result.a = makeIssueAwareAnchor(onIssueLinkClick);
+    }
+    if (interactiveTodos?.enabled) {
+      const onToggle = interactiveTodos.onToggle;
+      result.li = ({ children, className: liClass }) => {
+        if (hasTaskListClass(liClass)) {
+          const idx = counterRef.current++;
+          const checked = readCheckedFromChildren(children);
+          return (
+            <InteractiveTodoItem
+              todoIndex={idx}
+              checked={checked}
+              onToggle={onToggle}
+              sortable={sortable}
+            >
+              {children}
+            </InteractiveTodoItem>
+          );
+        }
+        return <li className="ml-4">{children}</li>;
+      };
+    }
+    if (components) Object.assign(result, components);
+    return result;
+  }, [interactiveTodos?.enabled, interactiveTodos?.onToggle, sortable, onIssueLinkClick, components]);
+
+  const body = (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm, remarkBreaks, remarkFlattenListParagraphs]}
+      rehypePlugins={[rehypeRaw, rehypeSanitize]}
+      components={mergedComponents}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+
   return (
     <div className={`markdown-content ${className}`}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkBreaks, remarkFlattenListParagraphs]}
-        rehypePlugins={[rehypeRaw, rehypeSanitize]}
-        components={resolved}
-      >
-        {content}
-      </ReactMarkdown>
+      {reorderNotice && (
+        <div className="mb-2 px-3 py-1.5 text-xs bg-amber-100 text-amber-800 border border-amber-300 rounded">
+          {reorderNotice}
+        </div>
+      )}
+      {sortable ? (
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <SortableContext items={todoIds} strategy={verticalListSortingStrategy}>
+            {body}
+          </SortableContext>
+        </DndContext>
+      ) : (
+        body
+      )}
     </div>
   );
 }
@@ -485,7 +597,13 @@ export function extractFirstLine(markdown: string, maxLength?: number): string {
  * @param props Component props with content string
  * @returns JSX element with inline-rendered markdown
  */
-export function InlineMarkdownRenderer({ content, onIssueLinkClick }: { content: string; onIssueLinkClick?: (id: number, type: IssueType) => void }) {
+export function InlineMarkdownRenderer({
+  content,
+  onIssueLinkClick,
+}: {
+  content: string;
+  onIssueLinkClick?: (id: number, type: IssueType) => void;
+}) {
   const issueAnchor = onIssueLinkClick ? makeIssueAwareAnchor(onIssueLinkClick) : undefined;
   const inlineComponents: Components = {
     // Images with attachment path transformation

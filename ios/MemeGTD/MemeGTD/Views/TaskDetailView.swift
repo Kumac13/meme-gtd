@@ -106,6 +106,9 @@ struct TaskDetailView: View {
                                         showMenu: false,
                                         onIssueTap: { id, type in
                                             onNavigateToLinkedIssue?(id, type, "")
+                                        },
+                                        onTodoToggle: { todoIndex, _ in
+                                            Task { await viewModel.toggleBodyTodo(at: todoIndex) }
                                         }
                                     )
                                 } else {
@@ -177,6 +180,9 @@ struct TaskDetailView: View {
                                             showMenu: false,
                                             onIssueTap: { id, type in
                                                 onNavigateToLinkedIssue?(id, type, "")
+                                            },
+                                            onTodoToggle: { todoIndex, _ in
+                                                Task { await viewModel.toggleCommentTodo(commentId: comment.id, todoIndex: todoIndex) }
                                             }
                                         )
                                     }

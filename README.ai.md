@@ -126,6 +126,8 @@ Memo (Captured) → promote → Task (Inbox)
 
 **自動 `#id` メンション**: メモ・タスク・記事の本文／コメント保存時、`#123` のような表記は core サービス層（`rewriteIssueMentions`）が `[#123](/<type>/123)` という Markdown リンクに書き換え、同時に `relates` 型の link を作成する。`issues` テーブル内で memo/task/article は番号空間が共通なので `#id` 一つで一意に解決できる。コードブロック・インラインコード・既存リンク内・`\#id`（エスケープ）・存在しない id・自己参照は変換対象外。一度作られた link は本文編集で `#id` が消えても残る（GitHub と同じ流儀）。
 
+**インタラクティブ Markdown チェックボックス（Task 限定）**: Task の本文と Task のコメントに含まれる `- [ ]` / `- [x]` は、表示画面のままトグルできる（Edit に入る必要なし）。書き換えは **クライアント側完結**（Web は `packages/web/src/utils/todoMarkdown.ts`、iOS は `ios/.../Utilities/TodoMarkdown.swift`）で、コードブロック内・blockquote 内の `- [ ]` は採番対象外。トグル結果は既存 `PATCH /api/tasks/{id}` / `PUT /api/tasks/{taskId}/comments/{commentId}` で全文置換保存される。**チェックボックスだけの変更は activity log を積まない** — core 層の `isCheckboxOnlyChange` が old/new bodyMd を比較してログ呼び出しを抑止し、timeline が toggle で膨らまない。Web のみネスト含む並べ替えにも対応（`@dnd-kit/sortable`）。Memo・Article は対象外。
+
 ### url_links（外部URLリンク）
 
 | カラム | 型 | 説明 |

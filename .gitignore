@@ -45,3 +45,4 @@ test-data/
 # Xcode user data
 *.xcuserstate
 xcuserdata/
+ios/MemeGTD/build/

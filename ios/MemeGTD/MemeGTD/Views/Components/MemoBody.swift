@@ -7,10 +7,11 @@ struct MemoBody: View {
     var labels: [String]?
     var searchQuery: String?
     var onIssueTap: ((Int, String) -> Void)?
+    var onTodoToggle: ((Int, Bool) -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            MarkdownBody(bodyMd, fontSize: 14, searchQuery: searchQuery, onIssueTap: onIssueTap)
+            MarkdownBody(bodyMd, fontSize: 14, searchQuery: searchQuery, onIssueTap: onIssueTap, onTodoToggle: onTodoToggle)
 
             if let labels = labels, !labels.isEmpty {
                 HStack(spacing: 4) {

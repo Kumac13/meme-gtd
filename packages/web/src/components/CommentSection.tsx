@@ -28,6 +28,7 @@ interface CommentSectionProps {
   onDeleteComment: (commentId: number) => Promise<void>;
   activities?: ActivityLogEntry[];
   issueId?: number;
+  enableInteractiveTodos?: boolean;
   /** Click handler for `#id` links inside rendered comment bodies. */
   onIssueLinkClick?: (id: number, type: IssueType) => void;
 }
@@ -40,6 +41,7 @@ export default function CommentSection({
   onDeleteComment,
   activities = [],
   issueId,
+  enableInteractiveTodos = false,
   onIssueLinkClick,
 }: CommentSectionProps) {
   const [newCommentBody, setNewCommentBody] = useState('');
@@ -180,6 +182,7 @@ export default function CommentSection({
                     updatedAt={entry.comment.updatedAt}
                     onSave={(newBody) => onUpdateComment(entry.comment.id, newBody)}
                     onDelete={() => onDeleteComment(entry.comment.id)}
+                    enableInteractiveTodos={enableInteractiveTodos}
                     onIssueLinkClick={onIssueLinkClick}
                   />
                 );
