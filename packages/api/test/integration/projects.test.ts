@@ -812,4 +812,50 @@ describe('Project Management Operations', () => {
       assert.strictEqual(response.statusCode, 404);
     });
   });
+
+  describe('Get Projects for Issue', () => {
+    it('should list projects associated with an issue (GET /api/issues/:id/projects)', async () => {
+      // Create a project and a task, then add the task to the project
+      const projectResponse = await app.inject({
+        method: 'POST',
+        url: '/api/projects',
+        payload: createProjectFixture({ name: 'Issue Project' }),
+      });
+      const project = JSON.parse(projectResponse.body);
+
+      const taskResponse = await app.inject({
+        method: 'POST',
+        url: '/api/tasks',
+        payload: createTaskFixture(),
+      });
+      const task = JSON.parse(taskResponse.body);
+
+      await app.inject({
+        method: 'POST',
+        url: `/api/projects/${project.id}/items`,
+        payload: { issueId: task.id },
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/issues/${task.id}/projects`,
+      });
+
+      assert.strictEqual(response.statusCode, 200);
+      const projects = JSON.parse(response.body);
+      assert.strictEqual(projects.length, 1);
+      assert.strictEqual(projects[0].id, project.id);
+    });
+
+    it('should return 400 for a non-numeric issue id (GET /api/issues/:id/projects)', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/issues/not-a-number/projects',
+      });
+
+      assert.strictEqual(response.statusCode, 400);
+      const error = JSON.parse(response.body);
+      assert.strictEqual(error.code, 'VALIDATION_ERROR');
+    });
+  });
 });

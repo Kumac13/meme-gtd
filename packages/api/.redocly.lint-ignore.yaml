@@ -1,0 +1,12 @@
+# This file instructs Redocly's linter to ignore the rules contained for specific parts of your API.
+# See https://redocly.com/docs/cli/ for more information.
+#
+# operation-4xx-response: 以下の2エンドポイントは入力（params/query/body）を受け取らないため、
+# クライアントエラー（4XX）が発生し得ない。
+#   - GET /api/health   : 入力なし。DB障害時は 503 を返す（5XX）。
+#   - GET /api/projects : 入力なしの一覧取得。障害時は 500 を返す（5XX）。
+# 入力バリデーションを持つ他のエンドポイントは 400 等を正しく文書化済み。
+docs/api/openapi.yaml:
+  operation-4xx-response:
+    - '#/paths/~1api~1health/get/responses'
+    - '#/paths/~1api~1projects/get/responses'

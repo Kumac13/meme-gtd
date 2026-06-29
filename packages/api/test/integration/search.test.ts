@@ -676,4 +676,35 @@ describe('POST /api/search/export', () => {
     const body = JSON.parse(res.payload);
     assert.strictEqual(body.results.length, 0);
   });
+
+  it('should return 400 for invalid request body (missing required fields)', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search/export',
+      payload: {
+        // `type` and `itemIds` are required by SearchExportRequestSchema
+        filters: {},
+      },
+    });
+
+    assert.strictEqual(res.statusCode, 400);
+    const error = JSON.parse(res.payload);
+    assert.strictEqual(error.code, 'VALIDATION_ERROR');
+  });
+
+  it('should return 400 for an invalid export type', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search/export',
+      payload: {
+        type: 'invalid_type',
+        filters: {},
+        itemIds: [1],
+      },
+    });
+
+    assert.strictEqual(res.statusCode, 400);
+    const error = JSON.parse(res.payload);
+    assert.strictEqual(error.code, 'VALIDATION_ERROR');
+  });
 });

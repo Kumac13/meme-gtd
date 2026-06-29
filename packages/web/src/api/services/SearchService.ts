@@ -118,6 +118,10 @@ export class SearchService {
                 'bookmarked': bookmarked,
                 'order': order,
             },
+            errors: {
+                400: `Default Response`,
+                500: `Default Response`,
+            },
         });
     }
     /**
@@ -225,6 +229,8 @@ export class SearchService {
                 'types': types,
             },
             errors: {
+                400: `Default Response`,
+                500: `Default Response`,
                 503: `Default Response`,
             },
         });
@@ -404,6 +410,10 @@ export class SearchService {
             url: '/api/search/export',
             body: requestBody,
             mediaType: 'application/json',
+            errors: {
+                400: `Default Response`,
+                500: `Default Response`,
+            },
         });
     }
 }

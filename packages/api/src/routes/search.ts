@@ -27,6 +27,8 @@ const searchRoutes: FastifyPluginAsync = async (fastify) => {
         querystring: KeywordSearchQuerySchema,
         response: {
           200: KeywordSearchResponseSchema,
+          400: ErrorResponseSchema,
+          500: ErrorResponseSchema,
         },
       },
     },
@@ -45,6 +47,8 @@ const searchRoutes: FastifyPluginAsync = async (fastify) => {
         querystring: SemanticSearchQuerySchema,
         response: {
           200: SemanticSearchResponseSchema,
+          400: ErrorResponseSchema,
+          500: ErrorResponseSchema,
           503: ErrorResponseSchema,
         },
       },
@@ -66,6 +70,8 @@ const searchRoutes: FastifyPluginAsync = async (fastify) => {
         body: SearchExportRequestSchema,
         response: {
           200: SearchExportResponseSchema,
+          400: ErrorResponseSchema,
+          500: ErrorResponseSchema,
         },
       },
     },
