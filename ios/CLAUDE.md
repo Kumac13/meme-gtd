@@ -40,7 +40,7 @@ ios/MemeGTD/
 - 同期対象: `MemeGTD/Models/*.swift`（12ファイル）と `Shared/ArticleModels.swift`
 - enumのraw value（例: `LinkType` の `"derived_from"`、`TaskStatus` の各値）は文字列でバックエンドと一致させる
 - 日付はISO形式（`yyyy-MM-dd` / `yyyy-MM-dd'T'HH:mm:ss`）
-- 検索の `label:xxx` クエリ構文はWeb（`packages/web/src/utils/queryParser.ts`）にも複製があるため、仕様変更時は両方更新
+- 検索の `label:xxx` クエリ構文は `MemoListViewModel.parseSearchQuery` に iOS 独自実装として残っている（Web は free-text 専用に簡素化済みで、もう複製ではない）。iOS の検索 UI を Web と揃える際は `MemoListViewModel.swift:55` を更新する
 
 ## 開発環境
 
