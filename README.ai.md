@@ -124,6 +124,8 @@ Memo (Captured) → promote → Task (Inbox)
 | link_type | TEXT | `parent`/`child`/`relates`/`derived_from` |
 | created_at | TEXT | 作成日時 |
 
+**自動 `#id` メンション**: メモ・タスク・記事の本文／コメント保存時、`#123` のような表記は core サービス層（`rewriteIssueMentions`）が `[#123](/<type>/123)` という Markdown リンクに書き換え、同時に `relates` 型の link を作成する。`issues` テーブル内で memo/task/article は番号空間が共通なので `#id` 一つで一意に解決できる。コードブロック・インラインコード・既存リンク内・`\#id`（エスケープ）・存在しない id・自己参照は変換対象外。一度作られた link は本文編集で `#id` が消えても残る（GitHub と同じ流儀）。
+
 ### url_links（外部URLリンク）
 
 | カラム | 型 | 説明 |

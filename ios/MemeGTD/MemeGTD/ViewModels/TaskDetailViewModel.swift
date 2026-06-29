@@ -330,6 +330,9 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
                 taskStore?.updateItem(updated)
             }
             await loadActivityLog()
+            if bodyMd != nil {
+                await loadLinks()
+            }
             HapticManager.notification(.success)
         } catch {
             self.error = error.localizedDescription
@@ -354,6 +357,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
             comments.append(comment)
             replyBody = ""
             HapticManager.notification(.success)
+            await loadLinks()
         } catch {
             self.error = error.localizedDescription
             HapticManager.notification(.error)
@@ -372,6 +376,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
             if let index = comments.firstIndex(where: { $0.id == commentId }) {
                 comments[index] = updated
             }
+            await loadLinks()
         } catch {
             self.error = error.localizedDescription
         }

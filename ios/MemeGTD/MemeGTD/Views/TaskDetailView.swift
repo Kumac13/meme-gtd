@@ -103,7 +103,10 @@ struct TaskDetailView: View {
                                     ThreadItem(
                                         bodyMd: task.bodyMd,
                                         labels: nil,
-                                        showMenu: false
+                                        showMenu: false,
+                                        onIssueTap: { id, type in
+                                            onNavigateToLinkedIssue?(id, type, "")
+                                        }
                                     )
                                 } else {
                                     Text("No description provided.")
@@ -171,7 +174,10 @@ struct TaskDetailView: View {
                                         ThreadItem(
                                             bodyMd: comment.bodyMd,
                                             labels: nil,
-                                            showMenu: false
+                                            showMenu: false,
+                                            onIssueTap: { id, type in
+                                                onNavigateToLinkedIssue?(id, type, "")
+                                            }
                                         )
                                     }
                                 }

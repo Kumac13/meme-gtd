@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.33.0 - 2026-06-29
+
+### New Features
+
+- **GitHub 風 `#id` 自動リンク**: メモ・タスク・記事の本文／コメントを保存すると、文章中の `#123` のような表記が `[#123](/<type>/123)` という Markdown リンクに書き換えられ、同時に参照先と `relates` 型の link が作成される。
+  - 対象は `issues` テーブル（memo / task / article）。番号空間が共通なので `#id` 一つで一意に解決される。`projects` は別テーブルのため対象外。
+  - 検出は core 層（`rewriteIssueMentions`）に集約。CLI / REST API / Share Extension いずれの保存パスからも同じ処理が走る。
+  - コードブロック・インラインコード・既存 Markdown リンク内・`\#id`（エスケープ）・存在しない id・自己参照は変換対象外。同じ `#id` を複数回書いても link は 1 本にデデュープ。
+  - 本文編集で `#id` を削除しても link は残る（GitHub と同じ。手動 link と自動 link を区別できないため）。不要なら従来通り LinkSection の × で個別削除可能。
+  - Web: `react-markdown` の `a` レンダラが内部 URL を React Router `Link` に分岐させ、SPA 遷移する。
+  - iOS: `MarkdownBody.onIssueTap` クロージャと `OpenURLAction` で内部 URL を `navigateToIssue` 経由の画面遷移にインターセプトする。
+
 ## 0.32.1 - 2026-06-23
 
 ### Bug Fixes

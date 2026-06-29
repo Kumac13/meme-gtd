@@ -1,4 +1,5 @@
 import { useState, useRef, DragEvent, ClipboardEvent } from 'react';
+import type { IssueType } from 'meme-gtd-shared';
 import { formatRelativeTime } from '../utils/dates';
 import { MarkdownRenderer } from '../utils/markdown';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
@@ -15,6 +16,11 @@ interface EditableContentProps {
   onDelete: () => Promise<void>;
   title?: string | null;
   showTitleEdit?: boolean;
+  /**
+   * Click handler for internal issue links inside the rendered body
+   * (used by ItemDetail to mirror LinkSection's modal-open behavior).
+   */
+  onIssueLinkClick?: (id: number, type: IssueType) => void;
 }
 
 export default function EditableContent({
@@ -25,6 +31,7 @@ export default function EditableContent({
   onDelete,
   title,
   showTitleEdit = false,
+  onIssueLinkClick,
 }: EditableContentProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editingContent, setEditingContent] = useState(content);
@@ -258,7 +265,7 @@ export default function EditableContent({
         </div>
       ) : (
         <div className="prose prose-sm max-w-none mt-1 break-words">
-          <MarkdownRenderer content={content} />
+          <MarkdownRenderer content={content} onIssueLinkClick={onIssueLinkClick} />
         </div>
       )}
     </div>

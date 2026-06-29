@@ -92,10 +92,15 @@ struct ArticleDetailView: View {
                                 with: "",
                                 options: .regularExpression
                             )
-                            MarkdownBody(cleanBody)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 16)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                            MarkdownBody(
+                                cleanBody,
+                                onIssueTap: { id, type in
+                                    onNavigateToLinkedIssue?(id, type, "")
+                                }
+                            )
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
                             Text("No content available.")
                                 .font(.system(size: 14))

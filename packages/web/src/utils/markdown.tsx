@@ -3,6 +3,8 @@
  */
 
 import { useState, useRef, type ReactNode } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
+import type { IssueType } from 'meme-gtd-shared';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -248,17 +250,30 @@ const defaultComponents: Components = {
   ol: ({ children }) => <ol className="list-decimal list-inside mb-4 space-y-1 text-gray-700">{children}</ol>,
   li: ({ children }) => <li className="ml-4">{children}</li>,
 
-  // Links
-  a: ({ href, children }) => (
-    <a
-      href={href}
-      className="text-github-green-600 hover:text-github-green-800 underline break-words"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      {children}
-    </a>
-  ),
+  // Links — default behavior, overridden in MarkdownRenderer / InlineMarkdownRenderer
+  // when an `onIssueLinkClick` callback is supplied (e.g. ItemDetail page mode).
+  a: ({ href, children }) => {
+    if (href && /^\/(memos|tasks|articles)\/\d+/.test(href)) {
+      return (
+        <RouterLink
+          to={href}
+          className="text-github-green-600 hover:text-github-green-800 underline break-words"
+        >
+          {children}
+        </RouterLink>
+      );
+    }
+    return (
+      <a
+        href={href}
+        className="text-github-green-600 hover:text-github-green-800 underline break-words"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {children}
+      </a>
+    );
+  },
 
   // Code blocks (inline only - fenced code blocks are handled by pre component)
   code: ({ className, children }) => {
@@ -339,6 +354,72 @@ const defaultComponents: Components = {
   },
 };
 
+const ISSUE_LINK_RE = /^\/(memos|tasks|articles)\/(\d+)(?:\/|$|\?|#)/;
+
+const slugToIssueType: Record<string, IssueType> = {
+  memos: 'memo',
+  tasks: 'task',
+  articles: 'article',
+};
+
+interface IssueAnchorProps {
+  href?: string;
+  children?: ReactNode;
+}
+
+/**
+ * Build an `a` component that delegates internal `#id` links to a click
+ * handler (used by ItemDetail page mode to open the target in a modal,
+ * matching the LinkSection behavior). External URLs still open in a new tab.
+ */
+function makeIssueAwareAnchor(
+  onIssueLinkClick: (id: number, type: IssueType) => void
+): (props: IssueAnchorProps) => ReactNode {
+  return ({ href, children }) => {
+    if (href) {
+      const match = ISSUE_LINK_RE.exec(href);
+      if (match) {
+        const type = slugToIssueType[match[1]];
+        const id = parseInt(match[2], 10);
+        if (type && Number.isFinite(id)) {
+          return (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                onIssueLinkClick(id, type);
+              }}
+              className="text-github-green-600 hover:text-github-green-800 underline break-words bg-transparent border-0 p-0 cursor-pointer"
+            >
+              {children}
+            </button>
+          );
+        }
+      }
+    }
+    if (href && /^\/(memos|tasks|articles)\/\d+/.test(href)) {
+      return (
+        <RouterLink
+          to={href}
+          className="text-github-green-600 hover:text-github-green-800 underline break-words"
+        >
+          {children}
+        </RouterLink>
+      );
+    }
+    return (
+      <a
+        href={href}
+        className="text-github-green-600 hover:text-github-green-800 underline break-words"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {children}
+      </a>
+    );
+  };
+}
+
 interface MarkdownRendererProps {
   /**
    * Markdown content to render
@@ -352,6 +433,14 @@ interface MarkdownRendererProps {
    * Optional CSS class name for the wrapper div
    */
   className?: string;
+  /**
+   * Optional click handler invoked when the user clicks an internal issue
+   * link (`/memos/:id` / `/tasks/:id` / `/articles/:id`). When supplied,
+   * such links render as a button instead of navigating, so callers can
+   * mirror the LinkSection's modal-open behavior. External URLs are not
+   * affected.
+   */
+  onIssueLinkClick?: (id: number, type: IssueType) => void;
 }
 
 /**
@@ -359,13 +448,16 @@ interface MarkdownRendererProps {
  * @param props Markdown renderer props
  * @returns JSX element with rendered markdown
  */
-export function MarkdownRenderer({ content, components, className = '' }: MarkdownRendererProps) {
+export function MarkdownRenderer({ content, components, className = '', onIssueLinkClick }: MarkdownRendererProps) {
+  const resolved: Components = onIssueLinkClick
+    ? { ...defaultComponents, a: makeIssueAwareAnchor(onIssueLinkClick), ...components }
+    : { ...defaultComponents, ...components };
   return (
     <div className={`markdown-content ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks, remarkFlattenListParagraphs]}
         rehypePlugins={[rehypeRaw, rehypeSanitize]}
-        components={{ ...defaultComponents, ...components }}
+        components={resolved}
       >
         {content}
       </ReactMarkdown>
@@ -393,7 +485,8 @@ export function extractFirstLine(markdown: string, maxLength?: number): string {
  * @param props Component props with content string
  * @returns JSX element with inline-rendered markdown
  */
-export function InlineMarkdownRenderer({ content }: { content: string }) {
+export function InlineMarkdownRenderer({ content, onIssueLinkClick }: { content: string; onIssueLinkClick?: (id: number, type: IssueType) => void }) {
+  const issueAnchor = onIssueLinkClick ? makeIssueAwareAnchor(onIssueLinkClick) : undefined;
   const inlineComponents: Components = {
     // Images with attachment path transformation
     img: ({ src, alt, ...props }) => {
@@ -422,16 +515,33 @@ export function InlineMarkdownRenderer({ content }: { content: string }) {
         {children}
       </code>
     ),
-    a: ({ href, children }) => (
-      <a
-        href={href}
-        className="text-github-green-600 hover:text-github-green-800 underline"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        {children}
-      </a>
-    ),
+    a: (props) => {
+      if (issueAnchor) {
+        const node = issueAnchor(props);
+        if (node) return node;
+      }
+      const { href, children } = props;
+      if (href && /^\/(memos|tasks|articles)\/\d+/.test(href)) {
+        return (
+          <RouterLink
+            to={href}
+            className="text-github-green-600 hover:text-github-green-800 underline"
+          >
+            {children}
+          </RouterLink>
+        );
+      }
+      return (
+        <a
+          href={href}
+          className="text-github-green-600 hover:text-github-green-800 underline"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {children}
+        </a>
+      );
+    },
     ul: ({ children }) => <span>{children}</span>,
     ol: ({ children }) => <span>{children}</span>,
     li: ({ children }) => <span className="mr-2">{children}</span>,

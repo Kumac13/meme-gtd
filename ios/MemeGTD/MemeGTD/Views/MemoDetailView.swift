@@ -81,6 +81,9 @@ struct MemoDetailView: View {
                                 onCopy: {
                                     UIPasteboard.general.string = item.bodyMd
                                     HapticManager.notification(.success)
+                                },
+                                onIssueTap: { id, type in
+                                    onNavigateToLinkedIssue?(id, type, "")
                                 }
                             )
                         }

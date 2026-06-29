@@ -134,6 +134,45 @@ export class LinkService {
   }
 
   /**
+   * Create a link, or silently return the existing one if a duplicate would be
+   * created. Used for auto-generated mention links where idempotency matters.
+   *
+   * For `relates`, an existing link in the opposite direction is treated as
+   * equivalent (since `A relates B` and `B relates A` mean the same thing),
+   * so the new row is skipped and the existing one is returned — avoiding
+   * the "two arrows for one relationship" duplication in the UI.
+   *
+   * Any other validation failure (self-reference, missing issue, etc.) still
+   * throws so the caller is forced to filter inputs upstream.
+   */
+  createOrIgnore(
+    sourceId: number,
+    targetId: number,
+    type: 'parent' | 'child' | 'relates' | 'derived_from'
+  ): Link | null {
+    if (type === 'relates') {
+      const inverse = findLink(this.db, {
+        sourceIssueId: targetId,
+        targetIssueId: sourceId,
+        linkType: 'relates'
+      });
+      if (inverse) return inverse;
+    }
+    try {
+      return this.create(sourceId, targetId, type);
+    } catch (e) {
+      if (e instanceof Error && /^Link already exists/.test(e.message)) {
+        return findLink(this.db, {
+          sourceIssueId: sourceId,
+          targetIssueId: targetId,
+          linkType: type
+        });
+      }
+      throw e;
+    }
+  }
+
+  /**
    * Get a link by ID
    * @param linkId Link ID
    * @returns Link

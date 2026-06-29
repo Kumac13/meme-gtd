@@ -291,6 +291,8 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
             comments.append(comment)
             replyBody = ""
             HapticManager.notification(.success)
+            // Server may have created relates links from `#id` mentions.
+            await loadLinks()
         } catch {
             self.error = error.localizedDescription
             HapticManager.notification(.error)
@@ -309,6 +311,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
             if let index = comments.firstIndex(where: { $0.id == commentId }) {
                 comments[index] = updated
             }
+            await loadLinks()
         } catch {
             self.error = error.localizedDescription
         }
@@ -326,6 +329,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
             memo = updated
             memoStore?.updateItem(updated)
             HapticManager.notification(.success)
+            await loadLinks()
         } catch {
             self.error = error.localizedDescription
             HapticManager.notification(.error)

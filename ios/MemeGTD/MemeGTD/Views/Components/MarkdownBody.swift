@@ -9,12 +9,20 @@ struct MarkdownBody: View {
     let fontSize: CGFloat
     let color: Color
     let searchQuery: String?
+    let onIssueTap: ((Int, String) -> Void)?
 
-    init(_ text: String, fontSize: CGFloat = 14, color: Color = Color(.label).opacity(0.75), searchQuery: String? = nil) {
+    init(
+        _ text: String,
+        fontSize: CGFloat = 14,
+        color: Color = Color(.label).opacity(0.75),
+        searchQuery: String? = nil,
+        onIssueTap: ((Int, String) -> Void)? = nil
+    ) {
         self.text = text
         self.fontSize = fontSize
         self.color = color
         self.searchQuery = searchQuery
+        self.onIssueTap = onIssueTap
     }
 
     private var blocks: [MarkdownBlock] {
@@ -27,6 +35,13 @@ struct MarkdownBody: View {
                 renderBlock(block)
             }
         }
+        .environment(\.openURL, OpenURLAction { url in
+            if let tap = onIssueTap, let parsed = parseInternalIssueURL(url) {
+                tap(parsed.id, parsed.type)
+                return .handled
+            }
+            return .systemAction
+        })
     }
 
     // MARK: - Block renderer
@@ -179,12 +194,25 @@ struct MarkdownBody: View {
             markdown: content,
             options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
         ) {
-            // Recolor links to accent
+            // Recolor links to accent + promote path-only URLs so SwiftUI fires OpenURLAction
             for run in attributed.runs {
-                if run.link != nil {
+                if let url = run.link {
                     let range = run.range
                     attributed[range].foregroundColor = UIColor(red: 0x2d/255.0, green: 0xa4/255.0, blue: 0x4e/255.0, alpha: 1.0)
                     attributed[range].underlineStyle = .single
+                    // `[#63](/tasks/63)` parses with `scheme == nil`. SwiftUI's Text
+                    // silently no-ops such links because there's nothing to "open".
+                    // Wrap the path under a custom scheme so OpenURLAction always
+                    // gets called — we still route through the same parser.
+                    if url.scheme == nil, !url.path.isEmpty {
+                        var components = URLComponents()
+                        components.scheme = "memegtd-internal"
+                        components.host = "internal"
+                        components.path = url.path.hasPrefix("/") ? url.path : "/\(url.path)"
+                        if let promoted = components.url {
+                            attributed[range].link = promoted
+                        }
+                    }
                 }
             }
             // Highlight search keywords
@@ -208,6 +236,43 @@ struct MarkdownBody: View {
             return Text(content)
         }
     }
+}
+
+// MARK: - Internal issue URL parser
+
+private func parseInternalIssueURL(_ url: URL) -> (id: Int, type: String)? {
+    // Accept three forms:
+    //   1. relative path-only (`/tasks/63`) from raw AttributedString
+    //   2. our promoted custom scheme (`memegtd-internal://internal/tasks/63`)
+    //   3. fully absolute URLs that happen to match the internal path shape
+    let path: String
+    if url.scheme == "memegtd-internal" {
+        path = url.path
+    } else if url.scheme == nil, url.host == nil {
+        path = url.absoluteString
+    } else {
+        path = url.path
+    }
+    let pattern = #"^/(memos|tasks|articles)/(\d+)$"#
+    guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+    let range = NSRange(path.startIndex..<path.endIndex, in: path)
+    guard let match = regex.firstMatch(in: path, range: range), match.numberOfRanges == 3 else {
+        return nil
+    }
+    guard
+        let slugRange = Range(match.range(at: 1), in: path),
+        let idRange = Range(match.range(at: 2), in: path),
+        let id = Int(path[idRange])
+    else { return nil }
+    let slug = String(path[slugRange])
+    let type: String
+    switch slug {
+    case "memos": type = "memo"
+    case "tasks": type = "task"
+    case "articles": type = "article"
+    default: return nil
+    }
+    return (id, type)
 }
 
 // MARK: - Markdown parser

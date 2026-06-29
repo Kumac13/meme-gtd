@@ -3,6 +3,8 @@ import { ensureDatabase } from 'meme-gtd-db';
 import type { MgtdConfig } from 'meme-gtd-config';
 import type { TaskStatus, SourceType } from 'meme-gtd-shared';
 import { ActivityLogger } from './activity-log/activity-logger.js';
+import { LinkService } from './linkService.js';
+import { rewriteIssueMentions } from './issueMentions.js';
 import {
   // Memo functions
   addComment,
@@ -75,6 +77,7 @@ export interface MemoServiceOptions {
 export class MemoService {
   private readonly db: Database.Database;
   private readonly logger: ActivityLogger;
+  private readonly linkService: LinkService;
 
   constructor(private readonly options: MemoServiceOptions) {
     if (options.db) {
@@ -85,12 +88,18 @@ export class MemoService {
       throw new Error('MemoService requires either db or config option');
     }
     this.logger = new ActivityLogger(this.db, options.sourceType ?? 'api');
+    this.linkService = new LinkService({ db: this.db, sourceType: options.sourceType });
   }
 
   public create(input: CreateMemoInput) {
     return this.db.transaction(() => {
-      const memo = createMemo(this.db, input);
-      this.logger.logMemoCreated(memo.id, input.bodyMd ?? '');
+      const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, input.bodyMd);
+      const memo = createMemo(this.db, { ...input, bodyMd: rewritten });
+      this.logger.logMemoCreated(memo.id, rewritten);
+      for (const targetId of mentionedIssueIds) {
+        if (targetId === memo.id) continue;
+        this.linkService.createOrIgnore(memo.id, targetId, 'relates');
+      }
       return memo;
     })();
   }
@@ -117,12 +126,22 @@ export class MemoService {
     return this.db.transaction(() => {
       // Get old value before update
       const oldMemo = getMemo(this.db, input.id);
-      const result = updateMemo(this.db, input);
-      // Log with diff
+      let finalInput = input;
+      let mentionedIssueIds: number[] = [];
+      if (input.bodyMd !== undefined) {
+        const result = rewriteIssueMentions(this.db, input.bodyMd, input.id);
+        finalInput = { ...input, bodyMd: result.rewritten };
+        mentionedIssueIds = result.mentionedIssueIds;
+      }
+      const result = updateMemo(this.db, finalInput);
       this.logger.logMemoUpdated(input.id, {
         old: oldMemo?.bodyMd ?? null,
-        new: input.bodyMd ?? null,
+        new: finalInput.bodyMd ?? null,
       });
+      for (const targetId of mentionedIssueIds) {
+        if (targetId === input.id) continue;
+        this.linkService.createOrIgnore(input.id, targetId, 'relates');
+      }
       return result;
     })();
   }
@@ -140,8 +159,13 @@ export class MemoService {
 
   public addComment(memoId: number, bodyMd: string) {
     return this.db.transaction(() => {
-      const comment = addComment(this.db, memoId, bodyMd);
-      this.logger.logCommentCreated(comment.id, memoId, bodyMd);
+      const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, bodyMd, memoId);
+      const comment = addComment(this.db, memoId, rewritten);
+      this.logger.logCommentCreated(comment.id, memoId, rewritten);
+      for (const targetId of mentionedIssueIds) {
+        if (targetId === memoId) continue;
+        this.linkService.createOrIgnore(memoId, targetId, 'relates');
+      }
       return comment;
     })();
   }
@@ -150,12 +174,18 @@ export class MemoService {
     return this.db.transaction(() => {
       // Get old value before update
       const row = this.db.prepare('SELECT issue_id, body_md FROM comments WHERE id = ?').get(commentId) as { issue_id: number; body_md: string | null } | undefined;
-      const result = updateComment(this.db, commentId, bodyMd);
+      const parentIssueId = row?.issue_id;
+      const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, bodyMd, parentIssueId);
+      const result = updateComment(this.db, commentId, rewritten);
       if (row) {
         this.logger.logCommentUpdated(commentId, row.issue_id, {
           old: row.body_md,
-          new: bodyMd,
+          new: rewritten,
         });
+        for (const targetId of mentionedIssueIds) {
+          if (targetId === row.issue_id) continue;
+          this.linkService.createOrIgnore(row.issue_id, targetId, 'relates');
+        }
       }
       return result;
     })();
@@ -199,6 +229,7 @@ export interface TaskServiceOptions {
 export class TaskService {
   private readonly db: Database.Database;
   private readonly logger: ActivityLogger;
+  private readonly linkService: LinkService;
 
   constructor(private readonly options: TaskServiceOptions) {
     if (options.db) {
@@ -209,11 +240,13 @@ export class TaskService {
       throw new Error('TaskService requires either db or config option');
     }
     this.logger = new ActivityLogger(this.db, options.sourceType ?? 'api');
+    this.linkService = new LinkService({ db: this.db, sourceType: options.sourceType });
   }
 
   public create(input: CreateTaskInput) {
     return this.db.transaction(() => {
-      const task = createTask(this.db, input);
+      const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, input.bodyMd);
+      const task = createTask(this.db, { ...input, bodyMd: rewritten });
       this.logger.logTaskCreated(
         task.id,
         input.title,
@@ -221,6 +254,10 @@ export class TaskService {
         input.scheduledStart,
         input.isAllDay
       );
+      for (const targetId of mentionedIssueIds) {
+        if (targetId === task.id) continue;
+        this.linkService.createOrIgnore(task.id, targetId, 'relates');
+      }
       return task;
     })();
   }
@@ -252,7 +289,14 @@ export class TaskService {
   public edit(input: UpdateTaskInput) {
     return this.db.transaction(() => {
       const beforeTask = getTask(this.db, input.id);
-      const task = updateTask(this.db, input);
+      let finalInput = input;
+      let mentionedIssueIds: number[] = [];
+      if (input.bodyMd !== undefined) {
+        const result = rewriteIssueMentions(this.db, input.bodyMd, input.id);
+        finalInput = { ...input, bodyMd: result.rewritten };
+        mentionedIssueIds = result.mentionedIssueIds;
+      }
+      const task = updateTask(this.db, finalInput);
       // Log status change if status was updated
       if (input.status && input.status !== beforeTask.status) {
         this.logger.logTaskStatusChanged(input.id, beforeTask.status, input.status);
@@ -265,10 +309,14 @@ export class TaskService {
         if (input.title !== undefined) {
           diff.title = { old: beforeTask.title, new: input.title };
         }
-        if (input.bodyMd !== undefined) {
-          diff.body = { old: beforeTask.bodyMd, new: input.bodyMd };
+        if (finalInput.bodyMd !== undefined) {
+          diff.body = { old: beforeTask.bodyMd, new: finalInput.bodyMd };
         }
         this.logger.logTaskUpdated(input.id, diff);
+      }
+      for (const targetId of mentionedIssueIds) {
+        if (targetId === input.id) continue;
+        this.linkService.createOrIgnore(input.id, targetId, 'relates');
       }
       return task;
     })();
@@ -316,8 +364,13 @@ export class TaskService {
 
   public addComment(taskId: number, bodyMd: string) {
     return this.db.transaction(() => {
-      const comment = addTaskComment(this.db, taskId, bodyMd);
-      this.logger.logCommentCreated(comment.id, taskId, bodyMd);
+      const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, bodyMd, taskId);
+      const comment = addTaskComment(this.db, taskId, rewritten);
+      this.logger.logCommentCreated(comment.id, taskId, rewritten);
+      for (const targetId of mentionedIssueIds) {
+        if (targetId === taskId) continue;
+        this.linkService.createOrIgnore(taskId, targetId, 'relates');
+      }
       return comment;
     })();
   }
@@ -326,12 +379,18 @@ export class TaskService {
     return this.db.transaction(() => {
       // Get old value before update
       const row = this.db.prepare('SELECT issue_id, body_md FROM comments WHERE id = ?').get(commentId) as { issue_id: number; body_md: string | null } | undefined;
-      const result = updateTaskComment(this.db, commentId, bodyMd);
+      const parentIssueId = row?.issue_id;
+      const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, bodyMd, parentIssueId);
+      const result = updateTaskComment(this.db, commentId, rewritten);
       if (row) {
         this.logger.logCommentUpdated(commentId, row.issue_id, {
           old: row.body_md,
-          new: bodyMd,
+          new: rewritten,
         });
+        for (const targetId of mentionedIssueIds) {
+          if (targetId === row.issue_id) continue;
+          this.linkService.createOrIgnore(row.issue_id, targetId, 'relates');
+        }
       }
       return result;
     })();
@@ -443,6 +502,7 @@ export interface ArticleServiceOptions {
 export class ArticleService {
   private readonly db: Database.Database;
   private readonly logger: ActivityLogger;
+  private readonly linkService: LinkService;
 
   constructor(private readonly options: ArticleServiceOptions) {
     if (options.db) {
@@ -453,17 +513,23 @@ export class ArticleService {
       throw new Error('ArticleService requires either db or config option');
     }
     this.logger = new ActivityLogger(this.db, options.sourceType ?? 'api');
+    this.linkService = new LinkService({ db: this.db, sourceType: options.sourceType });
   }
 
   public create(input: CreateArticleInput) {
     return this.db.transaction(() => {
-      const article = createArticle(this.db, input);
+      const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, input.bodyMd);
+      const article = createArticle(this.db, { ...input, bodyMd: rewritten });
       this.logger.logArticleCreated(
         article.id,
         input.title,
-        input.bodyMd,
+        rewritten,
         input.originalUrl
       );
+      for (const targetId of mentionedIssueIds) {
+        if (targetId === article.id) continue;
+        this.linkService.createOrIgnore(article.id, targetId, 'relates');
+      }
       return article;
     })();
   }
@@ -488,6 +554,12 @@ export class ArticleService {
 
 // Link Service
 export { LinkService, type LinkServiceOptions } from './linkService.js';
+
+// Issue mention rewriting
+export {
+  rewriteIssueMentions,
+  type RewriteIssueMentionsResult,
+} from './issueMentions.js';
 
 // URL Link Service
 export { UrlLinkService, type UrlLinkServiceOptions } from './urlLinkService.js';

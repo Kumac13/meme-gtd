@@ -42,7 +42,7 @@ await fetch(`/api/tasks/${id}`, { method: 'PATCH', ... });
 - 型は`meme-gtd-shared`からimportする（コンポーネント内にローカルinterfaceを複製しない）
 - スケジュールは新形式フィールド（`scheduledStart`/`scheduledEnd`/`isAllDay`）を使う。旧形式（`scheduledOn`/`startTime`/`endTime`/`duration`/`endDate`）は非推奨
 - UI文言は英語（ルートCLAUDE.md参照）
-- 検索クエリの`label:xxx`構文は`utils/queryParser.ts`が正（iOSにも複製があるため仕様変更時は両方更新）
+- 検索クエリは free-text のみ。ラベル・ステータスのフィルタは検索ボックスではなく専用 dropdown UI で扱う（`utils/queryParser.ts` 参照）
 
 ## 大型ファイルの注意
 

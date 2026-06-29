@@ -100,6 +100,10 @@ export default function ItemDetail({
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(true);
   const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
+  // Bumped after a body/comment save so LinkSection refetches; the server may
+  // have created a new `relates` link from a `#id` mention in the saved text.
+  const [linksRefreshKey, setLinksRefreshKey] = useState(0);
+  const bumpLinks = () => setLinksRefreshKey((k) => k + 1);
 
   // Store callback in ref to avoid dependency issues
   const onCommentsLoadedRef = useRef(onCommentsLoaded);
@@ -145,6 +149,7 @@ export default function ItemDetail({
     const updatedComments = [...comments, newComment];
     setComments(updatedComments);
     onCommentsLoadedRef.current?.(updatedComments);
+    bumpLinks();
   };
 
   const handleUpdateComment = async (commentId: number, bodyMd: string) => {
@@ -155,6 +160,7 @@ export default function ItemDetail({
     const updatedComments = comments.map((c) => (c.id === commentId ? updatedComment : c));
     setComments(updatedComments);
     onCommentsLoadedRef.current?.(updatedComments);
+    bumpLinks();
   };
 
   const handleDeleteComment = async (commentId: number) => {
@@ -179,6 +185,7 @@ export default function ItemDetail({
           bodyMd: newBody,
         });
     onUpdate(updatedItem as Item);
+    bumpLinks();
   };
 
   const handleDeleteBody = async () => {
@@ -257,6 +264,7 @@ export default function ItemDetail({
             onDelete={handleDeleteBody}
             title={item.title}
             showTitleEdit={itemType === 'task'}
+            onIssueLinkClick={onItemClick}
           />
 
           {/* Links section */}
@@ -271,6 +279,7 @@ export default function ItemDetail({
               status: 'status' in item ? item.status : null,
               labels: item.labels || [],
             } : undefined}
+            refreshKey={linksRefreshKey}
           />
 
           {/* Comments section (memo/task only) */}
@@ -283,6 +292,7 @@ export default function ItemDetail({
               onDeleteComment={handleDeleteComment}
               activities={activities}
               issueId={item.id}
+              onIssueLinkClick={onItemClick}
             />
           )}
         </div>
