@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.34.0 - 2026-06-29
+
+### New Features
+
+- **インタラクティブな Markdown チェックボックス**: Task の本文・Task のコメント内に書いた `- [ ]` / `- [x]` を、Edit モードに入らず表示画面のままトグルできるようにした。GitHub の task list と同じ操作感。
+  - **Web**: チェックボックスをクリックすると即時 `PATCH /api/tasks/{id}` または `PUT /api/tasks/{taskId}/comments/{commentId}` で保存。連続トグルは promise chain で直列化し、失敗時は楽観 UI をロールバックする。さらに各 todo の左に grip handle (常時表示・低彩度) があり、ドラッグ＆ドロップで順序を入れ替え可能。ネストした子項目は親と一緒に移動し、異なる親をまたぐ移動は弾いて警告を表示する（`@dnd-kit/sortable` ベース）。
+  - **iOS**: SwiftUI の SF Symbol（`square` / `checkmark.square.fill`）として描画し、タップで即トグル + Haptic + PATCH。並べ替えは Web のみのスコープのため iOS では非対応。
+  - **対象範囲は Task のみ**: Memo の本文・コメント・Article の本文では従来通り静的表示。スコープ外ではトグル UI も出ない。
+  - コードブロック・blockquote 内の `- [ ]` はインデックス対象外（誤って触らない）。書き換えは行範囲ベースの 1 文字置換で、原文の整形を壊さない。
+  - **インタラクティブ操作（トグル + 並べ替え）は activity log を積まない**: `core` の `isInteractiveTodoChange` が old/new bodyMd を比較し、変更が「`[ ]` ↔ `[x]` トグル」または「task list item の並べ替え（ネスト子も含む）」だけなら `task.updated` / `memo.updated` / `comment.updated` のログを抑止する。timeline が toggle/reorder の度に膨らまない。
+  - **`task.updated` の title 誤計上を修正**: Web は toggle 時に現タイトルを丸ごと PATCH に乗せるため、サーバーが `input.title !== undefined` だけを見て log を作る挙動だと毎回 task.updated が積まれていた。サーバー側で `input.title !== beforeTask.title` の実差分チェックを追加し、変更がない場合は title diff も body diff も発行しない。
+
 ## 0.33.0 - 2026-06-29
 
 ### New Features

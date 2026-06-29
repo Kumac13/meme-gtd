@@ -5,6 +5,7 @@ import type { TaskStatus, SourceType } from 'meme-gtd-shared';
 import { ActivityLogger } from './activity-log/activity-logger.js';
 import { LinkService } from './linkService.js';
 import { rewriteIssueMentions } from './issueMentions.js';
+import { isInteractiveTodoChange } from './checkboxDiff.js';
 import {
   // Memo functions
   addComment,
@@ -134,10 +135,12 @@ export class MemoService {
         mentionedIssueIds = result.mentionedIssueIds;
       }
       const result = updateMemo(this.db, finalInput);
-      this.logger.logMemoUpdated(input.id, {
-        old: oldMemo?.bodyMd ?? null,
-        new: finalInput.bodyMd ?? null,
-      });
+      const oldBody = oldMemo?.bodyMd ?? null;
+      const newBody = finalInput.bodyMd ?? null;
+      // Suppress activity log when the only change is a checkbox toggle
+      if (!isInteractiveTodoChange(oldBody, newBody)) {
+        this.logger.logMemoUpdated(input.id, { old: oldBody, new: newBody });
+      }
       for (const targetId of mentionedIssueIds) {
         if (targetId === input.id) continue;
         this.linkService.createOrIgnore(input.id, targetId, 'relates');
@@ -178,10 +181,12 @@ export class MemoService {
       const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, bodyMd, parentIssueId);
       const result = updateComment(this.db, commentId, rewritten);
       if (row) {
-        this.logger.logCommentUpdated(commentId, row.issue_id, {
-          old: row.body_md,
-          new: rewritten,
-        });
+        if (!isInteractiveTodoChange(row.body_md, rewritten)) {
+          this.logger.logCommentUpdated(commentId, row.issue_id, {
+            old: row.body_md,
+            new: rewritten,
+          });
+        }
         for (const targetId of mentionedIssueIds) {
           if (targetId === row.issue_id) continue;
           this.linkService.createOrIgnore(row.issue_id, targetId, 'relates');
@@ -301,18 +306,28 @@ export class TaskService {
       if (input.status && input.status !== beforeTask.status) {
         this.logger.logTaskStatusChanged(input.id, beforeTask.status, input.status);
       } else {
-        // Log with diff for title and/or body changes
+        // Log with diff for title and/or body changes — but only if the field
+        // actually changed. The Web client sends the current title alongside
+        // every checkbox toggle, so without the equality check every toggle
+        // would still create a task.updated entry.
         const diff: {
           title?: { old: string | null; new: string | null };
           body?: { old: string | null; new: string | null };
         } = {};
-        if (input.title !== undefined) {
+        if (input.title !== undefined && input.title !== beforeTask.title) {
           diff.title = { old: beforeTask.title, new: input.title };
         }
-        if (finalInput.bodyMd !== undefined) {
+        if (
+          finalInput.bodyMd !== undefined &&
+          finalInput.bodyMd !== beforeTask.bodyMd &&
+          !isInteractiveTodoChange(beforeTask.bodyMd, finalInput.bodyMd)
+        ) {
           diff.body = { old: beforeTask.bodyMd, new: finalInput.bodyMd };
         }
-        this.logger.logTaskUpdated(input.id, diff);
+        // Only log if at least one tracked field actually changed
+        if (diff.title || diff.body) {
+          this.logger.logTaskUpdated(input.id, diff);
+        }
       }
       for (const targetId of mentionedIssueIds) {
         if (targetId === input.id) continue;
@@ -383,10 +398,12 @@ export class TaskService {
       const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, bodyMd, parentIssueId);
       const result = updateTaskComment(this.db, commentId, rewritten);
       if (row) {
-        this.logger.logCommentUpdated(commentId, row.issue_id, {
-          old: row.body_md,
-          new: rewritten,
-        });
+        if (!isInteractiveTodoChange(row.body_md, rewritten)) {
+          this.logger.logCommentUpdated(commentId, row.issue_id, {
+            old: row.body_md,
+            new: rewritten,
+          });
+        }
         for (const targetId of mentionedIssueIds) {
           if (targetId === row.issue_id) continue;
           this.linkService.createOrIgnore(row.issue_id, targetId, 'relates');

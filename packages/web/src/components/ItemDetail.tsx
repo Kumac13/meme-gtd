@@ -264,6 +264,7 @@ export default function ItemDetail({
             onDelete={handleDeleteBody}
             title={item.title}
             showTitleEdit={itemType === 'task'}
+            enableInteractiveTodos={itemType === 'task'}
             onIssueLinkClick={onItemClick}
           />
 
@@ -292,6 +293,7 @@ export default function ItemDetail({
               onDeleteComment={handleDeleteComment}
               activities={activities}
               issueId={item.id}
+              enableInteractiveTodos={itemType === 'task'}
               onIssueLinkClick={onItemClick}
             />
           )}

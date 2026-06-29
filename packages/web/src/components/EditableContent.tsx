@@ -1,4 +1,4 @@
-import { useState, useRef, DragEvent, ClipboardEvent } from 'react';
+import { useCallback, useState, useRef, DragEvent, ClipboardEvent } from 'react';
 import type { IssueType } from 'meme-gtd-shared';
 import { formatRelativeTime } from '../utils/dates';
 import { MarkdownRenderer } from '../utils/markdown';
@@ -6,6 +6,7 @@ import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
 import { useImageUpload } from '../hooks/useImageUpload';
+import { useTodoMutation } from '../hooks/useTodoMutation';
 import { MarkdownTextarea } from './MarkdownTextarea';
 
 interface EditableContentProps {
@@ -16,6 +17,7 @@ interface EditableContentProps {
   onDelete: () => Promise<void>;
   title?: string | null;
   showTitleEdit?: boolean;
+  enableInteractiveTodos?: boolean;
   /**
    * Click handler for internal issue links inside the rendered body
    * (used by ItemDetail to mirror LinkSection's modal-open behavior).
@@ -31,6 +33,7 @@ export default function EditableContent({
   onDelete,
   title,
   showTitleEdit = false,
+  enableInteractiveTodos = false,
   onIssueLinkClick,
 }: EditableContentProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -80,6 +83,19 @@ export default function EditableContent({
     if (!window.confirm('Are you sure you want to delete this?')) return;
     await onDelete();
   };
+
+  const todoSave = useCallback(
+    async (next: string) => {
+      await onSave(next);
+    },
+    [onSave],
+  );
+
+  const { content: displayContent, onToggle: handleTodoToggle, onReorder: handleTodoReorder } = useTodoMutation({
+    content,
+    save: todoSave,
+    onError: (err) => console.error('Todo update failed:', err),
+  });
 
   // Determine if save should be disabled
   const isSaveDisabled = saving || (
@@ -265,7 +281,19 @@ export default function EditableContent({
         </div>
       ) : (
         <div className="prose prose-sm max-w-none mt-1 break-words">
-          <MarkdownRenderer content={content} onIssueLinkClick={onIssueLinkClick} />
+          <MarkdownRenderer
+            content={enableInteractiveTodos ? displayContent : content}
+            interactiveTodos={
+              enableInteractiveTodos
+                ? {
+                    enabled: true,
+                    onToggle: handleTodoToggle,
+                    onReorder: handleTodoReorder,
+                  }
+                : undefined
+            }
+            onIssueLinkClick={onIssueLinkClick}
+          />
         </div>
       )}
     </div>
