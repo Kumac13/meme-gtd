@@ -60,9 +60,14 @@ interface LinkSectionProps {
   parentTask?: ParentTaskInfo;
   /** Callback when a child task is created */
   onChildTaskCreated?: () => void;
+  /**
+   * Bump from the parent to trigger a refetch (e.g. after a body or comment
+   * save where #id mention auto-linking may have added a new `relates` row).
+   */
+  refreshKey?: number;
 }
 
-export default function LinkSection({ itemId, itemType: _itemType, onItemClick, onBeforeNavigate, parentTask, onChildTaskCreated: _onChildTaskCreated }: LinkSectionProps) {
+export default function LinkSection({ itemId, itemType: _itemType, onItemClick, onBeforeNavigate, parentTask, onChildTaskCreated: _onChildTaskCreated, refreshKey }: LinkSectionProps) {
   const [links, setLinks] = useState<LinkDisplayItem[]>([]);
   const [urlLinks, setUrlLinks] = useState<UrlLinkDisplayItem[]>([]);
   // Child task creation state
@@ -86,10 +91,10 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
   // Total links count for display
   const totalLinksCount = links.length + urlLinks.length;
 
-  // Fetch links on mount and when itemId changes
+  // Fetch links on mount, when itemId changes, and when the parent bumps refreshKey
   useEffect(() => {
     fetchAllLinks();
-  }, [itemId]);
+  }, [itemId, refreshKey]);
 
   // Auto-collapse when no links, expand when links exist
   useEffect(() => {
