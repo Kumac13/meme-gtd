@@ -9,10 +9,11 @@ struct ThreadItem: View {
     var onEdit: (() -> Void)?
     var onDelete: (() -> Void)?
     var onCopy: (() -> Void)?
+    var onIssueTap: ((Int, String) -> Void)?
 
     var body: some View {
         HStack(alignment: .top, spacing: 4) {
-            MemoBody(bodyMd: bodyMd, labels: labels)
+            MemoBody(bodyMd: bodyMd, labels: labels, onIssueTap: onIssueTap)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             if showMenu {

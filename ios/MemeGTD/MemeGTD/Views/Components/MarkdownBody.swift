@@ -9,12 +9,20 @@ struct MarkdownBody: View {
     let fontSize: CGFloat
     let color: Color
     let searchQuery: String?
+    let onIssueTap: ((Int, String) -> Void)?
 
-    init(_ text: String, fontSize: CGFloat = 14, color: Color = Color(.label).opacity(0.75), searchQuery: String? = nil) {
+    init(
+        _ text: String,
+        fontSize: CGFloat = 14,
+        color: Color = Color(.label).opacity(0.75),
+        searchQuery: String? = nil,
+        onIssueTap: ((Int, String) -> Void)? = nil
+    ) {
         self.text = text
         self.fontSize = fontSize
         self.color = color
         self.searchQuery = searchQuery
+        self.onIssueTap = onIssueTap
     }
 
     private var blocks: [MarkdownBlock] {
@@ -27,6 +35,13 @@ struct MarkdownBody: View {
                 renderBlock(block)
             }
         }
+        .environment(\.openURL, OpenURLAction { url in
+            if let tap = onIssueTap, let parsed = parseInternalIssueURL(url) {
+                tap(parsed.id, parsed.type)
+                return .handled
+            }
+            return .systemAction
+        })
     }
 
     // MARK: - Block renderer
@@ -208,6 +223,38 @@ struct MarkdownBody: View {
             return Text(content)
         }
     }
+}
+
+// MARK: - Internal issue URL parser
+
+private func parseInternalIssueURL(_ url: URL) -> (id: Int, type: String)? {
+    // Accept both relative (`/tasks/63`) and absolute (`https://x/tasks/63`) forms.
+    let path: String
+    if url.scheme == nil, url.host == nil {
+        path = url.absoluteString
+    } else {
+        path = url.path
+    }
+    let pattern = #"^/(memos|tasks|articles)/(\d+)$"#
+    guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+    let range = NSRange(path.startIndex..<path.endIndex, in: path)
+    guard let match = regex.firstMatch(in: path, range: range), match.numberOfRanges == 3 else {
+        return nil
+    }
+    guard
+        let slugRange = Range(match.range(at: 1), in: path),
+        let idRange = Range(match.range(at: 2), in: path),
+        let id = Int(path[idRange])
+    else { return nil }
+    let slug = String(path[slugRange])
+    let type: String
+    switch slug {
+    case "memos": type = "memo"
+    case "tasks": type = "task"
+    case "articles": type = "article"
+    default: return nil
+    }
+    return (id, type)
 }
 
 // MARK: - Markdown parser
