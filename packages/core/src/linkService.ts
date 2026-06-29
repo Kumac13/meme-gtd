@@ -134,6 +134,31 @@ export class LinkService {
   }
 
   /**
+   * Create a link, or silently return the existing one if a duplicate would be
+   * created. Used for auto-generated mention links where idempotency matters.
+   * Any other validation failure (self-reference, missing issue, etc.) still
+   * throws so the caller is forced to filter inputs upstream.
+   */
+  createOrIgnore(
+    sourceId: number,
+    targetId: number,
+    type: 'parent' | 'child' | 'relates' | 'derived_from'
+  ): Link | null {
+    try {
+      return this.create(sourceId, targetId, type);
+    } catch (e) {
+      if (e instanceof Error && /^Link already exists/.test(e.message)) {
+        return findLink(this.db, {
+          sourceIssueId: sourceId,
+          targetIssueId: targetId,
+          linkType: type
+        });
+      }
+      throw e;
+    }
+  }
+
+  /**
    * Get a link by ID
    * @param linkId Link ID
    * @returns Link
