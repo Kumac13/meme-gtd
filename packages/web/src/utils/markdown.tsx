@@ -3,6 +3,7 @@
  */
 
 import { useState, useRef, type ReactNode } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -249,16 +250,28 @@ const defaultComponents: Components = {
   li: ({ children }) => <li className="ml-4">{children}</li>,
 
   // Links
-  a: ({ href, children }) => (
-    <a
-      href={href}
-      className="text-github-green-600 hover:text-github-green-800 underline break-words"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      {children}
-    </a>
-  ),
+  a: ({ href, children }) => {
+    if (href && /^\/(memos|tasks|articles)\/\d+/.test(href)) {
+      return (
+        <RouterLink
+          to={href}
+          className="text-github-green-600 hover:text-github-green-800 underline break-words"
+        >
+          {children}
+        </RouterLink>
+      );
+    }
+    return (
+      <a
+        href={href}
+        className="text-github-green-600 hover:text-github-green-800 underline break-words"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {children}
+      </a>
+    );
+  },
 
   // Code blocks (inline only - fenced code blocks are handled by pre component)
   code: ({ className, children }) => {
