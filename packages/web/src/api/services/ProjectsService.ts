@@ -609,6 +609,7 @@ export class ProjectsService {
                 'id': id,
             },
             errors: {
+                400: `Default Response`,
                 500: `Default Response`,
             },
         });

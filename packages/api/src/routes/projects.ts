@@ -216,6 +216,7 @@ export async function projectRoutes(app: FastifyInstance) {
         }),
         response: {
           200: z.array(ProjectSchema),
+          400: ErrorResponseSchema,
           500: ErrorResponseSchema,
         },
       },

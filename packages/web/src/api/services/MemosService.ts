@@ -91,6 +91,7 @@ export class MemosService {
      * @param createdTo Filter memos created on or before this date (YYYY-MM-DD)
      * @param limit Maximum number of memos to return (default: 100, max: 1000)
      * @param offset Number of memos to skip (default: 0)
+     * @param order Sort order by created_at (default: desc — newest first)
      * @returns any Default Response
      * @throws ApiError
      */
@@ -103,6 +104,7 @@ export class MemosService {
         createdTo?: string,
         limit?: number,
         offset?: number,
+        order?: 'asc' | 'desc',
     ): CancelablePromise<{
         /**
          * Array of memos
@@ -190,6 +192,7 @@ export class MemosService {
                 'createdTo': createdTo,
                 'limit': limit,
                 'offset': offset,
+                'order': order,
             },
             errors: {
                 400: `Default Response`,
