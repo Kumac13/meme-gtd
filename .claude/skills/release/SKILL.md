@@ -6,7 +6,7 @@ description: Version bump and release procedure for meme-gtd. Use after completi
 # Release / バージョンバンプ手順
 
 新機能・修正の実装完了後に**必ず**実行する（人間からの明示的な指示がなくても自動実行）。
-詳細ルールは `docs/versioning.md` を参照。
+このスキルがリリース手順の唯一の正。バージョニングポリシー（Fixed Versioning・1.0.0基準）は `docs/versioning.md` を参照。
 
 ## 例外（バージョンバンプ不要）
 
@@ -85,4 +85,4 @@ git push && git push --tags
 
 - タグは push 後に削除・移動しない（履歴は不変）
 - タグは CHANGELOG.md とバージョン番号を更新したコミットを指すこと
-- 新機能・スキーマ変更の場合は `README.md` / `README.ai.md` / 関連 `docs/` の更新も完了していること
+- 新機能・スキーマ変更の場合は `README.md` と関連 `docs/` の更新も完了していること（更新トリガー表: `docs/CLAUDE.md`）

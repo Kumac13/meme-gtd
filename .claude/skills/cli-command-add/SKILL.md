@@ -1,6 +1,6 @@
 ---
 name: cli-command-add
-description: Use when adding, renaming, or removing an mgtd CLI command or subcommand in packages/cli. Registers the command in MULTIWORD_COMMANDS (forgetting this breaks space-separated syntax) and updates docs/cli-commands.md, tests, and README.ai.md.
+description: Use when adding, renaming, or removing an mgtd CLI command or subcommand in packages/cli. Registers the command in MULTIWORD_COMMANDS (forgetting this breaks space-separated syntax) and updates docs/cli-commands.md, tests, and shell completions.
 ---
 
 # CLIコマンド追加・変更手順
@@ -11,7 +11,6 @@ description: Use when adding, renaming, or removing an mgtd CLI command or subco
 - [ ] `packages/cli/src/index.ts` の `MULTIWORD_COMMANDS` に登録（**忘れるとスペース区切り構文が動かない**）
 - [ ] テストを追加（`packages/cli/test/` — テストなしのバックエンド変更は禁止）
 - [ ] `docs/cli-commands.md` を更新（コマンド構文・オプション・使用例を省略せず全文記載）
-- [ ] `README.ai.md` を更新（新機能追加時は必須）
 - [ ] シェル補完（`scripts/completions/`）に影響する場合は更新
 
 ## MULTIWORD_COMMANDS の登録ルール
