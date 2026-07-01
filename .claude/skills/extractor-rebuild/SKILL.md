@@ -26,4 +26,4 @@ ls -la ios/MemeGTD/ShareExtension/Resources/extractor.bundle.js
 
 - [ ] 再生成した `extractor.bundle.js` を変更と同じコミットに含める
 - [ ] iOSの動作確認が必要な場合は ios-deploy スキルでビルド・デプロイする
-- [ ] 抽出ロジックの仕様変更なら `README.ai.md` と関連 `docs/` を更新する
+- [ ] 抽出ロジックの仕様変更なら関連 `docs/` を更新する（更新トリガー表: `docs/CLAUDE.md`）

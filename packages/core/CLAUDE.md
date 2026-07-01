@@ -17,7 +17,7 @@ src/
 
 ## 実装ルール
 
-**IMPORTANT: mutationには必ずActivityLoggerでイベントを記録すること**
+mutationには必ずActivityLoggerでイベントを記録すること（欠落するとWeb/iOSのタイムライン表示から消える）。
 
 - サービスのパターン: コンストラクタで `{ config?, db?, sourceType? }` を受け取り、db層のリポジトリを呼び、`ActivityLogger`でイベント（`task.created`等）を記録する
 - 新しいmutationメソッドを追加する際、イベント記録を忘れるとアクティビティログ（Web/iOSのタイムライン表示）から欠落する

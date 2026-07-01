@@ -5,7 +5,8 @@ description: Use BEFORE any verification or testing involving the mgtd CLI, API 
 
 # テスト環境での検証手順
 
-**🚨 絶対ルール**: 開発・検証・テストでは必ずテスト環境を使用。本番環境には絶対に触れない。
+**絶対ルール**: 開発・検証・テストでは必ずテスト環境を使用。本番環境には絶対に触れない。
+このスキルがテスト環境手順の唯一の正。
 
 ## 過去のインシデント（Issue #48）
 

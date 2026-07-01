@@ -2,17 +2,15 @@
 
 ## ビルド必須ルール
 
-**IMPORTANT: ユーザーへの報告・確認を求める前に、必ず`xcodebuild`でビルドして動作確認すること**
+ユーザーへの報告・確認を求める前に、必ず `xcodebuild` でビルドして動作確認すること（XCTestが無いため、ビルド成功が最低限の検証手段）。
 
 ```bash
 xcodebuild -scheme MemeGTD -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
 
-ビルドエラーや動作不良をユーザーに発見させない。
+ビルド・デプロイの完全な手順は ios-deploy スキルを使うこと。
 
 ## コミットルール
-
-**IMPORTANT: 変更を加えたら適宜コミットすること**
 
 - 機能追加・修正ごとにコミット
 - feature branchで作業し、進捗に合わせてpush
@@ -31,31 +29,25 @@ ios/MemeGTD/
 └── Shared/           # 両ターゲット共有コード（APIClient / Settings / Colors / ArticleModels）
 ```
 
-## <critical-safety>APIスキーマとの手動同期（最重要）</critical-safety>
+## APIスキーマとの手動同期（最重要）
 
-**IMPORTANT: SwiftモデルはTypeScript APIスキーマの手書きミラーであり、自動生成されない。**
-バックエンドのAPI契約が変わったら、対応するSwiftモデルを必ず手動で更新すること。
-対応表とAPI変更時チェックリストは `docs/architecture.md` の「API契約の同期チェーン」を参照。
+SwiftモデルはTypeScript APIスキーマの手書きミラーであり、自動生成されない。
+バックエンドのAPI契約が変わったら、対応するSwiftモデルを必ず手動で更新すること（更新漏れは実行時のデコード失敗として現れる）。
 
-- 同期対象: `MemeGTD/Models/*.swift`（12ファイル）と `Shared/ArticleModels.swift`
+- 手順: api-schema-sync スキル。Swiftファイル↔スキーマの完全な対応表は `docs/architecture.md` の「API契約の同期チェーン」
 - enumのraw value（例: `LinkType` の `"derived_from"`、`TaskStatus` の各値）は文字列でバックエンドと一致させる
 - 日付はISO形式（`yyyy-MM-dd` / `yyyy-MM-dd'T'HH:mm:ss`）
-- 検索の `label:xxx` クエリ構文は `MemoListViewModel.parseSearchQuery` に iOS 独自実装として残っている（Web は free-text 専用に簡素化済みで、もう複製ではない）。iOS の検索 UI を Web と揃える際は `MemoListViewModel.swift:55` を更新する
+- 検索の `label:xxx` クエリ構文は `MemoListViewModel.parseSearchQuery` に iOS 独自実装として残っている（Web は free-text 専用に簡素化済みで、もう複製ではない）。iOS の検索 UI を Web と揃える際はここを更新する
 
 ## 開発環境
 
-- Xcode 15.0+
-- iOS 16.0+
-- Swift 5.9
+- デプロイメントターゲット: iOS 26.2（`project.pbxproj` の `IPHONEOS_DEPLOYMENT_TARGET`）
+- Swift 5 言語モード
+- Xcode: iOS 26.2 SDK を含むバージョン
 
 ## JavaScript Bundle更新
 
-記事抽出ロジック（`packages/extension/src/content/extractor.ts`）を変更した場合：
-
-```bash
-cd packages/extension
-pnpm exec esbuild src/ios-extractor.ts --bundle --format=iife --outfile=../../ios/MemeGTD/ShareExtension/Resources/extractor.bundle.js --target=es2020
-```
+記事抽出ロジック（`packages/extension/src/` 配下）を変更した場合は、iOS用バンドルの再ビルドが必要。手順は extractor-rebuild スキルを使うこと（忘れるとiOSだけ古い抽出ロジックのまま動く）。
 
 ## 実装ルール
 

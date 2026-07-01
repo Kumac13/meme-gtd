@@ -16,14 +16,14 @@ src/
 
 ## API呼び出しルール
 
-**IMPORTANT: APIは必ず生成済みServiceクラス（`src/api/services/`）経由で呼ぶこと**
+APIは必ず生成済みServiceクラス（`src/api/services/`）経由で呼ぶこと（直接fetchすると型安全性・共通エラー処理を失う）。
 
 ```typescript
-// ✅ 正しい
+// 正しい
 import { TasksService } from '../api';
 await TasksService.updateTask(id, { status });
 
-// ❌ 禁止（型安全性・エラー処理を失う）
+// 禁止（型安全性・エラー処理を失う）
 await fetch(`/api/tasks/${id}`, { method: 'PATCH', ... });
 ```
 
@@ -46,7 +46,7 @@ await fetch(`/api/tasks/${id}`, { method: 'PATCH', ... });
 
 ## 大型ファイルの注意
 
-`TaskForm.tsx`（約960行）、`MemosList.tsx`（約960行）、`MemoForm.tsx`（約790行）、`utils/activityLogHelpers.ts`（約840行）は複数の関心事を含む。変更時は影響範囲を慎重に確認すること。
+`TaskForm.tsx`、`MemosList.tsx`、`MemoForm.tsx`、`utils/activityLogHelpers.ts` は特に大きく（数百行〜1,000行近く）複数の関心事を含む。変更時は影響範囲を慎重に確認すること。
 
 ## テスト・検証
 

@@ -1,5 +1,9 @@
 # リモートアクセス設定ガイド
 
+> 目的: Tailscale経由でiPhone等の外部デバイスからWeb UI/APIへアクセスする設定手順（人間向け）
+> 読むタイミング: リモートアクセスの構築・接続トラブルシューティング時
+> 更新タイミング: リモートアクセス構成（Tailscale設定・ポート等）の変更時
+
 このガイドでは、meme-gtd WebUIにiPhoneなどの外部デバイスからアクセスする方法を説明します。
 
 ## 概要
@@ -83,9 +87,10 @@ tailscale serve status
 
 #### Tailscale Serve使用時の注意点
 
-- Web UIの `OpenAPI.ts` で `BASE: ''` と設定すると、どの環境からでも相対パスでAPIにアクセスできます
+- Web UIのAPIクライアントは相対パス（`BASE: ''`）でAPIにアクセスするため、どのホスト名経由でも追加設定なしで動作します
   - Mac上: `localhost:3000` → API: `localhost:3000/api/...`
-  - iPhone: `https://hirakus-mac-mini.tailff2c68.ts.net` → API: `https://hirakus-mac-mini.tailff2c68.ts.net/api/...`
+  - iPhone: `https://<ホスト名>.ts.net` → API: `https://<ホスト名>.ts.net/api/...`
+  - この設定は `pnpm --filter meme-gtd-web generate:api` がクライアント再生成時に自動で適用する（手動編集は不要）
 
 #### 設定の停止
 
