@@ -28,6 +28,20 @@
 - 実装前に`docs/architecture.md`と`docs/requirement.md`を必ず参照
 - **バックエンド（API/DB）を変更・追加する際は、必ず対応するテストを書くこと**（テストなしでのバックエンド変更は禁止）
 
+## 定型作業スキル
+
+定型手順は `.claude/skills/` にスキル化している。該当する作業では対応スキルの手順に従うこと。
+
+| スキル | 使うタイミング |
+|---|---|
+| `release` | 新機能・修正の実装完了後のバージョンバンプ（必須・自動実行） |
+| `api-schema-sync` | APIスキーマ・ルート・ハンドラ変更時の同期チェーン |
+| `db-migration` | DBスキーマ変更・本番マイグレーション時 |
+| `test-env` | CLI/API/Web UIの検証・テスト前（本番環境保護） |
+| `extractor-rebuild` | `packages/extension/src/` の抽出ロジック変更後 |
+| `cli-command-add` | CLIコマンド追加・変更時 |
+| `ios-deploy` | iOSアプリのビルド・デプロイ時 |
+
 ## 変更時のドキュメント・追随作業マップ
 
 **IMPORTANT: 以下に該当する変更をしたら、対応する追随作業まで完了して初めて作業完了とする**
