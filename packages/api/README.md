@@ -55,7 +55,7 @@ pnpm test:watch    # watchモード
 
 ## 環境変数
 
-`docs/operations.md` の環境変数一覧を参照。
+`src/config.ts` を参照（`PORT` / `HOST` / `DB_PATH` / `LOG_LEVEL` / `MGTD_LOG_FILE` / `CORS_ALLOWED_ORIGINS` / `MGTD_BACKUP_*` 等）。
 
 ## 構成
 
