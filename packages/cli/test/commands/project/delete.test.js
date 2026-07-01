@@ -59,6 +59,21 @@ describe('project delete command', () => {
     assert.match(output.reason, /requires --yes/i);
   });
 
+  test('delete without --yes in non-TTY mode aborts without deleting', () => {
+    const createProject = runCli(['project', 'create', 'Non TTY Project', '-j'], { env });
+    const projectId = JSON.parse(createProject.stdout).id;
+
+    // spawnSync pipes stdin, so the child process has no TTY
+    const result = runCli(['project', 'delete', String(projectId)], { env });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /use --yes flag/i);
+
+    // Project must still exist
+    const view = runCli(['project', 'view', String(projectId), '-j'], { env });
+    assert.equal(view.status, 0, view.stderr);
+    assert.equal(JSON.parse(view.stdout).id, projectId);
+  });
+
   test('delete non-existent project shows error', () => {
     const result = runCli(['project', 'delete', '99999', '--yes', '-j'], { env });
     assert.equal(result.status, 0);
