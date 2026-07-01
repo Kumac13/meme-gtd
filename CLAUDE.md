@@ -52,7 +52,7 @@
 | DBスキーマ変更 | `schema/` に連番SQL追加（既存SQL変更禁止）+ shared型 + リポジトリ + テスト |
 | CLIコマンド追加 | `MULTIWORD_COMMANDS` 登録 + `docs/cli-commands.md` 更新 |
 | 記事抽出ロジック変更 | iOS用 `extractor.bundle.js` 再ビルド（手順: `ios/CLAUDE.md`） |
-| スキーマ変更・新機能追加 | `README.ai.md` 更新（他AIへ渡すコンテキストドキュメント） |
+| スキーマ変更 | `docs/er-diagram.md` 更新（データモデルの正） |
 | 新機能・機能変更 | `README.md` + 関連 `docs/` 更新 + バージョンバンプ |
 
 ## <critical-safety>Push前のローカル検証（必須）</critical-safety>
@@ -297,4 +297,3 @@ git tag vX.Y.Z
 - 指示から外れる判断が必要な場合は事前に確認を取る
 - 実装中は論理的な区切りごとにコミットを作成し、変更は順次記録する
 - 機能追加や変更時は関連ドキュメント（README.mdやdocs/）を必ず更新する
-- **スキーマ変更・新機能追加時は `README.ai.md` も更新する**（他AIへ渡す用のコンテキストドキュメント）

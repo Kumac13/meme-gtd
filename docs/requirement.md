@@ -228,18 +228,11 @@ stateDiagram-v2
     - スケジュール (新形式): `scheduled_start`, `scheduled_end`, `is_all_day`, `actual_start`, `actual_end`, `notify_before_minutes`
     - スケジュール (旧形式/非推奨): `scheduled_on`, `start_time`, `end_date`, `end_time`, `duration`
   - `labels`, `issue_labels`, `comments`, `comment_revisions`, `links`, `url_links`, `projects`, `project_items`, `activity_log`, `issues_fts`, `issue_embeddings`
-  - カラム定義の詳細は `README.ai.md`、マイグレーション SQL は `schema/` を参照。
+  - カラム定義・enum値の詳細は `docs/er-diagram.md`（データモデルの正）、マイグレーション SQL は `schema/` を参照。
 - **ID ルール**:
   - すべてのエンティティで単一連番 ID を採用。CLI は `memo` / `task` / `article` で型チェックを実施。
   - SQLite が唯一の ID 発行源。
-- **API**（タイプ別エンドポイント。契約の正は `packages/api/docs/api/openapi.yaml`）:
-  - Memos: `/api/memos`（CRUD、bookmark、promote、promote-preview、comments）
-  - Tasks: `/api/tasks`（CRUD、status 遷移、bookmark、demote、comments）
-  - Articles: `/api/articles`（保存・一覧・詳細・削除）
-  - Labels / Links / URL Links / Projects / Comments: `/api/labels`, `/api/links`, `/api/issues/{id}/url-links`, `/api/projects`, `/api/issues/{id}/comments` 等
-  - Search: `/api/search/keyword`, `/api/search/semantic`
-  - Attachments: `/api/attachments`
-  - Activity Log: `/api/activity-log`
+- **API**: エンドポイント一覧は `docs/architecture.md` のAPIエンドポイントマップ、契約の正は `packages/api/docs/api/openapi.yaml` を参照。
   - `GET /api/tasks` のレスポンスには各タスクの `projectIds` と `linkIds` を含み、AIエージェントが関連情報を参照可能。
 
 ---
@@ -264,11 +257,7 @@ stateDiagram-v2
 
 - **目的**: CLI と同等の機能を REST API として公開し、自動化や外部クライアント（MCP ベースのエージェント等）から利用できるようにする。
 - **構成**: `packages/api` 配下に Fastify 5 系で実装。既存の `meme-gtd-core` / `meme-gtd-db` サービスを再利用し、CLI と同じビジネスロジックを共有する。
-- **エンドポイント分類**:
-  - Memos: `/api/memos`（CRUD、bookmark、promote、comments）
-  - Tasks: `/api/tasks`（CRUD、status 遷移、bookmark、comments）
-  - Labels: `/api/labels`, `/api/issues/{id}/labels`
-  - Links: `/api/links`, `/api/issues/{id}/links`
+- **エンドポイント分類**: `docs/architecture.md` のAPIエンドポイントマップを参照。
 - **ドキュメント**: `pnpm openapi:generate` で `packages/api/docs/api/openapi.yaml` を生成。Swagger UI は `/api-docs` で提供。`pnpm openapi:validate` で Redocly 検証を実施。
 - **運用想定**: 単一ユーザー／閉域ネットワーク（Tailscale 等）上で稼働。アプリケーションレベルの認証は今後の拡張事項とする。
 - **Web UI 配信**: API サーバーが `packages/web/dist` を同一ポートで静的配信する（SPA フォールバック付き）。
