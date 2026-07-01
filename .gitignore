@@ -5,7 +5,8 @@ dist/
 *.log
 .DS_Store
 .tmp/
-.claude/
+.claude/*
+!.claude/skills/
 .specify/
 .github/agents/
 .github/prompts/
