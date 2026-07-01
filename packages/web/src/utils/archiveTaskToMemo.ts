@@ -33,7 +33,7 @@ export function buildMemoBodyFromTask(task: Task, comments: Comment[]): string {
   if (comments.length > 0) {
     parts.push('');
     parts.push('---');
-    parts.push('## コメント');
+    parts.push('## Comments');
     parts.push('');
 
     for (const comment of comments) {

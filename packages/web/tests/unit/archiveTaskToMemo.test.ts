@@ -41,7 +41,7 @@ describe('buildMemoBodyFromTask', () => {
     expect(result).toContain('# Test Title');
     expect(result).toContain('Task body');
     expect(result).toContain('---');
-    expect(result).toContain('## コメント');
+    expect(result).toContain('## Comments');
     expect(result).toContain('### 2025-01-01T00:00:00Z');
     expect(result).toContain('First comment');
     expect(result).toContain('### 2025-01-02T00:00:00Z');
@@ -66,7 +66,7 @@ describe('buildMemoBodyFromTask', () => {
     const result = buildMemoBodyFromTask(task, comments);
 
     expect(result).toContain('---');
-    expect(result).toContain('## コメント');
+    expect(result).toContain('## Comments');
     expect(result).toContain('Comment content');
   });
 
