@@ -1,331 +1,82 @@
-# Version Management Strategy
+# バージョン管理ポリシー
 
-**Last Updated**: 2025-10-14
-**Related Issue**: [#5](https://github.com/Kumac13/meme-gtd/issues/5)
+> 目的: バージョニング方針（Fixed Versioning・SemVer判断基準・タグ/CHANGELOG規約）の定義
+> 読むタイミング: バージョン番号の判断に迷ったとき、リリースルールを変更するとき
+> 更新タイミング: バージョニングルール自体を変更するときのみ
 
-## Overview
+実行手順（コマンド・コミット構成）は **release スキル** が唯一の正。本書はポリシーのみを定義する。
 
-This document defines the version management strategy for the meme-gtd project. It covers our versioning approach, semantic versioning rules, release process, and CHANGELOG management.
+## Fixed Versioning（全パッケージ同一バージョン）
 
-## Versioning Approach: Fixed Versioning
+モノレポ内の全パッケージはルート `package.json` をマスターとして同一バージョンを共有する。
 
-**Decision**: We adopt **Fixed Versioning** (also known as Unified Versioning) for all packages in this monorepo.
+理由: 全パッケージが `private: true` で npm 非公開、`workspace:*` で密結合、配布物は単一のCLIツール（`mgtd`）。ユーザーが追うべきバージョン番号を1つにする。
 
-### What is Fixed Versioning?
+## SemVer 判断基準
 
-Fixed Versioning means all packages in the monorepo share the same version number. When any package is updated, all packages are bumped to the same version, regardless of whether they had individual changes.
+SemVer 2.0.0（`MAJOR.MINOR.PATCH`）に従う。
 
-### Rationale
+| 種別 | バンプ | 判断基準 | 例 |
+|------|--------|---------|-----|
+| Breaking Changes | MAJOR | 既存ユーザーがコマンド・スクリプトの変更を強いられる（フラグ改名、コマンド削除、出力形式の非互換変更） | `--body-file` → `--file` の改名 |
+| New Features | MINOR | 後方互換の機能追加（新コマンド、新フラグ、既存機能の拡張） | `memo list --search` の追加 |
+| Bug Fixes | PATCH | 後方互換のバグ修正、ユーザーに見えない内部リファクタリング、性能改善 | 削除コマンドのクラッシュ修正 |
 
-We chose Fixed Versioning for the following reasons:
+判断に迷ったら「既存ユーザーはコマンドやスクリプトを変える必要があるか？」で判定する。Yesなら Breaking。判断がつかない場合は MINOR に倒す。
 
-1. **Private Packages**: All packages in this monorepo are marked as `private: true` and are not published to npm. They serve only as internal implementation details of the CLI tool.
+### バンプ不要の例外
 
-2. **Tight Coupling**: Packages have密 interdependencies using `workspace:*` protocol, indicating they are designed to work together as a cohesive unit.
+- ドキュメントのみの変更
+- テストのみの追加
 
-3. **Single Artifact**: The project is distributed as a single CLI tool (`mgtd`). Users interact with one unified product, not individual libraries.
+### 1.0.0 の基準
 
-4. **Current Practice**: The project is already using unified versioning (all packages at `0.1.0`), so this formalizes existing practice.
+コア機能が安定しテストが十分で、Breaking Changes が収束し、本番利用に耐えるドキュメントが揃った時点で 1.0.0 をリリースする。
 
-5. **Simplicity**: Users and developers only need to track one version number, reducing confusion and simplifying documentation.
+## リリース方式
 
-### Operational Method
+手動リリース（`npm version` ベース）。semantic-release / standard-version 等の自動化は使わない
+（npm 非公開・リリース頻度が低い・キュレーションされたリリースノートを重視するため。頻度が大きく上がったら再検討）。
 
-- The version in **root `package.json`** serves as the master version
-- During release, all package versions are updated simultaneously
-- Users see and refer to only one version number for the entire tool
+複数の機能を1リリースに束ねてよい。バンプは機能ごとではなくリリースごとに行い、開発中はバンプしない。
 
-## Semantic Versioning Rules
+## Git タグ規約
 
-We follow **SemVer 2.0.0** (`MAJOR.MINOR.PATCH`) specification:
+- 形式: `vMAJOR.MINOR.PATCH`（`v` プレフィックス必須。例: `v0.2.0`）
+- タグは CHANGELOG.md とバージョン番号を更新したコミットを指す
+- push 済みのタグは削除・移動しない（履歴は不変）
 
-### Version Number Format
+## CHANGELOG 規約
 
-```
-MAJOR.MINOR.PATCH
-```
-
-### When to Increment
-
-| Change Type | Version Update | Example | Description |
-|------------|---------------|---------|-------------|
-| **MAJOR** | Breaking Changes | 0.1.1 → 1.0.0 | Incompatible API changes, removes existing functionality |
-| **MINOR** | New Features | 0.1.0 → 0.2.0 | Adds functionality in a backward-compatible manner |
-| **PATCH** | Bug Fixes | 0.1.0 → 0.1.1 | Backward-compatible bug fixes |
-
-### Concrete Examples
-
-#### MAJOR Version Bump (Breaking Changes)
-
-- Renaming existing command flags (e.g., `--body-file` → `--file`)
-- Removing commands or subcommands
-- Changing command behavior in incompatible ways
-- Modifying output format that breaks existing integrations
-
-**Example**:
-```bash
-# Before: 1.5.2
-mgtd memo create --body-file memo.txt
-
-# After breaking change: 2.0.0
-mgtd memo create --file memo.txt  # Flag renamed
-```
-
-#### MINOR Version Bump (New Features)
-
-- Adding new commands or subcommands
-- Adding new flags (backward-compatible)
-- Adding new optional parameters
-- Enhancing existing functionality without breaking changes
-
-**Example**:
-```bash
-# Before: 0.1.0
-mgtd memo list
-
-# After feature addition: 0.2.0
-mgtd memo list --search "keyword"  # New optional flag added
-```
-
-#### PATCH Version Bump (Bug Fixes)
-
-- Fixing bugs
-- Updating documentation
-- Internal refactoring with no user-visible changes
-- Performance improvements
-
-**Example**:
-```bash
-# Before: 0.1.0 - bug where memo delete fails
-mgtd memo delete 5  # Returns error
-
-# After bug fix: 0.1.1
-mgtd memo delete 5  # Works correctly
-```
-
-### Version 1.0.0 Criteria
-
-We will release version 1.0.0 when:
-
-- Core functionality (init, memo) is stable and well-tested
-- Breaking changes have converged (API is stable)
-- The tool is ready for production use
-- Documentation is complete
-- Test coverage is adequate
-
-## Release Process
-
-We use a **manual release process** with the `npm version` command.
-
-### Step-by-Step Release Workflow
-
-```bash
-# 1. Determine the new version number based on SemVer rules
-#    - Review changes since last release
-#    - Decide: patch, minor, or major?
-
-# 2. Update CHANGELOG.md manually
-#    - Add new version section with date
-#    - Document all changes under appropriate categories
-#    - See CHANGELOG Management section below for format
-
-# 3. Update version in root package.json
-npm version minor -m "chore: bump version to %s"
-# Use: patch, minor, or major depending on changes
-
-# 4. Synchronize version across all packages
-pnpm -r exec npm version $(node -p "require('./package.json').version") --no-git-tag-version
-
-# 5. Commit the version changes
-git add .
-git commit -m "chore: release v0.2.0"
-
-# 6. Create git tag
-git tag v0.2.0
-
-# 7. Push to remote (only when explicitly instructed)
-git push && git push --tags
-```
-
-### Why Manual Process?
-
-We do **not** use automated versioning tools for the following reasons:
-
-| Tool | Why Not Used |
-|------|-------------|
-| **semantic-release** | Designed for npm publishing with automatic releases. Our packages are private and don't need npm publication. |
-| **standard-version** | Requires Conventional Commits format. The cost of enforcing commit conventions outweighs the benefit for this project. |
-| **Manual is sufficient** | Current release frequency is low. Manual process provides more control and is well understood by the team. |
-
-### Automation Trade-offs
-
-**Automated tools are great when**:
-- Publishing to npm registry
-- High release frequency (weekly/daily)
-- Large team with strict commit conventions
-- Need for automatic CHANGELOG generation
-
-**Manual process works better when**:
-- ✅ Private packages (our case)
-- ✅ Low release frequency (our case)
-- ✅ Small team with flexible workflow (our case)
-- ✅ Need for detailed, curated release notes (our case)
-
-We may revisit automation in the future if release frequency increases significantly.
-
-## Git Tagging Convention
-
-### Tag Format
-
-All version tags use the format: **`vMAJOR.MINOR.PATCH`**
-
-The `v` prefix is required for consistency.
-
-### Examples
-
-```bash
-v0.1.0    # Initial release
-v0.1.1    # Patch release
-v0.2.0    # Minor release (new features)
-v1.0.0    # Major release (stable API)
-v1.1.0    # Minor release after 1.0
-v2.0.0    # Major release (breaking changes)
-```
-
-### Creating Tags
-
-```bash
-# After version bump and commit
-git tag v0.2.0
-
-# Verify tag was created
-git tag -l
-
-# Push tag to remote (when ready)
-git push origin v0.2.0
-# Or push all tags:
-git push --tags
-```
-
-### Tag Best Practices
-
-- Tags should be annotated with release notes (optional but recommended):
-  ```bash
-  git tag -a v0.2.0 -m "Release v0.2.0: Add version command"
-  ```
-- Tags should point to the commit that updates CHANGELOG.md and version numbers
-- Never delete or move tags after pushing to remote (history should be immutable)
-
-## CHANGELOG Management
-
-We maintain a **manual CHANGELOG** at the root of the repository.
-
-### Format
-
-We follow a simplified version of [Keep a Changelog](https://keepachangelog.com/) format:
+ルートの `CHANGELOG.md` を手動で管理する（simplified [Keep a Changelog](https://keepachangelog.com/)。説明は日本語）。
 
 ```markdown
-# Changelog
-
 ## X.Y.Z - YYYY-MM-DD
 
 ### Breaking Changes
-- Description of breaking change
-  - Migration instructions for users
+- 破壊的変更の説明
+  - ユーザー向け移行手順
 
 ### New Features
-- Description of new feature
-  - Usage examples or notes
+- 新機能の説明
+  - 使用例や補足
 
 ### Bug Fixes
-- Description of bug fix
-  - Context on what was broken
+- バグ修正の説明
+  - 何が壊れていたかの背景
 
 ### Tests
-- Test additions or updates
+- テストの追加・更新
 ```
 
-### Category Descriptions
+| カテゴリ | 使うとき |
+|----------|---------|
+| Breaking Changes | 互換維持にユーザー側の対応が必要な変更（移行手順を必ず書く） |
+| New Features | 機能追加 |
+| Bug Fixes | 既存挙動の修正 |
+| Tests | テストスイートの改善 |
 
-| Category | Use When | Example |
-|----------|----------|---------|
-| **Breaking Changes** | Changes that require user action to maintain compatibility | Renamed `--bodyFile` to `--body-file` |
-| **New Features** | New functionality added | Added `memo bookmark` command |
-| **Bug Fixes** | Corrections to existing behavior | Fixed crash when deleting non-existent memo |
-| **Tests** | Test suite improvements | Added E2E tests for completion command |
-
-### Example Entry
-
-```markdown
-## 0.2.0 - 2025-10-14
-
-### New Features
-
-- **Version confirmation command**: Implemented functionality to check CLI version
-  - `mgtd --version` / `mgtd -v`: Display version number
-  - `mgtd version`: Display detailed version information
-  - `mgtd version --json`: Output environment information in JSON format
-
-### Tests
-
-- Added integration tests for version command (5 tests)
-- Performance validation: all version commands complete in <100ms
-```
-
-### Why Manual CHANGELOG?
-
-**Advantages of manual editing**:
-- ✅ Detailed explanations possible (better than auto-generated)
-- ✅ Can include migration instructions for breaking changes
-- ✅ Curated content focuses on user-relevant changes
-- ✅ Existing CHANGELOG.md has proven this approach works
-
-**Disadvantages of auto-generation**:
-- ❌ Relies heavily on commit message quality
-- ❌ May include irrelevant internal changes
-- ❌ Less readable than curated notes
-- ❌ Requires strict Conventional Commits discipline
-
-## Quick Reference
-
-### When Releasing
-
-1. ✅ Review changes → Determine version type (patch/minor/major)
-2. ✅ Update CHANGELOG.md with new section
-3. ✅ Run version commands (see Release Process section)
-4. ✅ Create git tag with `v` prefix
-5. ✅ Push when ready (with `--tags` flag)
-
-### Version Decision Tree
-
-```
-Does this introduce breaking changes?
-├─ Yes → MAJOR version bump
-└─ No → Does this add new features?
-    ├─ Yes → MINOR version bump
-    └─ No → PATCH version bump
-```
-
-### Common Questions
-
-**Q: Do I need to version bump for documentation-only changes?**
-A: Generally no. Documentation updates can go directly to main without a version bump. However, if releasing for other reasons, include docs changes in the CHANGELOG.
-
-**Q: What if I'm not sure if a change is breaking?**
-A: Ask: "Will existing users need to change their commands/scripts?" If yes, it's breaking. If unsure, discuss with the team or err on the side of a MINOR bump.
-
-**Q: Can I bundle multiple features into one release?**
-A: Yes! Version bumps are per-release, not per-feature. Accumulate features on main branch, then release when ready with appropriate version bump.
-
-**Q: Should I version bump during development?**
-A: No. Version bumps happen only at release time. Work on features in branches or main, then bump version when releasing.
-
-## References
+## 参照
 
 - [Semantic Versioning 2.0.0](https://semver.org/)
 - [Keep a Changelog](https://keepachangelog.com/)
-- [Monorepo Versioning Best Practices](https://amarchenko.dev/blog/2023-09-26-versioning/)
-
-## Changelog of This Document
-
-- 2025-10-14: Initial version created for Issue #5
