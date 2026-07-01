@@ -1,9 +1,8 @@
 # CLI開発ガイド
 
-## コマンド追加時の必須作業
+## コマンド追加・変更
 
-- **`src/index.ts`の`MULTIWORD_COMMANDS`配列に登録する**（スペース区切り構文の必須要件）
-- `docs/cli-commands.md`を更新する
+チェックリスト（`MULTIWORD_COMMANDS` 登録・テスト・`docs/cli-commands.md`・シェル補完）は cli-command-add スキルが唯一の正。
 
 ## 実装ルール
 

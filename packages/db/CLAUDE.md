@@ -12,12 +12,10 @@ src/
 └── index.ts         # 全エクスポート + ensureDatabase / openDatabase
 ```
 
-## マイグレーション追加手順
+## マイグレーション追加
 
-1. リポジトリルートの `schema/` に **連番** でSQLファイルを追加（例: `014_add_xxx.sql`）
-2. **既存のマイグレーションファイルは絶対に変更しない**（適用済みDBと不整合になる）
-3. マイグレーションは `ensureDatabase()` がCLI/APIサーバー起動時に自動適用する
-4. `packages/shared` の型、対応するリポジトリ、core のサービス、API契約チェーン（`docs/architecture.md` 参照）まで追随させる
+手順とチェックリストは db-migration スキルが唯一の正。
+このパッケージ固有の事実: マイグレーションは `ensureDatabase()` がCLI/APIサーバー起動時に自動適用する（`src/migrate.ts`、`schema_migrations` テーブルで管理）。
 
 ## 実装ルール
 
@@ -28,4 +26,4 @@ src/
 
 ## 検証
 
-開発・テストでは必ずテスト用DB（`test-data/test.db` / 一時ディレクトリ）を使用。本番DB（`~/.local/share/mgtd/issues.db`）には絶対に触れない（ルートCLAUDE.mdのAI Safetyセクション参照）。
+必ずテスト環境で行うこと（手順: test-env スキル。本番DB保護のため）。

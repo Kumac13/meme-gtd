@@ -20,4 +20,5 @@
 * Repo behavior belongs in repo AGENTS.md or the relevant skill.
 * Repeatable workflows belong in skills.
 * Memory must not override an explicitly invoked skill.
+* Routing for repo knowledge starts at the root `CLAUDE.md` document-routing table; the document catalog and update rules live in `docs/CLAUDE.md`.
 
