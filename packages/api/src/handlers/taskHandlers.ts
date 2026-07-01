@@ -32,28 +32,24 @@ export async function createTaskHandler(
   } = request.body;
   const taskService = new TaskService({ db: request.server.db });
 
-  try {
-    const task = taskService.create({
-      title,
-      bodyMd: bodyMd ?? '', // Default to empty string if undefined
-      status,
-      taskKind,
-      // New scheduling fields
-      scheduledStart,
-      scheduledEnd,
-      isAllDay,
-      // Deprecated fields
-      scheduledOn,
-      startTime,
-      endDate,
-      endTime,
-      duration
-    });
-    const labels = taskService.listLabels(task.id);
-    return reply.status(201).send({ ...task, labels });
-  } catch (error) {
-    throw error;
-  }
+  const task = taskService.create({
+    title,
+    bodyMd: bodyMd ?? '', // Default to empty string if undefined
+    status,
+    taskKind,
+    // New scheduling fields
+    scheduledStart,
+    scheduledEnd,
+    isAllDay,
+    // Deprecated fields
+    scheduledOn,
+    startTime,
+    endDate,
+    endTime,
+    duration
+  });
+  const labels = taskService.listLabels(task.id);
+  return reply.status(201).send({ ...task, labels });
 }
 
 /**
@@ -123,17 +119,13 @@ export async function listTasksHandler(
     filters.scheduledTo = scheduledTo;
   }
 
-  try {
-    const result = taskService.list(filters);
-    return reply.status(200).send({
-      data: result.data,
-      total: result.total,
-      limit: actualLimit,
-      offset: actualOffset,
-    });
-  } catch (error) {
-    throw error;
-  }
+  const result = taskService.list(filters);
+  return reply.status(200).send({
+    data: result.data,
+    total: result.total,
+    limit: actualLimit,
+    offset: actualOffset,
+  });
 }
 
 /**
