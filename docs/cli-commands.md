@@ -132,7 +132,7 @@ mgtd task list --status next
 mgtd task list --status done
 ```
 
-Valid status values: `open`, `next`, `waiting`, `scheduled`, `done`, `canceled`
+Valid status values: `inbox`, `open`, `next`, `waiting`, `scheduled`, `someday`, `done`, `canceled`
 
 #### Combined Filters (AND Logic)
 
@@ -186,7 +186,7 @@ mgtd task list [--status <state>] [--label <name>] [--search <query>] [--search-
 ```
 
 **Options:**
-- `--status <state>` - Filter by task status (open, next, waiting, scheduled, done, canceled)
+- `--status <state>` - Filter by task status (inbox, open, next, waiting, scheduled, someday, done, canceled)
 - `--label <name>` - Filter by label. Supports comma-separated values for OR logic (e.g., bug,enhancement)
 - `--search <query>` - Search in both task title and body using FTS5 (multi-word AND logic)
 - `--search-title <query>` - Search in task title only using FTS5

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.34.1 - 2026-07-01
+
+### Bug Fixes
+
+- **DB: カレンダー用インデックスの復旧（migration 014）**: migration 010 が `issues` テーブルを再構築した際、007 で作成した `idx_issues_scheduled_start` / `idx_issues_scheduled_end` / `idx_issues_actual_start` を再作成しておらず、010 以降に適用したDBでは日付範囲検索がフルスキャンになっていた。`014_restore_calendar_indexes.sql` で復旧（`IF NOT EXISTS` のため未適用DBにも安全）。
+- **CLI: `project delete` の非TTYガード追加**: 非対話実行（パイプ・スクリプト）で `--yes` なしでも確認なしに削除されていた。task/memo delete と同様に「Cannot prompt for confirmation. Please use --yes flag」でエラー終了するよう修正。
+- **CLI: `link` コマンドをスペース区切り構文に対応**: `MULTIWORD_COMMANDS` に `link add` / `link list` / `link remove` が未登録で、`mgtd link add ...` がヘルプ表示になっていた（`link:add` のみ動作）。
+- **CLI: グローバル `-v` フラグの衝突を修正**: `-v` が argv 全体から検出されていたため、`mgtd project create "X" -v table` がプロジェクト作成ではなくバージョン表示になっていた。先頭トークンの場合のみバージョン表示として扱うよう修正。
+- **アプリ内テキストの英語統一**: promote / demote / タスクアーカイブで生成される本文の見出し `## コメント` を `## Comments` に変更（アプリ内テキスト英語統一ルールへの追随）。
+- **API: 無意味な try/catch ラッパーを削除**: ハンドラー内の `catch (error) { throw error; }` パターンを除去（挙動変更なし）。
+
+### CI / Docs
+
+- **CI: 上流パッケージ変更でもAPI CIが起動するようトリガーパスを拡大**（core / db / shared / config / logger / schema）。存在しない `specs/` パス参照を削除。
+- **CI: コミット済みOpenAPI specの陳腐化チェックを追加**: `openapi:generate` 後に `git diff --exit-code` で検証。
+- **Docs: pnpm 9系 → 10系に更新**（README.md / docs/extension-setup.md、`packageManager` の固定バージョンに整合）。
+- **Docs: タスクステータス一覧に `inbox` / `someday` を追記**（docs/cli-commands.md）。
+- 未参照のデバッグスクリプト `packages/api/test-debug.ts` / `test-server-debug.ts` を削除。
+
 ## 0.34.0 - 2026-06-29
 
 ### New Features

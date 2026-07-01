@@ -5,7 +5,7 @@ meme-gtdには、閲覧中のWebページをワンクリックでローカルデ
 ## 前提条件
 
 - Node.js 22.18.0 以上
-- pnpm 9 系
+- pnpm 10 系（`package.json` の `packageManager` に固定されたバージョンを使用）
 - Google Chrome または Chromiumベースのブラウザ（Edge, Brave等）
 
 ## ビルド手順

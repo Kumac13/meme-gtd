@@ -2,11 +2,11 @@
 
 ## 動作前提
 - Node.js 22.18.0 以上
-- corepack / pnpm 9 系
+- corepack / pnpm 10 系（`package.json` の `packageManager` に固定されたバージョンを使用）
 
 ```bash
 corepack enable
-corepack prepare pnpm@9.0.0 --activate
+corepack prepare pnpm@10.25.0 --activate
 ```
 
 ## セットアップ手順
