@@ -1,43 +1,47 @@
 # iOS MemeGTD
 
-Native iOS app for meme-gtd. Includes a memo timeline, thread detail view, and a Safari Share Extension for saving articles.
+> 目的: iOSアプリのセットアップ・ビルド・実機インストール・デザインシステムのガイド
+> 読むタイミング: iOSアプリの環境構築・実機デプロイ・デザイン変更時
+> 更新タイミング: iOSのビルド要件・プロジェクト構成・デザインシステム変更時
 
-## Requirements
+meme-gtd のネイティブiOSアプリ。メモのタイムライン・スレッド詳細ビュー・記事保存用のSafari Share Extensionを含む。
 
-- Xcode 16.0+
-- iOS 26.0+
-- Tailscale (for API connection)
+## 動作要件
 
-## Project Structure
+- Xcode（iOS 26.2 SDK を含むバージョン）
+- iOS 26.2 以上（デプロイメントターゲット。`project.pbxproj` の `IPHONEOS_DEPLOYMENT_TARGET`）
+- Tailscale（API接続用）
+
+## プロジェクト構成
 
 ```
 ios/MemeGTD/
 ├── MemeGTD/
-│   ├── Models/             # Data models (Memo, Comment, Label, Project)
-│   ├── ViewModels/         # MemoListViewModel, MemoDetailViewModel
+│   ├── Models/             # APIレスポンスのCodableモデル（手書き・要同期）
+│   ├── ViewModels/         # MemoListViewModel, MemoDetailViewModel 等
 │   ├── Views/
-│   │   ├── Components/     # Reusable UI (FloatingComposer, ThreadItem, MarkdownBody, etc.)
-│   │   ├── RootView.swift  # Root container with slide-out side menu
+│   │   ├── Components/     # 再利用UI（FloatingComposer, ThreadItem, MarkdownBody 等）
+│   │   ├── RootView.swift  # スライドアウトサイドメニュー付きルートコンテナ
 │   │   ├── MemoListView.swift
 │   │   ├── MemoDetailView.swift
 │   │   ├── SettingsView.swift
 │   │   └── SideMenuView.swift
-│   └── Utilities/          # TimelineHelpers, HapticManager, LabelColorHelper
+│   └── Utilities/          # TimelineHelpers, HapticManager, LabelColorHelper 等
 ├── ShareExtension/         # Safari Share Extension
-└── Shared/                 # Shared code (APIClient, Settings, Colors)
+└── Shared/                 # 両ターゲット共有コード（APIClient, Settings, Colors）
 ```
 
-## Features
+## 主な機能
 
-- **Memo timeline**: Chat-like chronological view with date buckets and timestamps
-- **Thread detail**: Memo body + comment thread, info modal for labels/projects
-- **Side menu**: Claude-style slide-out drawer with rounded content panel
-- **Search**: Free text and `label:xxx` prefix search
-- **Bookmark filter**: Toggle to show only bookmarked memos
-- **Markdown rendering**: Headings, bold, italic, code blocks, links, lists
-- **Safari Share Extension**: Save articles directly from Safari
+- **メモタイムライン**: 日付バケット・タイムスタンプ付きのチャット風時系列ビュー
+- **スレッド詳細**: メモ本文 + コメントスレッド、ラベル/プロジェクトの情報モーダル
+- **サイドメニュー**: スライドアウトドロワー
+- **検索**: フリーテキスト + `label:xxx` プレフィックス検索（iOS独自実装）
+- **ブックマークフィルタ**: ブックマーク済みメモのみ表示
+- **Markdownレンダリング**: 見出し・強調・コードブロック・リンク・リスト
+- **Safari Share Extension**: Safariから記事を直接保存
 
-## Build
+## ビルド
 
 ```bash
 cd ios/MemeGTD
@@ -45,97 +49,92 @@ cd ios/MemeGTD
 # Simulator
 xcodebuild -scheme MemeGTD -destination 'platform=iOS Simulator,name=iPhone 17' build
 
-# Device
+# 実機
 xcodebuild -scheme MemeGTD -destination 'platform=iOS,id=<DEVICE_ID>' build
 ```
 
-## Install on iPhone
+ビルド+インストールの自動化手順は `.claude/skills/ios-deploy/SKILL.md`（設定値もここが正）。
 
-### 1. Connect iPhone to Mac
+## iPhoneへのインストール
 
-USB cable required.
+### 1. iPhoneをMacに接続
 
-### 2. Build in Xcode
+USBケーブルが必要。
 
-1. Open `ios/MemeGTD/MemeGTD.xcodeproj`
-2. Select your iPhone from device dropdown
-3. Set signing team for both targets:
+### 2. Xcodeでビルド
+
+1. `ios/MemeGTD/MemeGTD.xcodeproj` を開く
+2. デバイスドロップダウンから自分のiPhoneを選択
+3. 両ターゲットのSigning Teamを設定:
    - Project Navigator → MemeGTD project → Signing & Capabilities
-   - Select your Apple ID for Team
-   - **Do this for both MemeGTD and ShareExtension targets**
-4. Press Cmd+R to build and run
+   - TeamにApple IDを選択
+   - **MemeGTD と ShareExtension の両ターゲットで設定すること**
+4. Cmd+R でビルド・実行
 
-### 3. Enable Developer Mode
+### 3. デベロッパーモードを有効化
 
-After first build attempt:
+初回ビルド後:
 
-1. iPhone: Settings → Privacy & Security → Developer Mode (at bottom) → ON
-2. Restart iPhone when prompted
+1. iPhone: 設定 → プライバシーとセキュリティ → デベロッパモード（最下部）→ ON
+2. 指示に従ってiPhoneを再起動
 
-### 4. Trust Developer Certificate
+### 4. 開発者証明書を信頼
 
-1. iPhone: Settings → General → VPN & Device Management
-2. Tap your Apple ID under "Developer App"
-3. Tap "Trust"
+1. iPhone: 設定 → 一般 → VPNとデバイス管理
+2. 「デベロッパApp」の下の自分のApple IDをタップ
+3. 「信頼」をタップ
 
-### 5. Run Again
+### 5. 再度実行
 
-Build and run from Xcode again. The app should now install and launch.
+Xcodeから再度ビルド・実行するとインストール・起動できる。
 
-## Usage
+## 使い方
 
-1. Open the app and configure API URL in Settings (gear icon in side menu)
-2. Browse memos in the timeline view
-3. Tap a memo to view its thread and add comments
-4. Use the search bar with `label:book` syntax to filter by labels
-5. In Safari, tap Share → "MemeGTD" to save articles
+1. アプリを開き、サイドメニューの歯車アイコンからAPI URLを設定
+2. タイムラインビューでメモを閲覧
+3. メモをタップしてスレッド表示・コメント追加
+4. 検索バーで `label:book` 構文によるラベル絞り込み
+5. Safariで共有 → 「MemeGTD」で記事保存
 
-## Deploy (Claude Code)
+## デプロイ（Claude Code）
 
-Not enrolled in Apple Developer Program, so apps signed with a free developer certificate **expire after 7 days**. Periodic rebuild and reinstall is required.
+Apple Developer Program 未加入のため、無料開発者証明書で署名したアプリは**7日で期限切れ**になる。定期的な再ビルド・再インストールが必要。
 
-The deploy process is automated via the Claude Code skill (`ios-deploy`).
+デプロイは ios-deploy スキルで自動化されている:
 
 ```
-# Just ask Claude Code:
+# Claude Code に依頼するだけ:
 > deploy the ios app
 ```
 
-What the skill does:
-1. Build for Simulator and Device in **parallel**
-2. After both builds succeed, install on Simulator and Device in **parallel**
-3. Auto-launch the app on Simulator
+スキルの動作: Simulator/実機を**並列**ビルド → 両方成功後に**並列**インストール → Simulatorでアプリ自動起動。
 
-Prerequisites:
-- iPhone connected to Mac via USB
-- Xcode signing configured for both targets (first time only)
-- Device ID set in `.claude/skills/ios-deploy/SKILL.md`
+前提条件:
+- iPhoneがUSBでMacに接続されている
+- 両ターゲットのXcode署名設定済み（初回のみ）
+- Device ID が `.claude/skills/ios-deploy/SKILL.md` に設定済み
 
-## Design System
+## デザインシステム
 
-### Liquid Glass (iOS 26)
+### Liquid Glass（iOS 26）
 
-All floating UI elements use iOS 26 Liquid Glass depth effects. The design is built on two primitives:
+浮遊UI要素はすべて iOS 26 の Liquid Glass 深度エフェクトを使う。2つのプリミティブで構成:
 
-#### `PillSurface` (ViewModifier)
+#### `PillSurface`（ViewModifier）
 
-The single source of truth for floating element appearance. Apply to any view with `.modifier(PillSurface(radius:))`.
+浮遊要素の外観の単一情報源。任意のビューに `.modifier(PillSurface(radius:))` で適用する。
 
-- Uses `.glassEffect(.regular)` — provides backdrop blur, edge highlights, and depth automatically
-- No manual background color, border stroke, or shadow needed
-- Already applied to: `FloatingComposer`, `BottomBar` pills, info circle button
+- `.glassEffect(.regular)` を使用 — 背景ブラー・エッジハイライト・深度を自動で提供
+- 背景色・ボーダー・シャドウの手動指定は不要
+- 適用済み: `FloatingComposer`、`BottomBar` のピル、情報サークルボタン
 
-When adding new floating elements (e.g., Task action buttons, Project cards), use `PillSurface` to maintain visual consistency.
+新しい浮遊要素（Taskアクションボタン、Projectカード等）を追加する際は `PillSurface` を使って視覚的一貫性を保つこと。
 
-#### `safeAreaBar` + `scrollEdgeEffectStyle` (layout pattern)
+#### `safeAreaBar` + `scrollEdgeEffectStyle`（レイアウトパターン）
 
-Bottom bars are placed inside `.safeAreaBar(edge: .bottom)` instead of `ZStack` overlays. This enables:
+ボトムバーは `ZStack` オーバーレイではなく `.safeAreaBar(edge: .bottom)` 内に置く。これにより safe area インセットの自動管理・スクロールエッジの漸進ブラー・下層コンテンツの適切な背景ブラーが得られる。
 
-- Automatic safe area inset management (no manual spacer height)
-- Progressive blur where scrolling content meets the bar (scroll edge effect)
-- Proper backdrop blur of underlying content
-
-When creating a new list view (e.g., TaskListView, ProjectListView), follow this pattern:
+新しいリストビュー（TaskListView, ProjectListView 等）を作る際はこのパターンに従う:
 
 ```swift
 ScrollView {
@@ -153,42 +152,37 @@ ScrollView {
 }
 ```
 
-### Side Menu
+### サイドメニュー
 
-Claude-style slide-out drawer with cream background (`#F5F0E8`) and content opacity fade. Implemented in `SideMenuView.swift` and `RootView.swift`.
+クリーム背景（`#F5F0E8`）とコンテンツの不透明度フェードを持つスライドアウトドロワー。`SideMenuView.swift` と `RootView.swift` に実装。
 
-## Notes
+## 注意事項
 
-- **7-day rule**: Free developer certificate expires after 7 days. Rebuild and reinstall required
-- **Tailscale**: Must be connected on iPhone for API access
-- **Share Extension Memory Limit**: 120MB
-- **Dark mode**: Not supported (forced light mode)
+- **7日ルール**: 無料開発者証明書は7日で期限切れ。再ビルド・再インストールが必要
+- **Tailscale**: API接続にはiPhoneでTailscale VPN接続が必要
+- **Share Extensionのメモリ制限**: 120MB
+- **ダークモード**: 非対応（ライトモード固定）
 
-## Update JavaScript Bundle
+## JavaScript Bundleの更新
 
-When `packages/extension/src/content/extractor.ts` changes:
+記事抽出ロジック（`packages/extension/src/` 配下）を変更した場合は、iOS用バンドルの再ビルドが必要。手順は extractor-rebuild スキル（`.claude/skills/extractor-rebuild/SKILL.md`）を参照。
 
-```bash
-cd packages/extension
-pnpm exec esbuild src/ios-extractor.ts --bundle --format=iife --outfile=../../ios/MemeGTD/ShareExtension/Resources/extractor.bundle.js --target=es2020
-```
+## トラブルシューティング
 
-## Troubleshooting
+### 「信頼されていないデベロッパ」
 
-### "Untrusted Developer"
+設定 → 一般 → VPNとデバイス管理 → デベロッパApp → 信頼
 
-Settings → General → VPN & Device Management → Developer App → Trust
+### 「API URL is not configured」
 
-### "API URL is not configured"
+アプリを開く → サイドメニュー → 歯車アイコン → API URLを設定。
 
-Open the app → side menu → gear icon → set your API URL.
+### 「Network error」
 
-### "Network error"
+- iPhoneでTailscale VPNが接続されているか確認
+- APIサーバーが起動しているか確認
+- URLが正しいか確認（`http://` プレフィックスを含める）
 
-- Ensure Tailscale VPN is connected on iPhone
-- Verify API server is running
-- Check URL is correct (include `http://` prefix)
+### 共有メニューにExtensionが出ない
 
-### Extension not appearing in Share menu
-
-Settings → General → Share Sheet → Find MemeGTD and enable it
+設定 → 一般 → 共有シート → MemeGTD を有効化

@@ -15,8 +15,6 @@
 
 - **CI: 上流パッケージ変更でもAPI CIが起動するようトリガーパスを拡大**（core / db / shared / config / logger / schema）。存在しない `specs/` パス参照を削除。
 - **CI: コミット済みOpenAPI specの陳腐化チェックを追加**: `openapi:generate` 後に `git diff --exit-code` で検証。
-- **Docs: pnpm 9系 → 10系に更新**（README.md / docs/extension-setup.md、`packageManager` の固定バージョンに整合）。
-- **Docs: タスクステータス一覧に `inbox` / `someday` を追記**（docs/cli-commands.md）。
 - 未参照のデバッグスクリプト `packages/api/test-debug.ts` / `test-server-debug.ts` を削除。
 
 ## 0.34.0 - 2026-06-29
