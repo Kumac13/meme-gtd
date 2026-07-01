@@ -17,7 +17,6 @@
 | `docs/requirement.md` | プロダクト要件定義 | 機能要件の追加・変更時 |
 | `docs/cli-commands.md` | CLIコマンドの完全リファレンス | CLIコマンド追加・変更時（cli-command-add スキル） |
 | `docs/api-filtering.md` | APIクエリパラメータ・検索リファレンス | APIパラメータ変更時（api-schema-sync スキル） |
-| `docs/operations.md` | 環境定義・環境変数・運用Runbook | 運用系機能の追加・変更時 |
 | `docs/versioning.md` | バージョニングポリシー | ルール自体の変更時のみ |
 | `docs/extension-setup.md` | Chrome拡張のビルド・インストール手順（人間向け） | 拡張のビルド・設定方法変更時 |
 | `docs/remote-access.md` | Tailscaleリモートアクセス設定（人間向け） | リモートアクセス構成の変更時 |

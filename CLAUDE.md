@@ -12,7 +12,6 @@ pnpmモノレポ（CLI / REST API / Web UI / Chrome拡張）+ iOSアプリ。単
 | DBスキーマ・データ構造に触れる | `docs/er-diagram.md`（データモデルの正） |
 | CLIコマンドの仕様 | `docs/cli-commands.md` |
 | REST APIのフィルタ・検索仕様 | `docs/api-filtering.md`（契約の正は `packages/api/docs/api/openapi.yaml`） |
-| サーバー運用・バックアップ・障害対応 | `docs/operations.md` |
 | バージョニングポリシー | `docs/versioning.md` |
 | ドキュメント自体を追加・変更する | `docs/CLAUDE.md`（カタログ・ガバナンス・書き方） |
 | パッケージ固有のルール | 各ディレクトリの `CLAUDE.md`（自動ロードされる） |

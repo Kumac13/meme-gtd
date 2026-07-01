@@ -54,7 +54,6 @@ curl http://localhost:3000/api/health
 - APIサーバー稼働中は24時間ごとに自動バックアップされます（`MGTD_BACKUP_ENABLED=false` で無効化）
 - systemd によるAPIサーバーの常駐化テンプレート: `deploy/systemd/mgtd-api.service`
 - `MGTD_LOG_FILE` を設定するとログをファイルにも出力（日次ローテーション・7世代保持）
-- 詳細な手順・環境変数一覧・リストア手順は [docs/operations.md](./docs/operations.md) を参照してください
 
 ## ブラウザ拡張機能（Webクリッパー）
 
