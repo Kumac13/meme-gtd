@@ -57,73 +57,69 @@ export async function listLinksHandler(
   const linkService = new LinkService({ db: request.server.db });
   const db = request.server.db;
 
-  try {
-    // Apply optional type filter
-    const filters = request.query.type
-      ? { type: request.query.type }
-      : undefined;
+  // Apply optional type filter
+  const filters = request.query.type
+    ? { type: request.query.type }
+    : undefined;
 
-    const links = linkService.list(issueId, filters);
+  const links = linkService.list(issueId, filters);
 
-    // Collect all target issue IDs
-    const targetIds = links.map((link) =>
-      link.sourceIssueId === issueId ? link.targetIssueId : link.sourceIssueId
-    );
+  // Collect all target issue IDs
+  const targetIds = links.map((link) =>
+    link.sourceIssueId === issueId ? link.targetIssueId : link.sourceIssueId
+  );
 
-    // Fetch all target issues in one query
-    const issueInfoMap = new Map<number, { type: IssueType; title: string; status: string | null }>();
+  // Fetch all target issues in one query
+  const issueInfoMap = new Map<number, { type: IssueType; title: string; status: string | null }>();
 
-    if (targetIds.length > 0) {
-      const placeholders = targetIds.map(() => '?').join(',');
-      const query = `
-        SELECT
-          id,
-          type as issue_type,
-          COALESCE(title, SUBSTR(body_md, 1, 100)) as title,
-          status
-        FROM issues
-        WHERE id IN (${placeholders}) AND is_deleted = 0
-      `;
+  if (targetIds.length > 0) {
+    const placeholders = targetIds.map(() => '?').join(',');
+    const query = `
+      SELECT
+        id,
+        type as issue_type,
+        COALESCE(title, SUBSTR(body_md, 1, 100)) as title,
+        status
+      FROM issues
+      WHERE id IN (${placeholders}) AND is_deleted = 0
+    `;
 
-      const stmt = db.prepare(query);
-      const rows = stmt.all(...targetIds) as Array<{
-        id: number;
-        issue_type: IssueType;
-        title: string;
-        status: string | null;
-      }>;
+    const stmt = db.prepare(query);
+    const rows = stmt.all(...targetIds) as Array<{
+      id: number;
+      issue_type: IssueType;
+      title: string;
+      status: string | null;
+    }>;
 
-      rows.forEach((row) => {
-        issueInfoMap.set(row.id, {
-          type: row.issue_type,
-          title: row.title,
-          status: row.status,
-        });
+    rows.forEach((row) => {
+      issueInfoMap.set(row.id, {
+        type: row.issue_type,
+        title: row.title,
+        status: row.status,
       });
-    }
-
-    // Add direction and target issue information to each link
-    const linksWithDirection: LinkWithDirection[] = links.map((link) => {
-      const direction = link.sourceIssueId === issueId ? 'outgoing' : 'incoming';
-      const targetId = direction === 'outgoing' ? link.targetIssueId : link.sourceIssueId;
-      const targetInfo = issueInfoMap.get(targetId);
-
-      return {
-        ...link,
-        direction,
-        targetIssue: {
-          id: targetId,
-          type: targetInfo?.type || 'task',
-          title: targetInfo?.title || `Issue #${targetId}`,
-          status: targetInfo?.status ?? null,
-        },
-      };
     });
-
-    return reply.status(200).send(linksWithDirection);
-  } catch (error) {
-    throw error;
   }
+
+  // Add direction and target issue information to each link
+  const linksWithDirection: LinkWithDirection[] = links.map((link) => {
+    const direction = link.sourceIssueId === issueId ? 'outgoing' : 'incoming';
+    const targetId = direction === 'outgoing' ? link.targetIssueId : link.sourceIssueId;
+    const targetInfo = issueInfoMap.get(targetId);
+
+    return {
+      ...link,
+      direction,
+      targetIssue: {
+        id: targetId,
+        type: targetInfo?.type || 'task',
+        title: targetInfo?.title || `Issue #${targetId}`,
+        status: targetInfo?.status ?? null,
+      },
+    };
+  });
+
+  return reply.status(200).send(linksWithDirection);
 }
 
 /**

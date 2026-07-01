@@ -59,6 +59,10 @@ const MULTIWORD_COMMANDS = [
   ['project', 'move'],
   ['project', 'delete'],
   ['project'],
+  ['link', 'add'],
+  ['link', 'list'],
+  ['link', 'remove'],
+  ['link'],
   ['search', 'keyword'],
   ['search', 'semantic'],
   ['search'],
@@ -108,8 +112,10 @@ const collapsedArgv = (() => {
   return [bestMatch.id, ...normalizedHelpArgv.slice(bestMatch.length)];
 })();
 
-// Handle version flag before oclif routing
-if (process.argv.includes('--version') || process.argv.includes('-v')) {
+// Handle version flag before oclif routing.
+// Only the first token counts: `-v`/`--version` after a command name may be a
+// command-specific flag (e.g. `project create -v table`).
+if (withoutSeparator[0] === '--version' || withoutSeparator[0] === '-v') {
   try {
     const __dirname = dirname(fileURLToPath(import.meta.url));
     const pkgPath = join(__dirname, '../package.json');

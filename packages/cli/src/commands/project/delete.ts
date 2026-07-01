@@ -73,8 +73,13 @@ export default class ProjectDelete extends Command {
       this.error(error instanceof Error ? error.message : 'Unknown error', { exit: 1 });
     }
 
+    // Check if TTY available
+    if (!flags.yes && !process.stdin.isTTY) {
+      this.error('Cannot prompt for confirmation. Please use --yes flag to confirm deletion.', { exit: 1 });
+    }
+
     // Interactive confirmation if not forced
-    if (!flags.yes && process.stdin.isTTY) {
+    if (!flags.yes) {
       const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout

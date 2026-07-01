@@ -452,6 +452,65 @@ mgtd project delete 5
 mgtd project delete 5 --yes --json
 ```
 
+## リンクコマンド
+
+issue（タスク・メモ）間の関係を管理する。リンクタイプは `parent` / `child` / `relates` / `derived_from` の4種類。
+
+### Link Add
+
+```bash
+mgtd link add --type <type> --source <id> --target <id> [--json]
+```
+
+**オプション:**
+- `--type <type>` / `-t` - リンクタイプ（parent, child, relates, derived_from）。必須
+- `--source <id>` / `-s` - リンク元のissue ID（タスクまたはメモ）。必須
+- `--target <id>` / `-T` - リンク先のissue ID（タスクまたはメモ）。必須
+- `--json` / `-j` - 作成したリンクをJSONで出力
+
+```bash
+mgtd link add --type parent --source 5 --target 10
+mgtd link add -t child -s 10 -T 5
+mgtd link add --type relates --source 3 --target 8
+mgtd link add --type derived_from --source 15 --target 2 --json
+```
+
+### Link List
+
+指定したissueに紐づくリンクを、向き（outgoing / incoming）付きで一覧表示する。
+
+```bash
+mgtd link list <issue-id> [--type <type>] [--json]
+```
+
+**オプション:**
+- `--type <type>` / `-t` - リンクタイプで絞り込み（parent, child, relates, derived_from）
+- `--json` / `-j` - `direction` フィールド付きのJSON配列で出力
+
+```bash
+mgtd link list 5
+mgtd link list 10 --type parent
+mgtd link list 3 -t relates -j
+```
+
+### Link Remove
+
+リンクIDを指定して関係を削除する（確認が必要）。
+
+```bash
+mgtd link remove <link-id> [--yes] [--json]
+```
+
+**オプション:**
+- `--yes` / `-y` - 確認プロンプトをスキップ（非対話実行では必須）
+- `--json` / `-j` - 結果をJSONで出力（`--yes` が必要）
+
+```bash
+mgtd link remove 5
+mgtd link remove 10 --yes
+mgtd link remove 3 -y -j
+```
+
 ## Task Demote
 
 タスクの内容（タイトル・本文・コメント）をコピーして新しいメモを作成する。元のタスクは変更されない。

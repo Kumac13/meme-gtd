@@ -16,13 +16,9 @@ export async function createMemoHandler(
   const { bodyMd } = request.body;
   const memoService = new MemoService({ db: request.server.db });
 
-  try {
-    const memo = memoService.create({ bodyMd });
-    const labels = memoService.listLabels(memo.id);
-    return reply.status(201).send({ ...memo, labels });
-  } catch (error) {
-    throw error;
-  }
+  const memo = memoService.create({ bodyMd });
+  const labels = memoService.listLabels(memo.id);
+  return reply.status(201).send({ ...memo, labels });
 }
 
 /**
@@ -92,17 +88,13 @@ export async function listMemosHandler(
     filters.createdTo = createdTo;
   }
 
-  try {
-    const result = memoService.list(filters);
-    return reply.status(200).send({
-      data: result.data,
-      total: result.total,
-      limit: actualLimit,
-      offset: actualOffset,
-    });
-  } catch (error) {
-    throw error;
-  }
+  const result = memoService.list(filters);
+  return reply.status(200).send({
+    data: result.data,
+    total: result.total,
+    limit: actualLimit,
+    offset: actualOffset,
+  });
 }
 
 /**

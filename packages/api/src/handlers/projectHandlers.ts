@@ -61,12 +61,8 @@ export async function listProjectsHandler(
 ) {
   const projectService = new ProjectService({ db: request.server.db });
 
-  try {
-    const projects = projectService.list();
-    return reply.status(200).send(projects);
-  } catch (error) {
-    throw error;
-  }
+  const projects = projectService.list();
+  return reply.status(200).send(projects);
 }
 
 /**

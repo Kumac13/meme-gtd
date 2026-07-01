@@ -85,7 +85,7 @@ export default class TaskDemote extends Command {
       if (comments.length > 0) {
         parts.push('');
         parts.push('---');
-        parts.push('## コメント');
+        parts.push('## Comments');
         parts.push('');
         for (const comment of comments) {
           parts.push(`### ${comment.createdAt}`);

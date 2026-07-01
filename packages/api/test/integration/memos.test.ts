@@ -306,7 +306,7 @@ describe('Memo Promote Preview Operation', () => {
     assert.strictEqual(response.statusCode, 200);
     const preview = JSON.parse(response.body);
     assert.ok(preview.bodyMd.includes('Preview memo body'));
-    assert.ok(preview.bodyMd.includes('## コメント'));
+    assert.ok(preview.bodyMd.includes('## Comments'));
     assert.ok(preview.bodyMd.includes('thought A'));
     assert.ok(preview.bodyMd.includes('thought B'));
   });

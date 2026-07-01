@@ -16,18 +16,14 @@ export async function createArticleHandler(
   const { title, bodyMd, originalUrl, siteName, labels } = request.body;
   const articleService = new ArticleService({ db: request.server.db });
 
-  try {
-    const article = articleService.create({
-      title,
-      bodyMd,
-      originalUrl,
-      siteName: siteName ?? undefined,
-      labels,
-    });
-    return reply.status(201).send(article);
-  } catch (error) {
-    throw error;
-  }
+  const article = articleService.create({
+    title,
+    bodyMd,
+    originalUrl,
+    siteName: siteName ?? undefined,
+    labels,
+  });
+  return reply.status(201).send(article);
 }
 
 /**
@@ -49,17 +45,13 @@ export async function listArticlesHandler(
   const actualLimit = limit ?? DEFAULT_LIMIT;
   const actualOffset = offset ?? DEFAULT_OFFSET;
 
-  try {
-    const result = articleService.list({ limit: actualLimit, offset: actualOffset, search });
-    return reply.status(200).send({
-      data: result.data,
-      total: result.total,
-      limit: actualLimit,
-      offset: actualOffset,
-    });
-  } catch (error) {
-    throw error;
-  }
+  const result = articleService.list({ limit: actualLimit, offset: actualOffset, search });
+  return reply.status(200).send({
+    data: result.data,
+    total: result.total,
+    limit: actualLimit,
+    offset: actualOffset,
+  });
 }
 
 /**

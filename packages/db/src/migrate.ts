@@ -26,7 +26,8 @@ const migrations = [
   { version: '010_update_issues_type_check', file: path.join(schemaDir, '010_update_issues_type_check.sql') },
   { version: '011_add_url_links', file: path.join(schemaDir, '011_add_url_links.sql') },
   { version: '012_add_task_kind', file: path.join(schemaDir, '012_add_task_kind.sql') },
-  { version: '013_add_embeddings', file: path.join(schemaDir, '013_add_embeddings.sql') }
+  { version: '013_add_embeddings', file: path.join(schemaDir, '013_add_embeddings.sql') },
+  { version: '014_restore_calendar_indexes', file: path.join(schemaDir, '014_restore_calendar_indexes.sql') }
 ] as const;
 
 const prepareDatabase = (db: Database.Database): void => {

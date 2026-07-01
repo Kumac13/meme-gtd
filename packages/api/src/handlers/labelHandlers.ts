@@ -16,12 +16,8 @@ export async function listLabelsHandler(
 ) {
   const labelService = new LabelService({ db: request.server.db });
 
-  try {
-    const labels = labelService.list();
-    return reply.status(200).send(labels);
-  } catch (error) {
-    throw error;
-  }
+  const labels = labelService.list();
+  return reply.status(200).send(labels);
 }
 
 /**
