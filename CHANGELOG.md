@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.34.1 - 2026-07-02
+
+### Bug Fixes
+
+- **memo 昇格時に `memo.promoted` アクティビティログが記録されない退行を修正**: 昇格処理が `promotePreview`（本文整形）+ `TaskService.create` + `LinkService.create`（`derived_from` リンク作成）の合成に分解された際、`ActivityLogger.logMemoPromoted()` の呼び出し元が消失し、昇格しても `memo.promoted` イベントが記録されなくなっていた（Web/iOS のタイムラインに昇格が出ない状態）。
+  - CLI・Web の両昇格経路は「task→memo 方向の `derived_from` リンク作成」に収束するため、`LinkService.create` で「source が task・target が memo の `derived_from` リンク」を検出したときに `memo.promoted` を1件記録するようにした。他の `derived_from` リンクでは記録しないため二重記録も起きない。
+
+### Tests
+
+- `LinkService.create` の `derived_from` 経路で `memo.promoted` が1件だけ記録されること、および非昇格リンク（task→task の `derived_from`、task→memo の `relates`）では記録されないことを検証する回帰テストを追加。
+
 ## 0.34.0 - 2026-06-29
 
 ### New Features

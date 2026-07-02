@@ -1,5 +1,5 @@
 import type { MgtdConfig } from 'meme-gtd-config';
-import type { Link, SourceType } from 'meme-gtd-shared';
+import type { Link, SourceType, TaskStatus } from 'meme-gtd-shared';
 import type Database from 'better-sqlite3';
 import { ActivityLogger } from './activity-log/activity-logger.js';
 import {
@@ -129,8 +129,51 @@ export class LinkService {
 
       const link = dbCreateLink(this.db, input);
       this.logger.logLinkCreated(link.id, type, sourceId, targetId);
+
+      // Record memo.promoted when a memo is promoted to a task.
+      // Both the CLI and Web promote flows converge on creating a
+      // task -> memo `derived_from` link, so this is the single place
+      // that reliably observes a promotion (Issue #245).
+      if (type === 'derived_from') {
+        this.maybeLogMemoPromoted(sourceId, targetId, link.id);
+      }
+
       return link;
     })();
+  }
+
+  /**
+   * Emit a `memo.promoted` event when a newly-created `derived_from` link
+   * represents a memo→task promotion (source is a task, target is a memo).
+   * No-op for any other `derived_from` link so it never double-logs.
+   */
+  private maybeLogMemoPromoted(
+    sourceId: number,
+    targetId: number,
+    linkId: number
+  ): void {
+    const stmt = this.db.prepare(
+      'SELECT type, title, status, body_md FROM issues WHERE id = ?'
+    );
+    const source = stmt.get(sourceId) as
+      | { type: string; title: string | null; status: string | null; body_md: string }
+      | undefined;
+    const target = stmt.get(targetId) as
+      | { type: string; title: string | null; status: string | null; body_md: string }
+      | undefined;
+
+    if (source?.type !== 'task' || target?.type !== 'memo') {
+      return;
+    }
+
+    this.logger.logMemoPromoted(
+      targetId,
+      target.body_md,
+      sourceId,
+      source.title ?? '',
+      source.status as TaskStatus,
+      linkId
+    );
   }
 
   /**
