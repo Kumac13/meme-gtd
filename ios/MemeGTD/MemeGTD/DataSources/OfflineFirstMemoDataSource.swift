@@ -4,14 +4,14 @@ import GRDB
 /// Errors surfaced by the offline-first data source (English, user-facing).
 nonisolated enum OfflineFirstMemoError: Error, LocalizedError {
     case memoNotFound
-    case commentsRequireSync
+    case commentNotFound
 
     var errorDescription: String? {
         switch self {
         case .memoNotFound:
             return "Memo not found in the local database."
-        case .commentsRequireSync:
-            return "Comments become available after this memo has synced to the server."
+        case .commentNotFound:
+            return "Comment not found in the local database."
         }
     }
 }
@@ -24,16 +24,23 @@ nonisolated enum OfflineFirstMemoError: Error, LocalizedError {
 /// scheduler so the SyncEngine pushes when connectivity allows.
 ///
 /// Identity: rows are keyed by client-generated UUIDv7, but the protocol (and
-/// every ViewModel) speaks integer memo ids. The mapping is:
+/// every ViewModel) speaks integer ids. The mapping — for memos AND comments —
+/// is:
 /// - synced rows: `id == server_id` (positive)
 /// - local-only rows (created offline, not yet pushed): `id == -rowid`
 ///   (negative, never collides with server ids). Once the push assigns a
 ///   server_id, list reloads surface the row under its server id.
 ///
+/// Comments (Phase 6) follow the same local-write + outbox path as memos:
+/// entity='comment' operations carry the parent memo's uuid in `issue_uuid`,
+/// and FIFO push order guarantees the parent memo's create op (smaller outbox
+/// id) reaches the server before any of its comments.
+///
 /// Delegated to the wrapped remote implementation (server-only in this phase):
 /// - promotePreview (server-side logic is never duplicated on clients)
-/// - all comment methods (offline comments arrive in Phase 6); comment COUNTS
-///   for list rows still come from the local `comments` table
+/// - reads/writes on a memo that is not mirrored locally yet (e.g. opened
+///   before the initial pull finished) — server ids can be answered by the
+///   server directly
 /// - list requests with a projectId filter (project tables have no local
 ///   mirror until Phase 7); offline, such a request returns an empty page
 ///   rather than silently ignoring the filter
@@ -344,11 +351,14 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
                 // create + delete while still queued cancel each other: the
                 // memo never reached the server, so drop the row and every
                 // pending op for it (a queued create is by FIFO the target's
-                // first op, so nothing for this uuid was sent yet).
+                // first op, so nothing for this uuid was sent yet). Offline
+                // comments on the memo never reached the server either — drop
+                // their rows and ops too.
                 try db.execute(
-                    sql: "DELETE FROM pending_operations WHERE target_uuid = ?",
-                    arguments: [uuid]
+                    sql: "DELETE FROM pending_operations WHERE target_uuid = ? OR issue_uuid = ?",
+                    arguments: [uuid, uuid]
                 )
+                try db.execute(sql: "DELETE FROM comments WHERE issue_uuid = ?", arguments: [uuid])
                 try db.execute(sql: "DELETE FROM issues WHERE uuid = ?", arguments: [uuid])
             } else {
                 // Soft-delete locally (mirroring the server) and enqueue the
@@ -387,26 +397,211 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
         try await remote.promotePreview(memoId: memoId)
     }
 
+    // MARK: - Comments
+
     func listComments(memoId: Int) async throws -> [Comment] {
-        // A negative id means the memo has not reached the server yet, so it
-        // cannot have server-side comments.
-        guard memoId > 0 else { return [] }
-        return try await remote.listComments(memoId: memoId)
+        let local: [Comment]? = try await database.dbWriter.read { db in
+            guard let memoRow = try Self.fetchRow(db, id: memoId) else { return nil }
+            let memoUuid: String = memoRow["uuid"]
+            // Same order the server uses (memoRepository.listComments):
+            // created_at ASC, deleted rows excluded.
+            let rows = try Row.fetchAll(
+                db,
+                sql: Self.commentSelect + """
+                     WHERE c.issue_uuid = ? AND c.is_deleted = 0
+                    ORDER BY c.created_at ASC
+                    """,
+                arguments: [memoUuid]
+            )
+            return rows.map { Self.comment(from: $0, memoId: memoId) }
+        }
+        if let local { return local }
+        // The memo is not mirrored locally yet (e.g. opened before the
+        // initial pull finished): consistent with getMemo, let the server
+        // answer for server ids.
+        if memoId > 0 {
+            return try await remote.listComments(memoId: memoId)
+        }
+        throw OfflineFirstMemoError.memoNotFound
     }
 
     func createComment(memoId: Int, _ request: CreateCommentRequest) async throws -> Comment {
-        guard memoId > 0 else { throw OfflineFirstMemoError.commentsRequireSync }
-        return try await remote.createComment(memoId: memoId, request)
+        let uuid = UUIDv7.generate()
+        let now = ISO8601Millis.now()
+
+        let local: Comment? = try await database.dbWriter.write { db in
+            guard let memoRow = try Self.fetchRow(db, id: memoId) else { return nil }
+            let memoUuid: String = memoRow["uuid"]
+
+            let record = CommentRecord(
+                uuid: uuid,
+                serverId: nil,
+                issueUuid: memoUuid,
+                bodyMd: request.bodyMd,
+                createdAt: now,
+                updatedAt: now,
+                serverUpdatedAt: nil
+            )
+            try record.insert(db)
+
+            // The op carries the PARENT memo's uuid: the server resolves the
+            // comment's issue through it, and FIFO guarantees the memo's own
+            // create op (a smaller outbox id) lands first.
+            try Self.enqueue(
+                db,
+                entity: "comment",
+                opType: "create",
+                targetUuid: uuid,
+                issueUuid: memoUuid,
+                payload: SyncPushPayload(bodyMd: request.bodyMd, createdAt: now),
+                baseUpdatedAt: nil,
+                now: now
+            )
+
+            guard let row = try Self.fetchCommentRow(db, uuid: uuid) else {
+                throw OfflineFirstMemoError.commentNotFound
+            }
+            return Self.comment(from: row, memoId: memoId)
+        }
+        if let local {
+            onLocalWrite()
+            return local
+        }
+        if memoId > 0 {
+            return try await remote.createComment(memoId: memoId, request)
+        }
+        throw OfflineFirstMemoError.memoNotFound
     }
 
     func updateComment(memoId: Int, commentId: Int, _ request: UpdateCommentRequest) async throws -> Comment {
-        guard memoId > 0 else { throw OfflineFirstMemoError.commentsRequireSync }
-        return try await remote.updateComment(memoId: memoId, commentId: commentId, request)
+        let now = ISO8601Millis.now()
+
+        let local: Comment? = try await database.dbWriter.write { db in
+            guard let memoRow = try Self.fetchRow(db, id: memoId) else { return nil }
+            let memoUuid: String = memoRow["uuid"]
+            guard let row = try Self.fetchCommentRow(db, memoUuid: memoUuid, id: commentId) else {
+                throw OfflineFirstMemoError.commentNotFound
+            }
+            let uuid: String = row["uuid"]
+            let serverUpdatedAt: String? = row["server_updated_at"]
+
+            try db.execute(
+                sql: "UPDATE comments SET body_md = ?, updated_at = ? WHERE uuid = ?",
+                arguments: [request.bodyMd, now, uuid]
+            )
+
+            // Outbox compression, same rules as memo updates: merge into the
+            // newest un-sent op for this comment (a queued create absorbs the
+            // edit; consecutive queued updates collapse into one).
+            if var queued = try PendingOperationRecord.fetchOne(
+                db,
+                sql: """
+                    SELECT * FROM pending_operations
+                    WHERE target_uuid = ? AND entity = 'comment' AND state = 'queued'
+                      AND op_type IN ('create', 'update')
+                    ORDER BY id DESC LIMIT 1
+                    """,
+                arguments: [uuid]
+            ) {
+                var payload = try Self.decodePayload(queued.payload) ?? SyncPushPayload()
+                payload.bodyMd = request.bodyMd
+                queued.payload = try Self.encodePayload(payload)
+                try queued.update(db)
+            } else {
+                try Self.enqueue(
+                    db,
+                    entity: "comment",
+                    opType: "update",
+                    targetUuid: uuid,
+                    issueUuid: memoUuid,
+                    payload: SyncPushPayload(bodyMd: request.bodyMd),
+                    baseUpdatedAt: serverUpdatedAt,
+                    now: now
+                )
+            }
+
+            guard let updated = try Self.fetchCommentRow(db, uuid: uuid) else {
+                throw OfflineFirstMemoError.commentNotFound
+            }
+            return Self.comment(from: updated, memoId: memoId)
+        }
+        if let local {
+            onLocalWrite()
+            return local
+        }
+        if memoId > 0 {
+            return try await remote.updateComment(memoId: memoId, commentId: commentId, request)
+        }
+        throw OfflineFirstMemoError.memoNotFound
     }
 
     func deleteComment(memoId: Int, commentId: Int) async throws {
-        guard memoId > 0 else { throw OfflineFirstMemoError.commentsRequireSync }
-        try await remote.deleteComment(memoId: memoId, commentId: commentId)
+        let handledLocally: Bool = try await database.dbWriter.write { db in
+            guard let memoRow = try Self.fetchRow(db, id: memoId) else { return false }
+            let memoUuid: String = memoRow["uuid"]
+            guard let row = try Self.fetchCommentRow(db, memoUuid: memoUuid, id: commentId) else {
+                throw OfflineFirstMemoError.commentNotFound
+            }
+            let uuid: String = row["uuid"]
+            let serverUpdatedAt: String? = row["server_updated_at"]
+
+            let hasQueuedCreate = try Bool.fetchOne(
+                db,
+                sql: """
+                    SELECT EXISTS(
+                      SELECT 1 FROM pending_operations
+                      WHERE target_uuid = ? AND op_type = 'create' AND state = 'queued'
+                    )
+                    """,
+                arguments: [uuid]
+            ) ?? false
+
+            if hasQueuedCreate {
+                // create + delete while still queued cancel each other: the
+                // comment never reached the server, so drop the row and every
+                // pending op for it.
+                try db.execute(
+                    sql: "DELETE FROM pending_operations WHERE target_uuid = ?",
+                    arguments: [uuid]
+                )
+                try db.execute(sql: "DELETE FROM comments WHERE uuid = ?", arguments: [uuid])
+            } else {
+                // Soft-delete locally (mirroring the server) and enqueue the
+                // delete; queued updates are superseded and dropped.
+                let now = ISO8601Millis.now()
+                try db.execute(
+                    sql: "UPDATE comments SET is_deleted = 1, updated_at = ? WHERE uuid = ?",
+                    arguments: [now, uuid]
+                )
+                try db.execute(
+                    sql: """
+                        DELETE FROM pending_operations
+                        WHERE target_uuid = ? AND op_type = 'update' AND state = 'queued'
+                        """,
+                    arguments: [uuid]
+                )
+                try Self.enqueue(
+                    db,
+                    entity: "comment",
+                    opType: "delete",
+                    targetUuid: uuid,
+                    issueUuid: memoUuid,
+                    payload: nil,
+                    baseUpdatedAt: serverUpdatedAt,
+                    now: now
+                )
+            }
+            return true
+        }
+        if handledLocally {
+            onLocalWrite()
+            return
+        }
+        if memoId > 0 {
+            try await remote.deleteComment(memoId: memoId, commentId: commentId)
+            return
+        }
+        throw OfflineFirstMemoError.memoNotFound
     }
 
     // MARK: - Row helpers
@@ -466,12 +661,55 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
         )
     }
 
+    // MARK: - Comment row helpers
+
+    private static let commentSelect = """
+        SELECT c.rowid AS local_rowid, c.*
+        FROM comments c
+        """
+
+    /// Resolves the protocol's integer comment id: positive = server_id,
+    /// negative = -rowid (local-only row). Scoped to the parent memo so a
+    /// stale id can never touch another memo's comment.
+    private static func fetchCommentRow(_ db: Database, memoUuid: String, id: Int) throws -> Row? {
+        if id > 0 {
+            return try Row.fetchOne(
+                db,
+                sql: commentSelect + " WHERE c.server_id = ? AND c.issue_uuid = ? AND c.is_deleted = 0",
+                arguments: [id, memoUuid]
+            )
+        }
+        return try Row.fetchOne(
+            db,
+            sql: commentSelect + " WHERE c.rowid = ? AND c.issue_uuid = ? AND c.is_deleted = 0",
+            arguments: [-id, memoUuid]
+        )
+    }
+
+    private static func fetchCommentRow(_ db: Database, uuid: String) throws -> Row? {
+        try Row.fetchOne(db, sql: commentSelect + " WHERE c.uuid = ?", arguments: [uuid])
+    }
+
+    private static func comment(from row: Row, memoId: Int) -> Comment {
+        let serverId: Int? = row["server_id"]
+        let rowid: Int64 = row["local_rowid"]
+        return Comment(
+            id: serverId ?? -Int(rowid),
+            issueId: memoId,
+            bodyMd: row["body_md"],
+            createdAt: row["created_at"],
+            updatedAt: row["updated_at"]
+        )
+    }
+
     // MARK: - Outbox helpers
 
     private static func enqueue(
         _ db: Database,
+        entity: String = "memo",
         opType: String,
         targetUuid: String,
+        issueUuid: String? = nil,
         payload: SyncPushPayload?,
         baseUpdatedAt: String?,
         now: String
@@ -479,10 +717,10 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
         var record = PendingOperationRecord(
             id: nil,
             opId: UUID().uuidString.lowercased(),
-            entity: "memo",
+            entity: entity,
             opType: opType,
             targetUuid: targetUuid,
-            issueUuid: nil,
+            issueUuid: issueUuid,
             payload: try encodePayload(payload),
             baseUpdatedAt: baseUpdatedAt,
             createdAt: now

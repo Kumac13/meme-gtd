@@ -11,6 +11,11 @@ nonisolated struct SyncSummary: Equatable {
     var pushedCount: Int = 0
     /// Change-feed entries applied to the local database this run.
     var pulledCount: Int = 0
+    /// Push operations the server resolved as `conflictCopied`: the server
+    /// kept its version and saved the client body as a new "conflicted copy"
+    /// memo (delivered by the pull that follows). Surfaced in the UI as a
+    /// toast.
+    var conflictCopiedCount: Int = 0
     var errors: [String] = []
 
     /// True when the run changed local or remote state, i.e. stores should
@@ -23,6 +28,10 @@ extension Notification.Name {
     /// or pulled at least one change. Stores/ViewModels observe this to
     /// reload. Runs that change nothing stay silent, which also terminates
     /// the reload -> read -> sync trigger chain.
+    ///
+    /// When the run produced conflicted copies, the notification carries
+    /// `userInfo[SyncEngine.conflictCopiedUserInfoKey]` (Int > 0) so the UI
+    /// can surface a toast.
     nonisolated static let syncEngineDidChangeData = Notification.Name("SyncEngineDidChangeData")
 }
 
@@ -39,6 +48,10 @@ nonisolated enum SyncEngineError: Error {
 /// returned `SyncSummary` and the `.syncEngineDidChangeData` notification.
 actor SyncEngine {
     static let lastServerSeqKey = "last_server_seq"
+
+    /// userInfo key on `.syncEngineDidChangeData` carrying the number of
+    /// conflicted copies the server created during the run's push.
+    static let conflictCopiedUserInfoKey = "conflictCopied"
 
     private let database: AppDatabase
     private let transport: SyncTransport
@@ -57,24 +70,35 @@ actor SyncEngine {
     func syncNow() async -> SyncSummary {
         var summary = SyncSummary()
         do {
-            summary.pushedCount = try await pushOutbox()
+            let push = try await pushOutbox()
+            summary.pushedCount = push.resolved
+            summary.conflictCopiedCount = push.conflictCopied
             summary.pulledCount = try await pullChanges()
         } catch {
             summary.errors.append(error.localizedDescription)
             logger.error("syncNow failed: \(error.localizedDescription, privacy: .public)")
         }
         if summary.didChangeData {
-            NotificationCenter.default.post(name: .syncEngineDidChangeData, object: nil)
+            var userInfo: [AnyHashable: Any]?
+            if summary.conflictCopiedCount > 0 {
+                userInfo = [Self.conflictCopiedUserInfoKey: summary.conflictCopiedCount]
+            }
+            NotificationCenter.default.post(
+                name: .syncEngineDidChangeData,
+                object: nil,
+                userInfo: userInfo
+            )
         }
-        logger.info("syncNow done: pushed=\(summary.pushedCount), pulled=\(summary.pulledCount), errors=\(summary.errors.count)")
+        logger.info("syncNow done: pushed=\(summary.pushedCount), pulled=\(summary.pulledCount), conflictCopied=\(summary.conflictCopiedCount), errors=\(summary.errors.count)")
         return summary
     }
 
     // MARK: - Push
 
     /// Sends all outbox operations as one batch, FIFO by id. Returns the
-    /// number of operations the server resolved (they leave the outbox).
-    private func pushOutbox() async throws -> Int {
+    /// number of operations the server resolved (they leave the outbox) and
+    /// how many of them produced a conflicted copy.
+    private func pushOutbox() async throws -> (resolved: Int, conflictCopied: Int) {
         // Load every state: 'queued' is the normal case, 'failed' rows are
         // the ones this trigger retries, and 'inflight' rows are stale
         // leftovers from a crash mid-push — resending any of them is safe
@@ -89,7 +113,7 @@ actor SyncEngine {
             }
             return records
         }
-        guard !ops.isEmpty else { return 0 }
+        guard !ops.isEmpty else { return (0, 0) }
 
         let deviceId = try DeviceID.identifier(in: database)
         let request = SyncPushRequest(
@@ -119,8 +143,9 @@ actor SyncEngine {
             uniquingKeysWith: { first, _ in first }
         )
 
-        let resolved: Int = try await database.dbWriter.write { db in
+        let outcome: (resolved: Int, conflictCopied: Int) = try await database.dbWriter.write { db in
             var resolvedCount = 0
+            var conflictCopiedCount = 0
             for op in ops {
                 guard let result = resultsByOpId[op.opId] else {
                     // The server returned no verdict for this op (unexpected):
@@ -154,9 +179,13 @@ actor SyncEngine {
                             arguments: [updatedAt, op.targetUuid]
                         )
                     }
-                case .conflictCopied, .skipped:
+                case .conflictCopied:
                     // Server state wins; the pull that follows restores the
-                    // server row (and delivers the conflicted copy, if any).
+                    // server row and delivers the conflicted copy.
+                    conflictCopiedCount += 1
+                case .skipped:
+                    // Server state wins; the pull that follows restores the
+                    // server row.
                     break
                 }
 
@@ -166,9 +195,9 @@ actor SyncEngine {
                 )
                 resolvedCount += 1
             }
-            return resolvedCount
+            return (resolvedCount, conflictCopiedCount)
         }
-        return resolved
+        return outcome
     }
 
     private static func pushOperation(from record: PendingOperationRecord) throws -> SyncPushOperation {

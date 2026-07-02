@@ -1,3 +1,4 @@
+import Combine
 import PhotosUI
 import SwiftUI
 
@@ -24,6 +25,8 @@ struct MemoListView: View {
     @State private var pickedMimeType: String = "image/jpeg"
     @State private var pickedExtension: String = "jpg"
     @State private var showCopyDialog: Bool = false
+    @State private var conflictToastMessage: String?
+    @State private var conflictToastDismissTask: Task<Void, Never>?
 
     private var hasActiveFilters: Bool {
         !viewModel.searchQuery.isEmpty ||
@@ -335,6 +338,38 @@ struct MemoListView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.showCopiedFeedback)
+        .overlay(alignment: .top) {
+            if let conflictToastMessage {
+                Text(conflictToastMessage)
+                    .font(.system(size: 13, weight: .semibold))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(.regularMaterial, in: Capsule())
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: conflictToastMessage)
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: .syncEngineDidChangeData)
+                .receive(on: DispatchQueue.main)
+        ) { notification in
+            // Conflict surfacing: a sync run whose push produced conflicted
+            // copies announces the count via userInfo; the copies themselves
+            // arrive through the run's pull and the regular list reload.
+            guard let count = notification.userInfo?[SyncEngine.conflictCopiedUserInfoKey] as? Int,
+                  count > 0 else { return }
+            conflictToastMessage = count == 1
+                ? "1 conflicted copy created"
+                : "\(count) conflicted copies created"
+            conflictToastDismissTask?.cancel()
+            conflictToastDismissTask = Task {
+                try? await Task.sleep(nanoseconds: 4_000_000_000)
+                guard !Task.isCancelled else { return }
+                conflictToastMessage = nil
+            }
+        }
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: memoStore.needsReload) { _, needsReload in
             if needsReload {
