@@ -171,8 +171,12 @@ struct MemoListView: View {
             .task {
                 viewModel.store = memoStore
                 viewModel.dataSources = dataSources
-                await viewModel.loadLabels()
-                await viewModel.loadProjects()
+                // Memos render first: labels/projects only feed the filter
+                // pickers, and awaiting them before the list fetch left the
+                // screen blank for up to two 60s request timeouts whenever the
+                // connection was re-establishing (e.g. Tailscale after app
+                // relaunch). They now load concurrently after the list kicks
+                // off.
                 if memoStore.memos.isEmpty {
                     await viewModel.loadMemos()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -181,6 +185,9 @@ struct MemoListView: View {
                         }
                     }
                 }
+                async let labels: Void = viewModel.loadLabels()
+                async let projects: Void = viewModel.loadProjects()
+                _ = await (labels, projects)
             }
             .safeAreaBar(edge: .bottom) {
                 FloatingComposer(

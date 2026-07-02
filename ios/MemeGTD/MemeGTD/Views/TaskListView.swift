@@ -307,11 +307,14 @@ struct TaskListView: View {
         .task {
             viewModel.store = taskStore
             viewModel.dataSources = dataSources
-            await viewModel.loadLabels()
-            await viewModel.loadProjects()
+            // Tasks render first; labels/projects only feed the filter
+            // pickers and must not block the list (see MemoListView).
             if taskStore.tasks.isEmpty {
                 await viewModel.loadTasks()
             }
+            async let labels: Void = viewModel.loadLabels()
+            async let projects: Void = viewModel.loadProjects()
+            _ = await (labels, projects)
         }
     }
 
