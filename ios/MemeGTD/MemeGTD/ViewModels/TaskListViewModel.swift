@@ -41,6 +41,10 @@ class TaskListViewModel: ObservableObject {
 
     var store: TaskStore?
 
+    /// Data source seam. Views overwrite this with the app-wide provider from
+    /// the environment (same wiring point as `store`).
+    var dataSources = DataSourceProvider()
+
     private let pageSize = 20
 
     private static let dateFormatter: DateFormatter = {
@@ -111,8 +115,7 @@ class TaskListViewModel: ObservableObject {
     // MARK: - Keyword search helpers
 
     private func fetchKeywordSearch(offset: Int) async throws -> TaskListResponse {
-        let response: KeywordSearchResponse = try await APIClient.shared.get(
-            path: "/api/search/keyword",
+        let response: KeywordSearchResponse = try await dataSources.search.keywordSearch(
             queryItems: buildSearchQueryItems(offset: offset)
         )
         var infos: [Int: String] = [:]
@@ -134,8 +137,7 @@ class TaskListViewModel: ObservableObject {
             URLQueryItem(name: "types", value: "task"),
             URLQueryItem(name: "limit", value: "50"),
         ]
-        let response: SemanticSearchResponse = try await APIClient.shared.get(
-            path: "/api/search/semantic",
+        let response: SemanticSearchResponse = try await dataSources.search.semanticSearch(
             queryItems: queryItems
         )
         var scores: [Int: Double] = [:]
@@ -168,8 +170,7 @@ class TaskListViewModel: ObservableObject {
                 searchMatchInfos = [:]
                 relevanceScores = [:]
                 semanticSearchTimeMs = nil
-                response = try await APIClient.shared.get(
-                    path: "/api/tasks",
+                response = try await dataSources.tasks.listTasks(
                     queryItems: buildListQueryItems(offset: 0)
                 )
             }
@@ -193,8 +194,7 @@ class TaskListViewModel: ObservableObject {
             if isSearching {
                 return try await fetchKeywordSearch(offset: 0)
             }
-            return try await APIClient.shared.get(
-                path: "/api/tasks",
+            return try await dataSources.tasks.listTasks(
                 queryItems: buildListQueryItems(offset: 0)
             )
         } catch {
@@ -209,8 +209,7 @@ class TaskListViewModel: ObservableObject {
             if isSearching {
                 return try await fetchKeywordSearch(offset: store.tasks.count)
             }
-            return try await APIClient.shared.get(
-                path: "/api/tasks",
+            return try await dataSources.tasks.listTasks(
                 queryItems: buildListQueryItems(offset: store.tasks.count)
             )
         } catch is CancellationError {
@@ -243,8 +242,7 @@ class TaskListViewModel: ObservableObject {
             if isSearching {
                 response = try await fetchKeywordSearch(offset: store.tasks.count)
             } else {
-                response = try await APIClient.shared.get(
-                    path: "/api/tasks",
+                response = try await dataSources.tasks.listTasks(
                     queryItems: buildListQueryItems(offset: store.tasks.count)
                 )
             }
@@ -264,7 +262,7 @@ class TaskListViewModel: ObservableObject {
 
     func loadLabels() async {
         do {
-            allLabels = try await APIClient.shared.get(path: "/api/labels")
+            allLabels = try await dataSources.labels.listLabels()
         } catch {
             logger.error("loadLabels error: \(error.localizedDescription)")
         }
@@ -274,7 +272,7 @@ class TaskListViewModel: ObservableObject {
 
     func loadProjects() async {
         do {
-            allProjects = try await APIClient.shared.get(path: "/api/projects")
+            allProjects = try await dataSources.projects.listProjects()
         } catch {
             logger.error("loadProjects error: \(error.localizedDescription)")
         }
@@ -366,10 +364,7 @@ class TaskListViewModel: ObservableObject {
         )
 
         do {
-            let json = try await APIClient.shared.postReturningJSONString(
-                path: "/api/search/export",
-                body: request
-            )
+            let json = try await dataSources.search.exportSearchResults(request)
             UIPasteboard.general.string = json
             HapticManager.notification(.success)
             showCopiedFeedback = true

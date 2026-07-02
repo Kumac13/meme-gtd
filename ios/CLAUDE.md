@@ -24,10 +24,20 @@ ios/MemeGTD/
 │   ├── ViewModels/   # 一覧・詳細のViewModel
 │   ├── Views/        # 画面 + Components/
 │   ├── Stores/       # TaskStore / MemoStore / ArticleStore（EnvironmentObject）
+│   ├── DataSources/  # データアクセス層（protocol + Remote実装 + DataSourceProvider）
 │   └── Utilities/    # DateFilter, Haptic等
 ├── ShareExtension/   # Safari Share Extension（記事保存）
 └── Shared/           # 両ターゲット共有コード（APIClient / Settings / Colors / ArticleModels）
 ```
+
+## DataSource層（データアクセスの抽象化）
+
+ViewModelは `APIClient.shared` を直接呼ばず、`DataSources/` のprotocol経由でデータにアクセスする（オフライン対応・スタンドアロンモードで実装を差し替えるためのシーム）。
+
+- **protocol群**: `MemoDataSource` / `TaskDataSource` / `ArticleDataSource` / `SearchDataSource` / `ProjectDataSource` / `LabelDataSource` / `IssueRelationsDataSource`（links / url-links / activity-log）
+- **Remote実装**: `Remote*DataSource`（`APIClient.shared` の薄いラッパ。パス・メソッド・型は従来のViewModel直呼びと同一）
+- **`DataSourceProvider`**: 実装を束ねるObservableObject。`MemeGTDApp` から `.environmentObject` で注入し、各Viewが `.task` 内で `viewModel.dataSources = dataSources` とセットする（既存の `viewModel.store = ...` と同じ注入パターン）。ViewModel側のデフォルト値はRemote固定なので未注入でも挙動は変わらない
+- **ルール**: ViewModelに新しいAPI呼び出しを足すときは必ず該当protocolにメソッドを追加し、Remote実装を経由すること（`APIClient.shared` 直呼び禁止）。ShareExtension・添付画像アップロード（`uploadImage`）・接続テスト（`testConnection`）は対象外
 
 ## APIスキーマとの手動同期（最重要）
 

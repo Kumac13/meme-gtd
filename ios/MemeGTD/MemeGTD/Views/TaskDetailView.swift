@@ -8,6 +8,7 @@ struct TaskDetailView: View {
     var onNavigateToLinkedIssue: ((Int, String, String) -> Void)?
 
     @EnvironmentObject var taskStore: TaskStore
+    @EnvironmentObject var dataSources: DataSourceProvider
     @StateObject private var viewModel: TaskDetailViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirm: Bool = false
@@ -392,6 +393,7 @@ struct TaskDetailView: View {
         }
         .task {
             viewModel.taskStore = taskStore
+            viewModel.dataSources = dataSources
             await viewModel.loadTask()
         }
         } // GeometryReader

@@ -7,6 +7,7 @@ struct ArticleDetailView: View {
     var onNavigateToLinkedIssue: ((Int, String, String) -> Void)?
 
     @EnvironmentObject var articleStore: ArticleStore
+    @EnvironmentObject var dataSources: DataSourceProvider
     @StateObject private var viewModel: ArticleDetailViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -208,6 +209,7 @@ struct ArticleDetailView: View {
         }
         .task {
             viewModel.articleStore = articleStore
+            viewModel.dataSources = dataSources
             await viewModel.loadArticle()
         }
     }

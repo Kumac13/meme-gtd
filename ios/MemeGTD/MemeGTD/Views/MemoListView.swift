@@ -6,6 +6,7 @@ struct MemoListView: View {
     @Binding var navigationPath: NavigationPath
 
     @EnvironmentObject var memoStore: MemoStore
+    @EnvironmentObject var dataSources: DataSourceProvider
     @StateObject private var viewModel = MemoListViewModel()
     @State private var isSearching: Bool = false
     @State private var showLabelPicker: Bool = false
@@ -163,6 +164,7 @@ struct MemoListView: View {
             }
             .task {
                 viewModel.store = memoStore
+                viewModel.dataSources = dataSources
                 await viewModel.loadLabels()
                 await viewModel.loadProjects()
                 if memoStore.memos.isEmpty {

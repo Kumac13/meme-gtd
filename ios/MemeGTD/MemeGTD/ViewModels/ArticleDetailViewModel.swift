@@ -53,6 +53,10 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
     let articleId: Int
     var articleStore: ArticleStore?
 
+    /// Data source seam. Views overwrite this with the app-wide provider from
+    /// the environment (same wiring point as `articleStore`).
+    var dataSources = DataSourceProvider()
+
     init(articleId: Int) {
         self.articleId = articleId
     }
@@ -64,7 +68,7 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
         error = nil
 
         do {
-            article = try await APIClient.shared.get(path: "/api/articles/\(articleId)")
+            article = try await dataSources.articles.getArticle(id: articleId)
         } catch {
             self.error = error.localizedDescription
         }
@@ -84,10 +88,9 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func fetchArticle() async -> (Article, [ActivityLogEntry])? {
         do {
-            let article: Article = try await APIClient.shared.get(path: "/api/articles/\(articleId)")
-            let activities: [ActivityLogEntry] = try await APIClient.shared.get(
-                path: "/api/activity-log/issues/\(articleId)",
-                queryItems: [URLQueryItem(name: "order", value: "asc")]
+            let article: Article = try await dataSources.articles.getArticle(id: articleId)
+            let activities: [ActivityLogEntry] = try await dataSources.issueRelations.listActivityLog(
+                issueId: articleId
             )
             return (article, activities)
         } catch {
@@ -103,8 +106,8 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
 
     private func loadProjects() async {
         do {
-            associatedProjects = try await APIClient.shared.get(path: "/api/issues/\(articleId)/projects")
-            allProjects = try await APIClient.shared.get(path: "/api/projects")
+            associatedProjects = try await dataSources.projects.listIssueProjects(issueId: articleId)
+            allProjects = try await dataSources.projects.listProjects()
         } catch {
             // Non-critical
         }
@@ -112,7 +115,7 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
 
     private func loadAllLabels() async {
         do {
-            allLabels = try await APIClient.shared.get(path: "/api/labels")
+            allLabels = try await dataSources.labels.listLabels()
         } catch {
             // Non-critical
         }
@@ -122,10 +125,7 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
 
     private func loadActivityLog() async {
         do {
-            activityLogs = try await APIClient.shared.get(
-                path: "/api/activity-log/issues/\(articleId)",
-                queryItems: [URLQueryItem(name: "order", value: "asc")]
-            )
+            activityLogs = try await dataSources.issueRelations.listActivityLog(issueId: articleId)
         } catch {
             // Non-critical
         }
@@ -135,7 +135,7 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
 
     private func loadUrlLinks() async {
         do {
-            urlLinks = try await APIClient.shared.get(path: "/api/issues/\(articleId)/url-links")
+            urlLinks = try await dataSources.issueRelations.listUrlLinks(issueId: articleId)
         } catch {
             // Non-critical
         }
@@ -144,9 +144,9 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
     func createUrlLink(url: String, title: String?) async {
         do {
             let request = CreateUrlLinkRequest(url: url, title: title)
-            let _: UrlLink = try await APIClient.shared.post(
-                path: "/api/issues/\(articleId)/url-links",
-                body: request
+            let _: UrlLink = try await dataSources.issueRelations.createUrlLink(
+                issueId: articleId,
+                request
             )
             await loadUrlLinks()
             HapticManager.notification(.success)
@@ -158,7 +158,7 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func deleteUrlLink(_ urlLinkId: Int) async {
         do {
-            try await APIClient.shared.delete(path: "/api/url-links/\(urlLinkId)")
+            try await dataSources.issueRelations.deleteUrlLink(urlLinkId: urlLinkId)
             urlLinks.removeAll { $0.id == urlLinkId }
         } catch {
             self.error = error.localizedDescription
@@ -169,7 +169,7 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
 
     private func loadLinks() async {
         do {
-            issueLinks = try await APIClient.shared.get(path: "/api/issues/\(articleId)/links")
+            issueLinks = try await dataSources.issueRelations.listLinks(issueId: articleId)
         } catch {
             // Non-critical
         }
@@ -182,10 +182,7 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
                 targetIssueId: targetIssueId,
                 linkType: linkType
             )
-            let _: CreateLinkResponse = try await APIClient.shared.post(
-                path: "/api/links",
-                body: request
-            )
+            let _: CreateLinkResponse = try await dataSources.issueRelations.createLink(request)
             await loadLinks()
             await loadActivityLog()
             HapticManager.notification(.success)
@@ -197,7 +194,7 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func deleteIssueLink(_ linkId: Int) async {
         do {
-            try await APIClient.shared.delete(path: "/api/links/\(linkId)")
+            try await dataSources.issueRelations.deleteLink(linkId: linkId)
             issueLinks.removeAll { $0.id == linkId }
             await loadActivityLog()
         } catch {
@@ -210,6 +207,7 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
 
         var results: [IssuePickerItem] = []
 
+        let dataSources = dataSources
         await withTaskGroup(of: [IssuePickerItem].self) { group in
             let searchQuery: [URLQueryItem] = trimmed.isEmpty ? [] : [
                 URLQueryItem(name: "search", value: trimmed),
@@ -218,8 +216,7 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
             // Search tasks
             group.addTask {
                 do {
-                    let response: SearchTasksResponse = try await APIClient.shared.get(
-                        path: "/api/tasks",
+                    let response: SearchTasksResponse = try await dataSources.tasks.searchTasks(
                         queryItems: searchQuery
                     )
                     return response.data.map {
@@ -233,8 +230,7 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
             // Search memos
             group.addTask {
                 do {
-                    let response: MemoListResponse = try await APIClient.shared.get(
-                        path: "/api/memos",
+                    let response: MemoListResponse = try await dataSources.memos.listMemos(
                         queryItems: searchQuery
                     )
                     return response.data.map {
@@ -251,8 +247,7 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
             // Search articles
             group.addTask {
                 do {
-                    let response: SearchArticlesResponse = try await APIClient.shared.get(
-                        path: "/api/articles",
+                    let response: SearchArticlesResponse = try await dataSources.articles.searchArticles(
                         queryItems: searchQuery
                     )
                     return response.data.map {
@@ -286,7 +281,7 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func deleteArticle() async -> Bool {
         do {
-            try await APIClient.shared.delete(path: "/api/articles/\(articleId)")
+            try await dataSources.articles.deleteArticle(id: articleId)
             articleStore?.removeItem(articleId)
             return true
         } catch {
@@ -305,9 +300,9 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
         Task {
             for projectId in toAdd {
                 do {
-                    let _: ProjectItem = try await APIClient.shared.post(
-                        path: "/api/projects/\(projectId)/items",
-                        body: AddProjectItemRequest(issueId: articleId)
+                    let _: ProjectItem = try await dataSources.projects.addProjectItem(
+                        projectId: projectId,
+                        AddProjectItemRequest(issueId: articleId)
                     )
                 } catch {
                     self.error = error.localizedDescription
@@ -315,8 +310,9 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
             }
             for projectId in toRemove {
                 do {
-                    try await APIClient.shared.delete(
-                        path: "/api/projects/\(projectId)/items/\(articleId)"
+                    try await dataSources.projects.removeProjectItem(
+                        projectId: projectId,
+                        issueId: articleId
                     )
                 } catch {
                     self.error = error.localizedDescription
@@ -345,9 +341,9 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
             for name in toAdd {
                 if let label = allLabels.first(where: { $0.name == name }) {
                     do {
-                        let _: AssignLabelResponse = try await APIClient.shared.post(
-                            path: "/api/issues/\(articleId)/labels",
-                            body: AssignLabelRequest(labelId: label.id)
+                        let _: AssignLabelResponse = try await dataSources.labels.assignLabel(
+                            issueId: articleId,
+                            AssignLabelRequest(labelId: label.id)
                         )
                     } catch {
                         self.error = error.localizedDescription
@@ -357,8 +353,9 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
             for name in toRemove {
                 if let label = allLabels.first(where: { $0.name == name }) {
                     do {
-                        try await APIClient.shared.delete(
-                            path: "/api/issues/\(articleId)/labels/\(label.id)"
+                        try await dataSources.labels.removeLabel(
+                            issueId: articleId,
+                            labelId: label.id
                         )
                     } catch {
                         self.error = error.localizedDescription
@@ -367,7 +364,7 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
             }
             // Reload article to get updated labels
             do {
-                let updated: Article = try await APIClient.shared.get(path: "/api/articles/\(articleId)")
+                let updated: Article = try await dataSources.articles.getArticle(id: articleId)
                 article = updated
                 articleStore?.updateItem(updated)
                 articleStore?.needsReload = true

@@ -5,6 +5,7 @@ struct TaskListView: View {
     @Binding var navigationPath: NavigationPath
 
     @EnvironmentObject var taskStore: TaskStore
+    @EnvironmentObject var dataSources: DataSourceProvider
     @StateObject private var viewModel = TaskListViewModel()
     @State private var showStatusPicker: Bool = false
     @State private var isSearching: Bool = false
@@ -305,6 +306,7 @@ struct TaskListView: View {
         }
         .task {
             viewModel.store = taskStore
+            viewModel.dataSources = dataSources
             await viewModel.loadLabels()
             await viewModel.loadProjects()
             if taskStore.tasks.isEmpty {

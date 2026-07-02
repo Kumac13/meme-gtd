@@ -5,6 +5,7 @@ struct CreateTaskModal: View {
     let onCreated: (TaskItem) -> Void
     let onDismiss: () -> Void
 
+    @EnvironmentObject var dataSources: DataSourceProvider
     @StateObject private var viewModel: CreateTaskViewModel
 
     @State private var showStatusPicker = false
@@ -38,6 +39,7 @@ struct CreateTaskModal: View {
         }
         .background(Color(.systemBackground))
         .task {
+            viewModel.dataSources = dataSources
             await viewModel.loadData()
             // Sync initial selections for picker state
             selectedLabelNames = viewModel.selectedLabelNames

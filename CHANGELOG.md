@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.36.1 - 2026-07-02
+
+### Implementation Details
+
+- **iOS DataSource シーム導入（オフライン同期 Phase 3、挙動変更ゼロ）**: 全 ViewModel の `APIClient.shared` 直呼びを protocol ベースの DataSource 経由に差し替えた。以降のオフライン対応フェーズは `DataSourceProvider` での実装差し替えだけで済む構造になる。
+  - `ios/MemeGTD/MemeGTD/DataSources/` に 7 protocol + Remote 実装を新設（Memo / Task / Article / Search / Project / Label / IssueRelations）。Remote 実装は従来の APIClient 呼び出し（パス・メソッド・型）をそのまま移動したもの。
+  - `DataSourceProvider`（ObservableObject、現時点は Remote 固定）を `MemeGTDApp` から environmentObject 注入し、各 View が既存の `store` 配線と同じ箇所で ViewModel にセットする。
+  - 例外として据え置き: `SettingsView` の接続テスト、画像アップロード（オフライン恒久対象外）、ShareExtension（直POSTのまま）、レガシー `ContentView`。
+
 ## 0.36.0 - 2026-07-02
 
 ### New Features

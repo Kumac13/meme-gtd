@@ -31,6 +31,10 @@ class MemoListViewModel: ObservableObject {
 
     var store: MemoStore?
 
+    /// Data source seam. Views overwrite this with the app-wide provider from
+    /// the environment (same wiring point as `store`).
+    var dataSources = DataSourceProvider()
+
     private let pageSize = 20
 
     /// Tracks the most recently spawned reload task so a new filter change can
@@ -156,8 +160,7 @@ class MemoListViewModel: ObservableObject {
     // MARK: - Keyword search helpers
 
     private func fetchKeywordSearch(offset: Int) async throws -> MemoListResponse {
-        let response: KeywordSearchResponse = try await APIClient.shared.get(
-            path: "/api/search/keyword",
+        let response: KeywordSearchResponse = try await dataSources.search.keywordSearch(
             queryItems: buildSearchQueryItems(offset: offset)
         )
         var infos: [Int: String] = [:]
@@ -180,8 +183,7 @@ class MemoListViewModel: ObservableObject {
             URLQueryItem(name: "types", value: "memo"),
             URLQueryItem(name: "limit", value: "50"),
         ]
-        let response: SemanticSearchResponse = try await APIClient.shared.get(
-            path: "/api/search/semantic",
+        let response: SemanticSearchResponse = try await dataSources.search.semanticSearch(
             queryItems: queryItems
         )
         var scores: [Int: Double] = [:]
@@ -215,8 +217,7 @@ class MemoListViewModel: ObservableObject {
                 searchMatchInfos = [:]
                 relevanceScores = [:]
                 semanticSearchTimeMs = nil
-                response = try await APIClient.shared.get(
-                    path: "/api/memos",
+                response = try await dataSources.memos.listMemos(
                     queryItems: buildListQueryItems(offset: 0)
                 )
             }
@@ -263,8 +264,7 @@ class MemoListViewModel: ObservableObject {
 
             while true {
                 try Task.checkCancellation()
-                let resp: MemoListResponse = try await APIClient.shared.get(
-                    path: "/api/memos",
+                let resp: MemoListResponse = try await dataSources.memos.listMemos(
                     queryItems: buildListQueryItems(offset: accumulated.count)
                 )
                 try Task.checkCancellation()
@@ -324,8 +324,7 @@ class MemoListViewModel: ObservableObject {
             if isSearching {
                 return try await fetchKeywordSearch(offset: 0)
             }
-            return try await APIClient.shared.get(
-                path: "/api/memos",
+            return try await dataSources.memos.listMemos(
                 queryItems: buildListQueryItems(offset: 0)
             )
         } catch {
@@ -340,8 +339,7 @@ class MemoListViewModel: ObservableObject {
             if isSearching {
                 return try await fetchKeywordSearch(offset: store.memos.count)
             }
-            return try await APIClient.shared.get(
-                path: "/api/memos",
+            return try await dataSources.memos.listMemos(
                 queryItems: buildListQueryItems(offset: store.memos.count)
             )
         } catch is CancellationError {
@@ -374,8 +372,7 @@ class MemoListViewModel: ObservableObject {
             if isSearching {
                 response = try await fetchKeywordSearch(offset: store.memos.count)
             } else {
-                response = try await APIClient.shared.get(
-                    path: "/api/memos",
+                response = try await dataSources.memos.listMemos(
                     queryItems: buildListQueryItems(offset: store.memos.count)
                 )
             }
@@ -399,18 +396,15 @@ class MemoListViewModel: ObservableObject {
 
         do {
             let request = CreateMemoRequest(bodyMd: body)
-            let memo: Memo = try await APIClient.shared.post(
-                path: "/api/memos",
-                body: request
-            )
+            let memo: Memo = try await dataSources.memos.createMemo(request)
             store?.insertItem(memo, at: 0)
 
             // Auto-link to filtered projects
             if !projectFilters.isEmpty {
                 for projectId in projectFilters {
-                    let _: ProjectItem? = try? await APIClient.shared.post(
-                        path: "/api/projects/\(projectId)/items",
-                        body: AddProjectItemRequest(issueId: memo.id)
+                    let _: ProjectItem? = try? await dataSources.projects.addProjectItem(
+                        projectId: projectId,
+                        AddProjectItemRequest(issueId: memo.id)
                     )
                 }
             }
@@ -427,7 +421,7 @@ class MemoListViewModel: ObservableObject {
 
     func deleteMemo(_ id: Int) async {
         do {
-            try await APIClient.shared.delete(path: "/api/memos/\(id)")
+            try await dataSources.memos.deleteMemo(id: id)
             store?.removeItem(id)
         } catch {
             self.error = error.localizedDescription
@@ -438,7 +432,7 @@ class MemoListViewModel: ObservableObject {
 
     func loadLabels() async {
         do {
-            allLabels = try await APIClient.shared.get(path: "/api/labels")
+            allLabels = try await dataSources.labels.listLabels()
         } catch {
             logger.error("loadLabels error: \(error.localizedDescription)")
         }
@@ -448,7 +442,7 @@ class MemoListViewModel: ObservableObject {
 
     func loadProjects() async {
         do {
-            allProjects = try await APIClient.shared.get(path: "/api/projects")
+            allProjects = try await dataSources.projects.listProjects()
         } catch {
             logger.error("loadProjects error: \(error.localizedDescription)")
         }
@@ -540,10 +534,7 @@ class MemoListViewModel: ObservableObject {
         )
 
         do {
-            let json = try await APIClient.shared.postReturningJSONString(
-                path: "/api/search/export",
-                body: request
-            )
+            let json = try await dataSources.search.exportSearchResults(request)
             UIPasteboard.general.string = json
             HapticManager.notification(.success)
             showCopiedFeedback = true
