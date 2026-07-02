@@ -7,6 +7,13 @@ struct MemeGTDApp: App {
     @StateObject private var articleStore = ArticleStore()
     @StateObject private var dataSources = DataSourceProvider()
 
+    init() {
+        // Touch the shared local database so the App Group DB file and schema
+        // exist right after launch. No feature reads from it yet (offline
+        // support lands in later phases).
+        _ = AppDatabase.shared
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

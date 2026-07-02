@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		09875A098EDEB22EF0CA0C75 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = B606E428056D52CD2E19AB8C /* GRDB */; };
+		1E9EA939B1F308684A360B34 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = D5BF188B53B7AF195DF43B70 /* GRDB */; };
+		47B1E1AD852B8843D3F9A66C /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 7F0A438E8D7EB47F931D47FD /* GRDB */; };
 		E97C17652F65404800CC7490 /* HighlightSwift in Frameworks */ = {isa = PBXBuildFile; productRef = E9F1A0022F04000200000002 /* HighlightSwift */; };
 		E9E8D21E2EFCD0C200AAD867 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E9E8D2142EFCD0C200AAD867 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -18,6 +21,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = E9E8D2132EFCD0C200AAD867;
 			remoteInfo = ShareExtension;
+		};
+		FEFB8DB2F9FF05744C24A376 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E9E8D1F82EFCD06300AAD867 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E9E8D1FF2EFCD06300AAD867;
+			remoteInfo = MemeGTD;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -36,6 +46,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		8D7DEF14D72B5A74DC1743DD /* MemeGTDTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MemeGTDTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9E8D2002EFCD06300AAD867 /* MemeGTD.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MemeGTD.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9E8D2142EFCD0C200AAD867 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -51,8 +62,17 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		B7C812710D6F68A6D2D2D3DC /* MemeGTDTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = MemeGTDTests;
+			sourceTree = "<group>";
+		};
 		E9E8D2022EFCD06300AAD867 /* MemeGTD */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = MemeGTD;
 			sourceTree = "<group>";
 		};
@@ -66,17 +86,28 @@
 		};
 		E9E8D2302EFCD10000AAD867 /* Shared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		6A003173DAAE22163C00DFAF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E9EA939B1F308684A360B34 /* GRDB in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E9E8D1FD2EFCD06300AAD867 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				E97C17652F65404800CC7490 /* HighlightSwift in Frameworks */,
+				47B1E1AD852B8843D3F9A66C /* GRDB in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,6 +115,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				09875A098EDEB22EF0CA0C75 /* GRDB in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -96,6 +128,7 @@
 				E9E8D2022EFCD06300AAD867 /* MemeGTD */,
 				E9E8D2302EFCD10000AAD867 /* Shared */,
 				E9E8D2152EFCD0C200AAD867 /* ShareExtension */,
+				B7C812710D6F68A6D2D2D3DC /* MemeGTDTests */,
 				E9E8D2012EFCD06300AAD867 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -105,6 +138,7 @@
 			children = (
 				E9E8D2002EFCD06300AAD867 /* MemeGTD.app */,
 				E9E8D2142EFCD0C200AAD867 /* ShareExtension.appex */,
+				8D7DEF14D72B5A74DC1743DD /* MemeGTDTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -133,6 +167,7 @@
 			name = MemeGTD;
 			packageProductDependencies = (
 				E9F1A0022F04000200000002 /* HighlightSwift */,
+				7F0A438E8D7EB47F931D47FD /* GRDB */,
 			);
 			productName = MemeGTD;
 			productReference = E9E8D2002EFCD06300AAD867 /* MemeGTD.app */;
@@ -156,10 +191,35 @@
 			);
 			name = ShareExtension;
 			packageProductDependencies = (
+				B606E428056D52CD2E19AB8C /* GRDB */,
 			);
 			productName = ShareExtension;
 			productReference = E9E8D2142EFCD0C200AAD867 /* ShareExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
+		};
+		F27245B4FBA8C6EB9450B60D /* MemeGTDTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0ECB38698CE09002287DEE22 /* Build configuration list for PBXNativeTarget "MemeGTDTests" */;
+			buildPhases = (
+				6427C0C7F04F372CE8A60F36 /* Sources */,
+				6A003173DAAE22163C00DFAF /* Frameworks */,
+				08E769A86ED9FCAFEFB6D25B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2B143679460B1C956A6FEB21 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B7C812710D6F68A6D2D2D3DC /* MemeGTDTests */,
+			);
+			name = MemeGTDTests;
+			packageProductDependencies = (
+				D5BF188B53B7AF195DF43B70 /* GRDB */,
+			);
+			productName = MemeGTDTests;
+			productReference = 8D7DEF14D72B5A74DC1743DD /* MemeGTDTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -190,6 +250,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				E9F1A0012F04000100000001 /* XCRemoteSwiftPackageReference "HighlightSwift" */,
+				29E40CE468B51001462800FA /* XCRemoteSwiftPackageReference "GRDB.swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E9E8D2012EFCD06300AAD867 /* Products */;
@@ -198,11 +259,19 @@
 			targets = (
 				E9E8D1FF2EFCD06300AAD867 /* MemeGTD */,
 				E9E8D2132EFCD0C200AAD867 /* ShareExtension */,
+				F27245B4FBA8C6EB9450B60D /* MemeGTDTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		08E769A86ED9FCAFEFB6D25B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E9E8D1FE2EFCD06300AAD867 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -220,6 +289,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		6427C0C7F04F372CE8A60F36 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E9E8D1FC2EFCD06300AAD867 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -237,6 +313,12 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		2B143679460B1C956A6FEB21 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = MemeGTD;
+			target = E9E8D1FF2EFCD06300AAD867 /* MemeGTD */;
+			targetProxy = FEFB8DB2F9FF05744C24A376 /* PBXContainerItemProxy */;
+		};
 		E9E8D21D2EFCD0C200AAD867 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = E9E8D2132EFCD0C200AAD867 /* ShareExtension */;
@@ -245,6 +327,27 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		382F7DBADEB4B7C6AD5C0006 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2MR3NYTD64;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = name.kumac.MemeGTDTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MemeGTD.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MemeGTD";
+			};
+			name = Debug;
+		};
 		E9E8D2092EFCD06300AAD867 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -492,9 +595,40 @@
 			};
 			name = Release;
 		};
+		EC63C29AA7FEB78D3609AAE3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2MR3NYTD64;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = name.kumac.MemeGTDTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MemeGTD.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MemeGTD";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		0ECB38698CE09002287DEE22 /* Build configuration list for PBXNativeTarget "MemeGTDTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EC63C29AA7FEB78D3609AAE3 /* Release */,
+				382F7DBADEB4B7C6AD5C0006 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		E9E8D1FB2EFCD06300AAD867 /* Build configuration list for PBXProject "MemeGTD" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -525,6 +659,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		29E40CE468B51001462800FA /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.29.3;
+			};
+		};
 		E9F1A0012F04000100000001 /* XCRemoteSwiftPackageReference "HighlightSwift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/appstefan/HighlightSwift";
@@ -536,6 +678,21 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		7F0A438E8D7EB47F931D47FD /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 29E40CE468B51001462800FA /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
+		B606E428056D52CD2E19AB8C /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 29E40CE468B51001462800FA /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
+		D5BF188B53B7AF195DF43B70 /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 29E40CE468B51001462800FA /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
 		E9F1A0022F04000200000002 /* HighlightSwift */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = E9F1A0012F04000100000001 /* XCRemoteSwiftPackageReference "HighlightSwift" */;

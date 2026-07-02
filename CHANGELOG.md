@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.36.2 - 2026-07-02
+
+### Implementation Details
+
+- **iOS ローカル DB 基盤 + テスト基盤（オフライン同期 Phase 4、UI 挙動変更なし）**: GRDB.swift 6.29.3 を SPM で導入（app / ShareExtension 両ターゲット）。App Group コンテナに `local.sqlite`（WAL）を起動時に生成する `AppDatabase` を新設。まだどの画面からも使われない。
+  - スキーマ（`001_initial`）: issues / comments / labels / issue_labels / pending_operations（Outbox）/ sync_meta。サーバースキーマを 1:1 ミラーしつつ、PK はクライアント生成 UUIDv7 の `uuid`、`server_id` を併設。
+  - GRDB Record 型（Issue / Comment / Label / IssueLabel / PendingOperation）、UUIDv7 生成器（RFC 9562、単調カウンタ付き）、DeviceID（初回生成 → sync_meta 永続化）を追加。
+  - **iOS 初のユニットテストターゲット `MemeGTDTests` を新設**（共有スキームの Test アクション含む）。マイグレーション・Record round-trip・UUIDv7 形式/単調性・sync_meta・Outbox FIFO の14テスト。
+
 ## 0.36.1 - 2026-07-02
 
 ### Implementation Details
