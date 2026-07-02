@@ -3,10 +3,13 @@ import SwiftUI
 struct SettingsView: View {
     let onMenuTap: () -> Void
 
+    @EnvironmentObject var dataSources: DataSourceProvider
+
     @State private var apiUrl: String = Settings.shared.apiUrl ?? Settings.defaultApiUrl
     @State private var isSaved: Bool = false
     @State private var isTestingConnection: Bool = false
     @State private var connectionStatus: ConnectionStatus = .unknown
+    @State private var offlineSyncEnabled: Bool = Settings.shared.offlineSyncEnabled
 
     enum ConnectionStatus {
         case unknown
@@ -87,6 +90,35 @@ struct SettingsView: View {
                             .foregroundColor(.white)
                             .cornerRadius(10)
                         }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+
+                Divider().padding(.leading, 16)
+
+                // Sync section
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Sync")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.textSecondary)
+                        .textCase(.uppercase)
+
+                    Toggle(isOn: $offlineSyncEnabled) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Offline Sync (Beta)")
+                                .font(.system(size: 15))
+                                .foregroundColor(.textPrimary)
+                            Text("Read and write memos offline. Changes sync with the server when you are back online.")
+                                .font(.system(size: 13))
+                                .foregroundColor(.textSecondary)
+                        }
+                    }
+                    .tint(.accent)
+                    .onChange(of: offlineSyncEnabled) { _, newValue in
+                        Settings.shared.offlineSyncEnabled = newValue
+                        dataSources.offlineSyncSettingDidChange()
+                        HapticManager.impact(.light)
                     }
                 }
                 .padding(.horizontal, 16)

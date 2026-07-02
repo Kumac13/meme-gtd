@@ -118,6 +118,12 @@ struct MemoListView: View {
                     Task { @MainActor in
                         HapticManager.impact(.medium)
 
+                        // Sync trigger: pull-to-refresh (no-op while Offline
+                        // Sync is off). The refresh below reads the local DB
+                        // immediately; if the sync run brings changes, the
+                        // engine's notification reloads the list afterwards.
+                        dataSources.syncScheduler?.requestSync()
+
                         let start = Date()
 
                         if viewModel.isDateFiltered {

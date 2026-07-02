@@ -42,6 +42,30 @@ class MemoListViewModel: ObservableObject {
     /// the prior load appends stale pages to the store.
     private var activeReloadTask: Task<Void, Never>?
 
+    /// Reload hook for Offline Sync: when a sync run changed data (push or
+    /// pull), flag the store so MemoListView reloads through the usual
+    /// `needsReload` path. Runs that change nothing post no notification, so
+    /// the reload -> read -> sync chain terminates.
+    private var syncObserver: (any NSObjectProtocol)?
+
+    init() {
+        syncObserver = NotificationCenter.default.addObserver(
+            forName: .syncEngineDidChangeData,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Task { @MainActor [weak self] in
+                self?.store?.needsReload = true
+            }
+        }
+    }
+
+    deinit {
+        if let syncObserver {
+            NotificationCenter.default.removeObserver(syncObserver)
+        }
+    }
+
     private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"

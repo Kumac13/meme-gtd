@@ -6,6 +6,7 @@ struct MemeGTDApp: App {
     @StateObject private var memoStore = MemoStore()
     @StateObject private var articleStore = ArticleStore()
     @StateObject private var dataSources = DataSourceProvider()
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         // Touch the shared local database so the App Group DB file and schema
@@ -22,6 +23,13 @@ struct MemeGTDApp: App {
                 .environmentObject(articleStore)
                 .environmentObject(dataSources)
                 .preferredColorScheme(.light)
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            // Sync trigger: scene became active (no-op while Offline Sync is
+            // off — the scheduler only exists when the toggle is on).
+            if newPhase == .active {
+                dataSources.syncScheduler?.sceneDidBecomeActive()
+            }
         }
     }
 }

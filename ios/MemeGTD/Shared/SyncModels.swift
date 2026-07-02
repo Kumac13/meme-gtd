@@ -4,14 +4,14 @@ import Foundation
 // Not referenced by the UI yet — the SyncEngine (Phase 5) will consume these.
 // Raw values must match the backend strings exactly.
 
-enum SyncEntity: String, Codable {
+nonisolated enum SyncEntity: String, Codable {
     case issue
     case comment
     case label
     case issueLabel = "issue_label"
 }
 
-enum SyncChangeOp: String, Codable {
+nonisolated enum SyncChangeOp: String, Codable {
     case upsert
     case delete
 }
@@ -19,7 +19,7 @@ enum SyncChangeOp: String, Codable {
 /// Loose JSON value for `SyncChange.data`, whose shape depends on entity/op.
 /// Self-contained (no dependency on app-target types) so both the app and the
 /// Share Extension can compile this file.
-enum SyncJSONValue: Codable {
+nonisolated enum SyncJSONValue: Codable {
     case string(String)
     case number(Double)
     case bool(Bool)
@@ -70,38 +70,38 @@ enum SyncJSONValue: Codable {
 /// - issue_label: { issueId, labelId, issueUuid, labelName, assignedAt }
 /// op = delete (labels / issue_labels only): integer ids plus labelName /
 /// issueUuid when resolvable at delete time, and deletedAt.
-struct SyncChange: Codable {
+nonisolated struct SyncChange: Codable {
     let serverSeq: Int
     let entity: SyncEntity
     let op: SyncChangeOp
     let data: [String: SyncJSONValue]
 }
 
-struct SyncChangesResponse: Codable {
+nonisolated struct SyncChangesResponse: Codable {
     let changes: [SyncChange]
     let latestSeq: Int
     let hasMore: Bool
 }
 
-enum SyncPushEntity: String, Codable {
+nonisolated enum SyncPushEntity: String, Codable {
     case memo
     case comment
 }
 
-enum SyncPushOpType: String, Codable {
+nonisolated enum SyncPushOpType: String, Codable {
     case create
     case update
     case delete
 }
 
-struct SyncPushPayload: Codable {
+nonisolated struct SyncPushPayload: Codable {
     var bodyMd: String?
     var isBookmarked: Bool?
     var createdAt: String?
     var updatedAt: String?
 }
 
-struct SyncPushOperation: Codable {
+nonisolated struct SyncPushOperation: Codable {
     let opId: String
     let entity: SyncPushEntity
     let type: SyncPushOpType
@@ -111,19 +111,19 @@ struct SyncPushOperation: Codable {
     var payload: SyncPushPayload?
 }
 
-struct SyncPushRequest: Codable {
+nonisolated struct SyncPushRequest: Codable {
     let deviceId: String
     let operations: [SyncPushOperation]
 }
 
-enum SyncPushStatus: String, Codable {
+nonisolated enum SyncPushStatus: String, Codable {
     case applied
     case alreadyApplied
     case conflictCopied
     case skipped
 }
 
-struct SyncPushOperationResult: Codable {
+nonisolated struct SyncPushOperationResult: Codable {
     let opId: String
     let status: SyncPushStatus
     let uuid: String
@@ -132,7 +132,7 @@ struct SyncPushOperationResult: Codable {
     let conflictCopyUuid: String?
 }
 
-struct SyncPushResponse: Codable {
+nonisolated struct SyncPushResponse: Codable {
     let results: [SyncPushOperationResult]
     let latestSeq: Int
 }

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.37.0 - 2026-07-02
+
+### New Features
+
+- **iOS メモのオフライン対応（Offline Sync Beta、オフライン同期 Phase 5）**: 設定画面の「Offline Sync (Beta)」トグル（デフォルトOFF）をONにすると、メモの作成・編集・削除・ブックマークがオフラインで動作し、オンライン復帰時にサーバーと自動同期される。OFFのままなら従来のオンライン専用挙動と完全に同一（既存ユーザー無影響）。
+  - 書き込みはローカルGRDB更新 + Outbox（`pending_operations`）追記を単一トランザクションで行い、UIは即時反映。同一メモへの連続編集はOutbox内でマージ圧縮、送信前のcreate+deleteは相殺。
+  - `SyncEngine`（actor）が push→pull の順で同期。push結果の `serverId` / `updatedAt` をローカルに記録し、pullは `server_seq` カーソルでページングして1ページ=1トランザクションで適用。Outboxに未送信操作が残るuuidへのリモート変更適用はスキップ（ローカル編集の保護・同期ループ防止）。
+  - 同期トリガは4系統: アプリのフォアグラウンド復帰 / ネットワーク復帰（NWPathMonitor）/ ローカル書き込み直後 / pull-to-refresh。多重実行はactor+スケジューラで直列化。
+  - 未同期のローカル行は負の整数IDでUI層に露出し、push後は自動的にサーバーIDへ切り替わる（ID再マッピング不要のUUID主キー設計）。
+  - このフェーズのスコープ: メモ本体のみ。コメント・promote-preview・プロジェクトフィルタはオンライン時にサーバーへ委譲（コメントのオフライン化はPhase 6、タスク/記事の閲覧キャッシュはPhase 7）。画像添付はオフライン対象外。
+
+### Tests
+
+- `MemeGTDTests` に SyncEngine / OfflineFirstMemoDataSource のテストを追加（in-memory GRDB + MockTransport、7件）: Outbox FIFO・マージ圧縮・create+delete相殺、push成功時のserver_id記録とOutbox消化、通信失敗時のfailed遷移とリトライ、pullのページング・カーソル前進・task行の保存、pending中uuidの保護、ローカル一覧のbookmark/searchフィルタ。
+
 ## 0.36.2 - 2026-07-02
 
 ### Implementation Details
