@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { nowIso, type Task, type Comment, toBoolean, type TaskStatus, type TaskKind } from 'meme-gtd-shared';
+import { nowIso, uuidv7, type Task, type Comment, toBoolean, type TaskStatus, type TaskKind } from 'meme-gtd-shared';
 
 export interface CreateTaskInput {
   title: string;
@@ -63,6 +63,8 @@ export interface ListTaskFilters {
 
 const taskRowToTask = (row: any): Task => ({
   id: row.id,
+  uuid: row.uuid,
+  serverSeq: row.server_seq,
   type: 'task',
   title: row.title,
   bodyMd: row.body_md,
@@ -91,6 +93,8 @@ const taskRowToTask = (row: any): Task => ({
 
 const commentRowToComment = (row: any): Comment => ({
   id: row.id,
+  uuid: row.uuid,
+  serverSeq: row.server_seq,
   issueId: row.issue_id,
   bodyMd: row.body_md,
   createdAt: row.created_at,
@@ -118,10 +122,11 @@ export const createTask = (db: Database.Database, input: CreateTaskInput): Task 
   const taskKind = input.taskKind ?? 'action';
 
   const stmt = db.prepare(
-    `INSERT INTO issues (type, title, body_md, status, task_kind, actual_start, scheduled_start, scheduled_end, is_all_day, scheduled_on, end_date, start_time, end_time, duration, meta, created_at, updated_at, is_bookmarked, is_deleted)
-     VALUES ('task', @title, @body, @status, @taskKind, @actualStart, @scheduledStart, @scheduledEnd, @isAllDay, @scheduledOn, @endDate, @startTime, @endTime, @duration, json('{}'), @createdAt, @createdAt, 0, 0)`
+    `INSERT INTO issues (uuid, type, title, body_md, status, task_kind, actual_start, scheduled_start, scheduled_end, is_all_day, scheduled_on, end_date, start_time, end_time, duration, meta, created_at, updated_at, is_bookmarked, is_deleted)
+     VALUES (@uuid, 'task', @title, @body, @status, @taskKind, @actualStart, @scheduledStart, @scheduledEnd, @isAllDay, @scheduledOn, @endDate, @startTime, @endTime, @duration, json('{}'), @createdAt, @createdAt, 0, 0)`
   );
   const result = stmt.run({
+    uuid: uuidv7(),
     title: input.title,
     body: input.bodyMd,
     status,
@@ -700,10 +705,10 @@ export const addComment = (
   const now = nowIso();
   const result = db
     .prepare(
-      `INSERT INTO comments(issue_id, body_md, created_at, updated_at, is_deleted)
-VALUES(@issueId, @bodyMd, @createdAt, @createdAt, 0)`
+      `INSERT INTO comments(uuid, issue_id, body_md, created_at, updated_at, is_deleted)
+VALUES(@uuid, @issueId, @bodyMd, @createdAt, @createdAt, 0)`
     )
-    .run({ issueId: taskId, bodyMd, createdAt: now });
+    .run({ uuid: uuidv7(), issueId: taskId, bodyMd, createdAt: now });
 
   return commentRowToComment(
     db.prepare('SELECT * FROM comments WHERE id = @id').get({ id: result.lastInsertRowid }) as any
@@ -970,11 +975,12 @@ export const demoteTask = (
 
   // Create memo
   const insertMemo = db.prepare(
-    `INSERT INTO issues (type, title, body_md, status, scheduled_on, meta, created_at, updated_at, is_bookmarked, is_deleted)
-     VALUES ('memo', NULL, @body, NULL, NULL, json('{}'), @createdAt, @createdAt, 0, 0)`
+    `INSERT INTO issues (uuid, type, title, body_md, status, scheduled_on, meta, created_at, updated_at, is_bookmarked, is_deleted)
+     VALUES (@uuid, 'memo', NULL, @body, NULL, NULL, json('{}'), @createdAt, @createdAt, 0, 0)`
   );
 
   const result = insertMemo.run({
+    uuid: uuidv7(),
     body: bodyMd,
     createdAt: now
   });

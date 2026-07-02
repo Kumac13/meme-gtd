@@ -23,6 +23,7 @@ export const listAllLabels = (db: Database.Database): Label[] => {
     name: string;
     description: string | null;
     created_at: string;
+    server_seq: number | null;
     memo_count: number;
     task_count: number;
     article_count: number;
@@ -33,6 +34,7 @@ export const listAllLabels = (db: Database.Database): Label[] => {
     name: row.name,
     description: row.description,
     createdAt: row.created_at,
+    serverSeq: row.server_seq ?? undefined,
     memoCount: row.memo_count,
     taskCount: row.task_count,
     articleCount: row.article_count,
@@ -64,6 +66,7 @@ export const getLabel = (db: Database.Database, id: number): Label => {
         name: string;
         description: string | null;
         created_at: string;
+        server_seq: number | null;
         memo_count: number;
         task_count: number;
         article_count: number;
@@ -79,6 +82,7 @@ export const getLabel = (db: Database.Database, id: number): Label => {
     name: row.name,
     description: row.description,
     createdAt: row.created_at,
+    serverSeq: row.server_seq ?? undefined,
     memoCount: row.memo_count,
     taskCount: row.task_count,
     articleCount: row.article_count,
@@ -112,6 +116,7 @@ export const getLabelByName = (
         name: string;
         description: string | null;
         created_at: string;
+        server_seq: number | null;
         memo_count: number;
         task_count: number;
         article_count: number;
@@ -127,6 +132,7 @@ export const getLabelByName = (
     name: row.name,
     description: row.description,
     createdAt: row.created_at,
+    serverSeq: row.server_seq ?? undefined,
     memoCount: row.memo_count,
     taskCount: row.task_count,
     articleCount: row.article_count,

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.35.0 - 2026-07-02
+
+### New Features
+
+- **iOS オフライン同期の基盤（Phase 1 / サーバー DB）**: 差分同期に必要な識別子・順序・削除記録・冪等性の土台を migration 014 で導入した。既存 API のレスポンス形は不変（クライアントへの影響なし）。
+  - `issues` / `comments` に `uuid` 列を追加（同期用の恒久 ID）。新規行はリポジトリが UUIDv7 を採番し、リポジトリを経由しない INSERT にはトリガが UUIDv4 をフォールバック付与。既存行はマイグレーション内でバックフィル。
+  - `issues` / `comments` / `labels` / `issue_labels` に `server_seq` 列を追加。`sync_sequence`（シングルトンカウンタ）から全書き込みにグローバル単調連番を SQLite トリガで打刻する。CLI は HTTP を通らず core→db 直書きのため、全書き込み経路をカバーできる層がトリガのみであることが採用理由。既存行には重複しない連番をバックフィルし、初回差分取得（`since=0`）で全行が返せる状態にした。
+  - `sync_tombstones` を追加。ハード削除される `labels` / `issue_labels` の削除を記録する（CASCADE 削除でも発火することを検証済み）。論理削除の issues / comments は `is_deleted` 行自体がトンボストーンを兼ねるため対象外。
+  - `sync_applied_ops` を追加。Phase 2 で実装する `POST /api/sync/push` の冪等性台帳（クライアント採番の `op_id` が主キー）。
+  - `packages/shared` に `uuidv7()` ユーティリティと、`IssueBase` / `Comment` / `Label` への `uuid` / `serverSeq` フィールドを追加。CLI の `--json` 出力にはこれらのフィールドが追加で現れる（後方互換の追加変更）。
+
+### Tests
+
+- migration 014 の適用、CLI / API 両経路での server_seq 打刻、uuid の一意性とトリガフォールバック、ラベル削除（直接 / CASCADE）のトンボストーン生成、既存 FTS・activity_log トリガの無破壊、既存データへのバックフィルを検証するテストを `packages/db/test/syncSupport.test.ts` に追加。
+
 ## 0.34.0 - 2026-06-29
 
 ### New Features

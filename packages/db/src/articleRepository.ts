@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import { nowIso, type Article, type ArticleMeta, toBoolean } from "meme-gtd-shared";
+import { nowIso, uuidv7, type Article, type ArticleMeta, toBoolean } from "meme-gtd-shared";
 
 export interface CreateArticleInput {
   title: string;
@@ -22,6 +22,8 @@ const articleRowToArticle = (row: unknown): Article => {
 
   return {
     id: Number(r.id),
+    uuid: r.uuid ? String(r.uuid) : undefined,
+    serverSeq: r.server_seq != null ? Number(r.server_seq) : undefined,
     type: "article",
     title: String(r.title),
     bodyMd: String(r.body_md),
@@ -55,11 +57,12 @@ export const createArticle = (db: Database.Database, input: CreateArticleInput):
   };
 
   const stmt = db.prepare(
-    `INSERT INTO issues (type, title, body_md, meta, created_at, updated_at, is_bookmarked, is_deleted)
-     VALUES ('article', @title, @body, @meta, @createdAt, @createdAt, 0, 0)`
+    `INSERT INTO issues (uuid, type, title, body_md, meta, created_at, updated_at, is_bookmarked, is_deleted)
+     VALUES (@uuid, 'article', @title, @body, @meta, @createdAt, @createdAt, 0, 0)`
   );
 
   const result = stmt.run({
+    uuid: uuidv7(),
     title: input.title,
     body: input.bodyMd,
     meta: JSON.stringify(meta),

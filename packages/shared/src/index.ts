@@ -21,6 +21,10 @@ export interface Timestamped {
 
 export interface IssueBase extends Timestamped {
   id: number;
+  /** Sync identity: client- or server-generated UUID (migration 014). Always set by repositories. */
+  uuid?: string;
+  /** Sync cursor: global monotonic sequence stamped by DB triggers (migration 014). */
+  serverSeq?: number;
   type: IssueType;
   title: string | null;
   bodyMd: string;
@@ -112,6 +116,10 @@ export type Issue = Memo | Task | Article;
 
 export interface Comment extends Timestamped {
   id: number;
+  /** Sync identity (migration 014). Always set by repositories. */
+  uuid?: string;
+  /** Sync cursor (migration 014). */
+  serverSeq?: number;
   issueId: number;
   bodyMd: string;
   isDeleted: boolean;
@@ -122,6 +130,8 @@ export interface Label {
   name: string;
   description: string | null;
   createdAt: string;
+  /** Sync cursor (migration 014). Labels are identified by name, so no uuid. */
+  serverSeq?: number;
   memoCount: number;
   taskCount: number;
   articleCount: number;
@@ -189,3 +199,24 @@ export const toBoolean = (value: number | boolean): boolean =>
   typeof value === 'boolean' ? value : value !== 0;
 
 export const nowIso = (): string => new Date().toISOString();
+
+/**
+ * Generate a UUIDv7 (time-ordered UUID) for sync identities.
+ * Time-ordered so uuid indexes stay append-friendly; uses globalThis.crypto,
+ * which is available in Node 20+ and browsers alike.
+ */
+export const uuidv7 = (): string => {
+  const bytes = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(bytes);
+  const ts = Date.now();
+  bytes[0] = Math.floor(ts / 2 ** 40) & 0xff;
+  bytes[1] = Math.floor(ts / 2 ** 32) & 0xff;
+  bytes[2] = Math.floor(ts / 2 ** 24) & 0xff;
+  bytes[3] = Math.floor(ts / 2 ** 16) & 0xff;
+  bytes[4] = Math.floor(ts / 2 ** 8) & 0xff;
+  bytes[5] = ts & 0xff;
+  bytes[6] = (bytes[6] & 0x0f) | 0x70;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
