@@ -237,6 +237,54 @@ curl "http://localhost:3001/api/memos?search=important&bookmarked=true"
 }
 ```
 
+## Sync エンドポイント（iOSオフライン同期）
+
+競合ルール・全体設計は `docs/architecture.md` の「同期アーキテクチャ」を参照。契約の正は `packages/api/docs/api/openapi.yaml`。
+
+### GET /api/sync/changes
+
+`server_seq` カーソル以降の変更（issues / comments / labels / issue_labels）を昇順で返す。論理削除行も含まれる（通常の一覧エンドポイントと異なる点）。
+
+#### クエリパラメータ
+
+| パラメータ | 型 | 説明 |
+|---|---|---|
+| `since` | number（必須） | このserverSeqより後の変更を返す。初回フルプルは `0` |
+| `limit` | number | 1ページの最大件数（デフォルト500、最大1000） |
+
+```bash
+# 初回フルプル
+curl "http://localhost:3001/api/sync/changes?since=0"
+
+# カーソル継続（hasMore=true の間、最後の serverSeq を since に指定して繰り返す）
+curl "http://localhost:3001/api/sync/changes?since=42&limit=500"
+```
+
+レスポンス: `{ changes: [{ serverSeq, entity, op, data }], latestSeq, hasMore }`
+
+### POST /api/sync/push
+
+クライアントの保留操作（memo / comment の create / update / delete）をFIFOで適用する。`opId` で冪等（再送は記録済み結果を返す）。
+
+```bash
+curl -X POST "http://localhost:3001/api/sync/push" \
+  -H "content-type: application/json" \
+  -d '{
+    "deviceId": "device-abc",
+    "operations": [
+      {
+        "opId": "5f3a...",
+        "entity": "memo",
+        "type": "create",
+        "uuid": "019f...",
+        "payload": { "bodyMd": "offline memo", "createdAt": "2026-07-01T12:00:00.000Z" }
+      }
+    ]
+  }'
+```
+
+レスポンス: `{ results: [{ opId, status, uuid, serverId?, updatedAt?, conflictCopyUuid? }], latestSeq }`。`status` は `applied` / `alreadyApplied` / `conflictCopied` / `skipped`。
+
 ## 応用例
 
 APIは通常のREST APIなので、curl以外の任意のHTTPクライアント（Python requests、fetch等）からも同じパラメータで利用できる。以下ではcurl + jqを標準の例として示す。

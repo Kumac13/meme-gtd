@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.36.0 - 2026-07-02
+
+### New Features
+
+- **同期API（iOS オフライン同期 Phase 2）**: 差分プルとオフライン操作適用の2エンドポイントを追加した。実装は `packages/core/src/syncService.ts`（`SyncService`）で、mutation は `MemoService` を経由するため activity log は通常どおり記録される。
+  - `GET /api/sync/changes?since=<serverSeq>&limit=`: issues / comments / labels / issue_labels の変更を serverSeq 昇順で返す差分フィード。論理削除行（`isDeleted=true`）も含めて返すためクライアントが削除を検知できる。ハード削除される labels / issue_labels は `op:'delete'` のトンボストーンとして届く。`hasMore` によるカーソルページング付き。
+  - `POST /api/sync/push`: クライアントの保留操作（memo / comment の create / update / delete）を FIFO で適用する。op ごとに個別トランザクション（部分成功）、クライアント採番の `opId` で冪等（再送は記録済み結果を `alreadyApplied` として返す）。
+  - 競合解決: `updatedAt` は等値比較のみ（クロックスキュー・精度差対策）。レコード単位 LWW、ただしメモ本文の同時編集はサーバー版を温存しクライアント版を「Conflicted copy」メモとして保存（データ消失ゼロ）。edit-beats-delete を双方向で適用（削除済み行への編集は復活、編集済み行への stale な削除はスキップ）。
+  - オフライン作成メモは `payload.createdAt` で執筆時刻を保持したままサーバーに登録される。
+  - iOS 用 Swift ミラー `ios/MemeGTD/Shared/SyncModels.swift` を追加（Phase 5 の SyncEngine が使用予定。現時点では未使用）。
+
+### Tests
+
+- 同期APIの統合テストを `packages/api/test/integration/sync.test.ts` に追加（19件）: 差分フィードのカーソル/limit/hasMore/削除行包含/トンボストーン、push の4ステータス（applied / alreadyApplied / conflictCopied / skipped）、冪等再送、コメントの issueUuid 解決と FIFO、edit-beats-delete 両方向、ブックマークのみの LWW、activity log 記録。
+
 ## 0.35.0 - 2026-07-02
 
 ### New Features

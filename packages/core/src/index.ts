@@ -105,6 +105,58 @@ export class MemoService {
     })();
   }
 
+  /**
+   * Sync apply path (POST /api/sync/push): create a memo with a client-minted
+   * uuid and preserved offline authoring time. Same domain semantics as
+   * create() — mention rewriting, links, and activity log all apply.
+   */
+  public createFromSync(input: {
+    uuid: string;
+    bodyMd: string;
+    createdAt?: string;
+    isBookmarked?: boolean;
+  }) {
+    return this.db.transaction(() => {
+      const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, input.bodyMd);
+      const memo = createMemo(this.db, {
+        bodyMd: rewritten,
+        uuid: input.uuid,
+        createdAt: input.createdAt
+      });
+      this.logger.logMemoCreated(memo.id, rewritten);
+      for (const targetId of mentionedIssueIds) {
+        if (targetId === memo.id) continue;
+        this.linkService.createOrIgnore(memo.id, targetId, 'relates');
+      }
+      if (input.isBookmarked) {
+        setBookmark(this.db, memo.id, true);
+        this.logger.logMemoBookmarked(memo.id, true);
+      }
+      return getMemo(this.db, memo.id);
+    })();
+  }
+
+  /**
+   * Sync apply path: add a comment with a client-minted uuid and preserved
+   * offline authoring time.
+   */
+  public addCommentFromSync(
+    issueId: number,
+    bodyMd: string,
+    options: { uuid: string; createdAt?: string }
+  ) {
+    return this.db.transaction(() => {
+      const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, bodyMd, issueId);
+      const comment = addComment(this.db, issueId, rewritten, options);
+      this.logger.logCommentCreated(comment.id, issueId, rewritten);
+      for (const targetId of mentionedIssueIds) {
+        if (targetId === issueId) continue;
+        this.linkService.createOrIgnore(issueId, targetId, 'relates');
+      }
+      return comment;
+    })();
+  }
+
   public list(filters: ListMemoFilters = {}) {
     const memos = listMemos(this.db, filters);
     const total = countMemos(this.db, filters);
@@ -571,6 +623,16 @@ export class ArticleService {
 
 // Link Service
 export { LinkService, type LinkServiceOptions } from './linkService.js';
+
+// Sync Service (iOS offline sync)
+export {
+  SyncService,
+  type SyncServiceOptions,
+  type SyncPushOperation,
+  type SyncPushOperationResult,
+  type SyncPushResult,
+  type SyncPushStatus,
+} from './syncService.js';
 
 // Issue mention rewriting
 export {

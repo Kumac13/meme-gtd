@@ -5,6 +5,10 @@ export interface CreateMemoInput {
   bodyMd: string;
   labels?: string[];
   projectIds?: number[];
+  /** Sync apply path: client-minted identity. Omit to mint a fresh UUIDv7. */
+  uuid?: string;
+  /** Sync apply path: preserve the offline authoring time. Omit for now. */
+  createdAt?: string;
 }
 
 export interface UpdateMemoInput {
@@ -158,12 +162,12 @@ const commentRowToComment = (row: any): Comment => ({
 });
 
 export const createMemo = (db: Database.Database, input: CreateMemoInput): Memo => {
-  const now = nowIso();
+  const now = input.createdAt ?? nowIso();
   const stmt = db.prepare(
     `INSERT INTO issues (uuid, type, title, body_md, status, scheduled_on, meta, created_at, updated_at, is_bookmarked, is_deleted)
      VALUES (@uuid, 'memo', NULL, @body, NULL, NULL, json('{}'), @createdAt, @createdAt, 0, 0)`
   );
-  const result = stmt.run({ uuid: uuidv7(), body: input.bodyMd, createdAt: now });
+  const result = stmt.run({ uuid: input.uuid ?? uuidv7(), body: input.bodyMd, createdAt: now });
   const memoId = Number(result.lastInsertRowid);
 
   if (input.labels?.length) {
@@ -484,15 +488,16 @@ export const buildPromoteBody = (baseBody: string, comments: Comment[]): string 
 export const addComment = (
   db: Database.Database,
   memoId: number,
-  bodyMd: string
+  bodyMd: string,
+  options?: { uuid?: string; createdAt?: string }
 ): Comment => {
-  const now = nowIso();
+  const now = options?.createdAt ?? nowIso();
   const result = db
     .prepare(
       `INSERT INTO comments (uuid, issue_id, body_md, created_at, updated_at, is_deleted)
        VALUES (@uuid, @issueId, @bodyMd, @createdAt, @createdAt, 0)`
     )
-    .run({ uuid: uuidv7(), issueId: memoId, bodyMd, createdAt: now });
+    .run({ uuid: options?.uuid ?? uuidv7(), issueId: memoId, bodyMd, createdAt: now });
 
   return commentRowToComment(
     db.prepare('SELECT * FROM comments WHERE id = @id').get({ id: result.lastInsertRowid }) as any

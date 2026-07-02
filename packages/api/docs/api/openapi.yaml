@@ -7247,6 +7247,268 @@ paths:
                   - error
                   - message
                 additionalProperties: false
+  /api/sync/changes:
+    get:
+      operationId: listSyncChanges
+      summary: List changes after a cursor
+      tags:
+        - Sync
+      description: Return all changes (issues, comments, labels, issue_labels) with serverSeq greater than the cursor, ordered by serverSeq ascending. Soft-deleted issues/comments are included as upserts with isDeleted=true; hard-deleted labels/issue_labels arrive as op:delete tombstones. Pull with since=0 to bootstrap, then repeat with since=<last serverSeq> while hasMore is true.
+      parameters:
+        - schema:
+            type: integer
+            minimum: 0
+          in: query
+          name: since
+          required: true
+          description: "Pull cursor: return changes with serverSeq greater than this value. Use 0 for the initial full pull."
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+          in: query
+          name: limit
+          required: false
+          description: "Maximum number of changes to return (default: 500, max: 1000)"
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  changes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        serverSeq:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                          description: Global monotonic sequence number of this change
+                        entity:
+                          type: string
+                          enum:
+                            - issue
+                            - comment
+                            - label
+                            - issue_label
+                          description: Entity kind this change applies to
+                        op:
+                          type: string
+                          enum:
+                            - upsert
+                            - delete
+                          description: "upsert: apply the row in data; delete: remove the entity identified by data"
+                        data:
+                          type: object
+                          additionalProperties: {}
+                          description: Entity payload; shape depends on entity and op (see endpoint description)
+                      required:
+                        - serverSeq
+                        - entity
+                        - op
+                        - data
+                      additionalProperties: false
+                    description: Changes ordered by serverSeq ascending
+                  latestSeq:
+                    type: integer
+                    minimum: 0
+                    description: Highest serverSeq on the server right now
+                  hasMore:
+                    type: boolean
+                    description: True when more changes exist beyond this page; pull again with since = last serverSeq
+                required:
+                  - changes
+                  - latestSeq
+                  - hasMore
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/sync/push:
+    post:
+      operationId: pushSyncOperations
+      summary: Apply client operations
+      tags:
+        - Sync
+      description: "Apply a batch of offline operations (memo/comment create/update/delete) in order. Each operation is idempotent via opId and applies in its own transaction (partial success). Conflict rules: last-write-wins per record; concurrent memo body edits keep the server version and save the client body as a conflicted-copy memo; edits beat deletes in both directions."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deviceId:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                  description: Stable identifier of the pushing device (used in conflicted-copy annotations)
+                operations:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      opId:
+                        type: string
+                        minLength: 1
+                        maxLength: 128
+                        description: Client-minted idempotency key (UUID). Replays return the recorded result.
+                      entity:
+                        type: string
+                        enum:
+                          - memo
+                          - comment
+                        description: Entity kind this operation targets
+                      type:
+                        type: string
+                        enum:
+                          - create
+                          - update
+                          - delete
+                        description: Operation type
+                      uuid:
+                        type: string
+                        minLength: 1
+                        maxLength: 128
+                        description: Sync identity of the target row (client-minted UUIDv7 for offline-created rows)
+                      issueUuid:
+                        type: string
+                        minLength: 1
+                        maxLength: 128
+                        description: Parent issue uuid (required for comment create)
+                      baseUpdatedAt:
+                        type: string
+                        nullable: true
+                        description: The server updatedAt this edit was based on. Compared for equality only; mismatch triggers conflict handling.
+                      payload:
+                        type: object
+                        properties:
+                          bodyMd:
+                            type: string
+                            description: Body content (required for create)
+                          isBookmarked:
+                            type: boolean
+                            description: Bookmark state
+                          createdAt:
+                            type: string
+                            description: Offline authoring time to preserve (create only)
+                          updatedAt:
+                            type: string
+                            description: Client-side update time (informational)
+                        additionalProperties: false
+                        description: Operation payload; omitted for delete
+                    required:
+                      - opId
+                      - entity
+                      - type
+                      - uuid
+                    additionalProperties: false
+                  minItems: 1
+                  maxItems: 500
+                  description: Operations in client FIFO order (parents before children)
+              required:
+                - deviceId
+                - operations
+              additionalProperties: false
+        required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        opId:
+                          type: string
+                          description: Echo of the operation opId
+                        status:
+                          type: string
+                          enum:
+                            - applied
+                            - alreadyApplied
+                            - conflictCopied
+                            - skipped
+                          description: "applied: change accepted; alreadyApplied: idempotent replay or existing state; conflictCopied: server version kept, client body saved as a conflicted-copy memo; skipped: dropped (e.g. stale delete lost to edit-beats-delete)"
+                        uuid:
+                          type: string
+                          description: Sync identity of the target row
+                        serverId:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                          description: Server-assigned integer id of the row
+                        updatedAt:
+                          type: string
+                          description: Server updatedAt after applying — store as the new base for future edits
+                        conflictCopyUuid:
+                          type: string
+                          description: uuid of the conflicted-copy memo (status conflictCopied only)
+                      required:
+                        - opId
+                        - status
+                        - uuid
+                      additionalProperties: false
+                    description: One result per operation, same order as the request
+                  latestSeq:
+                    type: integer
+                    minimum: 0
+                    description: Highest serverSeq after applying — pull from your last cursor to converge
+                required:
+                  - results
+                  - latestSeq
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
   /api/articles/:
     post:
       operationId: createArticle
@@ -8537,3 +8799,5 @@ tags:
     description: Image attachment endpoints
   - name: ActivityLog
     description: Activity log endpoints
+  - name: Sync
+    description: Offline sync endpoints (delta pull + outbox push)
