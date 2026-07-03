@@ -3,6 +3,10 @@ import SwiftUI
 struct IssueInfoSheet<VM: IssueDetailProvider>: View {
     @ObservedObject var viewModel: VM
     @Binding var showCopiedFeedback: Bool
+    /// Disables every write action (offline read-only cache, Phase 7).
+    /// Copy and link navigation stay available. Defaults to false so
+    /// existing call sites (memos) keep their behavior.
+    var isReadOnly: Bool = false
     var onEditTitle: (() -> Void)?
     var onDelete: (() -> Void)?
     var onNewTask: (() -> Void)?
@@ -56,7 +60,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 14)
                     }
-                    .disabled(viewModel.isBookmarking)
+                    .disabled(viewModel.isBookmarking || isReadOnly)
 
                     Divider().padding(.leading, 16)
                 }
@@ -79,6 +83,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 14)
                     }
+                    .disabled(isReadOnly)
 
                     Divider().padding(.leading, 16)
                 }
@@ -101,6 +106,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 14)
                     }
+                    .disabled(isReadOnly)
 
                     Divider().padding(.leading, 16)
                 }
@@ -123,6 +129,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 14)
                     }
+                    .disabled(isReadOnly)
 
                     Divider().padding(.leading, 16)
                 }
@@ -166,6 +173,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
                 }
+                .disabled(isReadOnly)
 
                 Divider().padding(.leading, 16)
 
@@ -204,6 +212,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
                 }
+                .disabled(isReadOnly)
 
                 Divider().padding(.leading, 16)
 
@@ -220,6 +229,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                                 .foregroundColor(.accent)
                         }
                     }
+                    .disabled(isReadOnly)
 
                     if !viewModel.issueLinks.isEmpty || !viewModel.urlLinks.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
@@ -323,6 +333,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 14)
                     }
+                    .disabled(isReadOnly)
                 }
 
                 // Delete (optional, for tasks)
@@ -345,6 +356,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 14)
                     }
+                    .disabled(isReadOnly)
                 }
             }
 

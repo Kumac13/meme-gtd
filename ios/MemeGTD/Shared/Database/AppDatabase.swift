@@ -175,6 +175,38 @@ nonisolated final class AppDatabase {
                 """)
         }
 
+        migrator.registerMigration("002_projects_cache") { db in
+            // Read-only snapshot of GET /api/projects (offline support plan
+            // Phase 7). Projects are hard-deleted on the server and are not
+            // part of the change feed, so every successful fetch replaces the
+            // whole table (DELETE then INSERT) instead of merging.
+            try db.execute(sql: """
+                CREATE TABLE projects (
+                  id INTEGER PRIMARY KEY,
+                  name TEXT NOT NULL,
+                  description TEXT,
+                  status TEXT NOT NULL,
+                  start_date TEXT,
+                  end_date TEXT,
+                  created_at TEXT NOT NULL
+                )
+                """)
+
+            // Per-issue snapshot of GET /api/issues/{id}/projects: rows for an
+            // issue are replaced whenever its memberships are fetched. Keys
+            // are SERVER ids (projects never exist locally before syncing).
+            try db.execute(sql: """
+                CREATE TABLE project_items (
+                  project_id INTEGER NOT NULL,
+                  issue_id INTEGER NOT NULL,
+                  PRIMARY KEY (project_id, issue_id)
+                )
+                """)
+            try db.execute(sql: """
+                CREATE INDEX idx_project_items_issue_id ON project_items(issue_id)
+                """)
+        }
+
         return migrator
     }
 

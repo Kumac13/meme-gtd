@@ -14,6 +14,13 @@ struct ArticleDetailView: View {
     @State private var showDeleteConfirm: Bool = false
     @State private var showInfoSheet: Bool = false
     @State private var showCopiedFeedback: Bool = false
+    @ObservedObject private var connectivity = ConnectivityMonitor.shared
+
+    /// Offline Sync ON + offline: the article is served from the local read
+    /// cache and cannot be edited (offline support plan Phase 7).
+    private var isOfflineReadOnly: Bool {
+        Settings.shared.offlineSyncEnabled && connectivity.isOffline
+    }
 
     init(articleId: Int, initialTitle: String? = nil, onMenuTap: @escaping () -> Void, onNavigateToLinkedIssue: ((Int, String, String) -> Void)? = nil) {
         self.articleId = articleId
@@ -156,6 +163,9 @@ struct ArticleDetailView: View {
                 }
             }
         }
+        .safeAreaInset(edge: .top) {
+            OfflineBanner(message: "Offline — articles are read-only")
+        }
         .enableSwipeBack()
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -180,6 +190,7 @@ struct ArticleDetailView: View {
             IssueInfoSheet(
                 viewModel: viewModel,
                 showCopiedFeedback: $showCopiedFeedback,
+                isReadOnly: isOfflineReadOnly,
                 onDelete: { showDeleteConfirm = true },
                 onNavigateToIssue: { target in
                     onNavigateToLinkedIssue?(target.id, target.type, target.title)

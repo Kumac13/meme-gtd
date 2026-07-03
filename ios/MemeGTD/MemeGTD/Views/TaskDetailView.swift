@@ -23,6 +23,13 @@ struct TaskDetailView: View {
     @State private var pickedImageData: Data? = nil
     @State private var pickedMimeType: String = "image/jpeg"
     @State private var pickedExtension: String = "jpg"
+    @ObservedObject private var connectivity = ConnectivityMonitor.shared
+
+    /// Offline Sync ON + offline: the task is served from the local read
+    /// cache and cannot be edited (offline support plan Phase 7).
+    private var isOfflineReadOnly: Bool {
+        Settings.shared.offlineSyncEnabled && connectivity.isOffline
+    }
 
     enum EditingMode: Equatable {
         case none
@@ -50,7 +57,10 @@ struct TaskDetailView: View {
                             TaskTitleSection(
                                 title: task.title,
                                 status: task.status,
-                                onStatusTap: { showStatusPicker = true }
+                                onStatusTap: {
+                                    guard !isOfflineReadOnly else { return }
+                                    showStatusPicker = true
+                                }
                             )
                             .padding(.top, geo.safeAreaInsets.top)
                         }
@@ -88,6 +98,7 @@ struct TaskDetailView: View {
                                         }) {
                                             Label("Edit", systemImage: "pencil")
                                         }
+                                        .disabled(isOfflineReadOnly)
                                     } label: {
                                         Image(systemName: "ellipsis")
                                             .font(.system(size: 13))
@@ -109,6 +120,7 @@ struct TaskDetailView: View {
                                             onNavigateToLinkedIssue?(id, type, "")
                                         },
                                         onTodoToggle: { todoIndex, _ in
+                                            guard !isOfflineReadOnly else { return }
                                             Task { await viewModel.toggleBodyTodo(at: todoIndex) }
                                         }
                                     )
@@ -158,11 +170,13 @@ struct TaskDetailView: View {
                                                 }) {
                                                     Label("Edit", systemImage: "pencil")
                                                 }
+                                                .disabled(isOfflineReadOnly)
                                                 Button(role: .destructive, action: {
                                                     Task { await viewModel.deleteComment(comment.id) }
                                                 }) {
                                                     Label("Delete", systemImage: "trash")
                                                 }
+                                                .disabled(isOfflineReadOnly)
                                             } label: {
                                                 Image(systemName: "ellipsis")
                                                     .font(.system(size: 13))
@@ -183,6 +197,7 @@ struct TaskDetailView: View {
                                                 onNavigateToLinkedIssue?(id, type, "")
                                             },
                                             onTodoToggle: { todoIndex, _ in
+                                                guard !isOfflineReadOnly else { return }
                                                 Task { await viewModel.toggleCommentTodo(commentId: comment.id, todoIndex: todoIndex) }
                                             }
                                         )
@@ -234,7 +249,7 @@ struct TaskDetailView: View {
                 FloatingComposer(
                     text: $viewModel.replyBody,
                     placeholder: composerPlaceholder,
-                    disabled: viewModel.isLoading,
+                    disabled: viewModel.isLoading || isOfflineReadOnly,
                     submitting: viewModel.isSubmittingReply,
                     notice: composerNotice,
                     onDismissNotice: {
@@ -277,6 +292,9 @@ struct TaskDetailView: View {
                 .padding(.bottom, 10)
             }
         }
+        .safeAreaInset(edge: .top) {
+            OfflineBanner(message: "Offline — tasks are read-only")
+        }
         .enableSwipeBack()
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -301,6 +319,7 @@ struct TaskDetailView: View {
             IssueInfoSheet(
                 viewModel: viewModel,
                 showCopiedFeedback: $showCopiedFeedback,
+                isReadOnly: isOfflineReadOnly,
                 onEditTitle: {
                     if let task = viewModel.task {
                         viewModel.replyBody = task.title

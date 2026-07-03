@@ -17,17 +17,19 @@ private enum SharedSync {
 /// Injected as an `environmentObject` from `MemeGTDApp` and handed to each
 /// ViewModel alongside its store (see the `.task` wiring in the Views).
 ///
-/// Memos honor the "Offline Sync (Beta)" setting (offline support plan S5):
-/// when it is ON, `memos` becomes the offline-first implementation backed by
-/// the local GRDB mirror; when OFF (default), everything stays `Remote*`,
-/// byte-for-byte the previous online-only behavior. All other data sources
-/// are remote-only until later phases.
+/// Memos, tasks, articles and projects honor the "Offline Sync (Beta)"
+/// setting (offline support plan S5 + Phase 7): when it is ON, `memos`
+/// becomes the offline-first read/write implementation backed by the local
+/// GRDB mirror, and `tasks` / `articles` / `projects` become offline
+/// READ-ONLY caches (remote first, local fallback when unreachable). When
+/// OFF (default), everything stays `Remote*`, byte-for-byte the previous
+/// online-only behavior.
 final class DataSourceProvider: ObservableObject {
     private(set) var memos: MemoDataSource
-    let tasks: TaskDataSource
-    let articles: ArticleDataSource
+    private(set) var tasks: TaskDataSource
+    private(set) var articles: ArticleDataSource
     let search: SearchDataSource
-    let projects: ProjectDataSource
+    private(set) var projects: ProjectDataSource
     let labels: LabelDataSource
     let issueRelations: IssueRelationsDataSource
 
@@ -43,18 +45,18 @@ final class DataSourceProvider: ObservableObject {
         self.projects = RemoteProjectDataSource()
         self.labels = RemoteLabelDataSource()
         self.issueRelations = RemoteIssueRelationsDataSource()
-        rebuildMemoDataSource()
+        rebuildDataSources()
     }
 
     /// Called from SettingsView after the Offline Sync toggle changes.
-    /// Swaps the memo implementation; ViewModels hold this provider (not the
-    /// data source), so they pick up the new implementation on next access.
+    /// Swaps the implementations; ViewModels hold this provider (not the
+    /// data sources), so they pick up the new implementations on next access.
     func offlineSyncSettingDidChange() {
         objectWillChange.send()
-        rebuildMemoDataSource()
+        rebuildDataSources()
     }
 
-    private func rebuildMemoDataSource() {
+    private func rebuildDataSources() {
         if Settings.shared.offlineSyncEnabled {
             let scheduler = SharedSync.scheduler
             syncScheduler = scheduler
@@ -63,6 +65,18 @@ final class DataSourceProvider: ObservableObject {
                 remote: RemoteMemoDataSource(),
                 onLocalWrite: { scheduler.requestSync() }
             )
+            tasks = OfflineFirstTaskDataSource(
+                database: AppDatabase.shared,
+                remote: RemoteTaskDataSource()
+            )
+            articles = OfflineFirstArticleDataSource(
+                database: AppDatabase.shared,
+                remote: RemoteArticleDataSource()
+            )
+            projects = OfflineFirstProjectDataSource(
+                database: AppDatabase.shared,
+                remote: RemoteProjectDataSource()
+            )
             // Starts connectivity monitoring and runs an initial sync — with
             // a fresh database the cursor is 0, so this is the full seed pull.
             scheduler.start()
@@ -70,6 +84,9 @@ final class DataSourceProvider: ObservableObject {
             syncScheduler?.stop()
             syncScheduler = nil
             memos = RemoteMemoDataSource()
+            tasks = RemoteTaskDataSource()
+            articles = RemoteArticleDataSource()
+            projects = RemoteProjectDataSource()
         }
     }
 }

@@ -19,6 +19,13 @@ struct TaskListView: View {
     @State private var dateTo: Date?
     @State private var createTaskMode: CreateTaskMode? = nil
     @State private var showCopyDialog: Bool = false
+    @ObservedObject private var connectivity = ConnectivityMonitor.shared
+
+    /// Offline Sync ON + offline: tasks are served from the local read cache
+    /// and cannot be edited (offline support plan Phase 7).
+    private var isOfflineReadOnly: Bool {
+        Settings.shared.offlineSyncEnabled && connectivity.isOffline
+    }
 
     private var hasActiveFilters: Bool {
         !viewModel.searchQuery.isEmpty ||
@@ -95,6 +102,8 @@ struct TaskListView: View {
         }
         .safeAreaInset(edge: .top) {
             VStack(spacing: 0) {
+                OfflineBanner(message: "Offline — tasks are read-only")
+
                 if isSearching {
                     Picker("Search Mode", selection: $viewModel.searchMode) {
                         ForEach(SearchMode.allCases, id: \.self) { mode in
@@ -173,6 +182,8 @@ struct TaskListView: View {
                         .background(Color.accent)
                         .clipShape(Circle())
                 }
+                .disabled(isOfflineReadOnly)
+                .opacity(isOfflineReadOnly ? 0.4 : 1)
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 10)

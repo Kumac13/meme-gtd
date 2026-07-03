@@ -25,6 +25,8 @@ final class AppDatabaseTests: XCTestCase {
             "issues",
             "labels",
             "pending_operations",
+            "project_items",
+            "projects",
             "sync_meta",
         ])
     }
