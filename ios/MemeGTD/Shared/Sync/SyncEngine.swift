@@ -17,6 +17,11 @@ nonisolated struct SyncSummary: Equatable {
     /// toast.
     var conflictCopiedCount: Int = 0
     var errors: [String] = []
+    /// Outbox operations still waiting after the run. Non-zero means the push
+    /// did not fully drain (e.g. the server was unreachable) — the scheduler
+    /// uses this to retry with backoff instead of waiting for the next
+    /// external trigger, which may never come.
+    var remainingOutboxCount: Int = 0
 
     /// True when the run changed local or remote state, i.e. stores should
     /// reload their lists.
@@ -78,6 +83,9 @@ actor SyncEngine {
             summary.errors.append(error.localizedDescription)
             logger.error("syncNow failed: \(error.localizedDescription, privacy: .public)")
         }
+        summary.remainingOutboxCount = (try? await database.dbWriter.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM pending_operations") ?? 0
+        }) ?? 0
         if summary.didChangeData {
             var userInfo: [AnyHashable: Any]?
             if summary.conflictCopiedCount > 0 {
@@ -89,7 +97,7 @@ actor SyncEngine {
                 userInfo: userInfo
             )
         }
-        logger.info("syncNow done: pushed=\(summary.pushedCount), pulled=\(summary.pulledCount), conflictCopied=\(summary.conflictCopiedCount), errors=\(summary.errors.count)")
+        logger.info("syncNow done: pushed=\(summary.pushedCount), pulled=\(summary.pulledCount), conflictCopied=\(summary.conflictCopiedCount), errors=\(summary.errors.count), remaining=\(summary.remainingOutboxCount)")
         return summary
     }
 

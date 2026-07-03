@@ -34,6 +34,10 @@ final class ConnectivityMonitor: ObservableObject {
 /// local read cache and cannot be edited. Renders nothing otherwise, so
 /// embedding it is behavior-neutral for the default (toggle OFF) setup.
 /// Memo screens never show it — memos stay editable offline via the outbox.
+///
+/// Styled as a floating capsule pill (same idiom as the conflict toast in
+/// MemoListView), NOT an edge-to-edge material band: a full-width bar would
+/// break the translucent glass look of the scroll edges.
 struct OfflineBanner: View {
     let message: String
 
@@ -49,9 +53,11 @@ struct OfflineBanner: View {
                     .lineLimit(1)
             }
             .foregroundColor(.textSecondary)
-            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(.regularMaterial)
+            .background(.regularMaterial, in: Capsule())
+            .padding(.top, 4)
+            .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
 }

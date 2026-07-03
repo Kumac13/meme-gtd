@@ -267,6 +267,67 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertEqual(searchPage.data.map(\.id), [plain.id])
         XCTAssertEqual(searchPage.total, 1)
     }
+
+    // MARK: - Retry after failed runs
+
+    func testSummaryReportsRemainingOutboxAfterTransportFailure() async throws {
+        _ = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "stranded"))
+        transport.pushError = TestTransportError.offline
+
+        let failed = await engine.syncNow()
+        XCTAssertEqual(failed.remainingOutboxCount, 1)
+        XCTAssertFalse(failed.errors.isEmpty)
+
+        transport.pushError = nil
+        let recovered = await engine.syncNow()
+        XCTAssertEqual(recovered.remainingOutboxCount, 0)
+        XCTAssertTrue(recovered.errors.isEmpty)
+        XCTAssertEqual(recovered.pushedCount, 1)
+    }
+
+    /// The regression behind the "offline memo never reached the server" bug:
+    /// a push that fails right after connectivity returns (e.g. the VPN
+    /// tunnel is not up yet) must retry on its own — no further external
+    /// trigger arrives while the user stays on one screen.
+    @MainActor
+    func testSchedulerRetriesWithBackoffUntilOutboxDrains() async throws {
+        _ = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "retry me"))
+        transport.pushError = TestTransportError.offline
+
+        let scheduler = SyncScheduler(engine: engine, retryDelays: [0.05])
+        scheduler.requestSync()
+
+        // Wait for the first run to fail (its op transitions to 'failed').
+        try await pollUntil("first run marks the op failed") { [database] in
+            try await database!.dbWriter.read { db in
+                try Int.fetchOne(
+                    db,
+                    sql: "SELECT COUNT(*) FROM pending_operations WHERE state = 'failed'"
+                ) ?? 0
+            } > 0
+        }
+
+        // Server becomes reachable; the scheduled retry must drain the outbox
+        // without any external trigger.
+        transport.pushError = nil
+        try await pollUntil("retry drains the outbox") { [database] in
+            try await database!.dbWriter.read { db in
+                try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM pending_operations") ?? -1
+            } == 0
+        }
+    }
+
+    /// Polls the condition every 50ms for up to 5s.
+    private func pollUntil(
+        _ what: String,
+        _ condition: () async throws -> Bool
+    ) async throws {
+        for _ in 0..<100 {
+            if try await condition() { return }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        XCTFail("Timed out waiting for: \(what)")
+    }
 }
 
 /// Remote stub that fails every call: guarantees the offline paths under test
