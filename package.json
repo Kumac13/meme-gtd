@@ -1,6 +1,6 @@
 {
   "name": "meme-gtd",
-  "version": "0.39.5",
+  "version": "0.39.6",
   "private": true,
   "description": "CLI toolkit for meme-gtd (init + memo commands)",
   "license": "MIT",
