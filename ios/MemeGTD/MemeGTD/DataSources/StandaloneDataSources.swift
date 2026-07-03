@@ -15,12 +15,26 @@ nonisolated struct StandaloneUnavailableError: Error, LocalizedError {
     var errorDescription: String? { message }
 }
 
-// MARK: - Labels (served from the local mirror)
+// MARK: - Labels (local mirror, fully read/write since Phase 9)
+
+/// Error carrying the server's label validation messages (English,
+/// user-facing, same wording as labelRepository.ts).
+nonisolated struct LocalLabelError: Error, LocalizedError {
+    let message: String
+
+    init(_ message: String) {
+        self.message = message
+    }
+
+    var errorDescription: String? { message }
+}
 
 /// Standalone `LabelDataSource`: list is served from the local `labels`
-/// mirror (whatever a previous sync pulled, or nothing on a fresh install) so
-/// the memo label-filter picker keeps working without a server. Creating and
-/// (un)assigning labels are server writes with no outbox path and are refused.
+/// mirror (whatever a previous sync pulled, plus labels created on-device).
+/// Since Phase 9 creating and (un)assigning labels also work locally,
+/// mirroring labelRepository.ts semantics: create refuses duplicate names,
+/// assign is idempotent (INSERT OR IGNORE), remove is idempotent but
+/// validates that both the issue and the label exist.
 nonisolated final class LocalLabelDataSource: LabelDataSource {
     private let database: AppDatabase
 
@@ -66,73 +80,123 @@ nonisolated final class LocalLabelDataSource: LabelDataSource {
     }
 
     func createLabel(_ request: CreateLabelRequest) async throws -> IssueLabel {
-        throw StandaloneUnavailableError("Creating labels is not available in Standalone mode.")
+        let now = ISO8601Millis.now()
+
+        return try await database.dbWriter.write { db in
+            // Name is the natural key; duplicate creation fails with the
+            // server's message (labelRepository.createLabel).
+            let existing = try Row.fetchOne(
+                db,
+                sql: "SELECT 1 FROM labels WHERE name = ?",
+                arguments: [request.name]
+            )
+            if existing != nil {
+                throw LocalLabelError("Label '\(request.name)' already exists")
+            }
+
+            let record = LabelRecord(
+                name: request.name,
+                serverId: nil,
+                description: request.description,
+                createdAt: now
+            )
+            try record.insert(db)
+
+            let rowid = try Int64.fetchOne(
+                db,
+                sql: "SELECT rowid FROM labels WHERE name = ?",
+                arguments: [request.name]
+            ) ?? 0
+            return IssueLabel(
+                id: -Int(rowid),
+                name: request.name,
+                description: request.description,
+                createdAt: now,
+                memoCount: 0,
+                taskCount: 0,
+                articleCount: 0
+            )
+        }
     }
 
     func assignLabel(issueId: Int, _ request: AssignLabelRequest) async throws -> AssignLabelResponse {
-        throw StandaloneUnavailableError("Assigning labels is not available in Standalone mode.")
+        try await database.dbWriter.write { db in
+            // Mirrors labelRepository.attachLabelToIssue: issue must exist
+            // and not be deleted, label must exist, assignment is idempotent.
+            guard let issueUuid = try Self.issueUuid(db, issueId: issueId) else {
+                throw LocalLabelError("Issue #\(issueId) not found or deleted")
+            }
+            guard let labelName = try Self.labelName(db, labelId: request.labelId) else {
+                throw LocalLabelError("Label #\(request.labelId) not found")
+            }
+            try db.execute(
+                sql: "INSERT OR IGNORE INTO issue_labels (issue_uuid, label_name) VALUES (?, ?)",
+                arguments: [issueUuid, labelName]
+            )
+            return AssignLabelResponse(success: true)
+        }
     }
 
     func removeLabel(issueId: Int, labelId: Int) async throws {
-        throw StandaloneUnavailableError("Removing labels is not available in Standalone mode.")
+        try await database.dbWriter.write { db in
+            // Mirrors labelRepository.detachLabelFromIssue: validates both
+            // sides exist, then deletes idempotently.
+            guard let issueUuid = try Self.issueUuid(db, issueId: issueId) else {
+                throw LocalLabelError("Issue #\(issueId) not found")
+            }
+            guard let labelName = try Self.labelName(db, labelId: labelId) else {
+                throw LocalLabelError("Label #\(labelId) not found")
+            }
+            try db.execute(
+                sql: "DELETE FROM issue_labels WHERE issue_uuid = ? AND label_name = ?",
+                arguments: [issueUuid, labelName]
+            )
+        }
+    }
+
+    // MARK: - Id resolution (positive = server id, negative = -rowid)
+
+    private static func issueUuid(_ db: Database, issueId: Int) throws -> String? {
+        if issueId > 0 {
+            return try String.fetchOne(
+                db,
+                sql: "SELECT uuid FROM issues WHERE server_id = ? AND is_deleted = 0",
+                arguments: [issueId]
+            )
+        }
+        return try String.fetchOne(
+            db,
+            sql: "SELECT uuid FROM issues WHERE rowid = ? AND is_deleted = 0",
+            arguments: [-issueId]
+        )
+    }
+
+    private static func labelName(_ db: Database, labelId: Int) throws -> String? {
+        if labelId > 0 {
+            return try String.fetchOne(
+                db,
+                sql: "SELECT name FROM labels WHERE server_id = ?",
+                arguments: [labelId]
+            )
+        }
+        return try String.fetchOne(
+            db,
+            sql: "SELECT name FROM labels WHERE rowid = ?",
+            arguments: [-labelId]
+        )
     }
 }
 
-// MARK: - Tasks / Articles / Search / Projects / Relations (empty-safe)
+// MARK: - Articles / Projects (empty-safe)
 
-/// Standalone stand-ins for the server-backed domains: list-style reads
-/// answer empty pages so the Tasks/Articles screens render their (labelled)
+/// Standalone stand-ins for the still server-backed domains: list-style
+/// reads answer empty pages so the Articles screen renders its (labelled)
 /// empty state instead of erroring, and every write or by-id read throws the
 /// user-facing unavailable error. Nothing here can reach
 /// `APIError.noConfiguration` or crash without a server.
-
-nonisolated struct EmptyTaskDataSource: TaskDataSource {
-    func listTasks(queryItems: [URLQueryItem]) async throws -> TaskListResponse {
-        TaskListResponse(data: [], total: 0, limit: 0, offset: 0)
-    }
-
-    func searchTasks(queryItems: [URLQueryItem]) async throws -> SearchTasksResponse {
-        SearchTasksResponse(data: [], total: 0, limit: 0, offset: 0)
-    }
-
-    func getTask(id: Int) async throws -> TaskItem {
-        throw StandaloneUnavailableError("Tasks are not available in Standalone mode.")
-    }
-
-    func createTask(_ request: CreateTaskRequest) async throws -> TaskItem {
-        throw StandaloneUnavailableError("Creating tasks is not available in Standalone mode.")
-    }
-
-    func updateTask(id: Int, _ request: UpdateTaskRequest) async throws -> TaskItem {
-        throw StandaloneUnavailableError("Editing tasks is not available in Standalone mode.")
-    }
-
-    func deleteTask(id: Int) async throws {
-        throw StandaloneUnavailableError("Deleting tasks is not available in Standalone mode.")
-    }
-
-    func bookmarkTask(id: Int) async throws -> TaskItem {
-        throw StandaloneUnavailableError("Bookmarking tasks is not available in Standalone mode.")
-    }
-
-    func unbookmarkTask(id: Int) async throws -> TaskItem {
-        throw StandaloneUnavailableError("Bookmarking tasks is not available in Standalone mode.")
-    }
-
-    func listComments(taskId: Int) async throws -> [Comment] { [] }
-
-    func createComment(taskId: Int, _ request: CreateCommentRequest) async throws -> Comment {
-        throw StandaloneUnavailableError("Commenting on tasks is not available in Standalone mode.")
-    }
-
-    func updateComment(taskId: Int, commentId: Int, _ request: UpdateCommentRequest) async throws -> Comment {
-        throw StandaloneUnavailableError("Commenting on tasks is not available in Standalone mode.")
-    }
-
-    func deleteComment(taskId: Int, commentId: Int) async throws {
-        throw StandaloneUnavailableError("Commenting on tasks is not available in Standalone mode.")
-    }
-}
+/// (Tasks, keyword search, and issue relations moved to real local
+/// implementations in Phase 9: LocalTaskDataSource / LocalSearchDataSource /
+/// LocalIssueRelationsDataSource.)
 
 nonisolated struct EmptyArticleDataSource: ArticleDataSource {
     func listArticles(queryItems: [URLQueryItem]) async throws -> ArticleListResponse {
@@ -152,27 +216,6 @@ nonisolated struct EmptyArticleDataSource: ArticleDataSource {
     }
 }
 
-/// Keyword/semantic search stays server-backed until the local FTS lands
-/// (Phase 9): both endpoints answer an empty result set so the search UI
-/// shows "no results" instead of a configuration error.
-nonisolated struct EmptySearchDataSource: SearchDataSource {
-    func keywordSearch(queryItems: [URLQueryItem]) async throws -> KeywordSearchResponse {
-        KeywordSearchResponse(results: [], total: 0, limit: 0, offset: 0)
-    }
-
-    func semanticSearch(queryItems: [URLQueryItem]) async throws -> SemanticSearchResponse {
-        let query = queryItems.first(where: { $0.name == "q" })?.value ?? ""
-        return SemanticSearchResponse(
-            results: [],
-            meta: SemanticSearchMeta(query: query, totalResults: 0, searchTimeMs: 0)
-        )
-    }
-
-    func exportSearchResults(_ request: SearchExportRequest) async throws -> String {
-        throw StandaloneUnavailableError("Export is not available in Standalone mode.")
-    }
-}
-
 nonisolated struct EmptyProjectDataSource: ProjectDataSource {
     func listProjects() async throws -> [Project] { [] }
 
@@ -185,28 +228,4 @@ nonisolated struct EmptyProjectDataSource: ProjectDataSource {
     func removeProjectItem(projectId: Int, issueId: Int) async throws {
         throw StandaloneUnavailableError("Projects are not available in Standalone mode.")
     }
-}
-
-nonisolated struct EmptyIssueRelationsDataSource: IssueRelationsDataSource {
-    func listLinks(issueId: Int) async throws -> [IssueLink] { [] }
-
-    func createLink(_ request: CreateLinkRequest) async throws -> CreateLinkResponse {
-        throw StandaloneUnavailableError("Linking issues is not available in Standalone mode.")
-    }
-
-    func deleteLink(linkId: Int) async throws {
-        throw StandaloneUnavailableError("Linking issues is not available in Standalone mode.")
-    }
-
-    func listUrlLinks(issueId: Int) async throws -> [UrlLink] { [] }
-
-    func createUrlLink(issueId: Int, _ request: CreateUrlLinkRequest) async throws -> UrlLink {
-        throw StandaloneUnavailableError("URL links are not available in Standalone mode.")
-    }
-
-    func deleteUrlLink(urlLinkId: Int) async throws {
-        throw StandaloneUnavailableError("URL links are not available in Standalone mode.")
-    }
-
-    func listActivityLog(issueId: Int) async throws -> [ActivityLogEntry] { [] }
 }

@@ -27,8 +27,9 @@ struct TaskListView: View {
         Settings.shared.offlineSyncEnabled && connectivity.isOffline
     }
 
-    /// Standalone Storage Mode: tasks are server-only, so the list is always
-    /// empty and creating is disabled (offline support plan Phase 8).
+    /// Standalone Storage Mode: tasks work fully locally (offline support
+    /// plan Phase 9), but semantic search needs the server's embedding stack,
+    /// so the search-mode picker is hidden (keyword-only).
     private var isStandalone: Bool {
         Settings.shared.appMode == .standalone
     }
@@ -110,7 +111,9 @@ struct TaskListView: View {
             VStack(spacing: 0) {
                 OfflineReadOnlyIndicator()
 
-                if isSearching {
+                // Standalone: semantic search is server-only, so the mode
+                // picker is hidden and search stays on its keyword default.
+                if isSearching && !isStandalone {
                     Picker("Search Mode", selection: $viewModel.searchMode) {
                         ForEach(SearchMode.allCases, id: \.self) { mode in
                             Text(mode.rawValue).tag(mode)
@@ -188,8 +191,8 @@ struct TaskListView: View {
                         .background(Color.accent)
                         .clipShape(Circle())
                 }
-                .disabled(isOfflineReadOnly || isStandalone)
-                .opacity(isOfflineReadOnly || isStandalone ? 0.4 : 1)
+                .disabled(isOfflineReadOnly)
+                .opacity(isOfflineReadOnly ? 0.4 : 1)
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 10)
@@ -318,12 +321,6 @@ struct TaskListView: View {
         .overlay {
             if viewModel.isLoading && taskStore.tasks.isEmpty {
                 ProgressView("Loading tasks...")
-                    .foregroundColor(.textSecondary)
-            } else if isStandalone && taskStore.tasks.isEmpty {
-                // Tasks have no local implementation yet: label the empty
-                // list so it does not read as a loading failure.
-                Text("Tasks are not available in Standalone mode.")
-                    .font(.system(size: 14))
                     .foregroundColor(.textSecondary)
             }
         }

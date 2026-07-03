@@ -38,6 +38,13 @@ struct MemoListView: View {
         viewModel.createdTo != nil
     }
 
+    /// Standalone Storage Mode: keyword search runs on the local FTS index
+    /// (offline support plan Phase 9), but semantic search needs the server's
+    /// embedding stack, so the search-mode picker is hidden (keyword-only).
+    private var isStandalone: Bool {
+        Settings.shared.appMode == .standalone
+    }
+
     /// LazyVStack under defaultScrollAnchor(.bottom) fails to materialize its
     /// cells when the view is CREATED with content already present (tab
     /// return; iOS 26 — the list stays blank until a scroll gesture forces a
@@ -247,7 +254,9 @@ struct MemoListView: View {
         }
         .safeAreaInset(edge: .top) {
             VStack(spacing: 4) {
-                if isSearching {
+                // Standalone: semantic search is server-only, so the mode
+                // picker is hidden and search stays on its keyword default.
+                if isSearching && !isStandalone {
                     Picker("Search Mode", selection: $viewModel.searchMode) {
                         ForEach(SearchMode.allCases, id: \.self) { mode in
                             Text(mode.rawValue).tag(mode)

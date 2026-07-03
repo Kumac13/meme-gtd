@@ -207,6 +207,52 @@ nonisolated final class AppDatabase {
                 """)
         }
 
+        // NOTE: no local FTS index. Keyword search deliberately mirrors the
+        // server's LIKE-based implementation (packages/db/CLAUDE.md: unicode61
+        // cannot tokenize Japanese word boundaries) — see LocalSearchDataSource.
+
+        migrator.registerMigration("003_links") { db in
+            // Column-for-column mirror of the server `links` / `url_links`
+            // tables (schema/001_init.sql, schema/011_add_url_links.sql),
+            // with the identity swapped to the app-wide convention: PK is a
+            // client-generated UUIDv7 with server_id alongside, and issues
+            // are referenced by their uuid instead of the server integer id.
+            // Links are not part of the sync change feed, so today these
+            // tables only ever hold Standalone-created rows — the uuid PK is
+            // chosen so local creation works and a future feed extension can
+            // adopt the rows without a rekey.
+            try db.execute(sql: """
+                CREATE TABLE links (
+                  uuid TEXT PRIMARY KEY,
+                  server_id INTEGER UNIQUE,
+                  source_issue_uuid TEXT NOT NULL,
+                  target_issue_uuid TEXT NOT NULL,
+                  link_type TEXT NOT NULL CHECK (link_type IN ('parent', 'child', 'relates', 'derived_from')),
+                  created_at TEXT NOT NULL
+                )
+                """)
+            try db.execute(sql: """
+                CREATE INDEX idx_links_source_issue_uuid ON links(source_issue_uuid)
+                """)
+            try db.execute(sql: """
+                CREATE INDEX idx_links_target_issue_uuid ON links(target_issue_uuid)
+                """)
+
+            try db.execute(sql: """
+                CREATE TABLE url_links (
+                  uuid TEXT PRIMARY KEY,
+                  server_id INTEGER UNIQUE,
+                  issue_uuid TEXT NOT NULL,
+                  url TEXT NOT NULL,
+                  title TEXT,
+                  created_at TEXT NOT NULL
+                )
+                """)
+            try db.execute(sql: """
+                CREATE INDEX idx_url_links_issue_uuid ON url_links(issue_uuid)
+                """)
+        }
+
         return migrator
     }
 

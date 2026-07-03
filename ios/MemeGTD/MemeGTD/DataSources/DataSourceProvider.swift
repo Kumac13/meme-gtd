@@ -27,9 +27,11 @@ private enum SharedSync {
 ///   / `articles` / `projects` become offline READ-ONLY caches (remote
 ///   first, local fallback when unreachable). When OFF, everything stays
 ///   `Remote*`, byte-for-byte the previous online-only behavior.
-/// - `.standalone`: memos are fully local (`LocalMemoDataSource`, no outbox,
-///   no network) and labels are served from the local mirror; the remaining
-///   server-backed domains become safe empty implementations. No sync
+/// - `.standalone`: memos, tasks, keyword search, labels and issue relations
+///   are fully local (`LocalMemoDataSource` / `LocalTaskDataSource` /
+///   `LocalSearchDataSource` / `LocalLabelDataSource` /
+///   `LocalIssueRelationsDataSource` — no outbox, no network); articles and
+///   projects remain safe empty implementations (Phase 10). No sync
 ///   scheduler runs.
 final class DataSourceProvider: ObservableObject {
     private(set) var memos: MemoDataSource
@@ -65,19 +67,21 @@ final class DataSourceProvider: ObservableObject {
     }
 
     private func rebuildDataSources() {
-        // Standalone (Phase 8): everything the app touches is local — no
-        // scheduler, no remote wrappers, so nothing can reach
-        // APIError.noConfiguration even with no API URL configured.
+        // Standalone (Phase 8, tasks/search/labels/relations local since
+        // Phase 9): everything the app touches is local — no scheduler, no
+        // remote wrappers, so nothing can reach APIError.noConfiguration even
+        // with no API URL configured. Articles and projects remain safe empty
+        // stand-ins (articles are Phase 10).
         if Settings.shared.appMode == .standalone {
             syncScheduler?.stop()
             syncScheduler = nil
             memos = LocalMemoDataSource(database: AppDatabase.shared)
-            tasks = EmptyTaskDataSource()
+            tasks = LocalTaskDataSource(database: AppDatabase.shared)
             articles = EmptyArticleDataSource()
-            search = EmptySearchDataSource()
+            search = LocalSearchDataSource(database: AppDatabase.shared)
             projects = EmptyProjectDataSource()
             labels = LocalLabelDataSource(database: AppDatabase.shared)
-            issueRelations = EmptyIssueRelationsDataSource()
+            issueRelations = LocalIssueRelationsDataSource(database: AppDatabase.shared)
             return
         }
 

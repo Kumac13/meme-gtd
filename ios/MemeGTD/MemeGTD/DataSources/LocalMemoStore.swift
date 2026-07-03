@@ -258,62 +258,27 @@ nonisolated enum LocalMemoStore {
         try db.execute(sql: "DELETE FROM issues WHERE uuid = ?", arguments: [uuid])
     }
 
-    // MARK: - Comment rows
+    // MARK: - Comments (shared, issue-type agnostic implementation)
 
-    private static let commentSelect = """
-        SELECT c.rowid AS local_rowid, c.*
-        FROM comments c
-        """
+    // Thin forwarding wrappers around `LocalCommentStore`, kept so the memo
+    // call sites read in memo vocabulary. The implementation moved to
+    // `LocalCommentStore` when tasks started sharing it (Phase 9).
 
     static func listComments(_ db: Database, memoUuid: String, memoId: Int) throws -> [Comment] {
-        // Same order the server uses (memoRepository.listComments):
-        // created_at ASC, deleted rows excluded.
-        let rows = try Row.fetchAll(
-            db,
-            sql: commentSelect + """
-                 WHERE c.issue_uuid = ? AND c.is_deleted = 0
-                ORDER BY c.created_at ASC
-                """,
-            arguments: [memoUuid]
-        )
-        return rows.map { comment(from: $0, memoId: memoId) }
+        try LocalCommentStore.listComments(db, issueUuid: memoUuid, issueId: memoId)
     }
 
-    /// Resolves the protocol's integer comment id: positive = server_id,
-    /// negative = -rowid (local-only row). Scoped to the parent memo so a
-    /// stale id can never touch another memo's comment.
     static func fetchCommentRow(_ db: Database, memoUuid: String, id: Int) throws -> Row? {
-        if id > 0 {
-            return try Row.fetchOne(
-                db,
-                sql: commentSelect + " WHERE c.server_id = ? AND c.issue_uuid = ? AND c.is_deleted = 0",
-                arguments: [id, memoUuid]
-            )
-        }
-        return try Row.fetchOne(
-            db,
-            sql: commentSelect + " WHERE c.rowid = ? AND c.issue_uuid = ? AND c.is_deleted = 0",
-            arguments: [-id, memoUuid]
-        )
+        try LocalCommentStore.fetchCommentRow(db, issueUuid: memoUuid, id: id)
     }
 
     static func fetchCommentRow(_ db: Database, uuid: String) throws -> Row? {
-        try Row.fetchOne(db, sql: commentSelect + " WHERE c.uuid = ?", arguments: [uuid])
+        try LocalCommentStore.fetchCommentRow(db, uuid: uuid)
     }
 
     static func comment(from row: Row, memoId: Int) -> Comment {
-        let serverId: Int? = row["server_id"]
-        let rowid: Int64 = row["local_rowid"]
-        return Comment(
-            id: serverId ?? -Int(rowid),
-            issueId: memoId,
-            bodyMd: row["body_md"],
-            createdAt: row["created_at"],
-            updatedAt: row["updated_at"]
-        )
+        LocalCommentStore.comment(from: row, issueId: memoId)
     }
-
-    // MARK: - Comment writes
 
     static func insertComment(
         _ db: Database,
@@ -322,35 +287,20 @@ nonisolated enum LocalMemoStore {
         bodyMd: String,
         now: String
     ) throws {
-        let record = CommentRecord(
-            uuid: uuid,
-            serverId: nil,
-            issueUuid: memoUuid,
-            bodyMd: bodyMd,
-            createdAt: now,
-            updatedAt: now,
-            serverUpdatedAt: nil
-        )
-        try record.insert(db)
+        try LocalCommentStore.insertComment(db, uuid: uuid, issueUuid: memoUuid, bodyMd: bodyMd, now: now)
     }
 
     static func updateCommentBody(_ db: Database, uuid: String, bodyMd: String, now: String) throws {
-        try db.execute(
-            sql: "UPDATE comments SET body_md = ?, updated_at = ? WHERE uuid = ?",
-            arguments: [bodyMd, now, uuid]
-        )
+        try LocalCommentStore.updateCommentBody(db, uuid: uuid, bodyMd: bodyMd, now: now)
     }
 
     /// Soft delete mirroring the server (row survives with is_deleted = 1).
     static func softDeleteComment(_ db: Database, uuid: String, now: String) throws {
-        try db.execute(
-            sql: "UPDATE comments SET is_deleted = 1, updated_at = ? WHERE uuid = ?",
-            arguments: [now, uuid]
-        )
+        try LocalCommentStore.softDeleteComment(db, uuid: uuid, now: now)
     }
 
     /// Hard delete for comments that never need to reach a server.
     static func hardDeleteComment(_ db: Database, uuid: String) throws {
-        try db.execute(sql: "DELETE FROM comments WHERE uuid = ?", arguments: [uuid])
+        try LocalCommentStore.hardDeleteComment(db, uuid: uuid)
     }
 }

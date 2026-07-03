@@ -24,10 +24,12 @@ final class AppDatabaseTests: XCTestCase {
             "issue_labels",
             "issues",
             "labels",
+            "links",
             "pending_operations",
             "project_items",
             "projects",
             "sync_meta",
+            "url_links",
         ])
     }
 

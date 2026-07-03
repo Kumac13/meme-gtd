@@ -256,7 +256,8 @@ final class LocalMemoDataSourceTests: XCTestCase {
 }
 
 /// Phase 8 coverage: `LocalLabelDataSource` serves the label-filter picker
-/// from the local mirror in Standalone mode; label writes are refused.
+/// from the local mirror in Standalone mode. (Label writes became local
+/// operations in Phase 9 — see LocalLabelWritesTests.)
 final class LocalLabelDataSourceTests: XCTestCase {
     private var database: AppDatabase!
     private var dataSource: LocalLabelDataSource!
@@ -298,12 +299,4 @@ final class LocalLabelDataSourceTests: XCTestCase {
         XCTAssertEqual(labels[0].articleCount, 0)
     }
 
-    func testCreateLabelIsRefused() async throws {
-        do {
-            _ = try await dataSource.createLabel(CreateLabelRequest(name: "new", description: nil))
-            XCTFail("Expected StandaloneUnavailableError")
-        } catch is StandaloneUnavailableError {
-            // expected
-        }
-    }
 }
