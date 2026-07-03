@@ -59,20 +59,17 @@ struct OfflineReadOnlyBadge: View {
 /// for the default (toggle OFF) setup. Memo screens never show it — memos
 /// stay editable offline via the outbox.
 ///
-/// Leading-aligned on the list's 16pt content grid — the same column as the
-/// filter pills and the list cells — so it reads as the list's state row, not
-/// as a centered element floating between the toolbar and the filters. The
-/// bottom padding keeps a clear gap to the filter row below.
+/// Centered under the title bar. Sits snug to the toolbar (small top
+/// padding) with a clear gap to the filter row below (bottom padding), so it
+/// belongs to the title area rather than to the filters.
 struct OfflineReadOnlyIndicator: View {
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
     var body: some View {
         if Settings.shared.offlineSyncEnabled && connectivity.isOffline {
             OfflineReadOnlyBadge()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 4)
+                .padding(.top, 2)
+                .padding(.bottom, 8)
                 .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
