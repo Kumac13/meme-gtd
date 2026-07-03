@@ -73,10 +73,6 @@ struct ArticleDetailView: View {
                                     }
                                 }
 
-                                if isOfflineReadOnly {
-                                    OfflineReadOnlyBadge()
-                                }
-
                                 // Labels
                                 if let labels = article.labels, !labels.isEmpty {
                                     FlowLayout(spacing: 6) {
@@ -174,6 +170,7 @@ struct ArticleDetailView: View {
                 title: toolbarTitle,
                 onMenuTap: onMenuTap,
                 titleLineLimit: 1,
+                isReadOnly: isOfflineReadOnly,
                 trailing: {
                     Button(action: {
                         HapticManager.impact(.light)

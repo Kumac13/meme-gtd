@@ -57,7 +57,6 @@ struct TaskDetailView: View {
                             TaskTitleSection(
                                 title: task.title,
                                 status: task.status,
-                                isReadOnly: isOfflineReadOnly,
                                 onStatusTap: {
                                     guard !isOfflineReadOnly else { return }
                                     showStatusPicker = true
@@ -300,6 +299,7 @@ struct TaskDetailView: View {
                 title: toolbarTitle,
                 onMenuTap: onMenuTap,
                 titleLineLimit: 1,
+                isReadOnly: isOfflineReadOnly,
                 trailing: {
                     Button(action: {
                         HapticManager.impact(.light)

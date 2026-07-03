@@ -102,8 +102,6 @@ struct TaskListView: View {
         }
         .safeAreaInset(edge: .top) {
             VStack(spacing: 0) {
-                OfflineReadOnlyIndicator()
-
                 if isSearching {
                     Picker("Search Mode", selection: $viewModel.searchMode) {
                         ForEach(SearchMode.allCases, id: \.self) { mode in
@@ -198,6 +196,7 @@ struct TaskListView: View {
                 searchQuery: $viewModel.searchQuery,
                 searchPlaceholder: "Search tasks...",
                 onSearch: { viewModel.search() },
+                isReadOnly: isOfflineReadOnly,
                 searchBarAction: {
                     if !taskStore.tasks.isEmpty && hasActiveFilters {
                         Button(action: {
