@@ -29,32 +29,34 @@ final class ConnectivityMonitor: ObservableObject {
     }
 }
 
-/// Banner shown on task/article screens while the "Offline Sync (Beta)"
-/// setting is on and the device is offline: those types are served from the
-/// local read cache and cannot be edited. Renders nothing otherwise, so
-/// embedding it is behavior-neutral for the default (toggle OFF) setup.
+/// Compact "Offline" pill shown on the task/article LIST screens while the
+/// "Offline Sync (Beta)" setting is on and the device is offline: those types
+/// are served from the local read cache and cannot be edited. Renders nothing
+/// otherwise, so embedding it is behavior-neutral for the default (toggle
+/// OFF) setup.
+///
+/// Deliberately terse and list-only: detail screens communicate the state
+/// through their disabled edit controls instead — their custom headers
+/// (`ignoresSafeArea` + manual inset) would collide with an injected banner.
 /// Memo screens never show it — memos stay editable offline via the outbox.
 ///
 /// Styled as a floating capsule pill (same idiom as the conflict toast in
 /// MemoListView), NOT an edge-to-edge material band: a full-width bar would
 /// break the translucent glass look of the scroll edges.
 struct OfflineBanner: View {
-    let message: String
-
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
     var body: some View {
         if Settings.shared.offlineSyncEnabled && connectivity.isOffline {
-            HStack(spacing: 6) {
+            HStack(spacing: 5) {
                 Image(systemName: "wifi.slash")
-                    .font(.system(size: 12, weight: .semibold))
-                Text(message)
+                    .font(.system(size: 11, weight: .semibold))
+                Text("Offline")
                     .font(.system(size: 12, weight: .medium))
-                    .lineLimit(1)
             }
             .foregroundColor(.textSecondary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
             .background(.regularMaterial, in: Capsule())
             .padding(.top, 4)
             .transition(.move(edge: .top).combined(with: .opacity))

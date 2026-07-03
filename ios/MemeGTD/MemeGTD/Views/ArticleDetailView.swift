@@ -163,9 +163,6 @@ struct ArticleDetailView: View {
                 }
             }
         }
-        .safeAreaInset(edge: .top) {
-            OfflineBanner(message: "Offline — articles are read-only")
-        }
         .enableSwipeBack()
         .navigationBarBackButtonHidden(true)
         .toolbar {

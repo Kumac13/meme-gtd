@@ -292,9 +292,6 @@ struct TaskDetailView: View {
                 .padding(.bottom, 10)
             }
         }
-        .safeAreaInset(edge: .top) {
-            OfflineBanner(message: "Offline — tasks are read-only")
-        }
         .enableSwipeBack()
         .navigationBarBackButtonHidden(true)
         .toolbar {
