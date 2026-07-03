@@ -73,6 +73,10 @@ struct ArticleDetailView: View {
                                     }
                                 }
 
+                                if isOfflineReadOnly {
+                                    OfflineReadOnlyBadge()
+                                }
+
                                 // Labels
                                 if let labels = article.labels, !labels.isEmpty {
                                     FlowLayout(spacing: 6) {

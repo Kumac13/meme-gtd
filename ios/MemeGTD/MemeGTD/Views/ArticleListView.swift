@@ -46,7 +46,7 @@ struct ArticleListView: View {
         .scrollDismissesKeyboard(.immediately)
         .scrollEdgeEffectStyle(.soft, for: .bottom)
         .safeAreaInset(edge: .top) {
-            OfflineBanner()
+            OfflineReadOnlyIndicator()
         }
         .refreshable {
             await withCheckedContinuation { continuation in

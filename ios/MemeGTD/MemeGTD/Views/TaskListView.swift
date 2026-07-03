@@ -102,7 +102,7 @@ struct TaskListView: View {
         }
         .safeAreaInset(edge: .top) {
             VStack(spacing: 0) {
-                OfflineBanner()
+                OfflineReadOnlyIndicator()
 
                 if isSearching {
                     Picker("Search Mode", selection: $viewModel.searchMode) {

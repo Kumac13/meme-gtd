@@ -124,7 +124,8 @@ final class OfflineFirstReadCacheTests: XCTestCase {
 
         // Unfiltered: both live tasks, updated_at DESC, no memo/deleted rows.
         let all = try await dataSource.listTasks(queryItems: [])
-        XCTAssertEqual(all.data.map(\.id), [101, 102])
+        let allIds = all.data.map { $0.id }
+        XCTAssertEqual(allIds, [101, 102])
         XCTAssertEqual(all.total, 2)
         XCTAssertEqual(all.data[0].labels, ["bug"])
         XCTAssertEqual(all.data[0].commentCount, 2)

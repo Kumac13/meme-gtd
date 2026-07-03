@@ -215,7 +215,7 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
         let now = ISO8601Millis.now()
 
         let memo: Memo = try await database.dbWriter.write { db in
-            var record = IssueRecord(
+            let record = IssueRecord(
                 uuid: uuid,
                 serverId: nil,
                 type: "memo",
