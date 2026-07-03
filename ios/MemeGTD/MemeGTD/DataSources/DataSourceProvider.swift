@@ -17,21 +17,28 @@ private enum SharedSync {
 /// Injected as an `environmentObject` from `MemeGTDApp` and handed to each
 /// ViewModel alongside its store (see the `.task` wiring in the Views).
 ///
-/// Memos, tasks, articles and projects honor the "Offline Sync (Beta)"
-/// setting (offline support plan S5 + Phase 7): when it is ON, `memos`
-/// becomes the offline-first read/write implementation backed by the local
-/// GRDB mirror, and `tasks` / `articles` / `projects` become offline
-/// READ-ONLY caches (remote first, local fallback when unreachable). When
-/// OFF (default), everything stays `Remote*`, byte-for-byte the previous
-/// online-only behavior.
+/// The implementations follow the Storage Mode setting (offline support plan
+/// Phase 8):
+///
+/// - `.server` (default): the pre-Phase-8 behavior. Memos, tasks, articles
+///   and projects additionally honor the "Offline Sync (Beta)" setting
+///   (S5 + Phase 7): when it is ON, `memos` becomes the offline-first
+///   read/write implementation backed by the local GRDB mirror, and `tasks`
+///   / `articles` / `projects` become offline READ-ONLY caches (remote
+///   first, local fallback when unreachable). When OFF, everything stays
+///   `Remote*`, byte-for-byte the previous online-only behavior.
+/// - `.standalone`: memos are fully local (`LocalMemoDataSource`, no outbox,
+///   no network) and labels are served from the local mirror; the remaining
+///   server-backed domains become safe empty implementations. No sync
+///   scheduler runs.
 final class DataSourceProvider: ObservableObject {
     private(set) var memos: MemoDataSource
     private(set) var tasks: TaskDataSource
     private(set) var articles: ArticleDataSource
-    let search: SearchDataSource
+    private(set) var search: SearchDataSource
     private(set) var projects: ProjectDataSource
-    let labels: LabelDataSource
-    let issueRelations: IssueRelationsDataSource
+    private(set) var labels: LabelDataSource
+    private(set) var issueRelations: IssueRelationsDataSource
 
     /// Non-nil while offline sync is enabled. Exposed so the app can forward
     /// scene-activation triggers and views can hook pull-to-refresh.
@@ -48,15 +55,36 @@ final class DataSourceProvider: ObservableObject {
         rebuildDataSources()
     }
 
-    /// Called from SettingsView after the Offline Sync toggle changes.
-    /// Swaps the implementations; ViewModels hold this provider (not the
-    /// data sources), so they pick up the new implementations on next access.
-    func offlineSyncSettingDidChange() {
+    /// Called from SettingsView after the Storage Mode picker or the Offline
+    /// Sync toggle changes. Swaps the implementations; ViewModels hold this
+    /// provider (not the data sources), so they pick up the new
+    /// implementations on next access.
+    func storageSettingDidChange() {
         objectWillChange.send()
         rebuildDataSources()
     }
 
     private func rebuildDataSources() {
+        // Standalone (Phase 8): everything the app touches is local — no
+        // scheduler, no remote wrappers, so nothing can reach
+        // APIError.noConfiguration even with no API URL configured.
+        if Settings.shared.appMode == .standalone {
+            syncScheduler?.stop()
+            syncScheduler = nil
+            memos = LocalMemoDataSource(database: AppDatabase.shared)
+            tasks = EmptyTaskDataSource()
+            articles = EmptyArticleDataSource()
+            search = EmptySearchDataSource()
+            projects = EmptyProjectDataSource()
+            labels = LocalLabelDataSource(database: AppDatabase.shared)
+            issueRelations = EmptyIssueRelationsDataSource()
+            return
+        }
+
+        // Server mode: the pre-Phase-8 code paths, unchanged.
+        search = RemoteSearchDataSource()
+        labels = RemoteLabelDataSource()
+        issueRelations = RemoteIssueRelationsDataSource()
         if Settings.shared.offlineSyncEnabled {
             let scheduler = SharedSync.scheduler
             syncScheduler = scheduler

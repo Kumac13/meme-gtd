@@ -1,5 +1,15 @@
 import Foundation
 
+/// Storage Mode (offline support plan Phase 8): where the app's data lives.
+/// Raw values are persisted in App Group UserDefaults — do not rename.
+enum AppMode: String {
+    /// Server-backed (default): the pre-Phase-8 behavior, including the
+    /// optional "Offline Sync (Beta)" layer.
+    case server
+    /// Local-only: memos live in the on-device database, no server required.
+    case standalone
+}
+
 class Settings {
     static let shared = Settings()
 
@@ -12,6 +22,7 @@ class Settings {
 
     private let apiUrlKey = "apiUrl"
     private let offlineSyncEnabledKey = "offlineSyncEnabled"
+    private let appModeKey = "appMode"
 
     private init() {}
 
@@ -33,6 +44,18 @@ class Settings {
         }
         set {
             userDefaults?.set(newValue, forKey: offlineSyncEnabledKey)
+        }
+    }
+
+    /// Storage Mode (offline support plan Phase 8). Defaults to .server:
+    /// with the key unset (every existing install), behavior is exactly the
+    /// pre-Phase-8, server-backed app.
+    var appMode: AppMode {
+        get {
+            userDefaults?.string(forKey: appModeKey).flatMap(AppMode.init) ?? .server
+        }
+        set {
+            userDefaults?.set(newValue.rawValue, forKey: appModeKey)
         }
     }
 

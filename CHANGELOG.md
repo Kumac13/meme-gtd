@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.40.0 - 2026-07-03
+
+### New Features
+
+- **iOS Standalone モード（オフライン同期 Phase 8）**: 設定の「Storage Mode」ピッカーで Server / Standalone を切り替えられるようになった。Standalone はサーバー不要で、API URL 未設定・ネットワーク完全遮断でもメモ機能（作成・編集・削除・ブックマーク・コメント・一覧フィルタ）が端末内データベースで完結する。
+  - ラベルフィルタはローカルのラベルデータで動作する（ラベルの新規作成・付け外しは未対応）。
+  - タスク・記事・検索・プロジェクトは Standalone では未対応（Phase 9〜11 で段階対応予定）。各画面はクラッシュせず、空一覧に "Tasks are not available in Standalone mode." 等の案内を表示する。
+  - Standalone から Server への切り替えは可能だが、端末内データのアップロード（移行）は未対応（Phase 12 で対応予定。設定画面に注記あり）。
+  - Server モード（デフォルト・設定キー未設定の既存ユーザー）の挙動は完全に従来どおり。
+
+### Tests
+
+- Standalone 用 `LocalMemoDataSource` の CRUD・コメント・フィルタ・Outbox 非使用・promote 不可を検証する10テストを追加（iOS 計49件）。
+
 ## 0.39.6 - 2026-07-03
 
 ### New Features

@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var isTestingConnection: Bool = false
     @State private var connectionStatus: ConnectionStatus = .unknown
     @State private var offlineSyncEnabled: Bool = Settings.shared.offlineSyncEnabled
+    @State private var appMode: AppMode = Settings.shared.appMode
 
     enum ConnectionStatus {
         case unknown
@@ -20,109 +21,148 @@ struct SettingsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                // API Configuration section
+                // Storage section (offline support plan Phase 8)
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("API Configuration")
+                    Text("Storage")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.textSecondary)
                         .textCase(.uppercase)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Server URL")
+                        Text("Storage Mode")
                             .font(.system(size: 15))
                             .foregroundColor(.textPrimary)
 
-                        TextField("http://localhost:3001", text: $apiUrl)
-                            .font(.system(size: 14))
-                            .padding(12)
-                            .background(Color(.tertiarySystemFill))
-                            .cornerRadius(10)
-                            .autocapitalization(.none)
-                            .autocorrectionDisabled()
-                            .keyboardType(.URL)
-                            .tint(.accent)
-                    }
-
-                    // Connection status
-                    if connectionStatus != .unknown {
-                        HStack(spacing: 6) {
-                            Image(systemName: connectionStatus == .success ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .font(.system(size: 13))
-                            Text(connectionStatus == .success ? "Connected" : "Connection failed")
-                                .font(.system(size: 13))
+                        Picker("Storage Mode", selection: $appMode) {
+                            Text("Server").tag(AppMode.server)
+                            Text("Standalone").tag(AppMode.standalone)
                         }
-                        .foregroundColor(connectionStatus == .success ? .accent : .red)
-                    }
+                        .pickerStyle(.segmented)
 
-                    // Buttons
-                    HStack(spacing: 10) {
-                        Button(action: testConnection) {
-                            HStack(spacing: 6) {
-                                if isTestingConnection {
-                                    ProgressView()
-                                        .scaleEffect(0.7)
-                                        .tint(.accent)
-                                } else {
-                                    Image(systemName: "network")
-                                        .font(.system(size: 13))
-                                }
-                                Text("Test")
-                                    .font(.system(size: 14, weight: .medium))
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(Color(.tertiarySystemFill))
-                            .foregroundColor(.accent)
-                            .cornerRadius(10)
-                        }
-                        .disabled(isTestingConnection)
-
-                        Button(action: saveSettings) {
-                            HStack(spacing: 6) {
-                                Image(systemName: isSaved ? "checkmark" : "square.and.arrow.down")
-                                    .font(.system(size: 13))
-                                Text(isSaved ? "Saved" : "Save")
-                                    .font(.system(size: 14, weight: .medium))
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(Color.accent)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 16)
-
-                Divider().padding(.leading, 16)
-
-                // Sync section
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Sync")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.textSecondary)
-                        .textCase(.uppercase)
-
-                    Toggle(isOn: $offlineSyncEnabled) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Offline Sync (Beta)")
-                                .font(.system(size: 15))
-                                .foregroundColor(.textPrimary)
-                            Text("Read and write memos offline. Changes sync with the server when you are back online.")
+                        if appMode == .standalone {
+                            Text("Data is stored only on this device. Switching back to Server mode does not upload existing data yet.")
                                 .font(.system(size: 13))
                                 .foregroundColor(.textSecondary)
                         }
                     }
-                    .tint(.accent)
-                    .onChange(of: offlineSyncEnabled) { _, newValue in
-                        Settings.shared.offlineSyncEnabled = newValue
-                        dataSources.offlineSyncSettingDidChange()
+                    .onChange(of: appMode) { _, newValue in
+                        Settings.shared.appMode = newValue
+                        dataSources.storageSettingDidChange()
                         HapticManager.impact(.light)
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 16)
+
+                // Server-backed settings are hidden while Standalone: neither
+                // the API URL nor Offline Sync has any effect in that mode.
+                if appMode == .server {
+                    Divider().padding(.leading, 16)
+
+                    // API Configuration section
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("API Configuration")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.textSecondary)
+                            .textCase(.uppercase)
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Server URL")
+                                .font(.system(size: 15))
+                                .foregroundColor(.textPrimary)
+
+                            TextField("http://localhost:3001", text: $apiUrl)
+                                .font(.system(size: 14))
+                                .padding(12)
+                                .background(Color(.tertiarySystemFill))
+                                .cornerRadius(10)
+                                .autocapitalization(.none)
+                                .autocorrectionDisabled()
+                                .keyboardType(.URL)
+                                .tint(.accent)
+                        }
+
+                        // Connection status
+                        if connectionStatus != .unknown {
+                            HStack(spacing: 6) {
+                                Image(systemName: connectionStatus == .success ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                    .font(.system(size: 13))
+                                Text(connectionStatus == .success ? "Connected" : "Connection failed")
+                                    .font(.system(size: 13))
+                            }
+                            .foregroundColor(connectionStatus == .success ? .accent : .red)
+                        }
+
+                        // Buttons
+                        HStack(spacing: 10) {
+                            Button(action: testConnection) {
+                                HStack(spacing: 6) {
+                                    if isTestingConnection {
+                                        ProgressView()
+                                            .scaleEffect(0.7)
+                                            .tint(.accent)
+                                    } else {
+                                        Image(systemName: "network")
+                                            .font(.system(size: 13))
+                                    }
+                                    Text("Test")
+                                        .font(.system(size: 14, weight: .medium))
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color(.tertiarySystemFill))
+                                .foregroundColor(.accent)
+                                .cornerRadius(10)
+                            }
+                            .disabled(isTestingConnection)
+
+                            Button(action: saveSettings) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: isSaved ? "checkmark" : "square.and.arrow.down")
+                                        .font(.system(size: 13))
+                                    Text(isSaved ? "Saved" : "Save")
+                                        .font(.system(size: 14, weight: .medium))
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color.accent)
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 16)
+
+                    Divider().padding(.leading, 16)
+
+                    // Sync section
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Sync")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.textSecondary)
+                            .textCase(.uppercase)
+
+                        Toggle(isOn: $offlineSyncEnabled) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Offline Sync (Beta)")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.textPrimary)
+                                Text("Read and write memos offline. Changes sync with the server when you are back online.")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.textSecondary)
+                            }
+                        }
+                        .tint(.accent)
+                        .onChange(of: offlineSyncEnabled) { _, newValue in
+                            Settings.shared.offlineSyncEnabled = newValue
+                            dataSources.storageSettingDidChange()
+                            HapticManager.impact(.light)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 16)
+                }
 
                 Divider().padding(.leading, 16)
 

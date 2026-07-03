@@ -27,6 +27,12 @@ struct TaskListView: View {
         Settings.shared.offlineSyncEnabled && connectivity.isOffline
     }
 
+    /// Standalone Storage Mode: tasks are server-only, so the list is always
+    /// empty and creating is disabled (offline support plan Phase 8).
+    private var isStandalone: Bool {
+        Settings.shared.appMode == .standalone
+    }
+
     private var hasActiveFilters: Bool {
         !viewModel.searchQuery.isEmpty ||
         !viewModel.labelFilters.isEmpty ||
@@ -182,8 +188,8 @@ struct TaskListView: View {
                         .background(Color.accent)
                         .clipShape(Circle())
                 }
-                .disabled(isOfflineReadOnly)
-                .opacity(isOfflineReadOnly ? 0.4 : 1)
+                .disabled(isOfflineReadOnly || isStandalone)
+                .opacity(isOfflineReadOnly || isStandalone ? 0.4 : 1)
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 10)
@@ -312,6 +318,12 @@ struct TaskListView: View {
         .overlay {
             if viewModel.isLoading && taskStore.tasks.isEmpty {
                 ProgressView("Loading tasks...")
+                    .foregroundColor(.textSecondary)
+            } else if isStandalone && taskStore.tasks.isEmpty {
+                // Tasks have no local implementation yet: label the empty
+                // list so it does not read as a loading failure.
+                Text("Tasks are not available in Standalone mode.")
+                    .font(.system(size: 14))
                     .foregroundColor(.textSecondary)
             }
         }
