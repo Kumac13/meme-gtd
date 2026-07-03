@@ -4,11 +4,6 @@ struct AppToolbar<Trailing: View, SearchBarAction: View>: ToolbarContent {
     let title: String
     let onMenuTap: () -> Void
     var titleLineLimit: Int? = nil
-    /// Offline read-only cache state (offline support plan Phase 7): renders
-    /// a "Read-only" subtitle under the title, the way Messages shows its
-    /// connection state under the conversation title. Screen-level state
-    /// belongs to the screen's title, not to the content or the filter row.
-    var isReadOnly: Bool = false
     @ViewBuilder let trailing: () -> Trailing
     /// Optional content rendered inside the search bar, to the left of the
     /// clear ([x]) button, only while the search bar is open. Used by list
@@ -30,14 +25,12 @@ struct AppToolbar<Trailing: View, SearchBarAction: View>: ToolbarContent {
         title: String,
         onMenuTap: @escaping () -> Void,
         titleLineLimit: Int? = nil,
-        isReadOnly: Bool = false,
         @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() },
         @ViewBuilder searchBarAction: @escaping () -> SearchBarAction = { EmptyView() }
     ) {
         self.title = title
         self.onMenuTap = onMenuTap
         self.titleLineLimit = titleLineLimit
-        self.isReadOnly = isReadOnly
         self.searchConfig = nil
         self.trailing = trailing
         self.searchBarAction = searchBarAction
@@ -51,14 +44,12 @@ struct AppToolbar<Trailing: View, SearchBarAction: View>: ToolbarContent {
         searchQuery: Binding<String>,
         searchPlaceholder: String = "Search...",
         onSearch: @escaping () -> Void,
-        isReadOnly: Bool = false,
         @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() },
         @ViewBuilder searchBarAction: @escaping () -> SearchBarAction = { EmptyView() }
     ) {
         self.title = title
         self.onMenuTap = onMenuTap
         self.titleLineLimit = nil
-        self.isReadOnly = isReadOnly
         self.searchConfig = SearchConfig(
             isSearching: isSearching,
             searchQuery: searchQuery,
@@ -123,25 +114,14 @@ struct AppToolbar<Trailing: View, SearchBarAction: View>: ToolbarContent {
                     .modifier(PillSurface(radius: 22))
                     .transition(.move(edge: .trailing).combined(with: .opacity))
                 } else {
-                    VStack(spacing: 1) {
-                        if let lineLimit = titleLineLimit {
-                            Text(title)
-                                .font(.headline)
-                                .lineLimit(lineLimit)
-                                .truncationMode(.tail)
-                        } else {
-                            Text(title)
-                                .font(.headline)
-                        }
-                        if isReadOnly {
-                            HStack(spacing: 3) {
-                                Image(systemName: "wifi.slash")
-                                    .font(.system(size: 9, weight: .semibold))
-                                Text("Read-only")
-                                    .font(.system(size: 11, weight: .medium))
-                            }
-                            .foregroundColor(.textSecondary)
-                        }
+                    if let lineLimit = titleLineLimit {
+                        Text(title)
+                            .font(.headline)
+                            .lineLimit(lineLimit)
+                            .truncationMode(.tail)
+                    } else {
+                        Text(title)
+                            .font(.headline)
                     }
                 }
             }

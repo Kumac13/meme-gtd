@@ -9,13 +9,6 @@ struct ArticleListView: View {
     @StateObject private var viewModel = ArticleListViewModel()
     @State private var isSearching: Bool = false
     @State private var showCopyDialog: Bool = false
-    @ObservedObject private var connectivity = ConnectivityMonitor.shared
-
-    /// Offline Sync ON + offline: articles are served from the local read
-    /// cache and cannot be edited (offline support plan Phase 7).
-    private var isOfflineReadOnly: Bool {
-        Settings.shared.offlineSyncEnabled && connectivity.isOffline
-    }
 
     private var hasActiveFilters: Bool {
         !viewModel.searchQuery.isEmpty
@@ -52,6 +45,9 @@ struct ArticleListView: View {
         }
         .scrollDismissesKeyboard(.immediately)
         .scrollEdgeEffectStyle(.soft, for: .bottom)
+        .safeAreaInset(edge: .top) {
+            OfflineReadOnlyIndicator()
+        }
         .refreshable {
             await withCheckedContinuation { continuation in
                 Task { @MainActor in
@@ -82,7 +78,6 @@ struct ArticleListView: View {
                 searchQuery: $viewModel.searchQuery,
                 searchPlaceholder: "Search articles...",
                 onSearch: { viewModel.search() },
-                isReadOnly: isOfflineReadOnly,
                 searchBarAction: {
                     if !articleStore.articles.isEmpty && hasActiveFilters {
                         Button(action: {
