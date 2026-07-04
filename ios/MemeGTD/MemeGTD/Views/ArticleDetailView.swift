@@ -16,10 +16,11 @@ struct ArticleDetailView: View {
     @State private var showCopiedFeedback: Bool = false
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
-    /// Offline Sync ON + offline: the article is served from the local read
-    /// cache and cannot be edited (offline support plan Phase 7).
+    /// Server mode + Offline Sync ON + offline: the article is served from
+    /// the local read cache and cannot be edited (offline support plan
+    /// Phase 7). Never true in Standalone.
     private var isOfflineReadOnly: Bool {
-        Settings.shared.offlineSyncEnabled && connectivity.isOffline
+        connectivity.isOfflineReadOnly
     }
 
     init(articleId: Int, initialTitle: String? = nil, onMenuTap: @escaping () -> Void, onNavigateToLinkedIssue: ((Int, String, String) -> Void)? = nil) {

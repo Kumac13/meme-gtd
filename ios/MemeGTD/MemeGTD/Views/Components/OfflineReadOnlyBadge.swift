@@ -27,6 +27,19 @@ final class ConnectivityMonitor: ObservableObject {
         }
         monitor.start(queue: DispatchQueue.global(qos: .utility))
     }
+
+    /// True while the Phase 7 offline READ-ONLY state applies to tasks and
+    /// articles: SERVER mode with Offline Sync on and no connectivity.
+    /// The appMode check matters: Standalone is never read-only (everything
+    /// is local), but the `offlineSyncEnabled` key can still hold a leftover
+    /// `true` from Server mode — the Settings toggle is hidden in Standalone,
+    /// not reset. All read-only gating in the Views goes through this single
+    /// definition.
+    var isOfflineReadOnly: Bool {
+        Settings.shared.appMode == .server
+            && Settings.shared.offlineSyncEnabled
+            && isOffline
+    }
 }
 
 /// "Read-only" chip for task/article screens whose data is served from the
@@ -66,7 +79,7 @@ struct OfflineReadOnlyIndicator: View {
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
     var body: some View {
-        if Settings.shared.offlineSyncEnabled && connectivity.isOffline {
+        if connectivity.isOfflineReadOnly {
             OfflineReadOnlyBadge()
                 .padding(.top, 2)
                 .padding(.bottom, 8)

@@ -21,10 +21,11 @@ struct TaskListView: View {
     @State private var showCopyDialog: Bool = false
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
-    /// Offline Sync ON + offline: tasks are served from the local read cache
-    /// and cannot be edited (offline support plan Phase 7).
+    /// Server mode + Offline Sync ON + offline: tasks are served from the
+    /// local read cache and cannot be edited (offline support plan Phase 7).
+    /// Never true in Standalone (tasks are fully local there).
     private var isOfflineReadOnly: Bool {
-        Settings.shared.offlineSyncEnabled && connectivity.isOffline
+        connectivity.isOfflineReadOnly
     }
 
     /// Standalone Storage Mode: tasks work fully locally (offline support

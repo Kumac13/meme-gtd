@@ -25,10 +25,11 @@ struct TaskDetailView: View {
     @State private var pickedExtension: String = "jpg"
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
-    /// Offline Sync ON + offline: the task is served from the local read
-    /// cache and cannot be edited (offline support plan Phase 7).
+    /// Server mode + Offline Sync ON + offline: the task is served from the
+    /// local read cache and cannot be edited (offline support plan Phase 7).
+    /// Never true in Standalone (tasks are fully local there).
     private var isOfflineReadOnly: Bool {
-        Settings.shared.offlineSyncEnabled && connectivity.isOffline
+        connectivity.isOfflineReadOnly
     }
 
     enum EditingMode: Equatable {
