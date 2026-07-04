@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.44.0 - 2026-07-04
+
+### New Features
+
+- **iOS Standalone→Server 一方向移行（オフライン同期 Phase 12）**: 設定の「Migrate to Server」で、Standalone で蓄積した端末内データ（メモ・タスク・記事・コメント・ラベル・リンク）をサーバーへ一括アップロードし、以後 Server モード（Offline Sync ON）として動作させられるようになった。これで iOS オフライン対応の全12フェーズが完成。
+  - フロー: Server URL 入力 → 接続確認 → 非可逆確認ダイアログ → 進捗表示付きアップロード → 完了時に自動でモード切替 + 同期開始。失敗・中断時は Standalone のまま残り、再実行しても重複しない（決定的 opId + サーバー側の冪等台帳・自然キー判定の二重防御）。
+  - サーバー側: `POST /api/sync/push` が移行用の create-only entity（task / article / label / issue_label / link）を受け付けるようになった。作成日時・実行打刻・記事 meta は端末の値を保持したまま登録され、activity log も通常どおり記録される。参照が解決できない操作は理由付きで skip され、他の操作を巻き込まない。
+  - 既存の memo / comment 同期セマンティクス、既存エンドポイントは無変更。
+
+### Tests
+
+- サーバー: 移行 entity の適用・冪等再送・参照解決・依存順フルセット・上限バリデーションの統合テスト15件 + db テスト4件を追加（api 計419件 / db 計140件）。
+- iOS: MigrationService の依存順・削除行除外・部分失敗からの再実行（同一 opId）・skip 集計・カーソル/ID 記録を検証する6テストを追加（iOS 計122件）。
+
 ## 0.43.0 - 2026-07-04
 
 ### New Features
