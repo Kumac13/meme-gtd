@@ -1,6 +1,6 @@
 {
   "name": "meme-gtd-api",
-  "version": "0.43.0",
+  "version": "0.44.0",
   "description": "HTTP API server for meme-gtd CLI operations",
   "type": "module",
   "main": "./dist/index.js",
