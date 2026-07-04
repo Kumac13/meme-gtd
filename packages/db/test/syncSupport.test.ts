@@ -19,6 +19,7 @@ import {
 import { createTask } from '../src/taskRepository';
 import { createArticle } from '../src/articleRepository';
 import { createLabel, attachLabelToIssue, detachLabelFromIssue, deleteLabel } from '../src/labelRepository';
+import { hasIssueLabel } from '../src/syncRepository';
 
 const schemaDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/schema');
 
@@ -328,6 +329,105 @@ test('backfill assigns unique uuid and server_seq to pre-existing rows', () => {
 
   const memo = createMemo(db, { bodyMd: 'post-migration memo' });
   assert.equal(memo.serverSeq, maxSeq + 1);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('createTask preserves sync-provided uuid, timestamps and execution stamps', () => {
+  const { dir, db } = createTempDb();
+
+  const task = createTask(db, {
+    title: 'migrated task',
+    bodyMd: 'task body',
+    status: 'done',
+    uuid: '00000000-0000-7000-8000-00000000aaaa',
+    createdAt: '2026-01-10T09:00:00.000Z',
+    updatedAt: '2026-01-11T10:00:00.000Z',
+    actualStart: '2026-01-10T09:30:00',
+    actualEnd: '2026-01-10T10:30:00'
+  });
+
+  assert.equal(task.uuid, '00000000-0000-7000-8000-00000000aaaa');
+  assert.equal(task.createdAt, '2026-01-10T09:00:00.000Z');
+  assert.equal(task.updatedAt, '2026-01-11T10:00:00.000Z');
+  assert.equal(task.actualStart, '2026-01-10T09:30:00');
+  assert.equal(task.actualEnd, '2026-01-10T10:30:00');
+
+  // Sync-provided actualStart wins over the status='next' auto stamp
+  const nextTask = createTask(db, {
+    title: 'in progress',
+    bodyMd: '',
+    status: 'next',
+    actualStart: '2026-01-05T08:00:00'
+  });
+  assert.equal(nextTask.actualStart, '2026-01-05T08:00:00');
+
+  // Without sync fields the original defaults still apply
+  const plain = createTask(db, { title: 'plain', bodyMd: '' });
+  assert.ok(plain.uuid && UUID_PATTERN.test(plain.uuid));
+  assert.equal(plain.createdAt, plain.updatedAt);
+  assert.equal(plain.actualEnd, null);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('createArticle preserves sync-provided uuid, createdAt and archivedAt', () => {
+  const { dir, db } = createTempDb();
+
+  const article = createArticle(db, {
+    title: 'migrated article',
+    bodyMd: 'article body',
+    originalUrl: 'https://example.com/post',
+    siteName: 'Example',
+    uuid: '00000000-0000-7000-8000-00000000bbbb',
+    createdAt: '2026-02-01T12:00:00.000Z',
+    archivedAt: '2026-02-01T11:59:00.000Z'
+  });
+
+  assert.equal(article.uuid, '00000000-0000-7000-8000-00000000bbbb');
+  assert.equal(article.createdAt, '2026-02-01T12:00:00.000Z');
+  assert.equal(article.meta.archivedAt, '2026-02-01T11:59:00.000Z');
+  assert.equal(article.meta.originalUrl, 'https://example.com/post');
+
+  // Without sync fields the defaults still apply (archivedAt = now)
+  const plain = createArticle(db, {
+    title: 'plain article',
+    bodyMd: 'body',
+    originalUrl: 'https://example.com/plain'
+  });
+  assert.ok(plain.uuid && UUID_PATTERN.test(plain.uuid));
+  assert.equal(plain.meta.archivedAt, plain.createdAt);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('createLabel preserves sync-provided createdAt', () => {
+  const { dir, db } = createTempDb();
+
+  const label = createLabel(db, 'migrated-label', 'from iOS', {
+    createdAt: '2026-03-01T00:00:00.000Z'
+  });
+  assert.equal(label.createdAt, '2026-03-01T00:00:00.000Z');
+  assert.equal(label.description, 'from iOS');
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('hasIssueLabel detects existing assignments', () => {
+  const { dir, db } = createTempDb();
+
+  const memo = createMemo(db, { bodyMd: 'labeled memo' });
+  const label = createLabel(db, 'assign-check');
+
+  assert.equal(hasIssueLabel(db, memo.id, label.id), false);
+  attachLabelToIssue(db, memo.id, label.id);
+  assert.equal(hasIssueLabel(db, memo.id, label.id), true);
+  detachLabelFromIssue(db, memo.id, label.id);
+  assert.equal(hasIssueLabel(db, memo.id, label.id), false);
 
   db.close();
   fs.removeSync(dir);

@@ -83,9 +83,17 @@ nonisolated struct SyncChangesResponse: Codable {
     let hasMore: Bool
 }
 
+/// memo / comment support create/update/delete; the bulk-migration entities
+/// (task / article / label / issueLabel / link) support create only
+/// (iOS Standalone -> Server one-way migration, Phase 12).
 nonisolated enum SyncPushEntity: String, Codable {
     case memo
     case comment
+    case task
+    case article
+    case label
+    case issueLabel = "issue_label"
+    case link
 }
 
 nonisolated enum SyncPushOpType: String, Codable {
@@ -94,11 +102,44 @@ nonisolated enum SyncPushOpType: String, Codable {
     case delete
 }
 
+/// Article metadata carried by article create operations.
+nonisolated struct SyncPushArticleMeta: Codable {
+    var originalUrl: String?
+    var siteName: String?
+    var archivedAt: String?
+}
+
+/// Union of the per-entity payload shapes; which fields apply depends on
+/// the operation's entity (see syncSchemas.ts for the required sets).
 nonisolated struct SyncPushPayload: Codable {
+    // memo / comment / task / article
     var bodyMd: String?
     var isBookmarked: Bool?
     var createdAt: String?
     var updatedAt: String?
+    // task / article
+    var title: String?
+    // task (raw values match backend TaskStatus / TaskKind strings)
+    var status: String?
+    var taskKind: String?
+    var scheduledStart: String?
+    var scheduledEnd: String?
+    var isAllDay: Bool?
+    var scheduledOn: String?
+    var actualStart: String?
+    var actualEnd: String?
+    // article
+    var meta: SyncPushArticleMeta?
+    // label (name is the natural key)
+    var name: String?
+    var description: String?
+    // issue_label
+    var issueUuid: String?
+    var labelName: String?
+    // link (linkType raw values: parent / child / relates / derived_from)
+    var sourceIssueUuid: String?
+    var targetIssueUuid: String?
+    var linkType: String?
 }
 
 nonisolated struct SyncPushOperation: Codable {
@@ -130,6 +171,27 @@ nonisolated struct SyncPushOperationResult: Codable {
     let serverId: Int?
     let updatedAt: String?
     let conflictCopyUuid: String?
+    /// Explanation for skipped bulk-migration operations
+    /// (e.g. unresolved issue/label reference).
+    let reason: String?
+
+    init(
+        opId: String,
+        status: SyncPushStatus,
+        uuid: String,
+        serverId: Int?,
+        updatedAt: String?,
+        conflictCopyUuid: String?,
+        reason: String? = nil
+    ) {
+        self.opId = opId
+        self.status = status
+        self.uuid = uuid
+        self.serverId = serverId
+        self.updatedAt = updatedAt
+        self.conflictCopyUuid = conflictCopyUuid
+        self.reason = reason
+    }
 }
 
 nonisolated struct SyncPushResponse: Codable {

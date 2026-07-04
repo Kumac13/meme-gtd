@@ -7,6 +7,11 @@ export interface CreateArticleInput {
   originalUrl: string;
   siteName?: string;
   labels?: string[];
+  // Sync apply path (POST /api/sync/push): client-minted identity and
+  // preserved offline timestamps.
+  uuid?: string;
+  createdAt?: string;
+  archivedAt?: string;
 }
 
 export interface ListArticleFilters {
@@ -49,11 +54,11 @@ const articleRowToArticle = (row: unknown): Article => {
 };
 
 export const createArticle = (db: Database.Database, input: CreateArticleInput): Article => {
-  const now = nowIso();
+  const now = input.createdAt ?? nowIso();
   const meta: ArticleMeta = {
     originalUrl: input.originalUrl,
     siteName: input.siteName,
-    archivedAt: now,
+    archivedAt: input.archivedAt ?? now,
   };
 
   const stmt = db.prepare(
@@ -62,7 +67,7 @@ export const createArticle = (db: Database.Database, input: CreateArticleInput):
   );
 
   const result = stmt.run({
-    uuid: uuidv7(),
+    uuid: input.uuid ?? uuidv7(),
     title: input.title,
     body: input.bodyMd,
     meta: JSON.stringify(meta),

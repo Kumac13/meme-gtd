@@ -56,14 +56,24 @@ export const SyncChangesResponseSchema = z.object({
 export type SyncChangesResponse = z.infer<typeof SyncChangesResponseSchema>;
 
 /**
+ * Entities that only accept create operations through push (iOS Standalone ->
+ * Server one-way bulk migration).
+ */
+const CREATE_ONLY_ENTITIES = ['task', 'article', 'label', 'issue_label', 'link'] as const;
+
+/**
  * One client-side pending operation to apply on the server.
  */
 export const SyncPushOperationSchema = z
   .object({
     opId: z.string().min(1).max(128).describe('Client-minted idempotency key (UUID). Replays return the recorded result.'),
-    entity: z.enum(['memo', 'comment']).describe('Entity kind this operation targets'),
+    entity: z
+      .enum(['memo', 'comment', 'task', 'article', 'label', 'issue_label', 'link'])
+      .describe(
+        'Entity kind this operation targets. memo/comment support create/update/delete; task/article/label/issue_label/link support create only (bulk migration).'
+      ),
     type: z.enum(['create', 'update', 'delete']).describe('Operation type'),
-    uuid: z.string().min(1).max(128).describe('Sync identity of the target row (client-minted UUIDv7 for offline-created rows)'),
+    uuid: z.string().min(1).max(128).describe('Sync identity of the target row (client-minted UUIDv7 for offline-created rows). Echoed back for entities without a server uuid column (label / issue_label / link).'),
     issueUuid: z.string().min(1).max(128).optional().describe('Parent issue uuid (required for comment create)'),
     baseUpdatedAt: z
       .string()
@@ -72,28 +82,127 @@ export const SyncPushOperationSchema = z
       .describe('The server updatedAt this edit was based on. Compared for equality only; mismatch triggers conflict handling.'),
     payload: z
       .object({
-        bodyMd: z.string().optional().describe('Body content (required for create)'),
-        isBookmarked: z.boolean().optional().describe('Bookmark state'),
+        bodyMd: z.string().optional().describe('Body content (required for memo/comment/article create; optional for task)'),
+        isBookmarked: z.boolean().optional().describe('Bookmark state (memo only)'),
         createdAt: z.string().optional().describe('Offline authoring time to preserve (create only)'),
-        updatedAt: z.string().optional().describe('Client-side update time (informational)'),
+        updatedAt: z.string().optional().describe('Client-side update time (stored as-is for task create; informational otherwise)'),
+        title: z.string().min(1).optional().describe('Title (required for task/article create)'),
+        status: z
+          .enum(['inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled'])
+          .optional()
+          .describe('Task status (task create only; default inbox)'),
+        taskKind: z.enum(['event', 'action']).optional().describe('Task kind (task create only; default action)'),
+        scheduledStart: z.string().optional().describe('Scheduled start, ISO 8601 datetime (task create only)'),
+        scheduledEnd: z.string().optional().describe('Scheduled end, ISO 8601 datetime (task create only)'),
+        isAllDay: z.boolean().optional().describe('All-day flag (task create only)'),
+        scheduledOn: z.string().optional().describe('Deprecated scheduled date YYYY-MM-DD (task create only, backward compatibility)'),
+        actualStart: z.string().optional().describe('Execution start stamp to preserve, ISO 8601 datetime (task create only)'),
+        actualEnd: z.string().optional().describe('Execution end stamp to preserve, ISO 8601 datetime (task create only)'),
+        meta: z
+          .object({
+            originalUrl: z.string().min(1).optional().describe('Source URL (required for article create)'),
+            siteName: z.string().optional().describe('Site name'),
+            archivedAt: z.string().optional().describe('Client-side archive time to preserve'),
+          })
+          .optional()
+          .describe('Article metadata (article create only)'),
+        name: z.string().min(1).optional().describe('Label name — the natural key (required for label create)'),
+        description: z.string().optional().describe('Label description (label create only)'),
+        issueUuid: z.string().min(1).max(128).optional().describe('Target issue uuid (required for issue_label create)'),
+        labelName: z.string().min(1).optional().describe('Label name to attach (required for issue_label create)'),
+        sourceIssueUuid: z.string().min(1).max(128).optional().describe('Link source issue uuid (required for link create)'),
+        targetIssueUuid: z.string().min(1).max(128).optional().describe('Link target issue uuid (required for link create)'),
+        linkType: z
+          .enum(['parent', 'child', 'relates', 'derived_from'])
+          .optional()
+          .describe('Link type (required for link create)'),
       })
       .optional()
-      .describe('Operation payload; omitted for delete'),
+      .describe('Operation payload; omitted for delete. Which fields apply depends on entity.'),
   })
   .superRefine((op, ctx) => {
-    if (op.type === 'create' && (op.payload?.bodyMd === undefined || op.payload.bodyMd.length === 0)) {
+    if ((CREATE_ONLY_ENTITIES as readonly string[]).includes(op.entity) && op.type !== 'create') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['payload', 'bodyMd'],
-        message: 'payload.bodyMd is required for create operations',
+        path: ['type'],
+        message: `entity '${op.entity}' only supports create operations`,
       });
+      return;
     }
-    if (op.type === 'create' && op.entity === 'comment' && !op.issueUuid) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['issueUuid'],
-        message: 'issueUuid is required for comment create operations',
-      });
+    if (op.type !== 'create') {
+      return;
+    }
+    const requireField = (condition: boolean, path: (string | number)[], message: string) => {
+      if (!condition) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path, message });
+      }
+    };
+    switch (op.entity) {
+      case 'memo':
+      case 'comment':
+        if (op.payload?.bodyMd === undefined || op.payload.bodyMd.length === 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['payload', 'bodyMd'],
+            message: 'payload.bodyMd is required for create operations',
+          });
+        }
+        if (op.entity === 'comment' && !op.issueUuid) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['issueUuid'],
+            message: 'issueUuid is required for comment create operations',
+          });
+        }
+        break;
+      case 'task':
+        requireField(!!op.payload?.title, ['payload', 'title'], 'payload.title is required for task create operations');
+        break;
+      case 'article':
+        requireField(!!op.payload?.title, ['payload', 'title'], 'payload.title is required for article create operations');
+        requireField(
+          op.payload?.bodyMd !== undefined,
+          ['payload', 'bodyMd'],
+          'payload.bodyMd is required for article create operations'
+        );
+        requireField(
+          !!op.payload?.meta?.originalUrl,
+          ['payload', 'meta', 'originalUrl'],
+          'payload.meta.originalUrl is required for article create operations'
+        );
+        break;
+      case 'label':
+        requireField(!!op.payload?.name, ['payload', 'name'], 'payload.name is required for label create operations');
+        break;
+      case 'issue_label':
+        requireField(
+          !!op.payload?.issueUuid,
+          ['payload', 'issueUuid'],
+          'payload.issueUuid is required for issue_label create operations'
+        );
+        requireField(
+          !!op.payload?.labelName,
+          ['payload', 'labelName'],
+          'payload.labelName is required for issue_label create operations'
+        );
+        break;
+      case 'link':
+        requireField(
+          !!op.payload?.sourceIssueUuid,
+          ['payload', 'sourceIssueUuid'],
+          'payload.sourceIssueUuid is required for link create operations'
+        );
+        requireField(
+          !!op.payload?.targetIssueUuid,
+          ['payload', 'targetIssueUuid'],
+          'payload.targetIssueUuid is required for link create operations'
+        );
+        requireField(
+          !!op.payload?.linkType,
+          ['payload', 'linkType'],
+          'payload.linkType is required for link create operations'
+        );
+        break;
     }
   });
 
@@ -127,6 +236,10 @@ export const SyncPushOperationResultSchema = z.object({
   serverId: z.number().int().positive().optional().describe('Server-assigned integer id of the row'),
   updatedAt: z.string().optional().describe('Server updatedAt after applying — store as the new base for future edits'),
   conflictCopyUuid: z.string().optional().describe('uuid of the conflicted-copy memo (status conflictCopied only)'),
+  reason: z
+    .string()
+    .optional()
+    .describe('Human-readable explanation for skipped bulk-migration operations (e.g. unresolved issue/label reference)'),
 });
 
 export type SyncPushOperationResult = z.infer<typeof SyncPushOperationResultSchema>;

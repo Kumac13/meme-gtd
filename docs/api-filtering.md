@@ -264,7 +264,21 @@ curl "http://localhost:3001/api/sync/changes?since=42&limit=500"
 
 ### POST /api/sync/push
 
-クライアントの保留操作（memo / comment の create / update / delete）をFIFOで適用する。`opId` で冪等（再送は記録済み結果を返す）。
+クライアントの保留操作をFIFOで適用する。`opId` で冪等（再送は記録済み結果を返す）。1リクエストの `operations` は最大500件（超える分はクライアントがページ分割して送る）。
+
+エンティティごとにサポートする操作が異なる:
+
+| entity | type | 主なpayload | 冪等判定（opId台帳に加えて） |
+|---|---|---|---|
+| `memo` | create / update / delete | `bodyMd`, `isBookmarked`, `createdAt` | `uuid` |
+| `comment` | create / update / delete | `bodyMd`, `createdAt`（親はトップレベル `issueUuid`） | `uuid` |
+| `task` | **createのみ** | `title`（必須）, `bodyMd?`, `status?`, `taskKind?`, `scheduledStart/End?`, `isAllDay?`, `scheduledOn?`, `actualStart/End?`, `createdAt?`, `updatedAt?` | `uuid` |
+| `article` | **createのみ** | `title`, `bodyMd`, `meta.originalUrl`（必須）, `meta.siteName?`, `meta.archivedAt?`, `createdAt?` | `uuid` |
+| `label` | **createのみ** | `name`（必須・自然キー）, `description?`, `createdAt?` | `name`（同名既存は `alreadyApplied` で既存idを返す） |
+| `issue_label` | **createのみ** | `issueUuid`, `labelName`（いずれも必須） | 既存の付与組み合わせ |
+| `link` | **createのみ** | `sourceIssueUuid`, `targetIssueUuid`, `linkType`（いずれも必須。`relates` は逆向き既存も同一視） | 既存の同組リンク |
+
+create専用エンティティ（task / article / label / issue_label / link）はiOS Standalone→Serverの一方向バルク移行用。update / delete を送ると400。依存順（labels → issues(task/article/memo) → issue_labels / comments → links）はクライアントが送信順で保証する。参照先（issueUuid / labelName / sourceIssueUuid / targetIssueUuid）が解決できない操作は `skipped` となり、`reason` に理由が入る。
 
 ```bash
 curl -X POST "http://localhost:3001/api/sync/push" \
@@ -278,12 +292,32 @@ curl -X POST "http://localhost:3001/api/sync/push" \
         "type": "create",
         "uuid": "019f...",
         "payload": { "bodyMd": "offline memo", "createdAt": "2026-07-01T12:00:00.000Z" }
+      },
+      {
+        "opId": "6a1b...",
+        "entity": "task",
+        "type": "create",
+        "uuid": "019e...",
+        "payload": {
+          "title": "Migrated task",
+          "status": "done",
+          "actualStart": "2026-07-01T09:00:00",
+          "actualEnd": "2026-07-01T10:00:00",
+          "createdAt": "2026-06-30T12:00:00.000Z"
+        }
+      },
+      {
+        "opId": "7c2d...",
+        "entity": "issue_label",
+        "type": "create",
+        "uuid": "019d...",
+        "payload": { "issueUuid": "019e...", "labelName": "work" }
       }
     ]
   }'
 ```
 
-レスポンス: `{ results: [{ opId, status, uuid, serverId?, updatedAt?, conflictCopyUuid? }], latestSeq }`。`status` は `applied` / `alreadyApplied` / `conflictCopied` / `skipped`。
+レスポンス: `{ results: [{ opId, status, uuid, serverId?, updatedAt?, conflictCopyUuid?, reason? }], latestSeq }`。`status` は `applied` / `alreadyApplied` / `conflictCopied` / `skipped`。
 
 ## 応用例
 

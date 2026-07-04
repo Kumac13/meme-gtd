@@ -18,6 +18,13 @@ export interface CreateTaskInput {
   duration?: number;
   labels?: string[];
   projectIds?: number[];
+  // Sync apply path (POST /api/sync/push): client-minted identity and
+  // preserved offline timestamps / execution stamps.
+  uuid?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  actualStart?: string;
+  actualEnd?: string;
 }
 
 export interface UpdateTaskInput {
@@ -104,7 +111,7 @@ const commentRowToComment = (row: any): Comment => ({
 
 // T012: Implement createTask()
 export const createTask = (db: Database.Database, input: CreateTaskInput): Task => {
-  const now = nowIso();
+  const now = input.createdAt ?? nowIso();
   const status = input.status ?? 'inbox';
   const { startTime, endTime, duration } = calculateTimeFields(
     input.startTime,
@@ -113,8 +120,9 @@ export const createTask = (db: Database.Database, input: CreateTaskInput): Task 
   );
 
   // Auto-set actual_start when creating task with status='next'
-  let actualStart: string | null = null;
-  if (status === 'next') {
+  // (a sync-provided value from the client always wins over the auto stamp)
+  let actualStart: string | null = input.actualStart ?? null;
+  if (actualStart === null && status === 'next') {
     const { date, time } = getLocalDateTime();
     actualStart = `${date}T${time}:00`;
   }
@@ -122,16 +130,17 @@ export const createTask = (db: Database.Database, input: CreateTaskInput): Task 
   const taskKind = input.taskKind ?? 'action';
 
   const stmt = db.prepare(
-    `INSERT INTO issues (uuid, type, title, body_md, status, task_kind, actual_start, scheduled_start, scheduled_end, is_all_day, scheduled_on, end_date, start_time, end_time, duration, meta, created_at, updated_at, is_bookmarked, is_deleted)
-     VALUES (@uuid, 'task', @title, @body, @status, @taskKind, @actualStart, @scheduledStart, @scheduledEnd, @isAllDay, @scheduledOn, @endDate, @startTime, @endTime, @duration, json('{}'), @createdAt, @createdAt, 0, 0)`
+    `INSERT INTO issues (uuid, type, title, body_md, status, task_kind, actual_start, actual_end, scheduled_start, scheduled_end, is_all_day, scheduled_on, end_date, start_time, end_time, duration, meta, created_at, updated_at, is_bookmarked, is_deleted)
+     VALUES (@uuid, 'task', @title, @body, @status, @taskKind, @actualStart, @actualEnd, @scheduledStart, @scheduledEnd, @isAllDay, @scheduledOn, @endDate, @startTime, @endTime, @duration, json('{}'), @createdAt, @updatedAt, 0, 0)`
   );
   const result = stmt.run({
-    uuid: uuidv7(),
+    uuid: input.uuid ?? uuidv7(),
     title: input.title,
     body: input.bodyMd,
     status,
     taskKind,
     actualStart,
+    actualEnd: input.actualEnd ?? null,
     // New fields
     scheduledStart: input.scheduledStart ?? null,
     scheduledEnd: input.scheduledEnd ?? null,
@@ -142,7 +151,8 @@ export const createTask = (db: Database.Database, input: CreateTaskInput): Task 
     startTime: startTime ?? null,
     endTime: endTime ?? null,
     duration: duration ?? null,
-    createdAt: now
+    createdAt: now,
+    updatedAt: input.updatedAt ?? now
   });
   const taskId = Number(result.lastInsertRowid);
 

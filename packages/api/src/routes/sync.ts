@@ -44,7 +44,7 @@ export async function syncRoutes(app: FastifyInstance) {
         tags: ['Sync'],
         summary: 'Apply client operations',
         description:
-          'Apply a batch of offline operations (memo/comment create/update/delete) in order. Each operation is idempotent via opId and applies in its own transaction (partial success). Conflict rules: last-write-wins per record; concurrent memo body edits keep the server version and save the client body as a conflicted-copy memo; edits beat deletes in both directions.',
+          'Apply a batch of offline operations in order. memo/comment support create/update/delete; task/article/label/issue_label/link support create only (iOS Standalone -> Server bulk migration; send in dependency order: labels, then issues, then issue_labels/comments, then links). Each operation is idempotent via opId and applies in its own transaction (partial success). Replays are also detected without the opId ledger: task/article on uuid, label on name, issue_label/link on the existing pair — all reported as alreadyApplied. Operations with unresolvable references are skipped with a reason. Conflict rules for memo/comment: last-write-wins per record; concurrent memo body edits keep the server version and save the client body as a conflicted-copy memo; edits beat deletes in both directions.',
         operationId: 'pushSyncOperations',
         body: SyncPushRequestSchema,
         response: {

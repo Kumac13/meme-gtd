@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { ensureDatabase } from 'meme-gtd-db';
 import type { MgtdConfig } from 'meme-gtd-config';
-import type { TaskStatus, SourceType } from 'meme-gtd-shared';
+import type { TaskStatus, TaskKind, SourceType } from 'meme-gtd-shared';
 import { ActivityLogger } from './activity-log/activity-logger.js';
 import { LinkService } from './linkService.js';
 import { rewriteIssueMentions } from './issueMentions.js';
@@ -319,6 +319,45 @@ export class TaskService {
     })();
   }
 
+  /**
+   * Sync apply path (POST /api/sync/push): create a task with a client-minted
+   * uuid and preserved offline timestamps / execution stamps. Same domain
+   * semantics as create() — mention rewriting, links, and activity log all
+   * apply.
+   */
+  public createFromSync(input: {
+    uuid: string;
+    title: string;
+    bodyMd?: string;
+    status?: TaskStatus;
+    taskKind?: TaskKind;
+    scheduledStart?: string;
+    scheduledEnd?: string;
+    isAllDay?: boolean;
+    scheduledOn?: string;
+    actualStart?: string;
+    actualEnd?: string;
+    createdAt?: string;
+    updatedAt?: string;
+  }) {
+    return this.db.transaction(() => {
+      const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, input.bodyMd ?? '');
+      const task = createTask(this.db, { ...input, bodyMd: rewritten });
+      this.logger.logTaskCreated(
+        task.id,
+        input.title,
+        task.status,
+        input.scheduledStart,
+        input.isAllDay
+      );
+      for (const targetId of mentionedIssueIds) {
+        if (targetId === task.id) continue;
+        this.linkService.createOrIgnore(task.id, targetId, 'relates');
+      }
+      return task;
+    })();
+  }
+
   public list(filters: ListTaskFilters = {}) {
     const tasks = listTasks(this.db, filters);
     const total = countTasks(this.db, filters);
@@ -536,6 +575,20 @@ export class LabelService {
     })();
   }
 
+  /**
+   * Sync apply path (POST /api/sync/push): create a label with a preserved
+   * offline authoring time. Activity log applies as in create().
+   */
+  public createFromSync(input: { name: string; description?: string; createdAt?: string }) {
+    return this.db.transaction(() => {
+      const label = createLabel(this.db, input.name, input.description, {
+        createdAt: input.createdAt
+      });
+      this.logger.logLabelCreated(label.id, input.name, input.description);
+      return label;
+    })();
+  }
+
   public assignToIssue(issueId: number, labelId: number) {
     return this.db.transaction(() => {
       const result = attachLabelToIssue(this.db, issueId, labelId);
@@ -603,6 +656,37 @@ export class ArticleService {
     })();
   }
 
+  /**
+   * Sync apply path (POST /api/sync/push): create an article with a
+   * client-minted uuid and preserved offline timestamps (createdAt /
+   * meta.archivedAt). Same domain semantics as create().
+   */
+  public createFromSync(input: {
+    uuid: string;
+    title: string;
+    bodyMd: string;
+    originalUrl: string;
+    siteName?: string;
+    archivedAt?: string;
+    createdAt?: string;
+  }) {
+    return this.db.transaction(() => {
+      const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, input.bodyMd);
+      const article = createArticle(this.db, { ...input, bodyMd: rewritten });
+      this.logger.logArticleCreated(
+        article.id,
+        input.title,
+        rewritten,
+        input.originalUrl
+      );
+      for (const targetId of mentionedIssueIds) {
+        if (targetId === article.id) continue;
+        this.linkService.createOrIgnore(article.id, targetId, 'relates');
+      }
+      return article;
+    })();
+  }
+
   public get(id: number) {
     return getArticle(this.db, id);
   }
@@ -628,6 +712,8 @@ export { LinkService, type LinkServiceOptions } from './linkService.js';
 export {
   SyncService,
   type SyncServiceOptions,
+  type SyncPushEntity,
+  type SyncPushLinkType,
   type SyncPushOperation,
   type SyncPushOperationResult,
   type SyncPushResult,

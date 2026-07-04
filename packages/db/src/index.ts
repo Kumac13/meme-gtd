@@ -201,6 +201,7 @@ export {
   listSyncChanges,
   findIssueByUuid,
   findCommentByUuid,
+  hasIssueLabel,
   undeleteIssue,
   undeleteComment,
   getAppliedOp,

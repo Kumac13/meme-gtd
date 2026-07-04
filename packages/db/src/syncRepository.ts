@@ -245,6 +245,21 @@ export const findCommentByUuid = (
 };
 
 /**
+ * Check whether a label is already attached to an issue (idempotent
+ * issue_label create detection for sync push).
+ */
+export const hasIssueLabel = (
+  db: Database.Database,
+  issueId: number,
+  labelId: number
+): boolean => {
+  const row = db
+    .prepare('SELECT 1 FROM issue_labels WHERE issue_id = @issueId AND label_id = @labelId')
+    .get({ issueId, labelId });
+  return row !== undefined;
+};
+
+/**
  * Restore a soft-deleted issue (edit-beats-delete resolution).
  */
 export const undeleteIssue = (db: Database.Database, id: number): void => {

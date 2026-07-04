@@ -62,7 +62,7 @@ export class SyncService {
     }
     /**
      * Apply client operations
-     * Apply a batch of offline operations (memo/comment create/update/delete) in order. Each operation is idempotent via opId and applies in its own transaction (partial success). Conflict rules: last-write-wins per record; concurrent memo body edits keep the server version and save the client body as a conflicted-copy memo; edits beat deletes in both directions.
+     * Apply a batch of offline operations in order. memo/comment support create/update/delete; task/article/label/issue_label/link support create only (iOS Standalone -> Server bulk migration; send in dependency order: labels, then issues, then issue_labels/comments, then links). Each operation is idempotent via opId and applies in its own transaction (partial success). Replays are also detected without the opId ledger: task/article on uuid, label on name, issue_label/link on the existing pair — all reported as alreadyApplied. Operations with unresolvable references are skipped with a reason. Conflict rules for memo/comment: last-write-wins per record; concurrent memo body edits keep the server version and save the client body as a conflicted-copy memo; edits beat deletes in both directions.
      * @param requestBody
      * @returns any Default Response
      * @throws ApiError
@@ -82,15 +82,15 @@ export class SyncService {
                  */
                 opId: string;
                 /**
-                 * Entity kind this operation targets
+                 * Entity kind this operation targets. memo/comment support create/update/delete; task/article/label/issue_label/link support create only (bulk migration).
                  */
-                entity: 'memo' | 'comment';
+                entity: 'memo' | 'comment' | 'task' | 'article' | 'label' | 'issue_label' | 'link';
                 /**
                  * Operation type
                  */
                 type: 'create' | 'update' | 'delete';
                 /**
-                 * Sync identity of the target row (client-minted UUIDv7 for offline-created rows)
+                 * Sync identity of the target row (client-minted UUIDv7 for offline-created rows). Echoed back for entities without a server uuid column (label / issue_label / link).
                  */
                 uuid: string;
                 /**
@@ -102,15 +102,15 @@ export class SyncService {
                  */
                 baseUpdatedAt?: string | null;
                 /**
-                 * Operation payload; omitted for delete
+                 * Operation payload; omitted for delete. Which fields apply depends on entity.
                  */
                 payload?: {
                     /**
-                     * Body content (required for create)
+                     * Body content (required for memo/comment/article create; optional for task)
                      */
                     bodyMd?: string;
                     /**
-                     * Bookmark state
+                     * Bookmark state (memo only)
                      */
                     isBookmarked?: boolean;
                     /**
@@ -118,9 +118,90 @@ export class SyncService {
                      */
                     createdAt?: string;
                     /**
-                     * Client-side update time (informational)
+                     * Client-side update time (stored as-is for task create; informational otherwise)
                      */
                     updatedAt?: string;
+                    /**
+                     * Title (required for task/article create)
+                     */
+                    title?: string;
+                    /**
+                     * Task status (task create only; default inbox)
+                     */
+                    status?: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
+                    /**
+                     * Task kind (task create only; default action)
+                     */
+                    taskKind?: 'event' | 'action';
+                    /**
+                     * Scheduled start, ISO 8601 datetime (task create only)
+                     */
+                    scheduledStart?: string;
+                    /**
+                     * Scheduled end, ISO 8601 datetime (task create only)
+                     */
+                    scheduledEnd?: string;
+                    /**
+                     * All-day flag (task create only)
+                     */
+                    isAllDay?: boolean;
+                    /**
+                     * Deprecated scheduled date YYYY-MM-DD (task create only, backward compatibility)
+                     */
+                    scheduledOn?: string;
+                    /**
+                     * Execution start stamp to preserve, ISO 8601 datetime (task create only)
+                     */
+                    actualStart?: string;
+                    /**
+                     * Execution end stamp to preserve, ISO 8601 datetime (task create only)
+                     */
+                    actualEnd?: string;
+                    /**
+                     * Article metadata (article create only)
+                     */
+                    meta?: {
+                        /**
+                         * Source URL (required for article create)
+                         */
+                        originalUrl?: string;
+                        /**
+                         * Site name
+                         */
+                        siteName?: string;
+                        /**
+                         * Client-side archive time to preserve
+                         */
+                        archivedAt?: string;
+                    };
+                    /**
+                     * Label name — the natural key (required for label create)
+                     */
+                    name?: string;
+                    /**
+                     * Label description (label create only)
+                     */
+                    description?: string;
+                    /**
+                     * Target issue uuid (required for issue_label create)
+                     */
+                    issueUuid?: string;
+                    /**
+                     * Label name to attach (required for issue_label create)
+                     */
+                    labelName?: string;
+                    /**
+                     * Link source issue uuid (required for link create)
+                     */
+                    sourceIssueUuid?: string;
+                    /**
+                     * Link target issue uuid (required for link create)
+                     */
+                    targetIssueUuid?: string;
+                    /**
+                     * Link type (required for link create)
+                     */
+                    linkType?: 'parent' | 'child' | 'relates' | 'derived_from';
                 };
             }>;
         },
@@ -153,6 +234,10 @@ export class SyncService {
              * uuid of the conflicted-copy memo (status conflictCopied only)
              */
             conflictCopyUuid?: string;
+            /**
+             * Human-readable explanation for skipped bulk-migration operations (e.g. unresolved issue/label reference)
+             */
+            reason?: string;
         }>;
         /**
          * Highest serverSeq after applying — pull from your last cursor to converge

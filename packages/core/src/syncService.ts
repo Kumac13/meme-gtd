@@ -1,19 +1,24 @@
 import Database from 'better-sqlite3';
 import { ensureDatabase } from 'meme-gtd-db';
 import type { MgtdConfig } from 'meme-gtd-config';
-import { nowIso, uuidv7, type SourceType } from 'meme-gtd-shared';
+import { nowIso, uuidv7, type SourceType, type TaskStatus, type TaskKind } from 'meme-gtd-shared';
 import {
   findCommentByUuid,
   findIssueByUuid,
+  findLink,
   getAppliedOp,
+  getLabelByName,
   getLatestSeq,
+  hasIssueLabel,
   listSyncChanges,
   recordAppliedOp,
   undeleteComment,
   undeleteIssue,
-  type SyncChangesPage
+  type SyncChangesPage,
+  type SyncIssueRecord
 } from 'meme-gtd-db';
-import { MemoService } from './index.js';
+import { ArticleService, LabelService, MemoService, TaskService } from './index.js';
+import { LinkService } from './linkService.js';
 
 export interface SyncServiceOptions {
   config?: MgtdConfig;
@@ -21,9 +26,20 @@ export interface SyncServiceOptions {
   sourceType?: SourceType;
 }
 
+export type SyncPushEntity =
+  | 'memo'
+  | 'comment'
+  | 'task'
+  | 'article'
+  | 'label'
+  | 'issue_label'
+  | 'link';
+
+export type SyncPushLinkType = 'parent' | 'child' | 'relates' | 'derived_from';
+
 export interface SyncPushOperation {
   opId: string;
-  entity: 'memo' | 'comment';
+  entity: SyncPushEntity;
   type: 'create' | 'update' | 'delete';
   uuid: string;
   /** Parent issue uuid (comment operations only). */
@@ -35,6 +51,33 @@ export interface SyncPushOperation {
     isBookmarked?: boolean;
     createdAt?: string;
     updatedAt?: string;
+    // task / article
+    title?: string;
+    // task
+    status?: TaskStatus;
+    taskKind?: TaskKind;
+    scheduledStart?: string;
+    scheduledEnd?: string;
+    isAllDay?: boolean;
+    scheduledOn?: string;
+    actualStart?: string;
+    actualEnd?: string;
+    // article
+    meta?: {
+      originalUrl?: string;
+      siteName?: string;
+      archivedAt?: string;
+    };
+    // label
+    name?: string;
+    description?: string;
+    // issue_label
+    issueUuid?: string;
+    labelName?: string;
+    // link
+    sourceIssueUuid?: string;
+    targetIssueUuid?: string;
+    linkType?: SyncPushLinkType;
   };
 }
 
@@ -47,6 +90,8 @@ export interface SyncPushOperationResult {
   serverId?: number;
   updatedAt?: string;
   conflictCopyUuid?: string;
+  /** Human-readable explanation, set when status is 'skipped' for bulk-migration entities. */
+  reason?: string;
 }
 
 export interface SyncPushResult {
@@ -68,11 +113,27 @@ export interface SyncPushResult {
  * - Idempotency: every operation carries a client-minted opId; replays return
  *   the recorded result (applied -> alreadyApplied).
  *
- * All mutations go through MemoService so the activity log stays complete.
+ * Bulk-migration entities (iOS Standalone -> Server one-way migration):
+ * - task / article / label / issue_label / link accept CREATE operations only.
+ * - Idempotency beyond the opId ledger: task/article replay on uuid, label on
+ *   its natural key (name), issue_label / link on the existing pair — all
+ *   reported as alreadyApplied so re-runs are safe.
+ * - Reference resolution (issue_label / link / comment) happens per operation;
+ *   the client guarantees dependency order (labels -> issues -> issue_labels ->
+ *   comments -> links) within its FIFO stream. Unresolvable references are
+ *   'skipped' with a reason.
+ *
+ * All mutations go through the domain services (MemoService / TaskService /
+ * ArticleService / LabelService / LinkService) so the activity log stays
+ * complete.
  */
 export class SyncService {
   private readonly db: Database.Database;
   private readonly memoService: MemoService;
+  private readonly taskService: TaskService;
+  private readonly articleService: ArticleService;
+  private readonly labelService: LabelService;
+  private readonly linkService: LinkService;
 
   constructor(options: SyncServiceOptions) {
     if (options.db) {
@@ -83,6 +144,10 @@ export class SyncService {
       throw new Error('SyncService requires either db or config option');
     }
     this.memoService = new MemoService({ db: this.db, sourceType: options.sourceType });
+    this.taskService = new TaskService({ db: this.db, sourceType: options.sourceType });
+    this.articleService = new ArticleService({ db: this.db, sourceType: options.sourceType });
+    this.labelService = new LabelService({ db: this.db, sourceType: options.sourceType });
+    this.linkService = new LinkService({ db: this.db, sourceType: options.sourceType });
   }
 
   public listChanges(since: number, limit: number): SyncChangesPage {
@@ -107,11 +172,303 @@ export class SyncService {
     // Each operation applies in its own transaction so a conflict or skip in
     // one op never rolls back its predecessors (partial success by design).
     return this.db.transaction(() => {
-      const result =
-        op.entity === 'memo' ? this.applyMemoOp(deviceId, op) : this.applyCommentOp(op);
+      const result = this.applyEntityOp(deviceId, op);
       recordAppliedOp(this.db, op.opId, deviceId, JSON.stringify(result));
       return result;
     })();
+  }
+
+  private applyEntityOp(deviceId: string, op: SyncPushOperation): SyncPushOperationResult {
+    switch (op.entity) {
+      case 'memo':
+        return this.applyMemoOp(deviceId, op);
+      case 'comment':
+        return this.applyCommentOp(op);
+      case 'task':
+        return this.applyCreateOnly(op, () => this.applyTaskCreate(op));
+      case 'article':
+        return this.applyCreateOnly(op, () => this.applyArticleCreate(op));
+      case 'label':
+        return this.applyCreateOnly(op, () => this.applyLabelCreate(op));
+      case 'issue_label':
+        return this.applyCreateOnly(op, () => this.applyIssueLabelCreate(op));
+      case 'link':
+        return this.applyCreateOnly(op, () => this.applyLinkCreate(op));
+    }
+  }
+
+  /**
+   * Bulk-migration entities accept create only. The API schema rejects
+   * update/delete with a 400 before reaching here; this guard covers direct
+   * core callers.
+   */
+  private applyCreateOnly(
+    op: SyncPushOperation,
+    create: () => SyncPushOperationResult
+  ): SyncPushOperationResult {
+    if (op.type !== 'create') {
+      return {
+        opId: op.opId,
+        status: 'skipped',
+        uuid: op.uuid,
+        reason: `entity '${op.entity}' only supports create operations`
+      };
+    }
+    return create();
+  }
+
+  private applyTaskCreate(op: SyncPushOperation): SyncPushOperationResult {
+    const existing = findIssueByUuid(this.db, op.uuid);
+    if (existing) {
+      return {
+        opId: op.opId,
+        status: 'alreadyApplied',
+        uuid: op.uuid,
+        serverId: existing.id,
+        updatedAt: existing.updatedAt
+      };
+    }
+    if (!op.payload?.title) {
+      return {
+        opId: op.opId,
+        status: 'skipped',
+        uuid: op.uuid,
+        reason: 'payload.title is required for task create'
+      };
+    }
+
+    const task = this.taskService.createFromSync({
+      uuid: op.uuid,
+      title: op.payload.title,
+      bodyMd: op.payload.bodyMd,
+      status: op.payload.status,
+      taskKind: op.payload.taskKind,
+      scheduledStart: op.payload.scheduledStart,
+      scheduledEnd: op.payload.scheduledEnd,
+      isAllDay: op.payload.isAllDay,
+      scheduledOn: op.payload.scheduledOn,
+      actualStart: op.payload.actualStart,
+      actualEnd: op.payload.actualEnd,
+      createdAt: op.payload.createdAt,
+      updatedAt: op.payload.updatedAt
+    });
+    return {
+      opId: op.opId,
+      status: 'applied',
+      uuid: op.uuid,
+      serverId: task.id,
+      updatedAt: task.updatedAt
+    };
+  }
+
+  private applyArticleCreate(op: SyncPushOperation): SyncPushOperationResult {
+    const existing = findIssueByUuid(this.db, op.uuid);
+    if (existing) {
+      return {
+        opId: op.opId,
+        status: 'alreadyApplied',
+        uuid: op.uuid,
+        serverId: existing.id,
+        updatedAt: existing.updatedAt
+      };
+    }
+    if (!op.payload?.title || op.payload.bodyMd === undefined || !op.payload.meta?.originalUrl) {
+      return {
+        opId: op.opId,
+        status: 'skipped',
+        uuid: op.uuid,
+        reason: 'payload.title, payload.bodyMd and payload.meta.originalUrl are required for article create'
+      };
+    }
+
+    const article = this.articleService.createFromSync({
+      uuid: op.uuid,
+      title: op.payload.title,
+      bodyMd: op.payload.bodyMd,
+      originalUrl: op.payload.meta.originalUrl,
+      siteName: op.payload.meta.siteName,
+      archivedAt: op.payload.meta.archivedAt,
+      createdAt: op.payload.createdAt
+    });
+    return {
+      opId: op.opId,
+      status: 'applied',
+      uuid: op.uuid,
+      serverId: article.id,
+      updatedAt: article.updatedAt
+    };
+  }
+
+  private applyLabelCreate(op: SyncPushOperation): SyncPushOperationResult {
+    if (!op.payload?.name) {
+      return {
+        opId: op.opId,
+        status: 'skipped',
+        uuid: op.uuid,
+        reason: 'payload.name is required for label create'
+      };
+    }
+
+    // Labels have no uuid column — name is the natural key. An existing label
+    // with the same name means the create already happened (idempotent re-run,
+    // not an error).
+    const existing = getLabelByName(this.db, op.payload.name);
+    if (existing) {
+      return {
+        opId: op.opId,
+        status: 'alreadyApplied',
+        uuid: op.uuid,
+        serverId: existing.id
+      };
+    }
+
+    const label = this.labelService.createFromSync({
+      name: op.payload.name,
+      description: op.payload.description,
+      createdAt: op.payload.createdAt
+    });
+    return {
+      opId: op.opId,
+      status: 'applied',
+      uuid: op.uuid,
+      serverId: label.id
+    };
+  }
+
+  private applyIssueLabelCreate(op: SyncPushOperation): SyncPushOperationResult {
+    if (!op.payload?.issueUuid || !op.payload.labelName) {
+      return {
+        opId: op.opId,
+        status: 'skipped',
+        uuid: op.uuid,
+        reason: 'payload.issueUuid and payload.labelName are required for issue_label create'
+      };
+    }
+
+    const issue = this.resolveIssue(op.payload.issueUuid);
+    if (!issue) {
+      return {
+        opId: op.opId,
+        status: 'skipped',
+        uuid: op.uuid,
+        reason: `issue not found for uuid ${op.payload.issueUuid}`
+      };
+    }
+    const label = getLabelByName(this.db, op.payload.labelName);
+    if (!label) {
+      return {
+        opId: op.opId,
+        status: 'skipped',
+        uuid: op.uuid,
+        reason: `label not found for name ${op.payload.labelName}`
+      };
+    }
+
+    if (hasIssueLabel(this.db, issue.id, label.id)) {
+      return {
+        opId: op.opId,
+        status: 'alreadyApplied',
+        uuid: op.uuid,
+        serverId: label.id
+      };
+    }
+
+    this.labelService.assignToIssue(issue.id, label.id);
+    return {
+      opId: op.opId,
+      status: 'applied',
+      uuid: op.uuid,
+      serverId: label.id
+    };
+  }
+
+  private applyLinkCreate(op: SyncPushOperation): SyncPushOperationResult {
+    if (!op.payload?.sourceIssueUuid || !op.payload.targetIssueUuid || !op.payload.linkType) {
+      return {
+        opId: op.opId,
+        status: 'skipped',
+        uuid: op.uuid,
+        reason:
+          'payload.sourceIssueUuid, payload.targetIssueUuid and payload.linkType are required for link create'
+      };
+    }
+
+    const source = this.resolveIssue(op.payload.sourceIssueUuid);
+    if (!source) {
+      return {
+        opId: op.opId,
+        status: 'skipped',
+        uuid: op.uuid,
+        reason: `source issue not found for uuid ${op.payload.sourceIssueUuid}`
+      };
+    }
+    const target = this.resolveIssue(op.payload.targetIssueUuid);
+    if (!target) {
+      return {
+        opId: op.opId,
+        status: 'skipped',
+        uuid: op.uuid,
+        reason: `target issue not found for uuid ${op.payload.targetIssueUuid}`
+      };
+    }
+
+    const existing = findLink(this.db, {
+      sourceIssueId: source.id,
+      targetIssueId: target.id,
+      linkType: op.payload.linkType
+    });
+    if (existing) {
+      return {
+        opId: op.opId,
+        status: 'alreadyApplied',
+        uuid: op.uuid,
+        serverId: existing.id
+      };
+    }
+    // 'relates' is symmetric: an existing inverse row is the same relationship.
+    if (op.payload.linkType === 'relates') {
+      const inverse = findLink(this.db, {
+        sourceIssueId: target.id,
+        targetIssueId: source.id,
+        linkType: 'relates'
+      });
+      if (inverse) {
+        return {
+          opId: op.opId,
+          status: 'alreadyApplied',
+          uuid: op.uuid,
+          serverId: inverse.id
+        };
+      }
+    }
+
+    try {
+      const link = this.linkService.create(source.id, target.id, op.payload.linkType);
+      return {
+        opId: op.opId,
+        status: 'applied',
+        uuid: op.uuid,
+        serverId: link.id
+      };
+    } catch (e) {
+      // Domain validation failures (self link, inverse parent-child, circular
+      // hierarchy) drop the op instead of failing the whole batch.
+      return {
+        opId: op.opId,
+        status: 'skipped',
+        uuid: op.uuid,
+        reason: e instanceof Error ? e.message : 'link validation failed'
+      };
+    }
+  }
+
+  /** Resolve an issue reference by uuid; soft-deleted rows do not qualify. */
+  private resolveIssue(uuid: string): SyncIssueRecord | null {
+    const issue = findIssueByUuid(this.db, uuid);
+    if (!issue || issue.isDeleted) {
+      return null;
+    }
+    return issue;
   }
 
   private applyMemoOp(deviceId: string, op: SyncPushOperation): SyncPushOperationResult {

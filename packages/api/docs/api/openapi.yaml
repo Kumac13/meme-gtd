@@ -7354,7 +7354,7 @@ paths:
       summary: Apply client operations
       tags:
         - Sync
-      description: "Apply a batch of offline operations (memo/comment create/update/delete) in order. Each operation is idempotent via opId and applies in its own transaction (partial success). Conflict rules: last-write-wins per record; concurrent memo body edits keep the server version and save the client body as a conflicted-copy memo; edits beat deletes in both directions."
+      description: "Apply a batch of offline operations in order. memo/comment support create/update/delete; task/article/label/issue_label/link support create only (iOS Standalone -> Server bulk migration; send in dependency order: labels, then issues, then issue_labels/comments, then links). Each operation is idempotent via opId and applies in its own transaction (partial success). Replays are also detected without the opId ledger: task/article on uuid, label on name, issue_label/link on the existing pair — all reported as alreadyApplied. Operations with unresolvable references are skipped with a reason. Conflict rules for memo/comment: last-write-wins per record; concurrent memo body edits keep the server version and save the client body as a conflicted-copy memo; edits beat deletes in both directions."
       requestBody:
         content:
           application/json:
@@ -7381,7 +7381,12 @@ paths:
                         enum:
                           - memo
                           - comment
-                        description: Entity kind this operation targets
+                          - task
+                          - article
+                          - label
+                          - issue_label
+                          - link
+                        description: Entity kind this operation targets. memo/comment support create/update/delete; task/article/label/issue_label/link support create only (bulk migration).
                       type:
                         type: string
                         enum:
@@ -7393,7 +7398,7 @@ paths:
                         type: string
                         minLength: 1
                         maxLength: 128
-                        description: Sync identity of the target row (client-minted UUIDv7 for offline-created rows)
+                        description: Sync identity of the target row (client-minted UUIDv7 for offline-created rows). Echoed back for entities without a server uuid column (label / issue_label / link).
                       issueUuid:
                         type: string
                         minLength: 1
@@ -7408,18 +7413,107 @@ paths:
                         properties:
                           bodyMd:
                             type: string
-                            description: Body content (required for create)
+                            description: Body content (required for memo/comment/article create; optional for task)
                           isBookmarked:
                             type: boolean
-                            description: Bookmark state
+                            description: Bookmark state (memo only)
                           createdAt:
                             type: string
                             description: Offline authoring time to preserve (create only)
                           updatedAt:
                             type: string
-                            description: Client-side update time (informational)
+                            description: Client-side update time (stored as-is for task create; informational otherwise)
+                          title:
+                            type: string
+                            minLength: 1
+                            description: Title (required for task/article create)
+                          status:
+                            type: string
+                            enum:
+                              - inbox
+                              - open
+                              - next
+                              - waiting
+                              - scheduled
+                              - someday
+                              - done
+                              - canceled
+                            description: Task status (task create only; default inbox)
+                          taskKind:
+                            type: string
+                            enum:
+                              - event
+                              - action
+                            description: Task kind (task create only; default action)
+                          scheduledStart:
+                            type: string
+                            description: Scheduled start, ISO 8601 datetime (task create only)
+                          scheduledEnd:
+                            type: string
+                            description: Scheduled end, ISO 8601 datetime (task create only)
+                          isAllDay:
+                            type: boolean
+                            description: All-day flag (task create only)
+                          scheduledOn:
+                            type: string
+                            description: Deprecated scheduled date YYYY-MM-DD (task create only, backward compatibility)
+                          actualStart:
+                            type: string
+                            description: Execution start stamp to preserve, ISO 8601 datetime (task create only)
+                          actualEnd:
+                            type: string
+                            description: Execution end stamp to preserve, ISO 8601 datetime (task create only)
+                          meta:
+                            type: object
+                            properties:
+                              originalUrl:
+                                type: string
+                                minLength: 1
+                                description: Source URL (required for article create)
+                              siteName:
+                                type: string
+                                description: Site name
+                              archivedAt:
+                                type: string
+                                description: Client-side archive time to preserve
+                            additionalProperties: false
+                            description: Article metadata (article create only)
+                          name:
+                            type: string
+                            minLength: 1
+                            description: Label name — the natural key (required for label create)
+                          description:
+                            type: string
+                            description: Label description (label create only)
+                          issueUuid:
+                            type: string
+                            minLength: 1
+                            maxLength: 128
+                            description: Target issue uuid (required for issue_label create)
+                          labelName:
+                            type: string
+                            minLength: 1
+                            description: Label name to attach (required for issue_label create)
+                          sourceIssueUuid:
+                            type: string
+                            minLength: 1
+                            maxLength: 128
+                            description: Link source issue uuid (required for link create)
+                          targetIssueUuid:
+                            type: string
+                            minLength: 1
+                            maxLength: 128
+                            description: Link target issue uuid (required for link create)
+                          linkType:
+                            type: string
+                            enum:
+                              - parent
+                              - child
+                              - relates
+                              - derived_from
+                            description: Link type (required for link create)
                         additionalProperties: false
-                        description: Operation payload; omitted for delete
+                        description: Operation payload; omitted for delete. Which fields apply depends on entity.
                     required:
                       - opId
                       - entity
@@ -7472,6 +7566,9 @@ paths:
                         conflictCopyUuid:
                           type: string
                           description: uuid of the conflicted-copy memo (status conflictCopied only)
+                        reason:
+                          type: string
+                          description: Human-readable explanation for skipped bulk-migration operations (e.g. unresolved issue/label reference)
                       required:
                         - opId
                         - status

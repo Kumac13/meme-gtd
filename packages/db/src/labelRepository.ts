@@ -144,13 +144,15 @@ export const getLabelByName = (
  * @param db Database instance
  * @param name Label name (must be unique)
  * @param description Optional label description
+ * @param options Sync apply path (POST /api/sync/push): preserved offline authoring time
  * @returns Created label object
  * @throws Error if label with the same name already exists
  */
 export const createLabel = (
   db: Database.Database,
   name: string,
-  description?: string
+  description?: string,
+  options?: { createdAt?: string }
 ): Label => {
   // Check uniqueness
   const existing = getLabelByName(db, name);
@@ -158,7 +160,7 @@ export const createLabel = (
     throw new Error(`Label '${name}' already exists`);
   }
 
-  const now = nowIso();
+  const now = options?.createdAt ?? nowIso();
   const stmt = db.prepare(
     `INSERT INTO labels (name, description, created_at)
      VALUES (@name, @description, @createdAt)`
