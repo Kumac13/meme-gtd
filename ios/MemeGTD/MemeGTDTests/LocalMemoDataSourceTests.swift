@@ -240,16 +240,181 @@ final class LocalMemoDataSourceTests: XCTestCase {
         XCTAssertEqual(page.limit, 20)
     }
 
-    // MARK: - Promote
+    // MARK: - Promote preview (Phase 11: local port of the server logic)
 
-    func testPromotePreviewThrowsStandaloneUnavailable() async throws {
+    /// Port of packages/db/test/memoRepository.test.ts
+    /// "promote preview returns memo body and labels".
+    func testPromotePreviewReturnsBodyAndLabels() async throws {
+        let memo = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "draft task"))
+        try await assignLabels(["idea"], memoId: memo.id)
+
+        let preview = try await dataSource.promotePreview(memoId: memo.id)
+        XCTAssertEqual(preview.bodyMd, "draft task")
+        XCTAssertEqual(preview.labels, ["idea"])
+        XCTAssertEqual(preview.projectIds, [])
+        XCTAssertTrue(preview.linkedIssues.isEmpty)
+    }
+
+    /// Port of packages/api/test/integration/memos.test.ts
+    /// "should return memo body with comments inlined": same inputs, and the
+    /// exact body string is anchored to real TS `buildPromoteBody` output.
+    func testPromotePreviewInlinesCommentsInCreatedAtOrder() async throws {
+        let memo = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "Preview memo body"))
+        let first = try await dataSource.createComment(
+            memoId: memo.id, CreateCommentRequest(bodyMd: "thought A")
+        )
+        let second = try await dataSource.createComment(
+            memoId: memo.id, CreateCommentRequest(bodyMd: "thought B")
+        )
+        // Pin comment timestamps so the created_at ASC order is deterministic
+        // even if both inserts land in the same millisecond.
+        try await setCommentCreatedAt("2026-07-01T10:00:00.000Z", commentId: first.id)
+        try await setCommentCreatedAt("2026-07-01T11:30:00.000Z", commentId: second.id)
+
+        let preview = try await dataSource.promotePreview(memoId: memo.id)
+        XCTAssertEqual(
+            preview.bodyMd,
+            "Preview memo body\n\n---\n## コメント\n\n### 2026-07-01T10:00:00.000Z\nthought A\n\n### 2026-07-01T11:30:00.000Z\nthought B"
+        )
+    }
+
+    /// Port of "should return just memo body when there are no comments" —
+    /// including the case where a comment existed but was deleted.
+    func testPromotePreviewExcludesDeletedComments() async throws {
+        let memo = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "Lonely memo"))
+        let comment = try await dataSource.createComment(
+            memoId: memo.id, CreateCommentRequest(bodyMd: "gone")
+        )
+        try await dataSource.deleteComment(memoId: memo.id, commentId: comment.id)
+
+        let preview = try await dataSource.promotePreview(memoId: memo.id)
+        XCTAssertEqual(preview.bodyMd, "Lonely memo")
+    }
+
+    /// Port of "should return 404 for a non-existent memo" (the local error
+    /// takes the place of the HTTP status).
+    func testPromotePreviewThrowsForUnknownMemo() async throws {
         do {
-            _ = try await dataSource.promotePreview(memoId: 1)
-            XCTFail("Expected StandaloneUnavailableError")
-        } catch let error as StandaloneUnavailableError {
-            XCTAssertEqual(
-                error.localizedDescription,
-                "Promote is not available in Standalone mode."
+            _ = try await dataSource.promotePreview(memoId: 99999)
+            XCTFail("Expected LocalMemoError.memoNotFound")
+        } catch let error as LocalMemoError {
+            XCTAssertEqual(error, .memoNotFound)
+        }
+    }
+
+    /// Port of "should include memo labels in preview", tightened to assert
+    /// the TS `listMemoLabels` ORDER BY name (the API test only checks
+    /// membership).
+    func testPromotePreviewLabelsAreSortedByName() async throws {
+        let memo = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "Labelled memo"))
+        try await assignLabels(["urgent", "review"], memoId: memo.id)
+
+        let preview = try await dataSource.promotePreview(memoId: memo.id)
+        XCTAssertEqual(preview.labels, ["review", "urgent"])
+    }
+
+    /// Port of "should include outgoing and incoming links with target issue
+    /// info", driven through the real Standalone link source.
+    func testPromotePreviewIncludesLinksWithTargetInfo() async throws {
+        let other = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "Other memo body"))
+        let memo = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "Source memo"))
+        let links = LocalIssueRelationsDataSource(database: database)
+        _ = try await links.createLink(
+            CreateLinkRequest(sourceIssueId: memo.id, targetIssueId: other.id, linkType: .relates)
+        )
+
+        let preview = try await dataSource.promotePreview(memoId: memo.id)
+        XCTAssertEqual(preview.linkedIssues.count, 1)
+        let link = try XCTUnwrap(preview.linkedIssues.first)
+        XCTAssertEqual(link.direction, "outgoing")
+        XCTAssertEqual(link.linkType, "relates")
+        XCTAssertEqual(link.targetIssue.id, other.id)
+        XCTAssertEqual(link.targetIssue.type, "memo")
+        XCTAssertEqual(link.targetIssue.title, "Other memo body",
+                       "Memos have no title: the collapsed body is the fallback")
+
+        // The incoming side of the same link, seen from the other memo.
+        let reverse = try await dataSource.promotePreview(memoId: other.id)
+        XCTAssertEqual(reverse.linkedIssues.count, 1)
+        XCTAssertEqual(reverse.linkedIssues.first?.direction, "incoming")
+        XCTAssertEqual(reverse.linkedIssues.first?.targetIssue.id, memo.id)
+    }
+
+    /// Deleting the counterpart drops the link from the preview — the same
+    /// observable behavior as the server's soft-delete exclusion (locally
+    /// the delete is hard, so the dangling row is skipped).
+    func testPromotePreviewExcludesLinksToDeletedIssues() async throws {
+        let other = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "doomed"))
+        let memo = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "survivor"))
+        let links = LocalIssueRelationsDataSource(database: database)
+        _ = try await links.createLink(
+            CreateLinkRequest(sourceIssueId: memo.id, targetIssueId: other.id, linkType: .relates)
+        )
+        try await dataSource.deleteMemo(id: other.id)
+
+        let preview = try await dataSource.promotePreview(memoId: memo.id)
+        XCTAssertTrue(preview.linkedIssues.isEmpty)
+    }
+
+    /// Port of "should return empty arrays when memo has no labels,
+    /// projects, or links".
+    func testPromotePreviewEmptyArraysForBareMemo() async throws {
+        let memo = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "Bare memo"))
+
+        let preview = try await dataSource.promotePreview(memoId: memo.id)
+        XCTAssertEqual(preview.labels, [])
+        XCTAssertEqual(preview.projectIds, [])
+        XCTAssertTrue(preview.linkedIssues.isEmpty)
+    }
+
+    /// Standalone policy: projects are server-only, so even a stale
+    /// `project_items` cache row (left over from Server-mode browsing) must
+    /// not leak into the preview.
+    func testPromotePreviewIgnoresCachedProjectItems() async throws {
+        // A synced memo (positive server id) with a cached membership row.
+        try await database.dbWriter.write { db in
+            try db.execute(sql: """
+                INSERT INTO issues (uuid, server_id, type, body_md, created_at, updated_at)
+                VALUES ('m-synced', 42, 'memo', 'synced memo', '2026-06-01T00:00:00.000Z', '2026-06-01T00:00:00.000Z')
+                """)
+            try db.execute(sql: "INSERT INTO project_items (project_id, issue_id) VALUES (5, 42)")
+        }
+
+        let preview = try await dataSource.promotePreview(memoId: 42)
+        XCTAssertEqual(preview.projectIds, [])
+    }
+
+    // MARK: - Promote preview helpers
+
+    /// Assigns labels directly (label CRUD has its own coverage; the preview
+    /// tests only need the rows to exist).
+    private func assignLabels(_ names: [String], memoId: Int) async throws {
+        try await database.dbWriter.write { db in
+            for name in names {
+                try db.execute(
+                    sql: """
+                        INSERT INTO labels (name, server_id, description, created_at)
+                        VALUES (?, NULL, NULL, '2026-01-01T00:00:00.000Z')
+                        """,
+                    arguments: [name]
+                )
+                try db.execute(
+                    sql: """
+                        INSERT INTO issue_labels (issue_uuid, label_name)
+                        SELECT uuid, ? FROM issues WHERE rowid = ?
+                        """,
+                    arguments: [name, -memoId]
+                )
+            }
+        }
+    }
+
+    /// Pins a local-only comment's created_at (its protocol id is -rowid).
+    private func setCommentCreatedAt(_ createdAt: String, commentId: Int) async throws {
+        try await database.dbWriter.write { db in
+            try db.execute(
+                sql: "UPDATE comments SET created_at = ? WHERE rowid = ?",
+                arguments: [createdAt, -commentId]
             )
         }
     }

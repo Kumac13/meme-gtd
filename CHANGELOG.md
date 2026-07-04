@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.43.0 - 2026-07-04
+
+### New Features
+
+- **iOS Standalone モードの promote（オフライン同期 Phase 11）**: Standalone でメモ→タスクの promote（プレビュー + 実行）がサーバーなしで動作するようになった。
+  - サーバーの promote-preview 整形ロジック（本文 + `## コメント` セクション、ラベル、関連リンク）を Swift（`PromoteEngine`）に移植。TS 実装を実際に実行して得た出力との完全一致をテストで固定しており、両実装の乖離を防ぐ。整形仕様を変更する際は両実装とパリティテストを同時更新する（ルールを docs に明記）。
+  - promote 実行（タスク作成 + `derived_from` リンク）は既存のローカル実装で完結する。
+  - Server モードの promote は従来どおりサーバーの preview API を使用（挙動不変）。
+
+### Tests
+
+- PromoteEngine の TS 出力パリティ（16件）と、ローカル promotePreview の統合テスト（9件）を追加（iOS 計116件）。
+
 ## 0.42.0 - 2026-07-04
 
 ### New Features

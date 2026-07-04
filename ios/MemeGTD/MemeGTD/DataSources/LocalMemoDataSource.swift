@@ -13,11 +13,15 @@ import GRDB
 /// dropping the row outright (queued create + delete cancel out). Soft
 /// deleting would only accumulate rows no code path could ever purge.
 ///
+/// promotePreview is computed locally since Phase 11: the memo, its live
+/// comments, labels, and links are read from GRDB and shaped by
+/// `PromoteEngine` (the Swift port of the server's promote-preview logic).
+///
 /// Not available in this mode:
-/// - promotePreview: server-side logic that is not ported to Swift yet
-///   (planned for Phase 11) — throws a user-facing error.
-/// - projectId list filters: project membership has no full local mirror, so
-///   a filtered request answers an honest empty page.
+/// - projectId list filters and preview projectIds: project membership has
+///   no full local mirror (projects stayed server-only in Standalone), so a
+///   filtered request answers an honest empty page and the preview reports
+///   no project memberships.
 nonisolated final class LocalMemoDataSource: MemoDataSource {
     private let database: AppDatabase
 
@@ -113,10 +117,112 @@ nonisolated final class LocalMemoDataSource: MemoDataSource {
         }
     }
 
-    // MARK: - Promote (unavailable in this mode)
+    // MARK: - Promote preview (local port of GET /api/memos/{id}/promote-preview)
 
+    /// Mirrors `getPromotePreview` in packages/db/src/memoRepository.ts:
+    /// - bodyMd: memo body + inlined comments (`PromoteEngine.buildPromoteBody`)
+    /// - labels: the memo's label names ordered by name (`listMemoLabels`)
+    /// - projectIds: always empty — projects are server-only in Standalone
+    ///   mode (no authoritative local membership mirror; the cached
+    ///   `project_items` snapshot is deliberately ignored here so the
+    ///   preview never preselects projects the standalone UI cannot show
+    ///   or assign)
+    /// - linkedIssues: both link directions ordered by created_at, deleted
+    ///   counterparts excluded. Deviation: rows whose counterpart is missing
+    ///   entirely (hard-deleted locally) are dropped instead of surfacing the
+    ///   server's `unknown` placeholder, because without the row there is no
+    ///   integer id to report — on the server this case cannot occur
+    ///   (issues are only ever soft-deleted).
     func promotePreview(memoId: Int) async throws -> PromotePreviewResponse {
-        throw StandaloneUnavailableError("Promote is not available in Standalone mode.")
+        try await database.dbWriter.read { db in
+            guard let memoRow = try LocalMemoStore.fetchMemoRow(db, id: memoId) else {
+                throw LocalMemoError.memoNotFound
+            }
+            let memoUuid: String = memoRow["uuid"]
+            let bodyMd: String = memoRow["body_md"]
+
+            let comments = try LocalMemoStore.listComments(db, memoUuid: memoUuid, memoId: memoId)
+
+            // listMemoLabels orders by label name (not created_at like the
+            // list-screen labels).
+            let labels = try String.fetchAll(
+                db,
+                sql: """
+                    SELECT label_name FROM issue_labels
+                    WHERE issue_uuid = ?
+                    ORDER BY label_name
+                    """,
+                arguments: [memoUuid]
+            )
+
+            // Same shape as the TS link query: both directions, counterpart
+            // joined for its display fields, deleted counterparts excluded,
+            // created_at order.
+            let linkRows = try Row.fetchAll(
+                db,
+                sql: """
+                    SELECT
+                      l.source_issue_uuid,
+                      l.link_type,
+                      i.rowid AS other_rowid,
+                      i.server_id AS other_server_id,
+                      i.type AS other_type,
+                      i.title AS other_title,
+                      i.body_md AS other_body
+                    FROM links l
+                    JOIN issues i ON i.uuid = (
+                      CASE WHEN l.source_issue_uuid = ?
+                        THEN l.target_issue_uuid
+                        ELSE l.source_issue_uuid
+                      END
+                    )
+                    WHERE (l.source_issue_uuid = ? OR l.target_issue_uuid = ?)
+                      AND i.is_deleted = 0
+                    ORDER BY l.created_at
+                    """,
+                arguments: [memoUuid, memoUuid, memoUuid]
+            )
+
+            let engineRows = linkRows.map { row -> PromoteEngine.LinkRow in
+                let otherServerId: Int? = row["other_server_id"]
+                let otherRowid: Int64 = row["other_rowid"]
+                let otherId = otherServerId ?? -Int(otherRowid)
+                let sourceUuid: String = row["source_issue_uuid"]
+                let isOutgoing = sourceUuid == memoUuid
+                return PromoteEngine.LinkRow(
+                    sourceIssueId: isOutgoing ? memoId : otherId,
+                    targetIssueId: isOutgoing ? otherId : memoId,
+                    linkType: row["link_type"],
+                    targetType: row["other_type"],
+                    targetTitle: row["other_title"],
+                    targetBody: row["other_body"]
+                )
+            }
+
+            let linkedIssues = PromoteEngine.linkedIssues(memoId: memoId, rows: engineRows)
+
+            return PromotePreviewResponse(
+                bodyMd: PromoteEngine.buildPromoteBody(
+                    baseBody: bodyMd,
+                    comments: comments.map {
+                        PromoteEngine.CommentInput(createdAt: $0.createdAt, bodyMd: $0.bodyMd)
+                    }
+                ),
+                labels: labels,
+                projectIds: [],
+                linkedIssues: linkedIssues.map { linked in
+                    PromotePreviewLink(
+                        direction: linked.direction,
+                        linkType: linked.linkType,
+                        targetIssue: PromotePreviewLinkTarget(
+                            id: linked.targetId,
+                            type: linked.targetType,
+                            title: linked.targetTitle
+                        )
+                    )
+                }
+            )
+        }
     }
 
     // MARK: - Comments
