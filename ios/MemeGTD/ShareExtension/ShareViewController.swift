@@ -1,6 +1,7 @@
 import UIKit
 import WebKit
 import UniformTypeIdentifiers
+import GRDB
 
 class ShareViewController: UIViewController {
 
@@ -156,13 +157,58 @@ class ShareViewController: UIViewController {
                             return
                         }
 
-                        self?.saveToAPI(article: article)
+                        self?.save(article: article)
                     } catch {
                         self?.showError("Failed to parse article: \(error.localizedDescription)")
                     }
 
                 case .failure(let error):
                     self?.showError("Extraction failed: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    /// Routes the extracted article by Storage Mode (App Group UserDefaults,
+    /// offline support plan Phase 10): Standalone saves into the on-device
+    /// App Group database, Server keeps the pre-Phase-10 POST /api/articles.
+    private func save(article: ExtractedArticle) {
+        if Settings.shared.appMode == .standalone {
+            saveLocally(article: article)
+        } else {
+            saveToAPI(article: article)
+        }
+    }
+
+    /// Standalone mode: inserts the article into the shared App Group
+    /// database (GRDB DatabasePool + WAL, safe alongside the app process).
+    /// `LocalArticleStore.insertArticle` applies the same semantics as the
+    /// server's POST /api/articles, so a later move to Server mode carries
+    /// these rows over losslessly.
+    private func saveLocally(article: ExtractedArticle) {
+        updateStatus("Saving on device...")
+
+        Task {
+            do {
+                let uuid = UUIDv7.generate()
+                let now = ISO8601Millis.now()
+                try await AppDatabase.shared.dbWriter.write { db in
+                    try LocalArticleStore.insertArticle(
+                        db,
+                        uuid: uuid,
+                        title: article.title,
+                        bodyMd: article.content,
+                        originalUrl: article.originalUrl,
+                        siteName: article.siteName,
+                        now: now
+                    )
+                }
+                await MainActor.run {
+                    showSuccess("Article saved!")
+                }
+            } catch {
+                await MainActor.run {
+                    showError("Failed to save article: \(error.localizedDescription)")
                 }
             }
         }

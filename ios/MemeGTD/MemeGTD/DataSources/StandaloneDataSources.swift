@@ -187,34 +187,16 @@ nonisolated final class LocalLabelDataSource: LabelDataSource {
     }
 }
 
-// MARK: - Articles / Projects (empty-safe)
+// MARK: - Projects (empty-safe)
 
-/// Standalone stand-ins for the still server-backed domains: list-style
-/// reads answer empty pages so the Articles screen renders its (labelled)
-/// empty state instead of erroring, and every write or by-id read throws the
-/// user-facing unavailable error. Nothing here can reach
-/// `APIError.noConfiguration` or crash without a server.
-/// (Tasks, keyword search, and issue relations moved to real local
-/// implementations in Phase 9: LocalTaskDataSource / LocalSearchDataSource /
-/// LocalIssueRelationsDataSource.)
-
-nonisolated struct EmptyArticleDataSource: ArticleDataSource {
-    func listArticles(queryItems: [URLQueryItem]) async throws -> ArticleListResponse {
-        ArticleListResponse(data: [], total: 0, limit: 0, offset: 0)
-    }
-
-    func searchArticles(queryItems: [URLQueryItem]) async throws -> SearchArticlesResponse {
-        SearchArticlesResponse(data: [], total: 0, limit: 0, offset: 0)
-    }
-
-    func getArticle(id: Int) async throws -> Article {
-        throw StandaloneUnavailableError("Articles are not available in Standalone mode.")
-    }
-
-    func deleteArticle(id: Int) async throws {
-        throw StandaloneUnavailableError("Deleting articles is not available in Standalone mode.")
-    }
-}
+/// Standalone stand-in for the last still server-backed domain: list-style
+/// reads answer empty pages so the UI renders its empty state instead of
+/// erroring, and every write throws the user-facing unavailable error.
+/// Nothing here can reach `APIError.noConfiguration` or crash without a
+/// server. (Tasks, keyword search, and issue relations moved to real local
+/// implementations in Phase 9, articles in Phase 10: LocalTaskDataSource /
+/// LocalSearchDataSource / LocalIssueRelationsDataSource /
+/// LocalArticleDataSource.)
 
 nonisolated struct EmptyProjectDataSource: ProjectDataSource {
     func listProjects() async throws -> [Project] { [] }

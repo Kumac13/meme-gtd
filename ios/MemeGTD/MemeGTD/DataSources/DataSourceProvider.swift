@@ -27,12 +27,12 @@ private enum SharedSync {
 ///   / `articles` / `projects` become offline READ-ONLY caches (remote
 ///   first, local fallback when unreachable). When OFF, everything stays
 ///   `Remote*`, byte-for-byte the previous online-only behavior.
-/// - `.standalone`: memos, tasks, keyword search, labels and issue relations
-///   are fully local (`LocalMemoDataSource` / `LocalTaskDataSource` /
-///   `LocalSearchDataSource` / `LocalLabelDataSource` /
-///   `LocalIssueRelationsDataSource` — no outbox, no network); articles and
-///   projects remain safe empty implementations (Phase 10). No sync
-///   scheduler runs.
+/// - `.standalone`: memos, tasks, articles, keyword search, labels and issue
+///   relations are fully local (`LocalMemoDataSource` / `LocalTaskDataSource`
+///   / `LocalArticleDataSource` / `LocalSearchDataSource` /
+///   `LocalLabelDataSource` / `LocalIssueRelationsDataSource` — no outbox, no
+///   network; articles are written by the Share Extension since Phase 10);
+///   projects remain a safe empty implementation. No sync scheduler runs.
 final class DataSourceProvider: ObservableObject {
     private(set) var memos: MemoDataSource
     private(set) var tasks: TaskDataSource
@@ -68,16 +68,16 @@ final class DataSourceProvider: ObservableObject {
 
     private func rebuildDataSources() {
         // Standalone (Phase 8, tasks/search/labels/relations local since
-        // Phase 9): everything the app touches is local — no scheduler, no
-        // remote wrappers, so nothing can reach APIError.noConfiguration even
-        // with no API URL configured. Articles and projects remain safe empty
-        // stand-ins (articles are Phase 10).
+        // Phase 9, articles since Phase 10): everything the app touches is
+        // local — no scheduler, no remote wrappers, so nothing can reach
+        // APIError.noConfiguration even with no API URL configured. Projects
+        // remain a safe empty stand-in.
         if Settings.shared.appMode == .standalone {
             syncScheduler?.stop()
             syncScheduler = nil
             memos = LocalMemoDataSource(database: AppDatabase.shared)
             tasks = LocalTaskDataSource(database: AppDatabase.shared)
-            articles = EmptyArticleDataSource()
+            articles = LocalArticleDataSource(database: AppDatabase.shared)
             search = LocalSearchDataSource(database: AppDatabase.shared)
             projects = EmptyProjectDataSource()
             labels = LocalLabelDataSource(database: AppDatabase.shared)

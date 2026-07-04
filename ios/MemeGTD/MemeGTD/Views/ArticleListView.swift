@@ -14,12 +14,6 @@ struct ArticleListView: View {
         !viewModel.searchQuery.isEmpty
     }
 
-    /// Standalone Storage Mode: articles are server-only, so the list is
-    /// always empty (offline support plan Phase 8).
-    private var isStandalone: Bool {
-        Settings.shared.appMode == .standalone
-    }
-
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
@@ -146,12 +140,6 @@ struct ArticleListView: View {
         .overlay {
             if viewModel.isLoading && articleStore.articles.isEmpty {
                 ProgressView("Loading articles...")
-                    .foregroundColor(.textSecondary)
-            } else if isStandalone && articleStore.articles.isEmpty {
-                // Articles have no local implementation yet: label the empty
-                // list so it does not read as a loading failure.
-                Text("Articles are not available in Standalone mode.")
-                    .font(.system(size: 14))
                     .foregroundColor(.textSecondary)
             }
         }

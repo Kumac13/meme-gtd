@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.42.0 - 2026-07-04
+
+### New Features
+
+- **iOS Standalone モードの記事機能 + ShareExtension のローカル保存（オフライン同期 Phase 10）**: Standalone で Safari の共有シートから記事を保存すると、サーバーではなく端末内データベースに保存され、記事タブで閲覧・検索・削除できるようになった。
+  - 記事の meta（originalUrl / siteName / archivedAt）はサーバーの保存形式と同一の JSON で格納され、将来の Server モード移行（Phase 12）で無損失に引き継げる。
+  - ShareExtension は Storage Mode を読んで保存先を切り替える。Server モードの共有は従来どおりサーバーへ POST（挙動不変）。
+  - 記事本文の `#ID` メンション書き換えはサーバー ID 前提のため Standalone では行わない（本文はそのまま保存）。
+
+### Tests
+
+- 記事のローカル insert→meta round-trip（サーバー形式との厳密一致含む）、検索、ハード削除、空タイトル拒否を検証する6テストを追加（iOS 計92件）。
+
 ## 0.41.1 - 2026-07-04
 
 ### New Features
