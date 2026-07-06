@@ -1,6 +1,6 @@
 {
   "name": "meme-gtd-web",
-  "version": "0.45.2",
+  "version": "0.45.3",
   "description": "Web UI for meme-gtd",
   "type": "module",
   "scripts": {
