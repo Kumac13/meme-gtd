@@ -25,7 +25,6 @@ struct SettingsView: View {
     @State private var migrationProgress: MigrationProgress?
     @State private var migrationSkippedCount: Int = 0
     @State private var migrationError: String?
-    @State private var showMigrationConfirm: Bool = false
     @State private var isPreparingMigration: Bool = false
 
     enum ConnectionStatus {
@@ -60,10 +59,10 @@ struct SettingsView: View {
                             Text("Standalone").tag(AppMode.standalone)
                         }
                         .pickerStyle(.segmented)
-                        .disabled(migrationState == .running)
+                        .disabled(migrationState == .running || isPreparingMigration)
 
                         if appMode == .standalone {
-                            Text("Data is stored only on this device. Use \"Migrate to Server\" below to upload it to a server and switch to Server mode.")
+                            Text("Data is stored only on this device. Switching to Server uploads it to the server first.")
                                 .font(.system(size: 13))
                                 .foregroundColor(.textSecondary)
                         }
@@ -102,11 +101,10 @@ struct SettingsView: View {
                     .alert("Switch to Server?", isPresented: $showServerSwitchConfirm) {
                         Button("Cancel", role: .cancel) {}
                         Button("Switch", role: .destructive) {
-                            confirmedServerSwitch = true
-                            appMode = .server
+                            startMigrationFlow()
                         }
                     } message: {
-                        Text("This cannot be undone. Data on this device will no longer be shown (it is not deleted). To upload it to the server, use \"Migrate to Server\" instead.")
+                        Text("All data on this device will be uploaded to the server, then the app will switch to Server mode. This cannot be undone. If the upload fails, nothing changes and you can try again.")
                     }
                     .alert("Cannot Switch to Standalone", isPresented: $showStandaloneSwitchBlocked) {
                         Button("OK", role: .cancel) {}
@@ -150,7 +148,7 @@ struct SettingsView: View {
                             .foregroundColor(connectionStatus == .success ? .accent : .red)
                         }
 
-                        if migrationState == .running {
+                        if migrationState == .running || isPreparingMigration {
                             HStack(spacing: 10) {
                                 ProgressView()
                                     .tint(.accent)
@@ -161,49 +159,26 @@ struct SettingsView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
                         } else {
-                            HStack(spacing: 10) {
-                                Button(action: testConnection) {
-                                    HStack(spacing: 6) {
-                                        if isTestingConnection {
-                                            ProgressView()
-                                                .scaleEffect(0.7)
-                                                .tint(.accent)
-                                        } else {
-                                            Image(systemName: "network")
-                                                .font(.system(size: 13))
-                                        }
-                                        Text("Test")
-                                            .font(.system(size: 14, weight: .medium))
+                            Button(action: testConnection) {
+                                HStack(spacing: 6) {
+                                    if isTestingConnection {
+                                        ProgressView()
+                                            .scaleEffect(0.7)
+                                            .tint(.accent)
+                                    } else {
+                                        Image(systemName: "network")
+                                            .font(.system(size: 13))
                                     }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 10)
-                                    .background(Color(.tertiarySystemFill))
-                                    .foregroundColor(.accent)
-                                    .cornerRadius(10)
+                                    Text("Test")
+                                        .font(.system(size: 14, weight: .medium))
                                 }
-                                .disabled(isTestingConnection || isPreparingMigration)
-
-                                Button(action: startMigrationFlow) {
-                                    HStack(spacing: 6) {
-                                        if isPreparingMigration {
-                                            ProgressView()
-                                                .scaleEffect(0.7)
-                                                .tint(.white)
-                                        } else {
-                                            Image(systemName: "icloud.and.arrow.up")
-                                                .font(.system(size: 13))
-                                        }
-                                        Text("Migrate to Server")
-                                            .font(.system(size: 14, weight: .medium))
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 10)
-                                    .background(Color.accent)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(10)
-                                }
-                                .disabled(isTestingConnection || isPreparingMigration)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color(.tertiarySystemFill))
+                                .foregroundColor(.accent)
+                                .cornerRadius(10)
                             }
+                            .disabled(isTestingConnection)
                         }
 
                         if let migrationError {
@@ -348,12 +323,6 @@ struct SettingsView: View {
         }
         .scrollDismissesKeyboard(.immediately)
         .background(Color(.systemBackground))
-        .alert("Migrate to Server", isPresented: $showMigrationConfirm) {
-            Button("Cancel", role: .cancel) {}
-            Button("Migrate", role: .destructive) { runMigration() }
-        } message: {
-            Text("Upload all on-device data to the server and switch to Server mode? This cannot be undone.")
-        }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: onMenuTap) {
@@ -414,8 +383,9 @@ struct SettingsView: View {
         return "Migration complete."
     }
 
-    /// Step 1 of the flow: verify the server is reachable, then ask for the
-    /// irreversible confirmation. Nothing is uploaded yet.
+    /// Runs after the switch-to-Server confirmation: verify the server is
+    /// reachable, then upload. Mode only changes when the upload fully
+    /// succeeds (runMigration); any failure leaves Standalone untouched.
     private func startMigrationFlow() {
         migrationError = nil
         connectionStatus = .unknown
@@ -428,7 +398,7 @@ struct SettingsView: View {
                 isPreparingMigration = false
                 connectionStatus = success ? .success : .failure
                 if success {
-                    showMigrationConfirm = true
+                    runMigration()
                 } else {
                     HapticManager.notification(.error)
                 }
