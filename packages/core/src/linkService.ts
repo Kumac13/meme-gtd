@@ -41,13 +41,17 @@ export class LinkService {
    * @param sourceId Source issue ID
    * @param targetId Target issue ID
    * @param type Link type
+   * @param options.isPromotion When true, this link creation is part of a
+   *   memo→task promotion and a `memo.promoted` event is recorded (Issue #245).
+   *   Only the promote flows set it; manual link creation and sync leave it unset.
    * @returns Created link
    * @throws Error if validation fails
    */
   create(
     sourceId: number,
     targetId: number,
-    type: 'parent' | 'child' | 'relates' | 'derived_from'
+    type: 'parent' | 'child' | 'relates' | 'derived_from',
+    options?: { isPromotion?: boolean }
   ): Link {
     return this.db.transaction(() => {
       // Validation 1: Self-reference check
@@ -130,11 +134,14 @@ export class LinkService {
       const link = dbCreateLink(this.db, input);
       this.logger.logLinkCreated(link.id, type, sourceId, targetId);
 
-      // Record memo.promoted when a memo is promoted to a task.
-      // Both the CLI and Web promote flows converge on creating a
-      // task -> memo `derived_from` link, so this is the single place
-      // that reliably observes a promotion (Issue #245).
-      if (type === 'derived_from') {
+      // Record memo.promoted only when the caller declares this to be a
+      // memo→task promotion (Issue #245). A task→memo `derived_from` link is
+      // ALSO produced by manual link creation (`mgtd link add`, the Web
+      // add-link UI) and by iOS Standalone→Server migration replay, so link
+      // shape alone cannot distinguish a promotion — the intent must come from
+      // the caller. Both promote flows (CLI `memo promote`, Web promote) pass
+      // `isPromotion: true`; every other path leaves it unset.
+      if (options?.isPromotion && type === 'derived_from') {
         this.maybeLogMemoPromoted(sourceId, targetId, link.id);
       }
 

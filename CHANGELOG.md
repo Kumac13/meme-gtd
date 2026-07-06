@@ -5,11 +5,12 @@
 ### Bug Fixes
 
 - **memo 昇格時に `memo.promoted` アクティビティログが記録されない退行を修正**: 昇格処理が `promotePreview`（本文整形）+ `TaskService.create` + `LinkService.create`（`derived_from` リンク作成）の合成に分解された際、`ActivityLogger.logMemoPromoted()` の呼び出し元が消失し、昇格しても `memo.promoted` イベントが記録されなくなっていた（Web/iOS のタイムラインに昇格が出ない状態）。
-  - CLI・Web の両昇格経路は「task→memo 方向の `derived_from` リンク作成」に収束するため、`LinkService.create` で「source が task・target が memo の `derived_from` リンク」を検出したときに `memo.promoted` を1件記録するようにした。他の `derived_from` リンクでは記録しないため二重記録も起きない。
+  - `LinkService.create` に `isPromotion` オプションを追加し、昇格経路（CLI `memo promote` / Web・iOS の昇格フロー）がこれを明示的に渡したときにのみ `memo.promoted` を1件記録するようにした。API 契約にも `POST /api/links` の任意フィールド `isPromotion` を追加。
+  - リンクの「形状」（task→memo の `derived_from`）ではなく呼び出し元の意図で判定するため、手動リンク作成（`mgtd link add` / Web・iOS の add-link UI）や iOS Standalone→Server 移行時のリンク再作成では `memo.promoted` を誤って記録しない。
 
 ### Tests
 
-- `LinkService.create` の `derived_from` 経路で `memo.promoted` が1件だけ記録されること、および非昇格リンク（task→task の `derived_from`、task→memo の `relates`）では記録されないことを検証する回帰テストを追加。
+- `LinkService.create` で `isPromotion` 指定時のみ `memo.promoted` が1件記録され、未指定の task→memo `derived_from`（手動リンク相当）や非該当リンク（task→task の `derived_from`、`relates`）では記録されないことを検証する回帰テストを core / API 両層に追加。
 
 ## 0.34.0 - 2026-06-29
 

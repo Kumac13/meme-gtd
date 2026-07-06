@@ -105,7 +105,7 @@ export default class MemoPromote extends Command {
       linkService.create(sourceId, targetId, linkType);
     }
 
-    linkService.create(task.id, args.id, 'derived_from');
+    linkService.create(task.id, args.id, 'derived_from', { isPromotion: true });
 
     if (flags.json) {
       this.log(JSON.stringify({ memoId: args.id, taskId: task.id }, null, 2));

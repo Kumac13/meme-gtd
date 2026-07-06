@@ -27,6 +27,10 @@ export class LinksService {
              * Type of relationship between issues
              */
             linkType: 'parent' | 'child' | 'relates' | 'derived_from';
+            /**
+             * Set to true only by the memo→task promotion flow so a memo.promoted activity event is recorded. Manual link creation must leave this unset.
+             */
+            isPromotion?: boolean;
         },
     ): CancelablePromise<{
         /**

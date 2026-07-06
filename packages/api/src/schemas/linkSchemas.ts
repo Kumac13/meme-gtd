@@ -15,6 +15,12 @@ export const CreateLinkRequestSchema = z.object({
   sourceIssueId: z.number().int().positive().describe('Source issue ID'),
   targetIssueId: z.number().int().positive().describe('Target issue ID'),
   linkType: LinkTypeSchema.describe('Type of relationship between issues'),
+  isPromotion: z
+    .boolean()
+    .optional()
+    .describe(
+      'Set to true only by the memo→task promotion flow so a memo.promoted activity event is recorded. Manual link creation must leave this unset.'
+    ),
 });
 
 export type CreateLinkRequest = z.infer<typeof CreateLinkRequestSchema>;

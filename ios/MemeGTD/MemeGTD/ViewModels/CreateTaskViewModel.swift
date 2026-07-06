@@ -147,7 +147,8 @@ class CreateTaskViewModel: ObservableObject {
                             body: CreateLinkRequest(
                                 sourceIssueId: task.id,
                                 targetIssueId: link.targetIssueId,
-                                linkType: link.linkType
+                                linkType: link.linkType,
+                                isPromotion: link.isPromotion ? true : nil
                             )
                         )
                     }

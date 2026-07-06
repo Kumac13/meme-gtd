@@ -15,11 +15,13 @@ export async function createLinkHandler(
   request: FastifyRequest<{ Body: CreateLinkRequest }>,
   reply: FastifyReply
 ) {
-  const { sourceIssueId, targetIssueId, linkType } = request.body;
+  const { sourceIssueId, targetIssueId, linkType, isPromotion } = request.body;
   const linkService = new LinkService({ db: request.server.db });
 
   try {
-    const link = linkService.create(sourceIssueId, targetIssueId, linkType);
+    const link = linkService.create(sourceIssueId, targetIssueId, linkType, {
+      isPromotion,
+    });
     return reply.status(201).send(link);
   } catch (error) {
     if (error instanceof Error) {

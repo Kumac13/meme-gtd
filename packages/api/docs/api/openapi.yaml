@@ -4299,6 +4299,9 @@ paths:
                     - relates
                     - derived_from
                   description: Type of relationship between issues
+                isPromotion:
+                  type: boolean
+                  description: Set to true only by the memo→task promotion flow so a memo.promoted activity event is recorded. Manual link creation must leave this unset.
               required:
                 - sourceIssueId
                 - targetIssueId
