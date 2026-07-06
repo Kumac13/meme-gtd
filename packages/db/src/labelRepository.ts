@@ -23,6 +23,7 @@ export const listAllLabels = (db: Database.Database): Label[] => {
     name: string;
     description: string | null;
     created_at: string;
+    server_seq: number | null;
     memo_count: number;
     task_count: number;
     article_count: number;
@@ -33,6 +34,7 @@ export const listAllLabels = (db: Database.Database): Label[] => {
     name: row.name,
     description: row.description,
     createdAt: row.created_at,
+    serverSeq: row.server_seq ?? undefined,
     memoCount: row.memo_count,
     taskCount: row.task_count,
     articleCount: row.article_count,
@@ -64,6 +66,7 @@ export const getLabel = (db: Database.Database, id: number): Label => {
         name: string;
         description: string | null;
         created_at: string;
+        server_seq: number | null;
         memo_count: number;
         task_count: number;
         article_count: number;
@@ -79,6 +82,7 @@ export const getLabel = (db: Database.Database, id: number): Label => {
     name: row.name,
     description: row.description,
     createdAt: row.created_at,
+    serverSeq: row.server_seq ?? undefined,
     memoCount: row.memo_count,
     taskCount: row.task_count,
     articleCount: row.article_count,
@@ -112,6 +116,7 @@ export const getLabelByName = (
         name: string;
         description: string | null;
         created_at: string;
+        server_seq: number | null;
         memo_count: number;
         task_count: number;
         article_count: number;
@@ -127,6 +132,7 @@ export const getLabelByName = (
     name: row.name,
     description: row.description,
     createdAt: row.created_at,
+    serverSeq: row.server_seq ?? undefined,
     memoCount: row.memo_count,
     taskCount: row.task_count,
     articleCount: row.article_count,
@@ -138,13 +144,15 @@ export const getLabelByName = (
  * @param db Database instance
  * @param name Label name (must be unique)
  * @param description Optional label description
+ * @param options Sync apply path (POST /api/sync/push): preserved offline authoring time
  * @returns Created label object
  * @throws Error if label with the same name already exists
  */
 export const createLabel = (
   db: Database.Database,
   name: string,
-  description?: string
+  description?: string,
+  options?: { createdAt?: string }
 ): Label => {
   // Check uniqueness
   const existing = getLabelByName(db, name);
@@ -152,7 +160,7 @@ export const createLabel = (
     throw new Error(`Label '${name}' already exists`);
   }
 
-  const now = nowIso();
+  const now = options?.createdAt ?? nowIso();
   const stmt = db.prepare(
     `INSERT INTO labels (name, description, created_at)
      VALUES (@name, @description, @createdAt)`

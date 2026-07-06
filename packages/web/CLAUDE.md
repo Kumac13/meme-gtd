@@ -6,7 +6,7 @@
 src/
 ├── api/          # OpenAPIから自動生成（手編集禁止）
 │   ├── core/     # fetchラッパー・エラー処理
-│   └── services/ # TasksService等 11サービスクラス
+│   └── services/ # TasksService等の生成サービスクラス
 ├── pages/        # ルーティング先のページ（App.tsxにルート定義）
 ├── components/   # 再利用コンポーネント（calendar/含む）
 ├── hooks/        # useUrlFilters, useCalendarState等
@@ -28,7 +28,8 @@ await fetch(`/api/tasks/${id}`, { method: 'PATCH', ... });
 ```
 
 - 既存コードに直接`fetch()`が数カ所残っているが、これは負債。真似しない。触る機会があればServiceクラスに置き換える
-- API変更後は `pnpm --filter meme-gtd-web generate:api` でクライアントを再生成する（`src/api/` を手で直さない）
+- API変更後は `pnpm --filter meme-gtd-web generate:api` でクライアントを再生成する（`src/api/` を手で直さない）。入力は `packages/api/docs/api/openapi.yaml` なので、スキーマ変更時は先に `pnpm --filter meme-gtd-api openapi:generate` を実行する（順序を誤ると古い契約から生成される）
+- `generate:api` は生成後に `src/api/core/OpenAPI.ts` の `BASE` を `''` へ置換する後処理を含む（本番はAPIサーバーがSPAを同一オリジンで配信するため）。`BASE` を localhost に戻さない
 
 ## 状態管理
 

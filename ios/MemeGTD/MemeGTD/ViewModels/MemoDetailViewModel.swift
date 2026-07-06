@@ -39,6 +39,10 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
     let memoId: Int
     var memoStore: MemoStore?
 
+    /// Data source seam. Views overwrite this with the app-wide provider from
+    /// the environment (same wiring point as `memoStore`).
+    var dataSources = DataSourceProvider()
+
     init(memoId: Int) {
         self.memoId = memoId
     }
@@ -50,10 +54,8 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
         error = nil
 
         do {
-            memo = try await APIClient.shared.get(path: "/api/memos/\(memoId)")
-            let commentList: [Comment] = try await APIClient.shared.get(
-                path: "/api/memos/\(memoId)/comments"
-            )
+            memo = try await dataSources.memos.getMemo(id: memoId)
+            let commentList: [Comment] = try await dataSources.memos.listComments(memoId: memoId)
             comments = commentList
         } catch {
             self.error = error.localizedDescription
@@ -73,10 +75,8 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func fetchMemo() async -> (Memo, [Comment])? {
         do {
-            let memo: Memo = try await APIClient.shared.get(path: "/api/memos/\(memoId)")
-            let commentList: [Comment] = try await APIClient.shared.get(
-                path: "/api/memos/\(memoId)/comments"
-            )
+            let memo: Memo = try await dataSources.memos.getMemo(id: memoId)
+            let commentList: [Comment] = try await dataSources.memos.listComments(memoId: memoId)
             return (memo, commentList)
         } catch {
             self.error = error.localizedDescription
@@ -91,8 +91,8 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     private func loadProjects() async {
         do {
-            associatedProjects = try await APIClient.shared.get(path: "/api/issues/\(memoId)/projects")
-            allProjects = try await APIClient.shared.get(path: "/api/projects")
+            associatedProjects = try await dataSources.projects.listIssueProjects(issueId: memoId)
+            allProjects = try await dataSources.projects.listProjects()
         } catch {
             // Non-critical, just log
         }
@@ -100,7 +100,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     private func loadAllLabels() async {
         do {
-            allLabels = try await APIClient.shared.get(path: "/api/labels")
+            allLabels = try await dataSources.labels.listLabels()
         } catch {
             // Non-critical
         }
@@ -110,7 +110,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     private func loadUrlLinks() async {
         do {
-            urlLinks = try await APIClient.shared.get(path: "/api/issues/\(memoId)/url-links")
+            urlLinks = try await dataSources.issueRelations.listUrlLinks(issueId: memoId)
         } catch {
             // Non-critical
         }
@@ -119,9 +119,9 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
     func createUrlLink(url: String, title: String?) async {
         do {
             let request = CreateUrlLinkRequest(url: url, title: title)
-            let _: UrlLink = try await APIClient.shared.post(
-                path: "/api/issues/\(memoId)/url-links",
-                body: request
+            let _: UrlLink = try await dataSources.issueRelations.createUrlLink(
+                issueId: memoId,
+                request
             )
             await loadUrlLinks()
             HapticManager.notification(.success)
@@ -133,7 +133,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func deleteUrlLink(_ urlLinkId: Int) async {
         do {
-            try await APIClient.shared.delete(path: "/api/url-links/\(urlLinkId)")
+            try await dataSources.issueRelations.deleteUrlLink(urlLinkId: urlLinkId)
             urlLinks.removeAll { $0.id == urlLinkId }
         } catch {
             self.error = error.localizedDescription
@@ -144,7 +144,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     private func loadLinks() async {
         do {
-            issueLinks = try await APIClient.shared.get(path: "/api/issues/\(memoId)/links")
+            issueLinks = try await dataSources.issueRelations.listLinks(issueId: memoId)
         } catch {
             // Non-critical
         }
@@ -157,10 +157,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
                 targetIssueId: targetIssueId,
                 linkType: linkType
             )
-            let _: CreateLinkResponse = try await APIClient.shared.post(
-                path: "/api/links",
-                body: request
-            )
+            let _: CreateLinkResponse = try await dataSources.issueRelations.createLink(request)
             await loadLinks()
             HapticManager.notification(.success)
         } catch {
@@ -171,7 +168,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func deleteIssueLink(_ linkId: Int) async {
         do {
-            try await APIClient.shared.delete(path: "/api/links/\(linkId)")
+            try await dataSources.issueRelations.deleteLink(linkId: linkId)
             issueLinks.removeAll { $0.id == linkId }
         } catch {
             self.error = error.localizedDescription
@@ -183,6 +180,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
         var results: [IssuePickerItem] = []
 
+        let dataSources = dataSources
         await withTaskGroup(of: [IssuePickerItem].self) { group in
             // Build query items: include search param only when non-empty
             let searchQuery: [URLQueryItem] = trimmed.isEmpty ? [] : [
@@ -192,8 +190,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
             // Search tasks
             group.addTask {
                 do {
-                    let response: SearchTasksResponse = try await APIClient.shared.get(
-                        path: "/api/tasks",
+                    let response: SearchTasksResponse = try await dataSources.tasks.searchTasks(
                         queryItems: searchQuery
                     )
                     return response.data.map {
@@ -207,8 +204,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
             // Search memos
             group.addTask {
                 do {
-                    let response: MemoListResponse = try await APIClient.shared.get(
-                        path: "/api/memos",
+                    let response: MemoListResponse = try await dataSources.memos.listMemos(
                         queryItems: searchQuery
                     )
                     return response.data.map {
@@ -225,8 +221,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
             // Search articles
             group.addTask {
                 do {
-                    let response: SearchArticlesResponse = try await APIClient.shared.get(
-                        path: "/api/articles",
+                    let response: SearchArticlesResponse = try await dataSources.articles.searchArticles(
                         queryItems: searchQuery
                     )
                     return response.data.map {
@@ -251,6 +246,14 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
             .map { $0 }
     }
 
+    // MARK: - Promote
+
+    /// Server-computed preview of promoting this memo to a task (resolved
+    /// body, labels, projects, and carried-over links).
+    func promotePreview() async throws -> PromotePreviewResponse {
+        try await dataSources.memos.promotePreview(memoId: memoId)
+    }
+
     // MARK: - Bookmark
 
     func toggleBookmark() async {
@@ -258,10 +261,9 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
         isBookmarking = true
 
         do {
-            let path = currentMemo.isBookmarked
-                ? "/api/memos/\(memoId)/unbookmark"
-                : "/api/memos/\(memoId)/bookmark"
-            let updated: Memo = try await APIClient.shared.postReturning(path: path)
+            let updated: Memo = currentMemo.isBookmarked
+                ? try await dataSources.memos.unbookmarkMemo(id: memoId)
+                : try await dataSources.memos.bookmarkMemo(id: memoId)
             memo = updated
             memoStore?.updateItem(updated)
             memoStore?.needsReload = true
@@ -284,9 +286,9 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
         do {
             let request = CreateCommentRequest(bodyMd: body)
-            let comment: Comment = try await APIClient.shared.post(
-                path: "/api/memos/\(memoId)/comments",
-                body: request
+            let comment: Comment = try await dataSources.memos.createComment(
+                memoId: memoId,
+                request
             )
             comments.append(comment)
             replyBody = ""
@@ -304,9 +306,10 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
     func updateComment(_ commentId: Int, bodyMd: String) async {
         do {
             let request = UpdateCommentRequest(bodyMd: bodyMd)
-            let updated: Comment = try await APIClient.shared.patch(
-                path: "/api/memos/\(memoId)/comments/\(commentId)",
-                body: request
+            let updated: Comment = try await dataSources.memos.updateComment(
+                memoId: memoId,
+                commentId: commentId,
+                request
             )
             if let index = comments.firstIndex(where: { $0.id == commentId }) {
                 comments[index] = updated
@@ -322,9 +325,9 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
     func updateMemo(bodyMd: String) async {
         do {
             let request = UpdateMemoRequest(bodyMd: bodyMd, isBookmarked: nil)
-            let updated: Memo = try await APIClient.shared.patch(
-                path: "/api/memos/\(memoId)",
-                body: request
+            let updated: Memo = try await dataSources.memos.updateMemo(
+                id: memoId,
+                request
             )
             memo = updated
             memoStore?.updateItem(updated)
@@ -338,8 +341,9 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func deleteComment(_ commentId: Int) async {
         do {
-            try await APIClient.shared.delete(
-                path: "/api/memos/\(memoId)/comments/\(commentId)"
+            try await dataSources.memos.deleteComment(
+                memoId: memoId,
+                commentId: commentId
             )
             comments.removeAll { $0.id == commentId }
         } catch {
@@ -349,7 +353,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func deleteMemo() async -> Bool {
         do {
-            try await APIClient.shared.delete(path: "/api/memos/\(memoId)")
+            try await dataSources.memos.deleteMemo(id: memoId)
             memoStore?.removeItem(memoId)
             return true
         } catch {
@@ -368,9 +372,9 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
         Task {
             for projectId in toAdd {
                 do {
-                    let _: ProjectItem = try await APIClient.shared.post(
-                        path: "/api/projects/\(projectId)/items",
-                        body: AddProjectItemRequest(issueId: memoId)
+                    let _: ProjectItem = try await dataSources.projects.addProjectItem(
+                        projectId: projectId,
+                        AddProjectItemRequest(issueId: memoId)
                     )
                 } catch {
                     self.error = error.localizedDescription
@@ -378,8 +382,9 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
             }
             for projectId in toRemove {
                 do {
-                    try await APIClient.shared.delete(
-                        path: "/api/projects/\(projectId)/items/\(memoId)"
+                    try await dataSources.projects.removeProjectItem(
+                        projectId: projectId,
+                        issueId: memoId
                     )
                 } catch {
                     self.error = error.localizedDescription
@@ -407,9 +412,9 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
             for name in toAdd {
                 if let label = allLabels.first(where: { $0.name == name }) {
                     do {
-                        let _: AssignLabelResponse = try await APIClient.shared.post(
-                            path: "/api/issues/\(memoId)/labels",
-                            body: AssignLabelRequest(labelId: label.id)
+                        let _: AssignLabelResponse = try await dataSources.labels.assignLabel(
+                            issueId: memoId,
+                            AssignLabelRequest(labelId: label.id)
                         )
                     } catch {
                         self.error = error.localizedDescription
@@ -419,8 +424,9 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
             for name in toRemove {
                 if let label = allLabels.first(where: { $0.name == name }) {
                     do {
-                        try await APIClient.shared.delete(
-                            path: "/api/issues/\(memoId)/labels/\(label.id)"
+                        try await dataSources.labels.removeLabel(
+                            issueId: memoId,
+                            labelId: label.id
                         )
                     } catch {
                         self.error = error.localizedDescription
@@ -429,7 +435,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
             }
             // Reload memo to get updated labels
             do {
-                let updated: Memo = try await APIClient.shared.get(path: "/api/memos/\(memoId)")
+                let updated: Memo = try await dataSources.memos.getMemo(id: memoId)
                 memo = updated
                 memoStore?.updateItem(updated)
                 memoStore?.needsReload = true

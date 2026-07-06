@@ -1,81 +1,57 @@
 # iOS開発ガイド
 
-## ビルド必須ルール
+## 報告前のビルド確認
 
-ユーザーへの報告・確認を求める前に、必ず `xcodebuild` でビルドして動作確認すること（XCTestが無いため、ビルド成功が最低限の検証手段）。
+ユーザーへ報告・確認を求める前に、`ios/MemeGTD/` で必ずビルドとユニットテストを通す:
 
 ```bash
-xcodebuild -scheme MemeGTD -destination 'platform=iOS Simulator,name=iPhone 17' build
+xcodebuild -project MemeGTD.xcodeproj -scheme MemeGTD -destination 'platform=iOS Simulator,name=iPhone 17' build
+xcodebuild test -project MemeGTD.xcodeproj -scheme MemeGTD -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
 ビルド・デプロイの完全な手順は ios-deploy スキルを使うこと。
 
-## コミットルール
+## ファイル追加とターゲット所属
 
-- 機能追加・修正ごとにコミット
-- feature branchで作業し、進捗に合わせてpush
+- Xcodeプロジェクトは synchronized folders 方式。フォルダに .swift を置くだけで対応ターゲットに入る（pbxproj の手編集・Xcode GUI での追加は不要）
+- 所属はフォルダで決まる: `MemeGTD/` = アプリのみ、`Shared/` = アプリ + ShareExtension 両方、`ShareExtension/` = 拡張のみ、`MemeGTDTests/` = テストのみ
+- `Shared/` に置いたファイルは ShareExtension でも必ずコンパイルされる。アプリ専用の型（View / ViewModel / ConnectivityMonitor 等）を参照するコードは `Shared/` に置けない。逆に ShareExtension も使う型（AppDatabase / Settings / LocalArticleStore の書き込み側）は `Shared/` に置く（`LocalArticleStore` が Shared の insert 側と `MemeGTD/DataSources/LocalArticleStore+App.swift` の読み取り側に分割されているのはこのため）
+- MainActor のデフォルト分離はアプリターゲットだけの設定。ShareExtension と MemeGTDTests は nonisolated が既定なので、`Shared/` とDB・同期層の型は明示的に `nonisolated` か actor で宣言する
+- テストターゲットは既定 nonisolated。アプリの `@MainActor` 型（ViewModel / ConnectivityMonitor）に触るテストはメソッド/クラスに `@MainActor` を付ける
 
-## プロジェクト構成
+## DataSource層
 
-```
-ios/MemeGTD/
-├── MemeGTD/          # ホストアプリ（SwiftUI）
-│   ├── Models/       # APIレスポンスのCodableモデル（手書き・要同期）
-│   ├── ViewModels/   # 一覧・詳細のViewModel
-│   ├── Views/        # 画面 + Components/
-│   ├── Stores/       # TaskStore / MemoStore / ArticleStore（EnvironmentObject）
-│   └── Utilities/    # DateFilter, Haptic等
-├── ShareExtension/   # Safari Share Extension（記事保存）
-└── Shared/           # 両ターゲット共有コード（APIClient / Settings / Colors / ArticleModels）
-```
+- ViewModel は `APIClient.shared` を直接呼ばず、`DataSources/` の protocol 経由でデータにアクセスする（オフライン対応・Standalone モードで実装を差し替えるためのシーム）。新しいAPI呼び出しは該当 protocol にメソッドを追加し、`Remote*DataSource` に実装する
+- 例外（直呼びのまま）: ShareExtension・添付画像アップロード（`uploadImage`）・接続テスト（`testConnection`）
 
-## APIスキーマとの手動同期（最重要）
+## APIスキーマとの手動同期
 
-SwiftモデルはTypeScript APIスキーマの手書きミラーであり、自動生成されない。
-バックエンドのAPI契約が変わったら、対応するSwiftモデルを必ず手動で更新すること（更新漏れは実行時のデコード失敗として現れる）。
+- SwiftモデルはTypeScript APIスキーマの手書きミラーで自動生成されない。API契約が変わったら対応するSwiftモデルを手動更新する（手順: api-schema-sync スキル、対応表: `docs/architecture.md`）。enum の raw value と ISO日付形式（`yyyy-MM-dd` / `yyyy-MM-dd'T'HH:mm:ss`）は文字列でバックエンドと一致させる
+- 検索の `label:xxx` クエリ構文は `MemoListViewModel.parseSearchQuery` の iOS 独自実装（Web は free-text 専用に簡素化済み）。iOS の検索 UI を Web と揃える際はここを更新する
 
-- 手順: api-schema-sync スキル。Swiftファイル↔スキーマの完全な対応表は `docs/architecture.md` の「API契約の同期チェーン」
-- enumのraw value（例: `LinkType` の `"derived_from"`、`TaskStatus` の各値）は文字列でバックエンドと一致させる
-- 日付はISO形式（`yyyy-MM-dd` / `yyyy-MM-dd'T'HH:mm:ss`）
-- 検索の `label:xxx` クエリ構文は `MemoListViewModel.parseSearchQuery` に iOS 独自実装として残っている（Web は free-text 専用に簡素化済みで、もう複製ではない）。iOS の検索 UI を Web と揃える際はここを更新する
+## Storage Mode（appMode）の規約
 
-## 開発環境
+- `appMode` は初回読み取り時に解決して永続化する: インストール直後 = `standalone`、アプリを消さずアップデートした既存端末（apiUrl 残存）のみ `server`。この解決順を変えない
+- Server モードは常時同期で、設定トグルはない。前提はサーバーが同期API対応版（migration 014 適用済み）であること — 旧サーバー相手では同期だけが失敗・再試行になる
+- Server への切替は移行そのもの: 端末内データの全件アップロードが成功したときだけモードが確定する（失敗時は Standalone のまま。決定的 opId により再実行しても重複しない）
 
-- デプロイメントターゲット: iOS 26.2（`project.pbxproj` の `IPHONEOS_DEPLOYMENT_TARGET`）
-- Swift 5 言語モード
-- Xcode: iOS 26.2 SDK を含むバージョン
+## ローカルDB（GRDB）と同期の規約
 
-## JavaScript Bundle更新
+- GRDBマイグレーションは `001_initial` 形式の番号で `DatabaseMigrator` に登録。登録済みマイグレーションは変更せず追加のみ（サーバー `schema/` と同じ規約）
+- ID規約: ViewModel が扱う整数IDは、同期済み行 = `server_id`、未同期ローカル行 = `-rowid`（負数）。UI層にこの区別を持ち込まない
+- Standalone のキーワード検索はサーバーと同じ LIKE 部分一致。FTS5 にしない（unicode61 が日本語の単語境界を扱えず、サーバー側も同じ理由で LIKE を採用 — `packages/db/CLAUDE.md`）
+- タスク/記事/プロジェクトは閲覧専用キャッシュ（メモだけがオフライン読み書き可）。設計理由と競合ルールは `docs/architecture.md`「同期アーキテクチャ」「iOS ローカル DB」が正
+- オフライン読み取り専用の判定は `ConnectivityMonitor.isOfflineReadOnly`（Serverモード かつ オフライン）に一元化。Standalone は全機能ローカルなので読み取り専用にしない。メモ画面はオフラインでも編集可のためピルを出さない
+- テストは `AppDatabase.makeInMemory()` を使い、通信は `SyncTransport` のモックで差し替える。テストファイルは `MemeGTDTests/` に置くだけで認識される
 
-記事抽出ロジック（`packages/extension/src/` 配下）を変更した場合は、iOS用バンドルの再ビルドが必要。手順は extractor-rebuild スキルを使うこと（忘れるとiOSだけ古い抽出ロジックのまま動く）。
+## 記事抽出バンドル
 
-## 実装ルール
+`packages/extension/src/` の抽出ロジックを変更したら iOS 用 `extractor.bundle.js` の再生成が必要（手順: `packages/extension/CLAUDE.md`）。忘れると iOS だけ古い抽出ロジックで動く。
 
-- **カラー**: `Shared/Colors.swift`の定義を使用（WebUIと統一）
-- **設定**: App Group経由で共有（`group.com.memegtd.app`）
-- **API通信**: `Shared/APIClient.swift`を使用
-- **UI言語**: 英語で統一（WebUIと同様）
+## 環境メモ
 
-## Xcodeプロジェクト設定
-
-Xcodeプロジェクト（.xcodeproj）はGUIで作成する必要がある。手順は`ios/README.md`を参照。
-
-### 必須設定
-
-1. **App Groups**: 両ターゲットに`group.com.memegtd.app`を追加
-2. **ATS例外**: Info.plistで`NSAllowsArbitraryLoads`を有効化（HTTP接続用）
-3. **Share Extension Activation Rule**: URLのみ有効化
-
-## テスト
-
-- **XCTestターゲットは存在しない**。`xcodebuild`でのビルド成功確認 + Simulator/実機での手動確認が唯一の検証手段
-- **Simulator**: Xcodeで直接実行
-- **実機**: 開発者モードでインストール（7日ごとに再ビルド必要）
-- **API接続テスト**: ホストアプリの「Test」ボタンで確認
-- 接続先APIサーバーのURLはApp Group UserDefaults（キー`apiUrl`、デフォルト`http://localhost:3001`）で共有
-
-## 注意事項
-
-- Share Extensionのメモリ制限は120MB
-- Tailscale VPNがiPhoneで接続されている必要がある
-- `extractor.bundle.js`は`packages/extension`の依存関係に基づく
+- デプロイメントターゲット iOS 26.2 / Swift 5 言語モード
+- App Group `group.com.memegtd.app`（設定・ローカルDBの共有）。接続先APIサーバーURLは App Group UserDefaults キー `apiUrl`（デフォルト `http://localhost:3001`）
+- カラーは `Shared/Colors.swift` の定義を使用、UI文言は英語（Webと統一）
+- ShareExtension のメモリ上限 120MB。実機での API 接続は Tailscale VPN が前提（実機は無料証明書のため7日ごとに再ビルドが必要）
+- Simulator の DB 確認: `xcrun simctl get_app_container booted name.kumac.MemeGTD groups` でコンテナパスを取得し `sqlite3 <path>/Library/Application\ Support/MemeGTD/local.sqlite ".tables"`

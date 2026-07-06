@@ -1,16 +1,193 @@
 # Changelog
 
-## 0.34.1 - 2026-07-02
+## 0.46.0 - 2026-07-06
 
-### Bug Fixes
+### New Features
 
-- **memo 昇格時に `memo.promoted` アクティビティログが記録されない退行を修正**: 昇格処理が `promotePreview`（本文整形）+ `TaskService.create` + `LinkService.create`（`derived_from` リンク作成）の合成に分解された際、`ActivityLogger.logMemoPromoted()` の呼び出し元が消失し、昇格しても `memo.promoted` イベントが記録されなくなっていた（Web/iOS のタイムラインに昇格が出ない状態）。
-  - `LinkService.create` に `isPromotion` オプションを追加し、昇格経路（CLI `memo promote` / Web・iOS の昇格フロー）がこれを明示的に渡したときにのみ `memo.promoted` を1件記録するようにした。API 契約にも `POST /api/links` の任意フィールド `isPromotion` を追加。
-  - リンクの「形状」（task→memo の `derived_from`）ではなく呼び出し元の意図で判定するため、手動リンク作成（`mgtd link add` / Web・iOS の add-link UI）や iOS Standalone→Server 移行時のリンク再作成では `memo.promoted` を誤って記録しない。
+- **iOS Server モードは常時オフライン同期に**: 「Offline Sync (Beta)」トグルを廃止した。Server モード = ローカルミラー + 自動同期そのもので、メモはオフラインで読み書き（復帰時同期）、タスク・記事・プロジェクトはオフライン閲覧専用。前提はサーバーが同期API対応版（v0.35以降）であること — 旧サーバー相手では同期のみ失敗・再試行になり、オンライン機能は従来どおり動く。
+- **Server→Standalone の遮断ダイアログを全ビルドで表示**: 製品挙動が実機で確認できるようにした。開発ビルドに限り、検証用の "Switch (Dev Only)" ボタンをダイアログ内に表示する。
+
+## 0.45.5 - 2026-07-06
+
+### New Features
+
+- **iOS インストール直後は Standalone で開始**: 新しくインストールしたアプリはセットアップなしで端末内保存モードとして即使える。アプリを消さずにアップデートした既存端末（API URL 設定が残っている = サーバー利用者）は従来どおり Server モードを維持する（挙動変更なし）。サーバー利用者がアプリを入れ直した場合は、Settings の Storage Mode で Server を選んで URL を設定するだけで従来どおり使える。Standalone から Server への切り替え = 端末内データの移行。トグル操作で確認ダイアログを表示し、全データのアップロードが成功したときだけモードが Server に確定する（失敗・キャンセルなら何も変わらず、再実行しても重複しない）。Migrate ボタンは存在しない。Server から Standalone への切り替えはできない（試みると遮断ダイアログを表示。開発ビルドのみ検証用に許可）。
+- **サーバー未登録アイテムの内部IDを非表示に**: Standalone や未同期のアイテムで内部の負数ID（例 `#-3`）が一覧・タイトルに露出していたのをやめ、サーバーに存在するアイテムだけ `#ID` を表示する。
 
 ### Tests
 
-- `LinkService.create` で `isPromotion` 指定時のみ `memo.promoted` が1件記録され、未指定の task→memo `derived_from`（手動リンク相当）や非該当リンク（task→task の `derived_from`、`relates`）では記録されないことを検証する回帰テストを core / API 両層に追加。
+- Storage Mode の初回解決（新規=Standalone / apiUrl設定済み=Server / 明示設定優先 / 後からURLを入れても変わらない）を検証する4テストを追加（iOS 計126件）。
+
+## 0.44.0 - 2026-07-04
+
+### New Features
+
+- **iOS Standalone→Server 一方向移行（オフライン同期 Phase 12）**: 設定の「Migrate to Server」で、Standalone で蓄積した端末内データ（メモ・タスク・記事・コメント・ラベル・リンク）をサーバーへ一括アップロードし、以後 Server モード（Offline Sync ON）として動作させられるようになった。これで iOS オフライン対応の全12フェーズが完成。
+  - フロー: Server URL 入力 → 接続確認 → 非可逆確認ダイアログ → 進捗表示付きアップロード → 完了時に自動でモード切替 + 同期開始。失敗・中断時は Standalone のまま残り、再実行しても重複しない（決定的 opId + サーバー側の冪等台帳・自然キー判定の二重防御）。
+  - サーバー側: `POST /api/sync/push` が移行用の create-only entity（task / article / label / issue_label / link）を受け付けるようになった。作成日時・実行打刻・記事 meta は端末の値を保持したまま登録され、activity log も通常どおり記録される。参照が解決できない操作は理由付きで skip され、他の操作を巻き込まない。
+  - 既存の memo / comment 同期セマンティクス、既存エンドポイントは無変更。
+
+### Tests
+
+- サーバー: 移行 entity の適用・冪等再送・参照解決・依存順フルセット・上限バリデーションの統合テスト15件 + db テスト4件を追加（api 計419件 / db 計140件）。
+- iOS: MigrationService の依存順・削除行除外・部分失敗からの再実行（同一 opId）・skip 集計・カーソル/ID 記録を検証する6テストを追加（iOS 計122件）。
+
+## 0.43.0 - 2026-07-04
+
+### New Features
+
+- **iOS Standalone モードの promote（オフライン同期 Phase 11）**: Standalone でメモ→タスクの promote（プレビュー + 実行）がサーバーなしで動作するようになった。
+  - サーバーの promote-preview 整形ロジック（本文 + `## コメント` セクション、ラベル、関連リンク）を Swift（`PromoteEngine`）に移植。TS 実装を実際に実行して得た出力との完全一致をテストで固定しており、両実装の乖離を防ぐ。整形仕様を変更する際は両実装とパリティテストを同時更新する（ルールを docs に明記）。
+  - promote 実行（タスク作成 + `derived_from` リンク）は既存のローカル実装で完結する。
+  - Server モードの promote は従来どおりサーバーの preview API を使用（挙動不変）。
+
+### Tests
+
+- PromoteEngine の TS 出力パリティ（16件）と、ローカル promotePreview の統合テスト（9件）を追加（iOS 計116件）。
+
+## 0.42.0 - 2026-07-04
+
+### New Features
+
+- **iOS Standalone モードの記事機能 + ShareExtension のローカル保存（オフライン同期 Phase 10）**: Standalone で Safari の共有シートから記事を保存すると、サーバーではなく端末内データベースに保存され、記事タブで閲覧・検索・削除できるようになった。
+  - 記事の meta（originalUrl / siteName / archivedAt）はサーバーの保存形式と同一の JSON で格納され、将来の Server モード移行（Phase 12）で無損失に引き継げる。
+  - ShareExtension は Storage Mode を読んで保存先を切り替える。Server モードの共有は従来どおりサーバーへ POST（挙動不変）。
+  - 記事本文の `#ID` メンション書き換えはサーバー ID 前提のため Standalone では行わない（本文はそのまま保存）。
+
+### Tests
+
+- 記事のローカル insert→meta round-trip（サーバー形式との厳密一致含む）、検索、ハード削除、空タイトル拒否を検証する6テストを追加（iOS 計92件）。
+
+## 0.41.1 - 2026-07-04
+
+### New Features
+
+- **iOS Standalone モードのタスク機能 + ローカルキーワード検索（オフライン同期 Phase 9）**: Standalone でタスクタブと検索がサーバーなしで動作するようになった。
+  - タスクの作成・編集・削除・ブックマーク・コメント・ステータス遷移・スケジュール日付・ラベル付与が端末内データベースで完結する。デフォルト値やステータス遷移時の打刻（next 移行時の actual_start 等）はサーバーと同じ意味論。
+  - ラベルの新規作成・付け外しも Standalone でローカル動作するようになった（Phase 8 では未対応だった）。
+  - キーワード検索はメモ・タスク横断で、コメント本文も対象。サーバーと同じ LIKE 部分一致（日本語の途中一致も同じ挙動）。セマンティック検索はサーバー専用のため、Standalone では検索モード切替を出さずキーワード検索のみになる。
+  - タスク詳細の関連リンク（issue リンク・URL リンク）もローカルで作成・表示できる（GRDBマイグレーション `003_links`）。
+  - Server モードと Offline Sync の挙動は完全に従来どおり。
+
+### Tests
+
+- Standalone のタスクCRUD・ステータス遷移・ラベル・コメント、キーワード検索（横断ヒット・日本語途中一致・コメント一致・グルーピング・フィルタ・ページング）、リンクのローカルCRUDを検証するテストを追加（iOS 計86件）。
+
+## 0.40.0 - 2026-07-03
+
+### New Features
+
+- **iOS Standalone モード（オフライン同期 Phase 8）**: 設定の「Storage Mode」ピッカーで Server / Standalone を切り替えられるようになった。Standalone はサーバー不要で、API URL 未設定・ネットワーク完全遮断でもメモ機能（作成・編集・削除・ブックマーク・コメント・一覧フィルタ）が端末内データベースで完結する。
+  - ラベルフィルタはローカルのラベルデータで動作する（ラベルの新規作成・付け外しは未対応）。
+  - タスク・記事・検索・プロジェクトは Standalone では未対応（Phase 9〜11 で段階対応予定）。各画面はクラッシュせず、空一覧に "Tasks are not available in Standalone mode." 等の案内を表示する。
+  - Standalone から Server への切り替えは可能だが、端末内データのアップロード（移行）は未対応（Phase 12 で対応予定。設定画面に注記あり）。
+  - Server モード（デフォルト・設定キー未設定の既存ユーザー）の挙動は完全に従来どおり。
+
+### Tests
+
+- Standalone 用 `LocalMemoDataSource` の CRUD・コメント・フィルタ・Outbox 非使用・promote 不可を検証する10テストを追加（iOS 計49件）。
+
+## 0.39.6 - 2026-07-03
+
+### New Features
+
+- **iOS タスク・記事・プロジェクトのオフライン閲覧（オフライン同期 Phase 7）**: Offline Sync ON時、タスク・記事・プロジェクトの最終取得データをオフラインで閲覧できるようになった（編集は不可）。これでケース2（サーバー連携モードのオフライン対応）のスコープが完成。
+  - 読み取りはサーバー優先で、サーバー到達不能（ネットワークエラー）のときだけローカルGRDBミラーにフォールバックする。タスク/記事の行は差分プルが `issues` に保存済みのため、追加の取得処理なしでキャッシュが最新に保たれる。
+  - ローカル一覧はサーバーと同じフィルタ意味論を再現: タスクは status / label / bookmarked / タイトル検索 / スケジュール日付範囲、記事はタイトル・本文検索。
+  - プロジェクトは同期フィード対象外のため、GRDBマイグレーション `002_projects_cache` によるスナップショットキャッシュ（`GET /api/projects` 成功ごとに全量入れ替え）。
+  - オフライン時は「Read-only」ピル（wifi.slashアイコン付き）を表示し、編集UI（タスク作成・ステータス変更・コメント投稿・Info シートの各書き込み操作）を無効化。一覧画面ではタイトルバー直下（フィルタ行の上）、詳細画面ではステータスチップの隣に出る。オンライン復帰で自動的に解除される。メモは従来どおりオフラインでも編集可。
+  - Offline Sync OFF（デフォルト）時の挙動は完全に従来どおり。
+- **iOS 同期の自動再試行**: 同期の push/pull が失敗した場合や未送信操作が残っている場合、指数バックオフ（5秒〜上限120秒）で自動的に再試行する。ネットワーク経路の変化（VPNトンネル確立など）を検知した場合は待たずに即時再実行。オフライン編集がオンライン復帰後に確実にサーバーへ届くことを保証する。
+
+### Tests
+
+- オフライン閲覧（フォールバック読み・フィルタ再現・readonly エラー・projects スナップショット）と同期自動再試行を検証するテストを追加(iOS 計39件)。
+
+## 0.38.1 - 2026-07-03
+
+### Bug Fixes
+
+- **iOS: タブ復帰時にメモ一覧が空白になる問題を修正**: `defaultScrollAnchor(.bottom)` のチャット型レイアウトで LazyVStack がデータを持った状態で再生成されるとセルを実体化しない iOS 26 の描画問題が原因。タブ復帰時も初回起動と同じ「空→挿入」の描画経路を通すことで回避した。
+
+## 0.38.0 - 2026-07-03
+
+### New Features
+
+- **iOS コメントのオフライン対応 + 競合の可視化（オフライン同期 Phase 6）**: Offline Sync ON時、メモへのコメント追加・編集・削除がオフラインで動作するようになった（未同期メモへのコメントも可。Outbox の FIFO 順で親メモの create が必ず先にサーバーへ届く）。
+  - コメントもメモと同じID規約（同期済み = server_id、未同期 = 負のローカルID）と Outbox 圧縮規則（連続編集のマージ、create+delete 相殺）に従う。
+  - 同期で conflicted copy が生成された場合、メモ一覧上部にトースト（"N conflicted copy created"）を4秒間表示する。
+  - 競合ルール自体はサーバー側（Phase 2）で確定済み: メモ本文の同時編集はサーバー版温存 + クライアント版を複製保存、edit-beats-delete 双方向、コメントは LWW のみ。
+
+### Bug Fixes
+
+- **メモ・タスク一覧が接続再確立時に長時間表示されない問題を修正**: 一覧の初期ロードがラベル・プロジェクト取得（各タイムアウト60秒）の完了を待ってから走る直列構成だったため、Tailscale 再接続時などに画面が最大2分間空白になっていた（pull-to-refresh はこの経路を通らないため即表示され、症状の再現条件と一致）。一覧を最優先で取得し、ラベル・プロジェクトはその後に並行取得へ変更。あわせて GET 系リクエストのタイムアウトを15秒に短縮（更新系・画像アップロードは従来どおり）。
+
+### Tests
+
+- コメントの FIFO push 順序と issueUuid 対応、圧縮規則、push 結果の server_id 反映、conflictCopied 受領（サーバー版復元 + copy 取得 + 計数）、skipped delete の pull 復元、ローカル listComments を検証する8テストを追加（iOS 計29件）。
+
+## 0.37.0 - 2026-07-02
+
+### New Features
+
+- **iOS メモのオフライン対応（Offline Sync Beta、オフライン同期 Phase 5）**: 設定画面の「Offline Sync (Beta)」トグル（デフォルトOFF）をONにすると、メモの作成・編集・削除・ブックマークがオフラインで動作し、オンライン復帰時にサーバーと自動同期される。OFFのままなら従来のオンライン専用挙動と完全に同一（既存ユーザー無影響）。
+  - 書き込みはローカルGRDB更新 + Outbox（`pending_operations`）追記を単一トランザクションで行い、UIは即時反映。同一メモへの連続編集はOutbox内でマージ圧縮、送信前のcreate+deleteは相殺。
+  - `SyncEngine`（actor）が push→pull の順で同期。push結果の `serverId` / `updatedAt` をローカルに記録し、pullは `server_seq` カーソルでページングして1ページ=1トランザクションで適用。Outboxに未送信操作が残るuuidへのリモート変更適用はスキップ（ローカル編集の保護・同期ループ防止）。
+  - 同期トリガは4系統: アプリのフォアグラウンド復帰 / ネットワーク復帰（NWPathMonitor）/ ローカル書き込み直後 / pull-to-refresh。多重実行はactor+スケジューラで直列化。
+  - 未同期のローカル行は負の整数IDでUI層に露出し、push後は自動的にサーバーIDへ切り替わる（ID再マッピング不要のUUID主キー設計）。
+  - このフェーズのスコープ: メモ本体のみ。コメント・promote-preview・プロジェクトフィルタはオンライン時にサーバーへ委譲（コメントのオフライン化はPhase 6、タスク/記事の閲覧キャッシュはPhase 7）。画像添付はオフライン対象外。
+
+### Tests
+
+- `MemeGTDTests` に SyncEngine / OfflineFirstMemoDataSource のテストを追加（in-memory GRDB + MockTransport、7件）: Outbox FIFO・マージ圧縮・create+delete相殺、push成功時のserver_id記録とOutbox消化、通信失敗時のfailed遷移とリトライ、pullのページング・カーソル前進・task行の保存、pending中uuidの保護、ローカル一覧のbookmark/searchフィルタ。
+
+## 0.36.2 - 2026-07-02
+
+### Implementation Details
+
+- **iOS ローカル DB 基盤 + テスト基盤（オフライン同期 Phase 4、UI 挙動変更なし）**: GRDB.swift 6.29.3 を SPM で導入（app / ShareExtension 両ターゲット）。App Group コンテナに `local.sqlite`（WAL）を起動時に生成する `AppDatabase` を新設。まだどの画面からも使われない。
+  - スキーマ（`001_initial`）: issues / comments / labels / issue_labels / pending_operations（Outbox）/ sync_meta。サーバースキーマを 1:1 ミラーしつつ、PK はクライアント生成 UUIDv7 の `uuid`、`server_id` を併設。
+  - GRDB Record 型（Issue / Comment / Label / IssueLabel / PendingOperation）、UUIDv7 生成器（RFC 9562、単調カウンタ付き）、DeviceID（初回生成 → sync_meta 永続化）を追加。
+  - **iOS 初のユニットテストターゲット `MemeGTDTests` を新設**（共有スキームの Test アクション含む）。マイグレーション・Record round-trip・UUIDv7 形式/単調性・sync_meta・Outbox FIFO の14テスト。
+
+## 0.36.1 - 2026-07-02
+
+### Implementation Details
+
+- **iOS DataSource シーム導入（オフライン同期 Phase 3、挙動変更ゼロ）**: 全 ViewModel の `APIClient.shared` 直呼びを protocol ベースの DataSource 経由に差し替えた。以降のオフライン対応フェーズは `DataSourceProvider` での実装差し替えだけで済む構造になる。
+  - `ios/MemeGTD/MemeGTD/DataSources/` に 7 protocol + Remote 実装を新設（Memo / Task / Article / Search / Project / Label / IssueRelations）。Remote 実装は従来の APIClient 呼び出し（パス・メソッド・型）をそのまま移動したもの。
+  - `DataSourceProvider`（ObservableObject、現時点は Remote 固定）を `MemeGTDApp` から environmentObject 注入し、各 View が既存の `store` 配線と同じ箇所で ViewModel にセットする。
+  - 例外として据え置き: `SettingsView` の接続テスト、画像アップロード（オフライン恒久対象外）、ShareExtension（直POSTのまま）、レガシー `ContentView`。
+
+## 0.36.0 - 2026-07-02
+
+### New Features
+
+- **同期API（iOS オフライン同期 Phase 2）**: 差分プルとオフライン操作適用の2エンドポイントを追加した。実装は `packages/core/src/syncService.ts`（`SyncService`）で、mutation は `MemoService` を経由するため activity log は通常どおり記録される。
+  - `GET /api/sync/changes?since=<serverSeq>&limit=`: issues / comments / labels / issue_labels の変更を serverSeq 昇順で返す差分フィード。論理削除行（`isDeleted=true`）も含めて返すためクライアントが削除を検知できる。ハード削除される labels / issue_labels は `op:'delete'` のトンボストーンとして届く。`hasMore` によるカーソルページング付き。
+  - `POST /api/sync/push`: クライアントの保留操作（memo / comment の create / update / delete）を FIFO で適用する。op ごとに個別トランザクション（部分成功）、クライアント採番の `opId` で冪等（再送は記録済み結果を `alreadyApplied` として返す）。
+  - 競合解決: `updatedAt` は等値比較のみ（クロックスキュー・精度差対策）。レコード単位 LWW、ただしメモ本文の同時編集はサーバー版を温存しクライアント版を「Conflicted copy」メモとして保存（データ消失ゼロ）。edit-beats-delete を双方向で適用（削除済み行への編集は復活、編集済み行への stale な削除はスキップ）。
+  - オフライン作成メモは `payload.createdAt` で執筆時刻を保持したままサーバーに登録される。
+  - iOS 用 Swift ミラー `ios/MemeGTD/Shared/SyncModels.swift` を追加（Phase 5 の SyncEngine が使用予定。現時点では未使用）。
+
+### Tests
+
+- 同期APIの統合テストを `packages/api/test/integration/sync.test.ts` に追加（19件）: 差分フィードのカーソル/limit/hasMore/削除行包含/トンボストーン、push の4ステータス（applied / alreadyApplied / conflictCopied / skipped）、冪等再送、コメントの issueUuid 解決と FIFO、edit-beats-delete 両方向、ブックマークのみの LWW、activity log 記録。
+
+## 0.35.0 - 2026-07-02
+
+### New Features
+
+- **iOS オフライン同期の基盤（Phase 1 / サーバー DB）**: 差分同期に必要な識別子・順序・削除記録・冪等性の土台を migration 014 で導入した。既存 API のレスポンス形は不変（クライアントへの影響なし）。
+  - `issues` / `comments` に `uuid` 列を追加（同期用の恒久 ID）。新規行はリポジトリが UUIDv7 を採番し、リポジトリを経由しない INSERT にはトリガが UUIDv4 をフォールバック付与。既存行はマイグレーション内でバックフィル。
+  - `issues` / `comments` / `labels` / `issue_labels` に `server_seq` 列を追加。`sync_sequence`（シングルトンカウンタ）から全書き込みにグローバル単調連番を SQLite トリガで打刻する。CLI は HTTP を通らず core→db 直書きのため、全書き込み経路をカバーできる層がトリガのみであることが採用理由。既存行には重複しない連番をバックフィルし、初回差分取得（`since=0`）で全行が返せる状態にした。
+  - `sync_tombstones` を追加。ハード削除される `labels` / `issue_labels` の削除を記録する（CASCADE 削除でも発火することを検証済み）。論理削除の issues / comments は `is_deleted` 行自体がトンボストーンを兼ねるため対象外。
+  - `sync_applied_ops` を追加。Phase 2 で実装する `POST /api/sync/push` の冪等性台帳（クライアント採番の `op_id` が主キー）。
+  - `packages/shared` に `uuidv7()` ユーティリティと、`IssueBase` / `Comment` / `Label` への `uuid` / `serverSeq` フィールドを追加。CLI の `--json` 出力にはこれらのフィールドが追加で現れる（後方互換の追加変更）。
+
+### Tests
+
+- migration 014 の適用、CLI / API 両経路での server_seq 打刻、uuid の一意性とトリガフォールバック、ラベル削除（直接 / CASCADE）のトンボストーン生成、既存 FTS・activity_log トリガの無破壊、既存データへのバックフィルを検証するテストを `packages/db/test/syncSupport.test.ts` に追加。
 
 ## 0.34.0 - 2026-06-29
 

@@ -59,6 +59,10 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
     let taskId: Int
     var taskStore: TaskStore?
 
+    /// Data source seam. Views overwrite this with the app-wide provider from
+    /// the environment (same wiring point as `taskStore`).
+    var dataSources = DataSourceProvider()
+
     init(taskId: Int) {
         self.taskId = taskId
     }
@@ -70,10 +74,8 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
         error = nil
 
         do {
-            task = try await APIClient.shared.get(path: "/api/tasks/\(taskId)")
-            let commentList: [Comment] = try await APIClient.shared.get(
-                path: "/api/tasks/\(taskId)/comments"
-            )
+            task = try await dataSources.tasks.getTask(id: taskId)
+            let commentList: [Comment] = try await dataSources.tasks.listComments(taskId: taskId)
             comments = commentList
         } catch {
             self.error = error.localizedDescription
@@ -94,13 +96,10 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func fetchTask() async -> (TaskItem, [Comment], [ActivityLogEntry])? {
         do {
-            let task: TaskItem = try await APIClient.shared.get(path: "/api/tasks/\(taskId)")
-            let commentList: [Comment] = try await APIClient.shared.get(
-                path: "/api/tasks/\(taskId)/comments"
-            )
-            let activities: [ActivityLogEntry] = try await APIClient.shared.get(
-                path: "/api/activity-log/issues/\(taskId)",
-                queryItems: [URLQueryItem(name: "order", value: "asc")]
+            let task: TaskItem = try await dataSources.tasks.getTask(id: taskId)
+            let commentList: [Comment] = try await dataSources.tasks.listComments(taskId: taskId)
+            let activities: [ActivityLogEntry] = try await dataSources.issueRelations.listActivityLog(
+                issueId: taskId
             )
             return (task, commentList, activities)
         } catch {
@@ -117,8 +116,8 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
 
     private func loadProjects() async {
         do {
-            associatedProjects = try await APIClient.shared.get(path: "/api/issues/\(taskId)/projects")
-            allProjects = try await APIClient.shared.get(path: "/api/projects")
+            associatedProjects = try await dataSources.projects.listIssueProjects(issueId: taskId)
+            allProjects = try await dataSources.projects.listProjects()
         } catch {
             // Non-critical
         }
@@ -126,7 +125,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
 
     private func loadAllLabels() async {
         do {
-            allLabels = try await APIClient.shared.get(path: "/api/labels")
+            allLabels = try await dataSources.labels.listLabels()
         } catch {
             // Non-critical
         }
@@ -136,10 +135,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
 
     private func loadActivityLog() async {
         do {
-            activityLogs = try await APIClient.shared.get(
-                path: "/api/activity-log/issues/\(taskId)",
-                queryItems: [URLQueryItem(name: "order", value: "asc")]
-            )
+            activityLogs = try await dataSources.issueRelations.listActivityLog(issueId: taskId)
         } catch {
             // Non-critical
         }
@@ -149,7 +145,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
 
     private func loadUrlLinks() async {
         do {
-            urlLinks = try await APIClient.shared.get(path: "/api/issues/\(taskId)/url-links")
+            urlLinks = try await dataSources.issueRelations.listUrlLinks(issueId: taskId)
         } catch {
             // Non-critical
         }
@@ -158,9 +154,9 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
     func createUrlLink(url: String, title: String?) async {
         do {
             let request = CreateUrlLinkRequest(url: url, title: title)
-            let _: UrlLink = try await APIClient.shared.post(
-                path: "/api/issues/\(taskId)/url-links",
-                body: request
+            let _: UrlLink = try await dataSources.issueRelations.createUrlLink(
+                issueId: taskId,
+                request
             )
             await loadUrlLinks()
             HapticManager.notification(.success)
@@ -172,7 +168,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func deleteUrlLink(_ urlLinkId: Int) async {
         do {
-            try await APIClient.shared.delete(path: "/api/url-links/\(urlLinkId)")
+            try await dataSources.issueRelations.deleteUrlLink(urlLinkId: urlLinkId)
             urlLinks.removeAll { $0.id == urlLinkId }
         } catch {
             self.error = error.localizedDescription
@@ -183,7 +179,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
 
     private func loadLinks() async {
         do {
-            issueLinks = try await APIClient.shared.get(path: "/api/issues/\(taskId)/links")
+            issueLinks = try await dataSources.issueRelations.listLinks(issueId: taskId)
         } catch {
             // Non-critical
         }
@@ -196,10 +192,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
                 targetIssueId: targetIssueId,
                 linkType: linkType
             )
-            let _: CreateLinkResponse = try await APIClient.shared.post(
-                path: "/api/links",
-                body: request
-            )
+            let _: CreateLinkResponse = try await dataSources.issueRelations.createLink(request)
             await loadLinks()
             await loadActivityLog()
             HapticManager.notification(.success)
@@ -211,7 +204,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func deleteIssueLink(_ linkId: Int) async {
         do {
-            try await APIClient.shared.delete(path: "/api/links/\(linkId)")
+            try await dataSources.issueRelations.deleteLink(linkId: linkId)
             issueLinks.removeAll { $0.id == linkId }
             await loadActivityLog()
         } catch {
@@ -224,6 +217,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
 
         var results: [IssuePickerItem] = []
 
+        let dataSources = dataSources
         await withTaskGroup(of: [IssuePickerItem].self) { group in
             let searchQuery: [URLQueryItem] = trimmed.isEmpty ? [] : [
                 URLQueryItem(name: "search", value: trimmed),
@@ -232,8 +226,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
             // Search tasks
             group.addTask {
                 do {
-                    let response: SearchTasksResponse = try await APIClient.shared.get(
-                        path: "/api/tasks",
+                    let response: SearchTasksResponse = try await dataSources.tasks.searchTasks(
                         queryItems: searchQuery
                     )
                     return response.data.map {
@@ -247,8 +240,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
             // Search memos
             group.addTask {
                 do {
-                    let response: MemoListResponse = try await APIClient.shared.get(
-                        path: "/api/memos",
+                    let response: MemoListResponse = try await dataSources.memos.listMemos(
                         queryItems: searchQuery
                     )
                     return response.data.map {
@@ -265,8 +257,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
             // Search articles
             group.addTask {
                 do {
-                    let response: SearchArticlesResponse = try await APIClient.shared.get(
-                        path: "/api/articles",
+                    let response: SearchArticlesResponse = try await dataSources.articles.searchArticles(
                         queryItems: searchQuery
                     )
                     return response.data.map {
@@ -297,10 +288,9 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
         isBookmarking = true
 
         do {
-            let path = currentTask.isBookmarked
-                ? "/api/tasks/\(taskId)/unbookmark"
-                : "/api/tasks/\(taskId)/bookmark"
-            let updated: TaskItem = try await APIClient.shared.postReturning(path: path)
+            let updated: TaskItem = currentTask.isBookmarked
+                ? try await dataSources.tasks.unbookmarkTask(id: taskId)
+                : try await dataSources.tasks.bookmarkTask(id: taskId)
             task = updated
             taskStore?.updateItem(updated)
             taskStore?.needsReload = true
@@ -318,9 +308,9 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
     func updateTask(title: String? = nil, bodyMd: String? = nil, status: String? = nil) async {
         do {
             let request = UpdateTaskRequest(title: title, bodyMd: bodyMd, status: status)
-            let updated: TaskItem = try await APIClient.shared.patch(
-                path: "/api/tasks/\(taskId)",
-                body: request
+            let updated: TaskItem = try await dataSources.tasks.updateTask(
+                id: taskId,
+                request
             )
             task = updated
             if status != nil {
@@ -350,9 +340,9 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
 
         do {
             let request = CreateCommentRequest(bodyMd: body)
-            let comment: Comment = try await APIClient.shared.post(
-                path: "/api/tasks/\(taskId)/comments",
-                body: request
+            let comment: Comment = try await dataSources.tasks.createComment(
+                taskId: taskId,
+                request
             )
             comments.append(comment)
             replyBody = ""
@@ -369,9 +359,10 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
     func updateComment(_ commentId: Int, bodyMd: String) async {
         do {
             let request = UpdateCommentRequest(bodyMd: bodyMd)
-            let updated: Comment = try await APIClient.shared.patch(
-                path: "/api/tasks/\(taskId)/comments/\(commentId)",
-                body: request
+            let updated: Comment = try await dataSources.tasks.updateComment(
+                taskId: taskId,
+                commentId: commentId,
+                request
             )
             if let index = comments.firstIndex(where: { $0.id == commentId }) {
                 comments[index] = updated
@@ -397,9 +388,9 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
 
         do {
             let request = UpdateTaskRequest(title: nil, bodyMd: next, status: nil)
-            let updated: TaskItem = try await APIClient.shared.patch(
-                path: "/api/tasks/\(taskId)",
-                body: request
+            let updated: TaskItem = try await dataSources.tasks.updateTask(
+                id: taskId,
+                request
             )
             task = updated
             taskStore?.updateItem(updated)
@@ -424,9 +415,10 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
 
         do {
             let request = UpdateCommentRequest(bodyMd: next)
-            let updated: Comment = try await APIClient.shared.patch(
-                path: "/api/tasks/\(taskId)/comments/\(commentId)",
-                body: request
+            let updated: Comment = try await dataSources.tasks.updateComment(
+                taskId: taskId,
+                commentId: commentId,
+                request
             )
             if let idx = comments.firstIndex(where: { $0.id == commentId }) {
                 comments[idx] = updated
@@ -440,8 +432,9 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func deleteComment(_ commentId: Int) async {
         do {
-            try await APIClient.shared.delete(
-                path: "/api/tasks/\(taskId)/comments/\(commentId)"
+            try await dataSources.tasks.deleteComment(
+                taskId: taskId,
+                commentId: commentId
             )
             comments.removeAll { $0.id == commentId }
         } catch {
@@ -451,7 +444,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func deleteTask() async -> Bool {
         do {
-            try await APIClient.shared.delete(path: "/api/tasks/\(taskId)")
+            try await dataSources.tasks.deleteTask(id: taskId)
             taskStore?.removeItem(taskId)
             return true
         } catch {
@@ -470,9 +463,9 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
         Task {
             for projectId in toAdd {
                 do {
-                    let _: ProjectItem = try await APIClient.shared.post(
-                        path: "/api/projects/\(projectId)/items",
-                        body: AddProjectItemRequest(issueId: taskId)
+                    let _: ProjectItem = try await dataSources.projects.addProjectItem(
+                        projectId: projectId,
+                        AddProjectItemRequest(issueId: taskId)
                     )
                 } catch {
                     self.error = error.localizedDescription
@@ -480,8 +473,9 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
             }
             for projectId in toRemove {
                 do {
-                    try await APIClient.shared.delete(
-                        path: "/api/projects/\(projectId)/items/\(taskId)"
+                    try await dataSources.projects.removeProjectItem(
+                        projectId: projectId,
+                        issueId: taskId
                     )
                 } catch {
                     self.error = error.localizedDescription
@@ -510,9 +504,9 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
             for name in toAdd {
                 if let label = allLabels.first(where: { $0.name == name }) {
                     do {
-                        let _: AssignLabelResponse = try await APIClient.shared.post(
-                            path: "/api/issues/\(taskId)/labels",
-                            body: AssignLabelRequest(labelId: label.id)
+                        let _: AssignLabelResponse = try await dataSources.labels.assignLabel(
+                            issueId: taskId,
+                            AssignLabelRequest(labelId: label.id)
                         )
                     } catch {
                         self.error = error.localizedDescription
@@ -522,8 +516,9 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
             for name in toRemove {
                 if let label = allLabels.first(where: { $0.name == name }) {
                     do {
-                        try await APIClient.shared.delete(
-                            path: "/api/issues/\(taskId)/labels/\(label.id)"
+                        try await dataSources.labels.removeLabel(
+                            issueId: taskId,
+                            labelId: label.id
                         )
                     } catch {
                         self.error = error.localizedDescription
@@ -532,7 +527,7 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
             }
             // Reload task to get updated labels
             do {
-                let updated: TaskItem = try await APIClient.shared.get(path: "/api/tasks/\(taskId)")
+                let updated: TaskItem = try await dataSources.tasks.getTask(id: taskId)
                 task = updated
                 taskStore?.updateItem(updated)
                 taskStore?.needsReload = true

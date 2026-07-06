@@ -5,6 +5,7 @@ struct TaskListView: View {
     @Binding var navigationPath: NavigationPath
 
     @EnvironmentObject var taskStore: TaskStore
+    @EnvironmentObject var dataSources: DataSourceProvider
     @StateObject private var viewModel = TaskListViewModel()
     @State private var showStatusPicker: Bool = false
     @State private var isSearching: Bool = false
@@ -18,6 +19,21 @@ struct TaskListView: View {
     @State private var dateTo: Date?
     @State private var createTaskMode: CreateTaskMode? = nil
     @State private var showCopyDialog: Bool = false
+    @ObservedObject private var connectivity = ConnectivityMonitor.shared
+
+    /// Server mode + Offline Sync ON + offline: tasks are served from the
+    /// local read cache and cannot be edited (offline support plan Phase 7).
+    /// Never true in Standalone (tasks are fully local there).
+    private var isOfflineReadOnly: Bool {
+        connectivity.isOfflineReadOnly
+    }
+
+    /// Standalone Storage Mode: tasks work fully locally (offline support
+    /// plan Phase 9), but semantic search needs the server's embedding stack,
+    /// so the search-mode picker is hidden (keyword-only).
+    private var isStandalone: Bool {
+        Settings.shared.appMode == .standalone
+    }
 
     private var hasActiveFilters: Bool {
         !viewModel.searchQuery.isEmpty ||
@@ -94,7 +110,11 @@ struct TaskListView: View {
         }
         .safeAreaInset(edge: .top) {
             VStack(spacing: 0) {
-                if isSearching {
+                OfflineReadOnlyIndicator()
+
+                // Standalone: semantic search is server-only, so the mode
+                // picker is hidden and search stays on its keyword default.
+                if isSearching && !isStandalone {
                     Picker("Search Mode", selection: $viewModel.searchMode) {
                         ForEach(SearchMode.allCases, id: \.self) { mode in
                             Text(mode.rawValue).tag(mode)
@@ -172,6 +192,8 @@ struct TaskListView: View {
                         .background(Color.accent)
                         .clipShape(Circle())
                 }
+                .disabled(isOfflineReadOnly)
+                .opacity(isOfflineReadOnly ? 0.4 : 1)
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 10)
@@ -305,11 +327,15 @@ struct TaskListView: View {
         }
         .task {
             viewModel.store = taskStore
-            await viewModel.loadLabels()
-            await viewModel.loadProjects()
+            viewModel.dataSources = dataSources
+            // Tasks render first; labels/projects only feed the filter
+            // pickers and must not block the list (see MemoListView).
             if taskStore.tasks.isEmpty {
                 await viewModel.loadTasks()
             }
+            async let labels: Void = viewModel.loadLabels()
+            async let projects: Void = viewModel.loadProjects()
+            _ = await (labels, projects)
         }
     }
 

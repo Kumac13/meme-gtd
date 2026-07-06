@@ -8,6 +8,7 @@ struct MemoDetailView: View {
     var onNavigateToLinkedIssue: ((Int, String, String) -> Void)?
 
     @EnvironmentObject var memoStore: MemoStore
+    @EnvironmentObject var dataSources: DataSourceProvider
     @StateObject private var viewModel: MemoDetailViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirm: Bool = false
@@ -195,9 +196,7 @@ struct MemoDetailView: View {
                         var initialProjectIds: [Int] = []
                         var carriedLinks: [PendingLink] = []
                         do {
-                            let preview: PromotePreviewResponse = try await APIClient.shared.get(
-                                path: "/api/memos/\(memoId)/promote-preview"
-                            )
+                            let preview: PromotePreviewResponse = try await viewModel.promotePreview()
                             resolvedBody = preview.bodyMd
                             initialLabelNames = preview.labels
                             initialProjectIds = preview.projectIds
@@ -304,6 +303,7 @@ struct MemoDetailView: View {
         }
         .task {
             viewModel.memoStore = memoStore
+            viewModel.dataSources = dataSources
             await viewModel.loadMemo()
         }
     }

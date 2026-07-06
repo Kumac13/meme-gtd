@@ -7,12 +7,21 @@ struct ArticleDetailView: View {
     var onNavigateToLinkedIssue: ((Int, String, String) -> Void)?
 
     @EnvironmentObject var articleStore: ArticleStore
+    @EnvironmentObject var dataSources: DataSourceProvider
     @StateObject private var viewModel: ArticleDetailViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @State private var showDeleteConfirm: Bool = false
     @State private var showInfoSheet: Bool = false
     @State private var showCopiedFeedback: Bool = false
+    @ObservedObject private var connectivity = ConnectivityMonitor.shared
+
+    /// Server mode + Offline Sync ON + offline: the article is served from
+    /// the local read cache and cannot be edited (offline support plan
+    /// Phase 7). Never true in Standalone.
+    private var isOfflineReadOnly: Bool {
+        connectivity.isOfflineReadOnly
+    }
 
     init(articleId: Int, initialTitle: String? = nil, onMenuTap: @escaping () -> Void, onNavigateToLinkedIssue: ((Int, String, String) -> Void)? = nil) {
         self.articleId = articleId
@@ -63,6 +72,10 @@ struct ArticleDetailView: View {
                                         }
                                         .foregroundColor(.accent)
                                     }
+                                }
+
+                                if isOfflineReadOnly {
+                                    OfflineReadOnlyBadge()
                                 }
 
                                 // Labels
@@ -179,6 +192,7 @@ struct ArticleDetailView: View {
             IssueInfoSheet(
                 viewModel: viewModel,
                 showCopiedFeedback: $showCopiedFeedback,
+                isReadOnly: isOfflineReadOnly,
                 onDelete: { showDeleteConfirm = true },
                 onNavigateToIssue: { target in
                     onNavigateToLinkedIssue?(target.id, target.type, target.title)
@@ -208,6 +222,7 @@ struct ArticleDetailView: View {
         }
         .task {
             viewModel.articleStore = articleStore
+            viewModel.dataSources = dataSources
             await viewModel.loadArticle()
         }
     }
@@ -215,7 +230,9 @@ struct ArticleDetailView: View {
     // MARK: - Toolbar title
 
     private var toolbarTitle: String {
-        viewModel.article?.title ?? initialTitle ?? "#\(String(articleId))"
+        // Negative ids are device-local rows with no server identity — not a
+        // number to surface.
+        viewModel.article?.title ?? initialTitle ?? (articleId > 0 ? "#\(articleId)" : "")
     }
 
     // MARK: - Site display name

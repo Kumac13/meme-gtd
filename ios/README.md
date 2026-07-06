@@ -165,7 +165,7 @@ ScrollView {
 
 ## JavaScript Bundleの更新
 
-記事抽出ロジック（`packages/extension/src/` 配下）を変更した場合は、iOS用バンドルの再ビルドが必要。手順は extractor-rebuild スキル（`.claude/skills/extractor-rebuild/SKILL.md`）を参照。
+記事抽出ロジック（`packages/extension/src/` 配下）を変更した場合は、iOS用バンドルの再ビルドが必要。手順は `packages/extension/CLAUDE.md` を参照。
 
 ## トラブルシューティング
 

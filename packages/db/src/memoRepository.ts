@@ -1,10 +1,14 @@
 import Database from 'better-sqlite3';
-import { nowIso, type Memo, type Comment, toBoolean } from 'meme-gtd-shared';
+import { nowIso, uuidv7, type Memo, type Comment, toBoolean } from 'meme-gtd-shared';
 
 export interface CreateMemoInput {
   bodyMd: string;
   labels?: string[];
   projectIds?: number[];
+  /** Sync apply path: client-minted identity. Omit to mint a fresh UUIDv7. */
+  uuid?: string;
+  /** Sync apply path: preserve the offline authoring time. Omit for now. */
+  createdAt?: string;
 }
 
 export interface UpdateMemoInput {
@@ -119,6 +123,8 @@ export const countMemos = (db: Database.Database, filters: ListMemoFilters = {})
 
 const memoRowToMemo = (row: any): Memo => ({
   id: row.id,
+  uuid: row.uuid,
+  serverSeq: row.server_seq,
   type: 'memo',
   title: null,
   bodyMd: row.body_md,
@@ -146,6 +152,8 @@ const memoRowToMemo = (row: any): Memo => ({
 
 const commentRowToComment = (row: any): Comment => ({
   id: row.id,
+  uuid: row.uuid,
+  serverSeq: row.server_seq,
   issueId: row.issue_id,
   bodyMd: row.body_md,
   createdAt: row.created_at,
@@ -154,12 +162,12 @@ const commentRowToComment = (row: any): Comment => ({
 });
 
 export const createMemo = (db: Database.Database, input: CreateMemoInput): Memo => {
-  const now = nowIso();
+  const now = input.createdAt ?? nowIso();
   const stmt = db.prepare(
-    `INSERT INTO issues (type, title, body_md, status, scheduled_on, meta, created_at, updated_at, is_bookmarked, is_deleted)
-     VALUES ('memo', NULL, @body, NULL, NULL, json('{}'), @createdAt, @createdAt, 0, 0)`
+    `INSERT INTO issues (uuid, type, title, body_md, status, scheduled_on, meta, created_at, updated_at, is_bookmarked, is_deleted)
+     VALUES (@uuid, 'memo', NULL, @body, NULL, NULL, json('{}'), @createdAt, @createdAt, 0, 0)`
   );
-  const result = stmt.run({ body: input.bodyMd, createdAt: now });
+  const result = stmt.run({ uuid: input.uuid ?? uuidv7(), body: input.bodyMd, createdAt: now });
   const memoId = Number(result.lastInsertRowid);
 
   if (input.labels?.length) {
@@ -480,15 +488,16 @@ export const buildPromoteBody = (baseBody: string, comments: Comment[]): string 
 export const addComment = (
   db: Database.Database,
   memoId: number,
-  bodyMd: string
+  bodyMd: string,
+  options?: { uuid?: string; createdAt?: string }
 ): Comment => {
-  const now = nowIso();
+  const now = options?.createdAt ?? nowIso();
   const result = db
     .prepare(
-      `INSERT INTO comments (issue_id, body_md, created_at, updated_at, is_deleted)
-       VALUES (@issueId, @bodyMd, @createdAt, @createdAt, 0)`
+      `INSERT INTO comments (uuid, issue_id, body_md, created_at, updated_at, is_deleted)
+       VALUES (@uuid, @issueId, @bodyMd, @createdAt, @createdAt, 0)`
     )
-    .run({ issueId: memoId, bodyMd, createdAt: now });
+    .run({ uuid: options?.uuid ?? uuidv7(), issueId: memoId, bodyMd, createdAt: now });
 
   return commentRowToComment(
     db.prepare('SELECT * FROM comments WHERE id = @id').get({ id: result.lastInsertRowid }) as any
