@@ -1,6 +1,6 @@
 {
   "name": "@meme-gtd/extension",
-  "version": "0.45.3",
+  "version": "0.45.4",
   "description": "Chrome Extension for Meme GTD Article Saver",
   "main": "dist/src/background/index.js",
   "scripts": {
