@@ -210,8 +210,8 @@ Push前の必須チェックはルート `CLAUDE.md` を参照。
 |---|---|---|
 | DBスキーマ変更 | `schema/NNN_*.sql` 連番追加 → `packages/db` リポジトリ → `packages/shared` 型 → core → API契約チェーン | db-migration スキル |
 | APIエンドポイント追加・変更 | 同期チェーン4段階すべて + テスト | api-schema-sync スキル |
-| CLIコマンド追加 | `MULTIWORD_COMMANDS` 登録 + テスト + 補完 | cli-command-add スキル |
-| 記事抽出ロジック変更（`packages/extension/src/`） | iOS用 `extractor.bundle.js` 再ビルド | extractor-rebuild スキル |
+| CLIコマンド追加 | `MULTIWORD_COMMANDS` 登録 + テスト + 補完 | `packages/cli/CLAUDE.md` のチェックリスト |
+| 記事抽出ロジック変更（`packages/extension/src/`） | iOS用 `extractor.bundle.js` 再ビルド | `packages/extension/CLAUDE.md` |
 | 新機能・修正の完了時 | バージョンバンプ | release スキル |
 
 ドキュメントの追随（どの変更でどのドキュメントを更新するか）は `docs/CLAUDE.md` の更新トリガー表を参照。
