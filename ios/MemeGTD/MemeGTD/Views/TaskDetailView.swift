@@ -420,7 +420,9 @@ struct TaskDetailView: View {
     // MARK: - Toolbar title
 
     private var toolbarTitle: String {
-        let title = viewModel.task?.title ?? initialTitle ?? "#\(String(taskId))"
+        // Negative ids are device-local rows with no server identity — not a
+        // number to surface.
+        let title = viewModel.task?.title ?? initialTitle ?? (taskId > 0 ? "#\(taskId)" : "")
         return title
     }
 

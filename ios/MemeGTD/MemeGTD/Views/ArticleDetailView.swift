@@ -230,7 +230,9 @@ struct ArticleDetailView: View {
     // MARK: - Toolbar title
 
     private var toolbarTitle: String {
-        viewModel.article?.title ?? initialTitle ?? "#\(String(articleId))"
+        // Negative ids are device-local rows with no server identity — not a
+        // number to surface.
+        viewModel.article?.title ?? initialTitle ?? (articleId > 0 ? "#\(articleId)" : "")
     }
 
     // MARK: - Site display name

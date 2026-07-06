@@ -42,20 +42,23 @@ struct SettingsView: View {
                         .foregroundColor(.textSecondary)
                         .textCase(.uppercase)
 
+                    // Mode is not a free toggle: fresh installs start in
+                    // Standalone, and the ONLY transition is the one-way
+                    // "Migrate to Server" below (requirement: no way back
+                    // from Server to Standalone).
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Storage Mode")
-                            .font(.system(size: 15))
-                            .foregroundColor(.textPrimary)
-
-                        Picker("Storage Mode", selection: $appMode) {
-                            Text("Server").tag(AppMode.server)
-                            Text("Standalone").tag(AppMode.standalone)
+                        HStack {
+                            Text("Storage Mode")
+                                .font(.system(size: 15))
+                                .foregroundColor(.textPrimary)
+                            Spacer()
+                            Text(appMode == .server ? "Server" : "Standalone")
+                                .font(.system(size: 15))
+                                .foregroundColor(.textSecondary)
                         }
-                        .pickerStyle(.segmented)
-                        .disabled(migrationState == .running)
 
                         if appMode == .standalone {
-                            Text("Data is stored only on this device. Use \"Migrate to Server\" below to upload it to a server and switch to Server mode.")
+                            Text("Data is stored only on this device. Use \"Migrate to Server\" below to move it to a server. Migration is one-way.")
                                 .font(.system(size: 13))
                                 .foregroundColor(.textSecondary)
                         }

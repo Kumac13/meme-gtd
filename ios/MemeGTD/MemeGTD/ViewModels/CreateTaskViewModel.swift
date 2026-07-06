@@ -80,11 +80,12 @@ class CreateTaskViewModel: ObservableObject {
                     title: task.title
                 ))
             } catch {
-                // Still add with placeholder title
+                // Still add with a placeholder title. Negative ids are
+                // device-local rows with no server identity to show.
                 pendingLinks.append(PendingLink(
                     targetIssueId: sourceTaskId,
                     linkType: .relates,
-                    title: "#\(sourceTaskId)"
+                    title: sourceTaskId > 0 ? "#\(sourceTaskId)" : "Untitled"
                 ))
             }
         }

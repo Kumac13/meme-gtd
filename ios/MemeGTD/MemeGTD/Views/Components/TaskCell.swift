@@ -26,9 +26,14 @@ struct TaskCell: View {
 
             // #id time | bookmark | labels — spacing で視覚的にグループ分け
             HStack(spacing: 6) {
-                Text(verbatim: "#\(task.id)")
-                    .font(.system(size: 11))
-                    .foregroundColor(.textSecondary)
+                // The integer id is a SERVER identity; rows that only exist
+                // on this device (Standalone / not-yet-synced, id = -rowid)
+                // have no meaningful number to show.
+                if task.id > 0 {
+                    Text(verbatim: "#\(task.id)")
+                        .font(.system(size: 11))
+                        .foregroundColor(.textSecondary)
+                }
 
                 Text(formatCompactTime(task.createdAt))
                     .font(.system(size: 11))

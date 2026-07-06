@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.45.0 - 2026-07-06
+
+### New Features
+
+- **iOS 新規インストールは Standalone で開始**: サーバー未設定の新規インストールは最初から端末内保存モードで動作し、セットアップなしで使える。API URL を設定済みの既存インストール（サーバー利用者のアップグレード）は従来どおり Server モードを維持する（挙動変更なし）。
+- **Storage Mode の遷移を一方向に限定**: 設定の Server / Standalone 自由切替ピッカーを廃止し、モード表示のみに変更。Standalone→Server は「Migrate to Server」（全データ移行）のみで行い、Server→Standalone への切替は提供しない（要件どおり）。
+- **サーバー未登録アイテムの内部IDを非表示に**: Standalone や未同期のアイテムで内部の負数ID（例 `#-3`）が一覧・タイトルに露出していたのをやめ、サーバーに存在するアイテムだけ `#ID` を表示する。
+
+### Tests
+
+- Storage Mode の初回解決（新規=Standalone / apiUrl設定済み=Server / 明示設定優先 / 後からURLを入れても変わらない）を検証する4テストを追加（iOS 計126件）。
+
 ## 0.44.0 - 2026-07-04
 
 ### New Features
