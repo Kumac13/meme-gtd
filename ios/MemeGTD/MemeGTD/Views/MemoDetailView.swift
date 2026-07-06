@@ -222,7 +222,8 @@ struct MemoDetailView: View {
                         let derivedFromLink = PendingLink(
                             targetIssueId: memoId,
                             linkType: .derivedFrom,
-                            title: memoTitleSnippet
+                            title: memoTitleSnippet,
+                            isPromotion: true
                         )
                         createTaskMode = CreateTaskMode(kind: .promoteFromMemo(
                             memoId: memoId,

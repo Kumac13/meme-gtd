@@ -1,5 +1,5 @@
 import type { MgtdConfig } from 'meme-gtd-config';
-import type { Link, SourceType } from 'meme-gtd-shared';
+import type { Link, SourceType, TaskStatus } from 'meme-gtd-shared';
 import type Database from 'better-sqlite3';
 import { ActivityLogger } from './activity-log/activity-logger.js';
 import {
@@ -41,13 +41,17 @@ export class LinkService {
    * @param sourceId Source issue ID
    * @param targetId Target issue ID
    * @param type Link type
+   * @param options.isPromotion When true, this link creation is part of a
+   *   memo→task promotion and a `memo.promoted` event is recorded (Issue #245).
+   *   Only the promote flows set it; manual link creation and sync leave it unset.
    * @returns Created link
    * @throws Error if validation fails
    */
   create(
     sourceId: number,
     targetId: number,
-    type: 'parent' | 'child' | 'relates' | 'derived_from'
+    type: 'parent' | 'child' | 'relates' | 'derived_from',
+    options?: { isPromotion?: boolean }
   ): Link {
     return this.db.transaction(() => {
       // Validation 1: Self-reference check
@@ -129,8 +133,54 @@ export class LinkService {
 
       const link = dbCreateLink(this.db, input);
       this.logger.logLinkCreated(link.id, type, sourceId, targetId);
+
+      // Record memo.promoted only when the caller declares this to be a
+      // memo→task promotion (Issue #245). A task→memo `derived_from` link is
+      // ALSO produced by manual link creation (`mgtd link add`, the Web
+      // add-link UI) and by iOS Standalone→Server migration replay, so link
+      // shape alone cannot distinguish a promotion — the intent must come from
+      // the caller. Both promote flows (CLI `memo promote`, Web promote) pass
+      // `isPromotion: true`; every other path leaves it unset.
+      if (options?.isPromotion && type === 'derived_from') {
+        this.maybeLogMemoPromoted(sourceId, targetId, link.id);
+      }
+
       return link;
     })();
+  }
+
+  /**
+   * Emit a `memo.promoted` event when a newly-created `derived_from` link
+   * represents a memo→task promotion (source is a task, target is a memo).
+   * No-op for any other `derived_from` link so it never double-logs.
+   */
+  private maybeLogMemoPromoted(
+    sourceId: number,
+    targetId: number,
+    linkId: number
+  ): void {
+    const stmt = this.db.prepare(
+      'SELECT type, title, status, body_md FROM issues WHERE id = ?'
+    );
+    const source = stmt.get(sourceId) as
+      | { type: string; title: string | null; status: string | null; body_md: string }
+      | undefined;
+    const target = stmt.get(targetId) as
+      | { type: string; title: string | null; status: string | null; body_md: string }
+      | undefined;
+
+    if (source?.type !== 'task' || target?.type !== 'memo') {
+      return;
+    }
+
+    this.logger.logMemoPromoted(
+      targetId,
+      target.body_md,
+      sourceId,
+      source.title ?? '',
+      source.status as TaskStatus,
+      linkId
+    );
   }
 
   /**

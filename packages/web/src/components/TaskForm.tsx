@@ -196,6 +196,7 @@ export default function TaskForm({
                   sourceIssueId: task.id,
                   targetIssueId: link.targetIssueId,
                   linkType: link.linkType,
+                  isPromotion: link.isPromotion,
                 })
               ),
             // URL links

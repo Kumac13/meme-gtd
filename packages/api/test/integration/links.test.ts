@@ -57,6 +57,82 @@ describe('Link Operations', () => {
     assert.ok(link.createdAt);
   });
 
+  // Issue #245: a memo.promoted event must be recorded only when the caller
+  // marks the link creation as a promotion — not for any task→memo derived_from
+  // link (manual link creation must not fabricate a promotion event).
+  it('records memo.promoted when creating a derived_from link with isPromotion (POST /api/links)', async () => {
+    const memoResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'promote me' }),
+    });
+    const memo = JSON.parse(memoResponse.body);
+
+    const taskResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Promoted Task' }),
+    });
+    const task = JSON.parse(taskResponse.body);
+
+    const linkResponse = await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: {
+        sourceIssueId: task.id,
+        targetIssueId: memo.id,
+        linkType: 'derived_from',
+        isPromotion: true,
+      },
+    });
+    assert.strictEqual(linkResponse.statusCode, 201);
+
+    const logResponse = await app.inject({
+      method: 'GET',
+      url: `/api/activity-log/issues/${task.id}`,
+    });
+    const logs = JSON.parse(logResponse.body);
+    const promoted = logs.filter((l: { eventType: string }) => l.eventType === 'memo.promoted');
+    assert.strictEqual(promoted.length, 1, 'exactly one memo.promoted event should be recorded');
+    assert.strictEqual(promoted[0].payload.source_memo_id, memo.id);
+    assert.strictEqual(promoted[0].payload.promoted_task.id, task.id);
+  });
+
+  it('does NOT record memo.promoted for a plain task→memo derived_from link (POST /api/links)', async () => {
+    const memoResponse = await app.inject({
+      method: 'POST',
+      url: '/api/memos',
+      payload: createMemoFixture({ bodyMd: 'just a reference' }),
+    });
+    const memo = JSON.parse(memoResponse.body);
+
+    const taskResponse = await app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      payload: createTaskFixture({ title: 'Task' }),
+    });
+    const task = JSON.parse(taskResponse.body);
+
+    const linkResponse = await app.inject({
+      method: 'POST',
+      url: '/api/links',
+      payload: {
+        sourceIssueId: task.id,
+        targetIssueId: memo.id,
+        linkType: 'derived_from',
+      },
+    });
+    assert.strictEqual(linkResponse.statusCode, 201);
+
+    const logResponse = await app.inject({
+      method: 'GET',
+      url: `/api/activity-log/issues/${task.id}`,
+    });
+    const logs = JSON.parse(logResponse.body);
+    const promoted = logs.filter((l: { eventType: string }) => l.eventType === 'memo.promoted');
+    assert.strictEqual(promoted.length, 0, 'manual derived_from link must not record memo.promoted');
+  });
+
   it('should return 400 when creating self-referencing link', async () => {
     // Create a task
     const taskResponse = await app.inject({

@@ -93,6 +93,12 @@ interface PendingIssueLink {
   targetIssueId: number;
   /** Type of relationship */
   linkType: LinkType;
+  /**
+   * True only for the `derived_from` link to the source memo of a promotion,
+   * so the API records a `memo.promoted` event. Leave unset for every other
+   * link (carried-over links, manually added links).
+   */
+  isPromotion?: boolean;
   /** Target issue information (for display purposes) */
   targetIssue?: {
     id: number;

@@ -66,6 +66,8 @@ export default function TaskNew() {
             linkKind: 'issue',
             targetIssueId: memoIdNum,
             linkType: 'derived_from',
+            // This is the promotion link — records the memo.promoted event.
+            isPromotion: true,
             targetIssue: { id: memoIdNum, type: 'memo', title: memoTitle },
           };
           setInitialLinks([derivedFromLink, ...carriedLinks]);

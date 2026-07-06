@@ -151,6 +151,9 @@ struct PendingLink: Identifiable {
     let targetIssueId: Int
     let linkType: LinkType
     let title: String
+    /// True only for the `derived_from` link to the source memo of a promotion,
+    /// so the API records a `memo.promoted` event. False for every other link.
+    var isPromotion: Bool = false
 }
 
 struct PendingUrlLink: Identifiable {

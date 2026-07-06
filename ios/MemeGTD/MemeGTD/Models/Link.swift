@@ -61,6 +61,9 @@ struct CreateLinkRequest: Codable {
     let sourceIssueId: Int
     let targetIssueId: Int
     let linkType: LinkType
+    /// Set to true only by the memo→task promotion flow so the server records a
+    /// `memo.promoted` activity event. Omitted (nil) for manual link creation.
+    var isPromotion: Bool?
 }
 
 // MARK: - Create Link Response (POST /api/links returns LinkSchema without direction/targetIssue)
