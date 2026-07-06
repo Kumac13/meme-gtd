@@ -60,13 +60,14 @@ class Settings {
 
     /// Storage Mode (offline support plan Phase 8). First-read resolution
     /// when the key is unset:
-    /// - an install that already talks to a server (apiUrl configured — only
-    ///   ever written by explicit user action) stays .server, so upgrading
-    ///   users see zero behavior change;
-    /// - a fresh install has no server and starts .standalone, fully usable
-    ///   out of the box.
+    /// - every fresh install starts .standalone (a just-installed app can
+    ///   never have a URL configured), fully usable out of the box;
+    /// - the apiUrl check matters in exactly one case: an EXISTING install
+    ///   updated in place (UserDefaults survive the update, so the URL the
+    ///   user once entered is still there) — that device keeps .server, so
+    ///   upgrading server users see zero behavior change.
     /// The resolved value is persisted so the answer never flips later
-    /// (e.g. when a URL is entered for the one-way Migrate to Server flow).
+    /// (e.g. when a URL is entered afterwards).
     var appMode: AppMode {
         get {
             if let mode = userDefaults?.string(forKey: appModeKey).flatMap(AppMode.init) {
