@@ -20,13 +20,11 @@ private enum SharedSync {
 /// The implementations follow the Storage Mode setting (offline support plan
 /// Phase 8):
 ///
-/// - `.server` (default): the pre-Phase-8 behavior. Memos, tasks, articles
-///   and projects additionally honor the "Offline Sync (Beta)" setting
-///   (S5 + Phase 7): when it is ON, `memos` becomes the offline-first
-///   read/write implementation backed by the local GRDB mirror, and `tasks`
-///   / `articles` / `projects` become offline READ-ONLY caches (remote
-///   first, local fallback when unreachable). When OFF, everything stays
-///   `Remote*`, byte-for-byte the previous online-only behavior.
+/// - `.server`: always offline-capable and synced. `memos` is the
+///   offline-first read/write implementation backed by the local GRDB mirror
+///   (outbox + push/pull), and `tasks` / `articles` / `projects` are offline
+///   READ-ONLY caches (remote first, local fallback when unreachable). There
+///   is no separate offline-sync setting — syncing IS Server mode.
 /// - `.standalone`: memos, tasks, articles, keyword search, labels and issue
 ///   relations are fully local (`LocalMemoDataSource` / `LocalTaskDataSource`
 ///   / `LocalArticleDataSource` / `LocalSearchDataSource` /
@@ -57,10 +55,9 @@ final class DataSourceProvider: ObservableObject {
         rebuildDataSources()
     }
 
-    /// Called from SettingsView after the Storage Mode picker or the Offline
-    /// Sync toggle changes. Swaps the implementations; ViewModels hold this
-    /// provider (not the data sources), so they pick up the new
-    /// implementations on next access.
+    /// Called from SettingsView after the Storage Mode changes. Swaps the
+    /// implementations; ViewModels hold this provider (not the data
+    /// sources), so they pick up the new implementations on next access.
     func storageSettingDidChange() {
         objectWillChange.send()
         rebuildDataSources()
@@ -85,40 +82,31 @@ final class DataSourceProvider: ObservableObject {
             return
         }
 
-        // Server mode: the pre-Phase-8 code paths, unchanged.
+        // Server mode: always synced and offline-capable.
         search = RemoteSearchDataSource()
         labels = RemoteLabelDataSource()
         issueRelations = RemoteIssueRelationsDataSource()
-        if Settings.shared.offlineSyncEnabled {
-            let scheduler = SharedSync.scheduler
-            syncScheduler = scheduler
-            memos = OfflineFirstMemoDataSource(
-                database: AppDatabase.shared,
-                remote: RemoteMemoDataSource(),
-                onLocalWrite: { scheduler.requestSync() }
-            )
-            tasks = OfflineFirstTaskDataSource(
-                database: AppDatabase.shared,
-                remote: RemoteTaskDataSource()
-            )
-            articles = OfflineFirstArticleDataSource(
-                database: AppDatabase.shared,
-                remote: RemoteArticleDataSource()
-            )
-            projects = OfflineFirstProjectDataSource(
-                database: AppDatabase.shared,
-                remote: RemoteProjectDataSource()
-            )
-            // Starts connectivity monitoring and runs an initial sync — with
-            // a fresh database the cursor is 0, so this is the full seed pull.
-            scheduler.start()
-        } else {
-            syncScheduler?.stop()
-            syncScheduler = nil
-            memos = RemoteMemoDataSource()
-            tasks = RemoteTaskDataSource()
-            articles = RemoteArticleDataSource()
-            projects = RemoteProjectDataSource()
-        }
+        let scheduler = SharedSync.scheduler
+        syncScheduler = scheduler
+        memos = OfflineFirstMemoDataSource(
+            database: AppDatabase.shared,
+            remote: RemoteMemoDataSource(),
+            onLocalWrite: { scheduler.requestSync() }
+        )
+        tasks = OfflineFirstTaskDataSource(
+            database: AppDatabase.shared,
+            remote: RemoteTaskDataSource()
+        )
+        articles = OfflineFirstArticleDataSource(
+            database: AppDatabase.shared,
+            remote: RemoteArticleDataSource()
+        )
+        projects = OfflineFirstProjectDataSource(
+            database: AppDatabase.shared,
+            remote: RemoteProjectDataSource()
+        )
+        // Starts connectivity monitoring and runs an initial sync — with
+        // a fresh database the cursor is 0, so this is the full seed pull.
+        scheduler.start()
     }
 }

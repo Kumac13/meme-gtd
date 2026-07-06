@@ -25,7 +25,6 @@ class Settings {
     private let suiteOverride: UserDefaults?
 
     private let apiUrlKey = "apiUrl"
-    private let offlineSyncEnabledKey = "offlineSyncEnabled"
     private let appModeKey = "appMode"
 
     private init() {
@@ -43,18 +42,6 @@ class Settings {
         }
         set {
             userDefaults?.set(newValue, forKey: apiUrlKey)
-        }
-    }
-
-    /// "Offline Sync (Beta)" opt-in (offline support plan S5). Defaults to
-    /// false: with the key unset, behavior is exactly the pre-sync,
-    /// online-only app.
-    var offlineSyncEnabled: Bool {
-        get {
-            userDefaults?.bool(forKey: offlineSyncEnabledKey) ?? false
-        }
-        set {
-            userDefaults?.set(newValue, forKey: offlineSyncEnabledKey)
         }
     }
 

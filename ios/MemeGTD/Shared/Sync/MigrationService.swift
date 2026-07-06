@@ -48,9 +48,8 @@ nonisolated enum MigrationError: Error, LocalizedError {
 }
 
 /// Seam for the final mode switch so unit tests never touch the real App
-/// Group UserDefaults. Production flips Storage Mode to Server and turns
-/// Offline Sync on (after a migration, "Server mode with offline sync" is the
-/// natural state — subsequent edits keep syncing).
+/// Group UserDefaults. Production flips Storage Mode to Server (Server mode
+/// always syncs — there is no separate offline-sync setting).
 nonisolated protocol MigrationSettingsStore: Sendable {
     func commitServerMode()
 }
@@ -58,7 +57,6 @@ nonisolated protocol MigrationSettingsStore: Sendable {
 nonisolated struct AppGroupMigrationSettingsStore: MigrationSettingsStore {
     func commitServerMode() {
         Settings.shared.appMode = .server
-        Settings.shared.offlineSyncEnabled = true
     }
 }
 

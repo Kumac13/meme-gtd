@@ -9,15 +9,15 @@ struct SettingsView: View {
     @State private var isSaved: Bool = false
     @State private var isTestingConnection: Bool = false
     @State private var connectionStatus: ConnectionStatus = .unknown
-    @State private var offlineSyncEnabled: Bool = Settings.shared.offlineSyncEnabled
     @State private var appMode: AppMode = Settings.shared.appMode
 
     // Standalone -> Server is one-way (confirm before applying); Server ->
-    // Standalone is not supported at all (block, explain, snap the picker
-    // back — DEBUG builds excepted for verification).
+    // Standalone is not supported (blocked dialog in every build; DEBUG adds
+    // a dev-only escape button for verification).
     @State private var showServerSwitchConfirm: Bool = false
     @State private var confirmedServerSwitch: Bool = false
     @State private var showStandaloneSwitchBlocked: Bool = false
+    @State private var devStandaloneSwitchConfirmed: Bool = false
     @State private var isRevertingModeChange: Bool = false
 
     // Migrate to Server flow (offline support plan Phase 12)
@@ -84,16 +84,18 @@ struct SettingsView: View {
                         }
                         confirmedServerSwitch = false
                         // There is no way back from Server. Block the attempt
-                        // and snap the picker. DEBUG builds allow it so mode
-                        // behavior stays verifiable on a development device.
-                        #if !DEBUG
-                        if oldValue == .server && newValue == .standalone {
+                        // and snap the picker; the blocked dialog is shown in
+                        // every build (DEBUG adds a dev-only escape button so
+                        // mode behavior stays verifiable on a dev device —
+                        // devStandaloneSwitchConfirmed can only become true
+                        // there).
+                        if oldValue == .server && newValue == .standalone && !devStandaloneSwitchConfirmed {
                             isRevertingModeChange = true
                             appMode = .server
                             showStandaloneSwitchBlocked = true
                             return
                         }
-                        #endif
+                        devStandaloneSwitchConfirmed = false
                         Settings.shared.appMode = newValue
                         dataSources.storageSettingDidChange()
                         HapticManager.impact(.light)
@@ -108,6 +110,12 @@ struct SettingsView: View {
                     }
                     .alert("Cannot Switch to Standalone", isPresented: $showStandaloneSwitchBlocked) {
                         Button("OK", role: .cancel) {}
+                        #if DEBUG
+                        Button("Switch (Dev Only)", role: .destructive) {
+                            devStandaloneSwitchConfirmed = true
+                            appMode = .standalone
+                        }
+                        #endif
                     } message: {
                         Text("This app is connected to a server. Switching back to Standalone is not supported.")
                     }
@@ -271,34 +279,6 @@ struct SettingsView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 16)
 
-                    Divider().padding(.leading, 16)
-
-                    // Sync section
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Sync")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.textSecondary)
-                            .textCase(.uppercase)
-
-                        Toggle(isOn: $offlineSyncEnabled) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Offline Sync (Beta)")
-                                    .font(.system(size: 15))
-                                    .foregroundColor(.textPrimary)
-                                Text("Read and write memos offline. Changes sync with the server when you are back online.")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.textSecondary)
-                            }
-                        }
-                        .tint(.accent)
-                        .onChange(of: offlineSyncEnabled) { _, newValue in
-                            Settings.shared.offlineSyncEnabled = newValue
-                            dataSources.storageSettingDidChange()
-                            HapticManager.impact(.light)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 16)
                 }
 
                 Divider().padding(.leading, 16)
@@ -429,11 +409,10 @@ struct SettingsView: View {
                     migrationSkippedCount = summary.skippedCount
                     migrationState = .done
                     HapticManager.notification(.success)
-                    // Reflect the committed settings; each onChange persists
-                    // the (already stored) value and rebuilds the provider.
+                    // Reflect the committed setting; onChange persists the
+                    // (already stored) value and rebuilds the provider.
                     // Migration already confirmed its own dialog — skip the
                     // switch-to-Server confirmation.
-                    offlineSyncEnabled = true
                     confirmedServerSwitch = true
                     appMode = .server
                 }
