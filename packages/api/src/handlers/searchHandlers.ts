@@ -6,13 +6,106 @@ import {
   loadEmbeddingConfig,
   checkEmbeddingHealth,
   ActivityLogger,
+  MemoService,
+  TaskService,
+  ArticleService,
 } from 'meme-gtd-core';
+import type Database from 'better-sqlite3';
 import { searchByKeyword } from 'meme-gtd-db';
+import type { TaskStatus } from 'meme-gtd-shared';
 import type {
   SemanticSearchQuery,
   KeywordSearchQuery,
   SearchExportRequest,
 } from '../schemas/searchSchemas.js';
+
+/**
+ * Upper bound on the number of items a scope="all" export resolves. Personal
+ * single-user datasets stay well below this; the cap only guards against an
+ * accidental unbounded copy. When exceeded, the response sets truncated=true so
+ * the client can surface that the copy is incomplete (never a silent cut).
+ */
+const EXPORT_ALL_CAP = 5000;
+
+/**
+ * Resolve the full set of item IDs matching the export filters, ignoring
+ * client pagination. Mirrors exactly the query each list view uses so the
+ * exported set matches what the user sees:
+ * - free-text query on memos/tasks -> keyword search (searchByKeyword)
+ * - articles -> ArticleService.list (article search is LIKE on the article
+ *   table, not the keyword-search endpoint)
+ * - otherwise -> the type's list service with the same filters
+ *
+ * For the keyword path it also rebuilds the matched-comment snippets so
+ * scope="all" keyword exports carry the same `matchedComment` fields the
+ * loaded-range export would.
+ */
+function resolveAllMatchIds(
+  db: Database.Database,
+  type: 'memos' | 'tasks' | 'articles',
+  filters: NonNullable<SearchExportRequest['filters']>
+): { ids: number[]; truncated: boolean; matchedComments?: Record<string, string> } {
+  const query = filters.query;
+  const issueType = type === 'memos' ? 'memo' : type === 'tasks' ? 'task' : 'article';
+
+  // Articles use LIKE search on the article table (ArticlesService.listArticles),
+  // never the keyword-search endpoint, so keep them on the list path even when a
+  // query is present.
+  if (query && type !== 'articles') {
+    const results = searchByKeyword(db, query, {
+      types: [issueType],
+      status: filters.status,
+      labels: filters.labels,
+      bookmarked: filters.bookmarked,
+      limit: EXPORT_ALL_CAP + 1,
+      offset: 0,
+    });
+    const truncated = results.length > EXPORT_ALL_CAP;
+    const sliced = truncated ? results.slice(0, EXPORT_ALL_CAP) : results;
+    const matchedComments: Record<string, string> = {};
+    for (const r of sliced) {
+      const match = r.matches.find((m) => m.field === 'comment');
+      if (match) matchedComments[String(r.id)] = match.text;
+    }
+    return { ids: sliced.map((r) => r.id), truncated, matchedComments };
+  }
+
+  if (type === 'memos') {
+    const { data, total } = new MemoService({ db }).list({
+      labels: filters.labels,
+      isBookmarked: filters.bookmarked,
+      projectIds: filters.projectIds,
+      includeNoProject: filters.includeNoProject,
+      createdFrom: filters.dateFrom,
+      createdTo: filters.dateTo,
+      limit: EXPORT_ALL_CAP,
+      offset: 0,
+    });
+    return { ids: data.map((d) => d.id), truncated: total > EXPORT_ALL_CAP };
+  }
+
+  if (type === 'tasks') {
+    const { data, total } = new TaskService({ db }).list({
+      status: filters.status as TaskStatus | undefined,
+      labels: filters.labels,
+      isBookmarked: filters.bookmarked,
+      projectIds: filters.projectIds,
+      includeNoProject: filters.includeNoProject,
+      scheduledFrom: filters.dateFrom,
+      scheduledTo: filters.dateTo,
+      limit: EXPORT_ALL_CAP,
+      offset: 0,
+    });
+    return { ids: data.map((d) => d.id), truncated: total > EXPORT_ALL_CAP };
+  }
+
+  const { data, total } = new ArticleService({ db }).list({
+    search: query,
+    limit: EXPORT_ALL_CAP,
+    offset: 0,
+  });
+  return { ids: data.map((d) => d.id), truncated: total > EXPORT_ALL_CAP };
+}
 
 /**
  * Handle semantic search requests.
@@ -174,10 +267,27 @@ export async function searchExportHandler(
   const db = request.server.db;
   const body = request.body;
   const { type, filters, itemIds, includeComments } = body;
-  const matchedComments = body.matchedComments ?? {};
+  let matchedComments = body.matchedComments ?? {};
   const matchedScores = body.matchedScores ?? {};
+  const scope = body.scope ?? 'loaded';
 
   const expectedIssueType = type === 'memos' ? 'memo' : type === 'tasks' ? 'task' : 'article';
+
+  // Resolve which items to export. In "all" scope the server re-runs the same
+  // query the list view uses (no pagination) so the copy covers every match,
+  // not just the client's loaded page. Semantic search is exempt: its result
+  // set is a bounded top-K ranking with no meaningful "all", so it falls back
+  // to the client-provided itemIds.
+  let effectiveItemIds = itemIds;
+  let truncated = false;
+  if (scope === 'all' && filters?.searchMode !== 'semantic') {
+    const resolved = resolveAllMatchIds(db, type, filters ?? {});
+    effectiveItemIds = resolved.ids;
+    truncated = resolved.truncated;
+    if (resolved.matchedComments) {
+      matchedComments = resolved.matchedComments;
+    }
+  }
 
   // Clean filters: strip keys with undefined/null/empty values so the copied
   // JSON shows only the filters actually in effect.
@@ -195,20 +305,21 @@ export async function searchExportHandler(
   logger.logSearchExported(
     expectedIssueType,
     cleanedFilters,
-    itemIds.length,
+    effectiveItemIds.length,
     includeComments
   );
 
-  if (itemIds.length === 0) {
+  if (effectiveItemIds.length === 0) {
     return reply.status(200).send({
       type,
       total: 0,
+      truncated,
       filters: cleanedFilters,
       results: [],
     });
   }
 
-  const placeholders = itemIds.map(() => '?').join(',');
+  const placeholders = effectiveItemIds.map(() => '?').join(',');
 
   // Batch fetch issues. We filter by type at the SQL level so callers can't
   // mix types in one export request.
@@ -218,7 +329,7 @@ export async function searchExportHandler(
        FROM issues
        WHERE id IN (${placeholders}) AND type = ? AND is_deleted = 0`
     )
-    .all(...itemIds, expectedIssueType) as Array<{
+    .all(...effectiveItemIds, expectedIssueType) as Array<{
       id: number;
       type: string;
       title: string | null;
@@ -286,8 +397,9 @@ export async function searchExportHandler(
     }
   }
 
-  // Preserve the order the client provided (matches the display order)
-  const orderedRows = itemIds
+  // Preserve the resolved order (client display order for "loaded", list sort
+  // order for "all") so the exported results read top-to-bottom as shown.
+  const orderedRows = effectiveItemIds
     .filter((id) => foundIds.has(id))
     .map((id) => issueRows.find((r) => r.id === id)!);
 
@@ -360,6 +472,7 @@ export async function searchExportHandler(
   return reply.status(200).send({
     type,
     total: results.length,
+    truncated,
     filters: cleanedFilters,
     results,
   });

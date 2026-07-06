@@ -10,6 +10,11 @@ struct SearchExportRequest: Encodable {
     let matchedComments: [String: String]?
     let matchedScores: [String: Double]?
     let includeComments: Bool
+    /// Export scope. "loaded" (default when omitted) exports exactly `itemIds`.
+    /// "all" tells the server to ignore `itemIds` and export every item matching
+    /// the filters. iOS already pre-loads the full filtered set into the store,
+    /// so it leaves this nil and stays on the loaded-range behavior.
+    let scope: String? = nil
 }
 
 struct SearchExportFilters: Encodable {
@@ -29,4 +34,6 @@ struct SearchExportFilters: Encodable {
 struct SearchExportRawResponse: Decodable {
     let type: String
     let total: Int
+    /// True when a scope="all" export exceeded the server cap and was truncated.
+    let truncated: Bool?
 }

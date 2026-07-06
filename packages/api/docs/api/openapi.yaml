@@ -8554,7 +8554,14 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
-                  description: IDs of items to include (current page or loaded range)
+                  description: IDs of items to include (current page or loaded range). Ignored when scope="all".
+                scope:
+                  type: string
+                  enum:
+                    - loaded
+                    - all
+                  default: loaded
+                  description: Export scope. "loaded" (default) exports exactly the provided itemIds — the current page / loaded range. "all" ignores itemIds and exports every item matching filters, resolved server-side with no pagination. Semantic search (filters.searchMode="semantic") always behaves as "loaded" because its result set is an inherently bounded top-K ranking.
                 matchedComments:
                   type: object
                   additionalProperties:
@@ -8592,6 +8599,10 @@ paths:
                   total:
                     type: integer
                     minimum: 0
+                  truncated:
+                    type: boolean
+                    default: false
+                    description: True when scope="all" matched more items than the export cap and the returned results were truncated to the cap.
                   filters:
                     type: object
                     properties:

@@ -118,7 +118,13 @@ export const SearchExportFiltersSchema = z
 export const SearchExportRequestSchema = z.object({
   type: z.enum(['memos', 'tasks', 'articles']).describe('Issue type being exported'),
   filters: SearchExportFiltersSchema,
-  itemIds: z.array(z.number().int().positive()).describe('IDs of items to include (current page or loaded range)'),
+  itemIds: z.array(z.number().int().positive()).describe('IDs of items to include (current page or loaded range). Ignored when scope="all".'),
+  scope: z
+    .enum(['loaded', 'all'])
+    .default('loaded')
+    .describe(
+      'Export scope. "loaded" (default) exports exactly the provided itemIds — the current page / loaded range. "all" ignores itemIds and exports every item matching filters, resolved server-side with no pagination. Semantic search (filters.searchMode="semantic") always behaves as "loaded" because its result set is an inherently bounded top-K ranking.'
+    ),
   matchedComments: z
     .record(z.string(), z.string())
     .optional()
@@ -186,6 +192,12 @@ const SearchExportArticleResultSchema = z.object({
 export const SearchExportResponseSchema = z.object({
   type: z.enum(['memos', 'tasks', 'articles']),
   total: z.number().int().nonnegative(),
+  truncated: z
+    .boolean()
+    .default(false)
+    .describe(
+      'True when scope="all" matched more items than the export cap and the returned results were truncated to the cap.'
+    ),
   filters: SearchExportFiltersSchema,
   results: z.array(
     z.union([

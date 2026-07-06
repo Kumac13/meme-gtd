@@ -63,26 +63,44 @@ export interface ExportAndCopyOptions {
   matchedComments?: Record<string, string>;
   matchedScores?: Record<string, number>;
   includeComments: boolean;
+  /**
+   * 'all' exports every item matching the filters (server-side, no pagination),
+   * ignoring itemIds. 'loaded' (default) exports only the provided itemIds — the
+   * current page / loaded range. Semantic search must stay 'loaded' since its
+   * result set is a bounded top-K ranking.
+   */
+  scope?: 'loaded' | 'all';
+}
+
+interface ExportAndCopyResult {
+  /** Number of items written to the clipboard. */
+  total: number;
+  /** True when scope='all' matched more items than the export cap. */
+  truncated: boolean;
 }
 
 /**
  * Calls the server-side search export endpoint (which records a search.exported
  * activity log entry) and writes the JSON response to the clipboard.
  *
- * The scope of the exported results is defined by `itemIds` — that is, the
- * currently displayed/loaded range, not the full set of matches.
+ * With scope='all' the server resolves every item matching `filters` (ignoring
+ * `itemIds`), so the copy covers the full filtered set rather than just the
+ * loaded page. With scope='loaded' the exported set is defined by `itemIds` —
+ * the currently displayed/loaded range.
  */
 export async function exportAndCopySearchResults(
   options: ExportAndCopyOptions
-): Promise<void> {
+): Promise<ExportAndCopyResult> {
   const response = await SearchService.exportSearchResults({
     type: options.type,
     filters: options.filters,
     itemIds: options.itemIds,
+    scope: options.scope,
     matchedComments: options.matchedComments,
     matchedScores: options.matchedScores,
     includeComments: options.includeComments,
   });
   const json = JSON.stringify(response, null, 2);
   await navigator.clipboard.writeText(json);
+  return { total: response.total, truncated: response.truncated ?? false };
 }
