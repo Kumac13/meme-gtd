@@ -194,3 +194,22 @@ export {
   type CreateUrlLinkInput,
   type UpdateUrlLinkInput
 } from './urlLinkRepository.js';
+
+// Sync repository exports
+export {
+  getLatestSeq,
+  listSyncChanges,
+  findIssueByUuid,
+  findCommentByUuid,
+  hasIssueLabel,
+  undeleteIssue,
+  undeleteComment,
+  getAppliedOp,
+  recordAppliedOp,
+  type SyncChange,
+  type SyncChangesPage,
+  type SyncEntity,
+  type SyncIssueRecord,
+  type SyncCommentRecord,
+  type AppliedOpRecord
+} from './syncRepository.js';

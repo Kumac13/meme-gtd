@@ -1,3 +1,4 @@
+import Combine
 import PhotosUI
 import SwiftUI
 
@@ -6,6 +7,7 @@ struct MemoListView: View {
     @Binding var navigationPath: NavigationPath
 
     @EnvironmentObject var memoStore: MemoStore
+    @EnvironmentObject var dataSources: DataSourceProvider
     @StateObject private var viewModel = MemoListViewModel()
     @State private var isSearching: Bool = false
     @State private var showLabelPicker: Bool = false
@@ -23,6 +25,8 @@ struct MemoListView: View {
     @State private var pickedMimeType: String = "image/jpeg"
     @State private var pickedExtension: String = "jpg"
     @State private var showCopyDialog: Bool = false
+    @State private var conflictToastMessage: String?
+    @State private var conflictToastDismissTask: Task<Void, Never>?
 
     private var hasActiveFilters: Bool {
         !viewModel.searchQuery.isEmpty ||
@@ -34,7 +38,24 @@ struct MemoListView: View {
         viewModel.createdTo != nil
     }
 
+    /// Standalone Storage Mode: keyword search runs on the local FTS index
+    /// (offline support plan Phase 9), but semantic search needs the server's
+    /// embedding stack, so the search-mode picker is hidden (keyword-only).
+    private var isStandalone: Bool {
+        Settings.shared.appMode == .standalone
+    }
+
+    /// LazyVStack under defaultScrollAnchor(.bottom) fails to materialize its
+    /// cells when the view is CREATED with content already present (tab
+    /// return; iOS 26 — the list stays blank until a scroll gesture forces a
+    /// layout pass). First launch works because content arrives after the
+    /// first empty layout. This flag reproduces that working order: the first
+    /// frame renders empty, then `.task` flips it and the rows come in
+    /// through the insertion path.
+    @State private var renderContent = false
+
     private var reversedMemos: [Memo] {
+        guard renderContent else { return [] }
         if viewModel.searchMode == .semantic && isSearching {
             return memoStore.memos
         }
@@ -51,7 +72,7 @@ struct MemoListView: View {
         ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        if !memoStore.hasMore && !memoStore.memos.isEmpty {
+                        if renderContent && !memoStore.hasMore && !memoStore.memos.isEmpty {
                         Text("No older memos")
                             .font(.caption)
                             .foregroundColor(Color(.systemGray))
@@ -117,6 +138,12 @@ struct MemoListView: View {
                     Task { @MainActor in
                         HapticManager.impact(.medium)
 
+                        // Sync trigger: pull-to-refresh (no-op while Offline
+                        // Sync is off). The refresh below reads the local DB
+                        // immediately; if the sync run brings changes, the
+                        // engine's notification reloads the list afterwards.
+                        dataSources.syncScheduler?.requestSync()
+
                         let start = Date()
 
                         if viewModel.isDateFiltered {
@@ -163,16 +190,34 @@ struct MemoListView: View {
             }
             .task {
                 viewModel.store = memoStore
-                await viewModel.loadLabels()
-                await viewModel.loadProjects()
+                viewModel.dataSources = dataSources
+                // Memos render first: labels/projects only feed the filter
+                // pickers, and awaiting them before the list fetch left the
+                // screen blank for up to two 60s request timeouts whenever the
+                // connection was re-establishing (e.g. Tailscale after app
+                // relaunch). They now load concurrently after the list kicks
+                // off.
                 if memoStore.memos.isEmpty {
+                    renderContent = true
                     await viewModel.loadMemos()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         withAnimation {
                             proxy.scrollTo("bottom", anchor: .bottom)
                         }
                     }
+                } else {
+                    // Tab return with existing content: inject the rows AFTER
+                    // the first (empty) layout pass so the LazyVStack takes
+                    // the same insertion path as first launch (see
+                    // renderContent), then re-anchor to the newest memo.
+                    renderContent = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        proxy.scrollTo("bottom", anchor: .bottom)
+                    }
                 }
+                async let labels: Void = viewModel.loadLabels()
+                async let projects: Void = viewModel.loadProjects()
+                _ = await (labels, projects)
             }
             .safeAreaBar(edge: .bottom) {
                 FloatingComposer(
@@ -209,7 +254,9 @@ struct MemoListView: View {
         }
         .safeAreaInset(edge: .top) {
             VStack(spacing: 4) {
-                if isSearching {
+                // Standalone: semantic search is server-only, so the mode
+                // picker is hidden and search stays on its keyword default.
+                if isSearching && !isStandalone {
                     Picker("Search Mode", selection: $viewModel.searchMode) {
                         ForEach(SearchMode.allCases, id: \.self) { mode in
                             Text(mode.rawValue).tag(mode)
@@ -320,6 +367,38 @@ struct MemoListView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.showCopiedFeedback)
+        .overlay(alignment: .top) {
+            if let conflictToastMessage {
+                Text(conflictToastMessage)
+                    .font(.system(size: 13, weight: .semibold))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(.regularMaterial, in: Capsule())
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: conflictToastMessage)
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: .syncEngineDidChangeData)
+                .receive(on: DispatchQueue.main)
+        ) { notification in
+            // Conflict surfacing: a sync run whose push produced conflicted
+            // copies announces the count via userInfo; the copies themselves
+            // arrive through the run's pull and the regular list reload.
+            guard let count = notification.userInfo?[SyncEngine.conflictCopiedUserInfoKey] as? Int,
+                  count > 0 else { return }
+            conflictToastMessage = count == 1
+                ? "1 conflicted copy created"
+                : "\(count) conflicted copies created"
+            conflictToastDismissTask?.cancel()
+            conflictToastDismissTask = Task {
+                try? await Task.sleep(nanoseconds: 4_000_000_000)
+                guard !Task.isCancelled else { return }
+                conflictToastMessage = nil
+            }
+        }
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: memoStore.needsReload) { _, needsReload in
             if needsReload {

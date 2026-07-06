@@ -7247,6 +7247,365 @@ paths:
                   - error
                   - message
                 additionalProperties: false
+  /api/sync/changes:
+    get:
+      operationId: listSyncChanges
+      summary: List changes after a cursor
+      tags:
+        - Sync
+      description: Return all changes (issues, comments, labels, issue_labels) with serverSeq greater than the cursor, ordered by serverSeq ascending. Soft-deleted issues/comments are included as upserts with isDeleted=true; hard-deleted labels/issue_labels arrive as op:delete tombstones. Pull with since=0 to bootstrap, then repeat with since=<last serverSeq> while hasMore is true.
+      parameters:
+        - schema:
+            type: integer
+            minimum: 0
+          in: query
+          name: since
+          required: true
+          description: "Pull cursor: return changes with serverSeq greater than this value. Use 0 for the initial full pull."
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+          in: query
+          name: limit
+          required: false
+          description: "Maximum number of changes to return (default: 500, max: 1000)"
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  changes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        serverSeq:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                          description: Global monotonic sequence number of this change
+                        entity:
+                          type: string
+                          enum:
+                            - issue
+                            - comment
+                            - label
+                            - issue_label
+                          description: Entity kind this change applies to
+                        op:
+                          type: string
+                          enum:
+                            - upsert
+                            - delete
+                          description: "upsert: apply the row in data; delete: remove the entity identified by data"
+                        data:
+                          type: object
+                          additionalProperties: {}
+                          description: Entity payload; shape depends on entity and op (see endpoint description)
+                      required:
+                        - serverSeq
+                        - entity
+                        - op
+                        - data
+                      additionalProperties: false
+                    description: Changes ordered by serverSeq ascending
+                  latestSeq:
+                    type: integer
+                    minimum: 0
+                    description: Highest serverSeq on the server right now
+                  hasMore:
+                    type: boolean
+                    description: True when more changes exist beyond this page; pull again with since = last serverSeq
+                required:
+                  - changes
+                  - latestSeq
+                  - hasMore
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/sync/push:
+    post:
+      operationId: pushSyncOperations
+      summary: Apply client operations
+      tags:
+        - Sync
+      description: "Apply a batch of offline operations in order. memo/comment support create/update/delete; task/article/label/issue_label/link support create only (iOS Standalone -> Server bulk migration; send in dependency order: labels, then issues, then issue_labels/comments, then links). Each operation is idempotent via opId and applies in its own transaction (partial success). Replays are also detected without the opId ledger: task/article on uuid, label on name, issue_label/link on the existing pair — all reported as alreadyApplied. Operations with unresolvable references are skipped with a reason. Conflict rules for memo/comment: last-write-wins per record; concurrent memo body edits keep the server version and save the client body as a conflicted-copy memo; edits beat deletes in both directions."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deviceId:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                  description: Stable identifier of the pushing device (used in conflicted-copy annotations)
+                operations:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      opId:
+                        type: string
+                        minLength: 1
+                        maxLength: 128
+                        description: Client-minted idempotency key (UUID). Replays return the recorded result.
+                      entity:
+                        type: string
+                        enum:
+                          - memo
+                          - comment
+                          - task
+                          - article
+                          - label
+                          - issue_label
+                          - link
+                        description: Entity kind this operation targets. memo/comment support create/update/delete; task/article/label/issue_label/link support create only (bulk migration).
+                      type:
+                        type: string
+                        enum:
+                          - create
+                          - update
+                          - delete
+                        description: Operation type
+                      uuid:
+                        type: string
+                        minLength: 1
+                        maxLength: 128
+                        description: Sync identity of the target row (client-minted UUIDv7 for offline-created rows). Echoed back for entities without a server uuid column (label / issue_label / link).
+                      issueUuid:
+                        type: string
+                        minLength: 1
+                        maxLength: 128
+                        description: Parent issue uuid (required for comment create)
+                      baseUpdatedAt:
+                        type: string
+                        nullable: true
+                        description: The server updatedAt this edit was based on. Compared for equality only; mismatch triggers conflict handling.
+                      payload:
+                        type: object
+                        properties:
+                          bodyMd:
+                            type: string
+                            description: Body content (required for memo/comment/article create; optional for task)
+                          isBookmarked:
+                            type: boolean
+                            description: Bookmark state (memo only)
+                          createdAt:
+                            type: string
+                            description: Offline authoring time to preserve (create only)
+                          updatedAt:
+                            type: string
+                            description: Client-side update time (stored as-is for task create; informational otherwise)
+                          title:
+                            type: string
+                            minLength: 1
+                            description: Title (required for task/article create)
+                          status:
+                            type: string
+                            enum:
+                              - inbox
+                              - open
+                              - next
+                              - waiting
+                              - scheduled
+                              - someday
+                              - done
+                              - canceled
+                            description: Task status (task create only; default inbox)
+                          taskKind:
+                            type: string
+                            enum:
+                              - event
+                              - action
+                            description: Task kind (task create only; default action)
+                          scheduledStart:
+                            type: string
+                            description: Scheduled start, ISO 8601 datetime (task create only)
+                          scheduledEnd:
+                            type: string
+                            description: Scheduled end, ISO 8601 datetime (task create only)
+                          isAllDay:
+                            type: boolean
+                            description: All-day flag (task create only)
+                          scheduledOn:
+                            type: string
+                            description: Deprecated scheduled date YYYY-MM-DD (task create only, backward compatibility)
+                          actualStart:
+                            type: string
+                            description: Execution start stamp to preserve, ISO 8601 datetime (task create only)
+                          actualEnd:
+                            type: string
+                            description: Execution end stamp to preserve, ISO 8601 datetime (task create only)
+                          meta:
+                            type: object
+                            properties:
+                              originalUrl:
+                                type: string
+                                minLength: 1
+                                description: Source URL (required for article create)
+                              siteName:
+                                type: string
+                                description: Site name
+                              archivedAt:
+                                type: string
+                                description: Client-side archive time to preserve
+                            additionalProperties: false
+                            description: Article metadata (article create only)
+                          name:
+                            type: string
+                            minLength: 1
+                            description: Label name — the natural key (required for label create)
+                          description:
+                            type: string
+                            description: Label description (label create only)
+                          issueUuid:
+                            type: string
+                            minLength: 1
+                            maxLength: 128
+                            description: Target issue uuid (required for issue_label create)
+                          labelName:
+                            type: string
+                            minLength: 1
+                            description: Label name to attach (required for issue_label create)
+                          sourceIssueUuid:
+                            type: string
+                            minLength: 1
+                            maxLength: 128
+                            description: Link source issue uuid (required for link create)
+                          targetIssueUuid:
+                            type: string
+                            minLength: 1
+                            maxLength: 128
+                            description: Link target issue uuid (required for link create)
+                          linkType:
+                            type: string
+                            enum:
+                              - parent
+                              - child
+                              - relates
+                              - derived_from
+                            description: Link type (required for link create)
+                        additionalProperties: false
+                        description: Operation payload; omitted for delete. Which fields apply depends on entity.
+                    required:
+                      - opId
+                      - entity
+                      - type
+                      - uuid
+                    additionalProperties: false
+                  minItems: 1
+                  maxItems: 500
+                  description: Operations in client FIFO order (parents before children)
+              required:
+                - deviceId
+                - operations
+              additionalProperties: false
+        required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        opId:
+                          type: string
+                          description: Echo of the operation opId
+                        status:
+                          type: string
+                          enum:
+                            - applied
+                            - alreadyApplied
+                            - conflictCopied
+                            - skipped
+                          description: "applied: change accepted; alreadyApplied: idempotent replay or existing state; conflictCopied: server version kept, client body saved as a conflicted-copy memo; skipped: dropped (e.g. stale delete lost to edit-beats-delete)"
+                        uuid:
+                          type: string
+                          description: Sync identity of the target row
+                        serverId:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                          description: Server-assigned integer id of the row
+                        updatedAt:
+                          type: string
+                          description: Server updatedAt after applying — store as the new base for future edits
+                        conflictCopyUuid:
+                          type: string
+                          description: uuid of the conflicted-copy memo (status conflictCopied only)
+                        reason:
+                          type: string
+                          description: Human-readable explanation for skipped bulk-migration operations (e.g. unresolved issue/label reference)
+                      required:
+                        - opId
+                        - status
+                        - uuid
+                      additionalProperties: false
+                    description: One result per operation, same order as the request
+                  latestSeq:
+                    type: integer
+                    minimum: 0
+                    description: Highest serverSeq after applying — pull from your last cursor to converge
+                required:
+                  - results
+                  - latestSeq
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
   /api/articles/:
     post:
       operationId: createArticle
@@ -8537,3 +8896,5 @@ tags:
     description: Image attachment endpoints
   - name: ActivityLog
     description: Activity log endpoints
+  - name: Sync
+    description: Offline sync endpoints (delta pull + outbox push)

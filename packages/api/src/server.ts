@@ -207,6 +207,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
         { name: 'Comments', description: 'Comment management endpoints' },
         { name: 'Attachments', description: 'Image attachment endpoints' },
         { name: 'ActivityLog', description: 'Activity log endpoints' },
+        { name: 'Sync', description: 'Offline sync endpoints (delta pull + outbox push)' },
       ],
     },
     transform: openApiTransform,
@@ -254,6 +255,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   const { activityLogRoutes } = await import('./routes/activity-log.js');
   await app.register(activityLogRoutes);
+
+  const { syncRoutes } = await import('./routes/sync.js');
+  await app.register(syncRoutes);
 
   // Register Article routes
   const { default: articlesRoutes } = await import('./routes/articles.js');

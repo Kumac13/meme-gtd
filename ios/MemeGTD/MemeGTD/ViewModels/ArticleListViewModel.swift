@@ -18,6 +18,10 @@ class ArticleListViewModel: ObservableObject {
 
     var store: ArticleStore?
 
+    /// Data source seam. Views overwrite this with the app-wide provider from
+    /// the environment (same wiring point as `store`).
+    var dataSources = DataSourceProvider()
+
     private let pageSize = 20
 
     /// Whether the current request should use the keyword search API
@@ -44,8 +48,7 @@ class ArticleListViewModel: ObservableObject {
     // MARK: - Keyword search helpers
 
     private func fetchKeywordSearch(offset: Int) async throws -> ArticleListResponse {
-        let response: KeywordSearchResponse = try await APIClient.shared.get(
-            path: "/api/search/keyword",
+        let response: KeywordSearchResponse = try await dataSources.search.keywordSearch(
             queryItems: buildSearchQueryItems(offset: offset)
         )
         var infos: [Int: String] = [:]
@@ -72,8 +75,7 @@ class ArticleListViewModel: ObservableObject {
                 response = try await fetchKeywordSearch(offset: 0)
             } else {
                 searchMatchInfos = [:]
-                response = try await APIClient.shared.get(
-                    path: "/api/articles",
+                response = try await dataSources.articles.listArticles(
                     queryItems: buildListQueryItems(offset: 0)
                 )
             }
@@ -94,8 +96,7 @@ class ArticleListViewModel: ObservableObject {
             if isSearching {
                 return try await fetchKeywordSearch(offset: 0)
             }
-            return try await APIClient.shared.get(
-                path: "/api/articles",
+            return try await dataSources.articles.listArticles(
                 queryItems: buildListQueryItems(offset: 0)
             )
         } catch {
@@ -122,8 +123,7 @@ class ArticleListViewModel: ObservableObject {
             if isSearching {
                 response = try await fetchKeywordSearch(offset: store.articles.count)
             } else {
-                response = try await APIClient.shared.get(
-                    path: "/api/articles",
+                response = try await dataSources.articles.listArticles(
                     queryItems: buildListQueryItems(offset: store.articles.count)
                 )
             }
@@ -186,10 +186,7 @@ class ArticleListViewModel: ObservableObject {
         )
 
         do {
-            let json = try await APIClient.shared.postReturningJSONString(
-                path: "/api/search/export",
-                body: request
-            )
+            let json = try await dataSources.search.exportSearchResults(request)
             UIPasteboard.general.string = json
             HapticManager.notification(.success)
             showCopiedFeedback = true

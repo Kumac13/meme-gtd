@@ -40,6 +40,10 @@ class APIClient {
         let url = try buildURL(path: path, queryItems: queryItems)
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
+        // Reads should fail fast: the default 60s timeout left screens blank
+        // for minutes when the connection was re-establishing (e.g. Tailscale
+        // after relaunch). Mutations and uploads keep the default.
+        request.timeoutInterval = 15
         return try await execute(request)
     }
 

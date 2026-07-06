@@ -143,6 +143,7 @@ struct LabelPickerModal: View {
 
 struct CreateLabelSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var dataSources: DataSourceProvider
     @State private var name: String
     @State private var description: String = ""
     @State private var isSaving = false
@@ -205,7 +206,7 @@ struct CreateLabelSheet: View {
         Task {
             do {
                 let req = CreateLabelRequest(name: trimmedName, description: description.isEmpty ? nil : description)
-                let label: IssueLabel = try await APIClient.shared.post(path: "/api/labels", body: req)
+                let label: IssueLabel = try await dataSources.labels.createLabel(req)
 
                 HapticManager.notification(.success)
                 onCreated(label)

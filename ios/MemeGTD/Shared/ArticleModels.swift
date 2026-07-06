@@ -23,7 +23,9 @@ struct ArticleResponse: Codable {
     let commentCount: Int?
 }
 
-struct ArticleMeta: Codable {
+// nonisolated: decoded inside the nonisolated offline read cache
+// (OfflineFirstArticleDataSource) as well as on the MainActor.
+nonisolated struct ArticleMeta: Codable {
     let originalUrl: String
     let siteName: String?
     let archivedAt: String

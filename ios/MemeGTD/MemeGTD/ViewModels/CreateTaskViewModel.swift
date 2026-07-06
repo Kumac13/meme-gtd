@@ -24,6 +24,10 @@ class CreateTaskViewModel: ObservableObject {
     @Published var error: String?
     @Published var createdTask: TaskItem?
 
+    /// Data source seam. Views overwrite this with the app-wide provider from
+    /// the environment before calling `loadData()`.
+    var dataSources = DataSourceProvider()
+
     private static let isoFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
@@ -57,8 +61,8 @@ class CreateTaskViewModel: ObservableObject {
 
     func loadData() async {
         do {
-            async let labelsResult: [IssueLabel] = APIClient.shared.get(path: "/api/labels")
-            async let projectsResult: [Project] = APIClient.shared.get(path: "/api/projects")
+            async let labelsResult: [IssueLabel] = dataSources.labels.listLabels()
+            async let projectsResult: [Project] = dataSources.projects.listProjects()
             let (labels, projects) = try await (labelsResult, projectsResult)
             allLabels = labels
             allProjects = projects
@@ -69,18 +73,19 @@ class CreateTaskViewModel: ObservableObject {
         // Set up initial pending link for linkedTo mode (needs title from search)
         if case .linkedTo(let sourceTaskId) = mode {
             do {
-                let task: TaskItem = try await APIClient.shared.get(path: "/api/tasks/\(sourceTaskId)")
+                let task: TaskItem = try await dataSources.tasks.getTask(id: sourceTaskId)
                 pendingLinks.append(PendingLink(
                     targetIssueId: sourceTaskId,
                     linkType: .relates,
                     title: task.title
                 ))
             } catch {
-                // Still add with placeholder title
+                // Still add with a placeholder title. Negative ids are
+                // device-local rows with no server identity to show.
                 pendingLinks.append(PendingLink(
                     targetIssueId: sourceTaskId,
                     linkType: .relates,
-                    title: "#\(sourceTaskId)"
+                    title: sourceTaskId > 0 ? "#\(sourceTaskId)" : "Untitled"
                 ))
             }
         }
@@ -115,17 +120,16 @@ class CreateTaskViewModel: ObservableObject {
                 scheduledEnd: scheduledEnd.map { Self.isoFormatter.string(from: $0) },
                 isAllDay: isAllDay ? true : nil
             )
-            let task: TaskItem = try await APIClient.shared.post(
-                path: "/api/tasks", body: request
-            )
+            let task: TaskItem = try await dataSources.tasks.createTask(request)
 
+            let dataSources = dataSources
             await withTaskGroup(of: Void.self) { group in
                 for name in selectedLabelNames {
                     if let label = allLabels.first(where: { $0.name == name }) {
                         group.addTask {
-                            let _: AssignLabelResponse? = try? await APIClient.shared.post(
-                                path: "/api/issues/\(task.id)/labels",
-                                body: AssignLabelRequest(labelId: label.id)
+                            let _: AssignLabelResponse? = try? await dataSources.labels.assignLabel(
+                                issueId: task.id,
+                                AssignLabelRequest(labelId: label.id)
                             )
                         }
                     }
@@ -133,18 +137,17 @@ class CreateTaskViewModel: ObservableObject {
 
                 for projectId in selectedProjectIds {
                     group.addTask {
-                        let _: ProjectItem? = try? await APIClient.shared.post(
-                            path: "/api/projects/\(projectId)/items",
-                            body: AddProjectItemRequest(issueId: task.id)
+                        let _: ProjectItem? = try? await dataSources.projects.addProjectItem(
+                            projectId: projectId,
+                            AddProjectItemRequest(issueId: task.id)
                         )
                     }
                 }
 
                 for link in pendingLinks {
                     group.addTask {
-                        let _: CreateLinkResponse? = try? await APIClient.shared.post(
-                            path: "/api/links",
-                            body: CreateLinkRequest(
+                        let _: CreateLinkResponse? = try? await dataSources.issueRelations.createLink(
+                            CreateLinkRequest(
                                 sourceIssueId: task.id,
                                 targetIssueId: link.targetIssueId,
                                 linkType: link.linkType
@@ -155,9 +158,9 @@ class CreateTaskViewModel: ObservableObject {
 
                 for urlLink in pendingUrlLinks {
                     group.addTask {
-                        let _: UrlLink? = try? await APIClient.shared.post(
-                            path: "/api/issues/\(task.id)/url-links",
-                            body: CreateUrlLinkRequest(url: urlLink.url, title: urlLink.title)
+                        let _: UrlLink? = try? await dataSources.issueRelations.createUrlLink(
+                            issueId: task.id,
+                            CreateUrlLinkRequest(url: urlLink.url, title: urlLink.title)
                         )
                     }
                 }
@@ -209,6 +212,7 @@ class CreateTaskViewModel: ObservableObject {
 
         var results: [IssuePickerItem] = []
 
+        let dataSources = dataSources
         await withTaskGroup(of: [IssuePickerItem].self) { group in
             let searchQuery: [URLQueryItem] = trimmed.isEmpty ? [] : [
                 URLQueryItem(name: "search", value: trimmed),
@@ -217,8 +221,7 @@ class CreateTaskViewModel: ObservableObject {
             // Search tasks
             group.addTask {
                 do {
-                    let response: SearchTasksResponse = try await APIClient.shared.get(
-                        path: "/api/tasks",
+                    let response: SearchTasksResponse = try await dataSources.tasks.searchTasks(
                         queryItems: searchQuery
                     )
                     return response.data.map {
@@ -232,8 +235,7 @@ class CreateTaskViewModel: ObservableObject {
             // Search memos
             group.addTask {
                 do {
-                    let response: MemoListResponse = try await APIClient.shared.get(
-                        path: "/api/memos",
+                    let response: MemoListResponse = try await dataSources.memos.listMemos(
                         queryItems: searchQuery
                     )
                     return response.data.map {
@@ -250,8 +252,7 @@ class CreateTaskViewModel: ObservableObject {
             // Search articles
             group.addTask {
                 do {
-                    let response: SearchArticlesResponse = try await APIClient.shared.get(
-                        path: "/api/articles",
+                    let response: SearchArticlesResponse = try await dataSources.articles.searchArticles(
                         queryItems: searchQuery
                     )
                     return response.data.map {

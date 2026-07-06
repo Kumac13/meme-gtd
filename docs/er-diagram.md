@@ -9,11 +9,14 @@
 - 中心テーブルは `issues` （memo / task / article を 1 つのテーブルで管理）。
 - `issues_fts` は FTS5 仮想テーブル、`schema_migrations` はマイグレーション履歴、`sync_state` は単一行のメタテーブルのため独立。
 - `activity_log` は payload(JSON) から仮想カラムで `issue_id` 等を参照するイベントソース型。**外部キー制約は持たない**ため、論理的な関係を点線（破線）で示しています。
+- `sync_sequence` / `sync_tombstones` / `sync_applied_ops` と `uuid` / `server_seq` カラムは iOS オフライン同期の基盤（migration 014、意味は後述の「同期基盤」）。
 
 ```mermaid
 erDiagram
     issues {
         INTEGER  id PK
+        TEXT     uuid UK "sync identity"
+        INTEGER  server_seq "sync cursor"
         TEXT     type "memo|task|article"
         TEXT     title
         TEXT     body_md
@@ -41,16 +44,20 @@ erDiagram
         TEXT     name UK
         TEXT     description
         TEXT     created_at
+        INTEGER  server_seq "sync cursor"
     }
 
     issue_labels {
         INTEGER  issue_id PK,FK
         INTEGER  label_id PK,FK
         TEXT     assigned_at
+        INTEGER  server_seq "sync cursor"
     }
 
     comments {
         INTEGER  id PK
+        TEXT     uuid UK "sync identity"
+        INTEGER  server_seq "sync cursor"
         INTEGER  issue_id FK
         TEXT     body_md
         TEXT     created_at
@@ -129,6 +136,26 @@ erDiagram
         INTEGER  id PK "= 1"
         TEXT     last_synced_at
         TEXT     schema_version
+    }
+
+    sync_sequence {
+        INTEGER  id PK "= 1"
+        INTEGER  seq "global monotonic counter"
+    }
+
+    sync_tombstones {
+        INTEGER  id PK
+        TEXT     entity "label|issue_label"
+        TEXT     entity_key "JSON"
+        INTEGER  server_seq
+        TEXT     deleted_at
+    }
+
+    sync_applied_ops {
+        TEXT     op_id PK "client-generated"
+        TEXT     device_id
+        TEXT     result
+        TEXT     applied_at
     }
 
     schema_migrations {
@@ -216,6 +243,15 @@ erDiagram
 - `model`: 使用モデル名（例: `qwen3-embedding:4b`）、`dimensions`: ベクトル次元数
 - `content_hash`: SHA-256。内容が変わったissueのみ再生成するための変更検知
 - オプトイン機能: `mgtd embedding sync` 実行後のみ populated
+
+### 同期基盤（migration 014、iOS オフライン同期）
+
+- `uuid`（issues / comments）: 同期用の恒久ID。オフラインクライアントが採番できるようUUIDを採用。新規行はリポジトリがUUIDv7を生成し、リポジトリを経由しないINSERTにもトリガがUUIDv4をフォールバック付与する。labelsは `name` が自然キーのためuuidなし
+- `server_seq`（issues / comments / labels / issue_labels）: 全書き込みに振られるグローバル単調連番。差分取得のカーソル（`?since=<seq>`）として使う。カウンタは `sync_sequence`（`id = 1` のシングルトン）
+- **打刻はSQLiteトリガ**（`*_sync_ai` / `*_sync_au` / `*_sync_ad`）で行う。CLIはHTTPを通らず core→db 直書きのため、全書き込み経路をカバーできる層がトリガのみであることが理由
+- `sync_tombstones`: ハード削除される labels / issue_labels の削除記録。`entity_key` はJSONで整数IDと（解決できる場合）`labelName` / `issueUuid` を併記。CASCADE削除時は親の labels 行が先に消えるため `labelName` がNULLになる（クライアントは同時に出る `label` tombstone で補完する）。issues / comments は論理削除（`is_deleted`）自体がtombstoneを兼ねるため対象外
+- `sync_applied_ops`: 同期push（Phase 2で追加予定の `POST /api/sync/push`）の冪等性台帳。`op_id` はクライアント採番
+- 既存の `sync_state`（001由来・未使用）は別用途のため据え置き
 
 ### その他の制約
 

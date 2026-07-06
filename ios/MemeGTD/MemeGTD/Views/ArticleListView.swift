@@ -5,6 +5,7 @@ struct ArticleListView: View {
     @Binding var navigationPath: NavigationPath
 
     @EnvironmentObject var articleStore: ArticleStore
+    @EnvironmentObject var dataSources: DataSourceProvider
     @StateObject private var viewModel = ArticleListViewModel()
     @State private var isSearching: Bool = false
     @State private var showCopyDialog: Bool = false
@@ -44,6 +45,9 @@ struct ArticleListView: View {
         }
         .scrollDismissesKeyboard(.immediately)
         .scrollEdgeEffectStyle(.soft, for: .bottom)
+        .safeAreaInset(edge: .top) {
+            OfflineReadOnlyIndicator()
+        }
         .refreshable {
             await withCheckedContinuation { continuation in
                 Task { @MainActor in
@@ -141,6 +145,7 @@ struct ArticleListView: View {
         }
         .task {
             viewModel.store = articleStore
+            viewModel.dataSources = dataSources
             if articleStore.articles.isEmpty {
                 await viewModel.loadArticles()
             }
