@@ -12,11 +12,11 @@ struct SettingsView: View {
     @State private var offlineSyncEnabled: Bool = Settings.shared.offlineSyncEnabled
     @State private var appMode: AppMode = Settings.shared.appMode
 
-    // Server -> Standalone is a rule-breaking direction (Standalone -> Server
-    // is meant to happen once): warn before applying, snap back on cancel.
-    @State private var showStandaloneSwitchWarning: Bool = false
+    // Server -> Standalone is not a supported transition (Standalone ->
+    // Server happens once, via the picker or migration): block it, explain,
+    // snap the picker back.
+    @State private var showStandaloneSwitchBlocked: Bool = false
     @State private var isRevertingModeChange: Bool = false
-    @State private var confirmedStandaloneSwitch: Bool = false
 
     // Migrate to Server flow (offline support plan Phase 12)
     @State private var migrationState: MigrationState = .idle
@@ -71,29 +71,22 @@ struct SettingsView: View {
                             isRevertingModeChange = false
                             return
                         }
-                        // Standalone -> Server is meant to happen only once;
-                        // going back to Standalone breaks that rule, so warn
-                        // first (confirmedStandaloneSwitch marks an accepted
-                        // warning so the change is applied on re-entry).
-                        if oldValue == .server && newValue == .standalone && !confirmedStandaloneSwitch {
+                        // Standalone -> Server happens only once; there is no
+                        // way back. Block the attempt and snap the picker.
+                        if oldValue == .server && newValue == .standalone {
                             isRevertingModeChange = true
                             appMode = .server
-                            showStandaloneSwitchWarning = true
+                            showStandaloneSwitchBlocked = true
                             return
                         }
-                        confirmedStandaloneSwitch = false
                         Settings.shared.appMode = newValue
                         dataSources.storageSettingDidChange()
                         HapticManager.impact(.light)
                     }
-                    .alert("Switch to Standalone?", isPresented: $showStandaloneSwitchWarning) {
-                        Button("Cancel", role: .cancel) {}
-                        Button("Switch", role: .destructive) {
-                            confirmedStandaloneSwitch = true
-                            appMode = .standalone
-                        }
+                    .alert("Cannot Switch to Standalone", isPresented: $showStandaloneSwitchBlocked) {
+                        Button("OK", role: .cancel) {}
                     } message: {
-                        Text("The app will stop using the server and work only with data on this device. Standalone is meant to be left only once, by migrating this device's data to a server.")
+                        Text("This app is connected to a server. Switching back to Standalone is not supported.")
                     }
 
                     if migrationState == .done {
