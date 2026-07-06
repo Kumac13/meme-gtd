@@ -14,11 +14,13 @@ description: Use when changing the database schema — adding a new numbered SQL
   - XXX: 3桁の連番（既存の最大番号 + 1）
   - description: スネークケースで機能を表現
 - 冪等に書く（`IF NOT EXISTS` を使用）
+- `ALTER TABLE ... ADD COLUMN` を含むファイルには他のDDL・バックフィルを混在させない（列が既存だと duplicate column 例外でファイル全体が「適用済み」扱いになるため。トリガー再作成などは別の連番ファイルに分ける）
 - 既存データの移行が必要な場合は同一ファイル内にUPDATE文も記述
 - コメントで変更内容を説明
 
 ## 必須の追随作業（これを終えるまで作業未完了）
 
+- [ ] `packages/db/src/migrate.ts` の `migrations` 配列に新しいSQLファイルを登録（`schema/` は自動走査されない）
 - [ ] `packages/shared` のドメイン型を更新
 - [ ] `packages/db` のリポジトリを更新
 - [ ] テストを追加・更新（テストなしのバックエンド変更は禁止）

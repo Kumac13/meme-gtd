@@ -25,8 +25,6 @@ pnpmモノレポ（CLI / REST API / Web UI / Chrome拡張）+ iOSアプリ。単
 | `test-env` | CLI/API/Web UIの検証・テスト前（本番環境保護） |
 | `api-schema-sync` | APIスキーマ・ルート・ハンドラ変更時の同期チェーン |
 | `db-migration` | DBスキーマ変更・本番マイグレーション時 |
-| `cli-command-add` | CLIコマンド追加・変更時 |
-| `extractor-rebuild` | `packages/extension/src/` の抽出ロジック変更後 |
 | `ios-deploy` | iOSアプリのビルド・デプロイ時 |
 | `release` | 新機能・修正の実装完了後のバージョンバンプ（指示がなくても自動実行） |
 

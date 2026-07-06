@@ -1,11 +1,19 @@
 # CLI開発ガイド
 
-## コマンド追加・変更
+## コマンド追加・変更チェックリスト
 
-チェックリスト（`MULTIWORD_COMMANDS` 登録・テスト・`docs/cli-commands.md`・シェル補完）は cli-command-add スキルが唯一の正。
+1. `src/commands/<topic>/<sub>.ts` に実装する（トピック直下コマンドは `src/commands/<topic>.ts`）
+2. `src/index.ts` の `MULTIWORD_COMMANDS` に登録する。漏れるとスペース区切り構文（`mgtd task comment add`）がヘルプ表示に落ちる
+   - 各エントリはセグメント配列。長い（具体的な）ものを先に並べる: `['memo', 'comment', 'add']` → `['memo', 'comment']` → `['memo']`
+   - サブコマンドを持つ親コマンド自体も登録する
+3. テストを追加する。`pnpm test` は明示グロブ（`test/*.test.js` と `test/commands/{task,memo,project,db}/*.test.js`）なので、それ以外の場所に置いたテストは package.json のグロブに追加しないと実行されない
+4. `docs/cli-commands.md` を更新する（オプションは `[options]` 等で省略せず全文記載、使用例は実際に動く完全なコマンド）
+5. `scripts/completions/`（bash/zsh/fish）に影響する場合は更新する（手書きで自動同期されない）
+6. 動作確認は `pnpm build && pnpm mgtd:test <コマンド>`。`mgtd` の直接実行は禁止（test-env スキル）
 
 ## 実装ルール
 
-- コマンドのオプションは全て明示的に記載（`[options]`などの省略表記禁止）
-- GitHub CLI (`gh`) のコマンド仕様を参考にする。実装前に公式ドキュメントで確認
-- ヘルプテキスト・出力メッセージは英語で統一
+- 一覧・取得系コマンドには `--json` フラグを実装し、出力形状を既存コマンドに合わせる
+- コマンド体系・オプション設計は GitHub CLI（`gh`）を参考にし、実装前に公式ドキュメントで確認する
+- ヘルプテキスト・出力メッセージは英語
+- バージョン表示は `src/index.ts` の自前処理（oclifルーティング前段）と `src/commands/version.ts` の2箇所にある。直すときは両方
