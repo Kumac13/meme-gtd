@@ -12,9 +12,11 @@ struct SettingsView: View {
     @State private var offlineSyncEnabled: Bool = Settings.shared.offlineSyncEnabled
     @State private var appMode: AppMode = Settings.shared.appMode
 
-    // Server -> Standalone is not a supported transition (Standalone ->
-    // Server happens once, via the picker or migration): block it, explain,
-    // snap the picker back.
+    // Standalone -> Server is one-way (confirm before applying); Server ->
+    // Standalone is not supported at all (block, explain, snap the picker
+    // back — DEBUG builds excepted for verification).
+    @State private var showServerSwitchConfirm: Bool = false
+    @State private var confirmedServerSwitch: Bool = false
     @State private var showStandaloneSwitchBlocked: Bool = false
     @State private var isRevertingModeChange: Bool = false
 
@@ -71,17 +73,40 @@ struct SettingsView: View {
                             isRevertingModeChange = false
                             return
                         }
-                        // Standalone -> Server happens only once; there is no
-                        // way back. Block the attempt and snap the picker.
+                        // Standalone -> Server is one-way and cannot be
+                        // undone: confirm before applying. The migration
+                        // completion path pre-sets confirmedServerSwitch (it
+                        // has its own confirmation).
+                        if oldValue == .standalone && newValue == .server && !confirmedServerSwitch {
+                            isRevertingModeChange = true
+                            appMode = .standalone
+                            showServerSwitchConfirm = true
+                            return
+                        }
+                        confirmedServerSwitch = false
+                        // There is no way back from Server. Block the attempt
+                        // and snap the picker. DEBUG builds allow it so mode
+                        // behavior stays verifiable on a development device.
+                        #if !DEBUG
                         if oldValue == .server && newValue == .standalone {
                             isRevertingModeChange = true
                             appMode = .server
                             showStandaloneSwitchBlocked = true
                             return
                         }
+                        #endif
                         Settings.shared.appMode = newValue
                         dataSources.storageSettingDidChange()
                         HapticManager.impact(.light)
+                    }
+                    .alert("Switch to Server?", isPresented: $showServerSwitchConfirm) {
+                        Button("Cancel", role: .cancel) {}
+                        Button("Switch", role: .destructive) {
+                            confirmedServerSwitch = true
+                            appMode = .server
+                        }
+                    } message: {
+                        Text("This cannot be undone. Data on this device will no longer be shown (it is not deleted). To upload it to the server, use \"Migrate to Server\" instead.")
                     }
                     .alert("Cannot Switch to Standalone", isPresented: $showStandaloneSwitchBlocked) {
                         Button("OK", role: .cancel) {}
@@ -436,7 +461,10 @@ struct SettingsView: View {
                     HapticManager.notification(.success)
                     // Reflect the committed settings; each onChange persists
                     // the (already stored) value and rebuilds the provider.
+                    // Migration already confirmed its own dialog — skip the
+                    // switch-to-Server confirmation.
                     offlineSyncEnabled = true
+                    confirmedServerSwitch = true
                     appMode = .server
                 }
             } catch {
