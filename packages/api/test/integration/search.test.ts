@@ -708,3 +708,221 @@ describe('POST /api/search/export', () => {
     assert.strictEqual(error.code, 'VALIDATION_ERROR');
   });
 });
+
+describe('POST /api/search/export (scope="all")', () => {
+  let app: FastifyInstance;
+  let cleanup: () => Promise<void>;
+
+  before(async () => {
+    const server = await createTestServer();
+    app = server.app;
+    cleanup = server.cleanup;
+    await app.ready();
+  });
+
+  after(async () => {
+    await cleanup();
+  });
+
+  it('exports every memo matching the filter, ignoring itemIds, and logs the full count', async () => {
+    createLabel(app.db, 'scope-all-label');
+    const m1 = createMemo(app.db, { bodyMd: 'scope all one', labels: ['scope-all-label'] });
+    const m2 = createMemo(app.db, { bodyMd: 'scope all two', labels: ['scope-all-label'] });
+    const m3 = createMemo(app.db, { bodyMd: 'scope all three', labels: ['scope-all-label'] });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search/export',
+      payload: {
+        type: 'memos',
+        filters: { labels: ['scope-all-label'] },
+        // Only one item is "loaded" on the client — scope="all" must ignore this.
+        itemIds: [m1.id],
+        scope: 'all',
+        includeComments: false,
+      },
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.strictEqual(body.total, 3);
+    assert.strictEqual(body.truncated, false);
+    const ids = body.results.map((r: { id: number }) => r.id).sort((a: number, b: number) => a - b);
+    assert.deepStrictEqual(ids, [m1.id, m2.id, m3.id].sort((a, b) => a - b));
+
+    // Activity log records the full matched count, not the loaded itemIds length.
+    const logRow = app.db
+      .prepare(
+        `SELECT payload FROM activity_log WHERE event_type = 'search.exported' ORDER BY id DESC LIMIT 1`
+      )
+      .get() as { payload: string } | undefined;
+    assert.ok(logRow);
+    assert.strictEqual(JSON.parse(logRow.payload).item_count, 3);
+  });
+
+  it('applies the date range filter server-side', async () => {
+    createLabel(app.db, 'scope-date-label');
+    const inRange1 = createMemo(app.db, {
+      bodyMd: 'date one',
+      labels: ['scope-date-label'],
+      createdAt: '2026-03-10T00:00:00',
+    });
+    const inRange2 = createMemo(app.db, {
+      bodyMd: 'date two',
+      labels: ['scope-date-label'],
+      createdAt: '2026-03-20T00:00:00',
+    });
+    createMemo(app.db, {
+      bodyMd: 'date out',
+      labels: ['scope-date-label'],
+      createdAt: '2026-05-01T00:00:00',
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search/export',
+      payload: {
+        type: 'memos',
+        filters: { labels: ['scope-date-label'], dateFrom: '2026-03-01', dateTo: '2026-03-31' },
+        itemIds: [],
+        scope: 'all',
+        includeComments: false,
+      },
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.strictEqual(body.total, 2);
+    const ids = body.results.map((r: { id: number }) => r.id).sort((a: number, b: number) => a - b);
+    assert.deepStrictEqual(ids, [inRange1.id, inRange2.id].sort((a, b) => a - b));
+  });
+
+  it('includes comments for every matched item', async () => {
+    createLabel(app.db, 'scope-comments-label');
+    const m1 = createMemo(app.db, { bodyMd: 'sc comments one', labels: ['scope-comments-label'] });
+    addComment(app.db, m1.id, 'c1');
+    const m2 = createMemo(app.db, { bodyMd: 'sc comments two', labels: ['scope-comments-label'] });
+    addComment(app.db, m2.id, 'c2a');
+    addComment(app.db, m2.id, 'c2b');
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search/export',
+      payload: {
+        type: 'memos',
+        filters: { labels: ['scope-comments-label'] },
+        itemIds: [m1.id],
+        scope: 'all',
+        includeComments: true,
+      },
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.strictEqual(body.total, 2);
+    const r1 = body.results.find((r: { id: number }) => r.id === m1.id);
+    const r2 = body.results.find((r: { id: number }) => r.id === m2.id);
+    assert.strictEqual(r1.comments.length, 1);
+    assert.strictEqual(r2.comments.length, 2);
+  });
+
+  it('rebuilds matchedComment snippets server-side for keyword search', async () => {
+    const m1 = createMemo(app.db, { bodyMd: 'scopekwxyz body match only' });
+    const m2 = createMemo(app.db, { bodyMd: 'no body match here at all' });
+    addComment(app.db, m2.id, 'scopekwxyz matched in comment');
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search/export',
+      payload: {
+        type: 'memos',
+        filters: { query: 'scopekwxyz', searchMode: 'keyword' },
+        // No matched snippets provided by the client — server must rebuild them.
+        itemIds: [],
+        scope: 'all',
+        includeComments: false,
+      },
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.strictEqual(body.total, 2);
+    const r2 = body.results.find((r: { id: number }) => r.id === m2.id);
+    assert.ok(r2.matchedComment && r2.matchedComment.includes('scopekwxyz'));
+    const r1 = body.results.find((r: { id: number }) => r.id === m1.id);
+    // m1 matched in body only, so it carries no comment snippet.
+    assert.strictEqual(r1.matchedComment, undefined);
+  });
+
+  it('falls back to the loaded itemIds for semantic search (no "all" expansion)', async () => {
+    const m1 = createMemo(app.db, { bodyMd: 'sem_fallback one' });
+    createMemo(app.db, { bodyMd: 'sem_fallback two' });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search/export',
+      payload: {
+        type: 'memos',
+        filters: { query: 'sem_fallback', searchMode: 'semantic' },
+        itemIds: [m1.id],
+        scope: 'all',
+        includeComments: false,
+      },
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    // Semantic stays scoped to the client-provided itemIds — not expanded to all.
+    assert.strictEqual(body.total, 1);
+    assert.strictEqual(body.results[0].id, m1.id);
+  });
+
+  it('exports every task matching the status filter', async () => {
+    createLabel(app.db, 'scope-task-label');
+    const t1 = createTask(app.db, { title: 'st open 1', bodyMd: '', status: 'open', labels: ['scope-task-label'] });
+    const t2 = createTask(app.db, { title: 'st open 2', bodyMd: '', status: 'open', labels: ['scope-task-label'] });
+    createTask(app.db, { title: 'st done', bodyMd: '', status: 'done', labels: ['scope-task-label'] });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search/export',
+      payload: {
+        type: 'tasks',
+        filters: { labels: ['scope-task-label'], status: 'open' },
+        itemIds: [],
+        scope: 'all',
+        includeComments: false,
+      },
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    assert.strictEqual(body.total, 2);
+    const ids = body.results.map((r: { id: number }) => r.id).sort((a: number, b: number) => a - b);
+    assert.deepStrictEqual(ids, [t1.id, t2.id].sort((a, b) => a - b));
+  });
+
+  it('defaults to loaded scope (itemIds) when scope is omitted', async () => {
+    createLabel(app.db, 'scope-default-label');
+    const m1 = createMemo(app.db, { bodyMd: 'default scope one', labels: ['scope-default-label'] });
+    createMemo(app.db, { bodyMd: 'default scope two', labels: ['scope-default-label'] });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/search/export',
+      payload: {
+        type: 'memos',
+        filters: { labels: ['scope-default-label'] },
+        itemIds: [m1.id],
+        includeComments: false,
+      },
+    });
+
+    assert.strictEqual(res.statusCode, 200);
+    const body = JSON.parse(res.payload);
+    // Without scope="all", only the single loaded item is exported.
+    assert.strictEqual(body.total, 1);
+    assert.strictEqual(body.results[0].id, m1.id);
+    assert.strictEqual(body.truncated, false);
+  });
+});

@@ -311,7 +311,16 @@ export default function TasksList() {
       result.projectIds = Array.from(selectedProjectIds);
     }
     if (selectedNoneProject) result.includeNoProject = true;
-    if (statusFilter && statusFilter !== 'all') result.status = statusFilter;
+    // Mirror the effective status the fetch used so a scope="all" copy resolves
+    // the same set the user sees. Label-only filtering on the default status
+    // view broadens to all statuses (see fetchTasks's effectiveStatus); the
+    // keyword and plain-list paths otherwise respect the selected status.
+    const isDefaultStatusView = !searchParams.get('status');
+    const broadened =
+      !filters.parsedQuery.freeText && selectedLabels.size > 0 && isDefaultStatusView;
+    if (!broadened && statusFilter && statusFilter !== 'all') {
+      result.status = statusFilter;
+    }
     return result;
   }, [
     filters.parsedQuery.freeText,
@@ -323,6 +332,7 @@ export default function TasksList() {
     selectedProjectIds,
     selectedNoneProject,
     statusFilter,
+    searchParams,
   ]);
   const copyExportItemIds = useMemo(
     () => filteredTasks.map((t) => t.id),

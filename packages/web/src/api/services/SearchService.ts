@@ -290,9 +290,13 @@ export class SearchService {
                 status?: string;
             };
             /**
-             * IDs of items to include (current page or loaded range)
+             * IDs of items to include (current page or loaded range). Ignored when scope="all".
              */
             itemIds: Array<number>;
+            /**
+             * Export scope. "loaded" (default) exports exactly the provided itemIds — the current page / loaded range. "all" ignores itemIds and exports every item matching filters, resolved server-side with no pagination. Semantic search (filters.searchMode="semantic") always behaves as "loaded" because its result set is an inherently bounded top-K ranking.
+             */
+            scope?: 'loaded' | 'all';
             /**
              * Matched comment snippets keyed by item id (from keyword search)
              */
@@ -309,6 +313,10 @@ export class SearchService {
     ): CancelablePromise<{
         type: 'memos' | 'tasks' | 'articles';
         total: number;
+        /**
+         * True when scope="all" matched more items than the export cap and the returned results were truncated to the cap.
+         */
+        truncated?: boolean;
         /**
          * Filters currently applied to the list view
          */

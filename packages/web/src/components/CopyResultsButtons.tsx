@@ -34,13 +34,21 @@ export default function CopyResultsButtons({
   matchedScores,
 }: CopyResultsButtonsProps) {
   const [justCopied, setJustCopied] = useState<'results' | 'comments' | null>(null);
-  const [copyingWithComments, setCopyingWithComments] = useState(false);
+  const [copying, setCopying] = useState<'results' | 'comments' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+
+  // Copy the full filtered set (server resolves every match, no pagination).
+  // Semantic search is the exception: its result set is a bounded top-K ranking
+  // with no meaningful "all", so it stays scoped to the loaded items.
+  const scope: 'loaded' | 'all' =
+    filters.searchMode === 'semantic' ? 'loaded' : 'all';
 
   const handleCopy = async (includeComments: boolean) => {
     setError(null);
+    setWarning(null);
     try {
-      if (includeComments) setCopyingWithComments(true);
+      setCopying(includeComments ? 'comments' : 'results');
       // Normalize matchedComments/matchedScores keys to string form for the API
       const normalizedMatched: Record<string, string> | undefined = matchedComments
         ? Object.fromEntries(
@@ -52,22 +60,27 @@ export default function CopyResultsButtons({
             Object.entries(matchedScores as Record<string | number, number>)
           )
         : undefined;
-      await exportAndCopySearchResults({
+      const result = await exportAndCopySearchResults({
         type,
         filters,
         itemIds,
+        scope,
         matchedComments: normalizedMatched,
         matchedScores: normalizedScores,
         includeComments,
       });
       setJustCopied(includeComments ? 'comments' : 'results');
       setTimeout(() => setJustCopied(null), 1200);
+      if (result.truncated) {
+        setWarning(`Copied first ${result.total} (too many to copy all)`);
+        setTimeout(() => setWarning(null), 3000);
+      }
     } catch (err) {
       console.error('Failed to copy search results:', err);
       setError(err instanceof Error ? err.message : 'Failed to copy');
       setTimeout(() => setError(null), 2000);
     } finally {
-      if (includeComments) setCopyingWithComments(false);
+      setCopying(null);
     }
   };
 
@@ -76,9 +89,14 @@ export default function CopyResultsButtons({
       <button
         type="button"
         onClick={() => handleCopy(false)}
-        className="text-xs text-gray-600 hover:text-gray-900 underline-offset-2 hover:underline"
+        disabled={copying !== null}
+        className="text-xs text-gray-600 hover:text-gray-900 underline-offset-2 hover:underline disabled:opacity-50"
       >
-        {justCopied === 'results' ? 'Copied' : 'Copy Results'}
+        {copying === 'results'
+          ? 'Copying...'
+          : justCopied === 'results'
+          ? 'Copied'
+          : 'Copy Results'}
       </button>
       <span className="text-gray-300" aria-hidden>
         |
@@ -86,16 +104,17 @@ export default function CopyResultsButtons({
       <button
         type="button"
         onClick={() => handleCopy(true)}
-        disabled={copyingWithComments}
+        disabled={copying !== null}
         className="text-xs text-gray-600 hover:text-gray-900 underline-offset-2 hover:underline disabled:opacity-50"
       >
-        {copyingWithComments
+        {copying === 'comments'
           ? 'Copying...'
           : justCopied === 'comments'
           ? 'Copied'
           : 'Copy with Comments'}
       </button>
       {error && <span className="text-xs text-red-500 ml-2">{error}</span>}
+      {warning && <span className="text-xs text-amber-600 ml-2">{warning}</span>}
     </div>
   );
 }
