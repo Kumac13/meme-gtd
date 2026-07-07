@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.47.1 - 2026-07-07
+
+### Bug Fixes
+
+- **Web の「Copy Results / Copy with Comments」でボタンが "Copied" になってもクリップボードに何も入らない問題を修正**: 取得（scope=all は全件でコメント込みだと数百KB・数秒かかる）を待ってから `navigator.clipboard.writeText` を呼ぶ実装だったため、Chrome では書き込み時にドキュメントがフォーカス条件を満たさないと **promise は解決する（＝"Copied" 表示になる）のに実際のシステムクリップボードには書き込まれない**ことがあった（貼り付け不可・クリップボード履歴にも現れない）。旧来の少件数コピーでは取得が速く顕在化しなかったが、0.47.0 の `scope=all` で取得が重くなり露呈した。
+  - 取得を待ってから書く方式をやめ、**クリックのジェスチャ内で `navigator.clipboard.write()` を Promise 付き `ClipboardItem`（`text/plain`）で同期発行**するように変更。ブラウザが書き込みをジェスチャに束ねたまま取得完了時に確定するため、取得が遅くても実クリップボードへ確実に書き込まれる。`ClipboardItem` 非対応ブラウザは従来の `writeText` にフォールバック。
+  - macOS の実システムクリップボード（`pbpaste`）で before/after を検証: 旧実装は書き込まれず、新実装は全件（例: 1067 件・約570KB）が書き込まれることを確認。
+
 ## 0.47.0 - 2026-07-07
 
 ### New Features

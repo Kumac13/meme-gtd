@@ -1,6 +1,20 @@
 import type { Comment } from '../components/CommentSection';
 import { SearchService } from '../api/services/SearchService';
 
+/**
+ * Write already-in-hand text to the clipboard.
+ *
+ * Only for the synchronous case where the text is available at call time (the
+ * write then happens within the click gesture while the document is focused).
+ * For text that must be fetched first, see `exportAndCopySearchResults`, which
+ * binds the write to the gesture via a promise-valued `ClipboardItem` — do NOT
+ * `await` a fetch and then call this, or Chrome will silently hang the write
+ * once the page is no longer focused.
+ */
+async function writeToClipboard(text: string): Promise<void> {
+  await navigator.clipboard.writeText(text);
+}
+
 interface CopyContentOptions {
   title: string | null;
   body: string;
@@ -41,7 +55,7 @@ function buildCopyContent({
  */
 export async function copyItemContent(options: CopyContentOptions): Promise<void> {
   const content = buildCopyContent(options);
-  await navigator.clipboard.writeText(content);
+  await writeToClipboard(content);
 }
 
 export type ExportItemType = 'memos' | 'tasks' | 'articles';
@@ -87,11 +101,22 @@ interface ExportAndCopyResult {
  * `itemIds`), so the copy covers the full filtered set rather than just the
  * loaded page. With scope='loaded' the exported set is defined by `itemIds` —
  * the currently displayed/loaded range.
+ *
+ * The clipboard write is bound to the user's click gesture, NOT deferred until
+ * after the fetch resolves. Awaiting a multi-second export fetch and only then
+ * calling `navigator.clipboard.writeText` is unreliable on Chrome: if the
+ * document is no longer focused when the write finally runs, the promise can
+ * resolve (the button shows "Copied") while the system clipboard is never
+ * updated — nothing is actually pasteable. `navigator.clipboard.write()` with a
+ * promise-valued `ClipboardItem`, invoked synchronously in the same tick as the
+ * click, keeps the write tied to the gesture; the browser fulfils it once the
+ * fetch resolves. This MUST be called synchronously from the click handler
+ * (before any `await`) or the gesture binding is lost.
  */
-export async function exportAndCopySearchResults(
+export function exportAndCopySearchResults(
   options: ExportAndCopyOptions
 ): Promise<ExportAndCopyResult> {
-  const response = await SearchService.exportSearchResults({
+  const responsePromise = SearchService.exportSearchResults({
     type: options.type,
     filters: options.filters,
     itemIds: options.itemIds,
@@ -100,7 +125,26 @@ export async function exportAndCopySearchResults(
     matchedScores: options.matchedScores,
     includeComments: options.includeComments,
   });
-  const json = JSON.stringify(response, null, 2);
-  await navigator.clipboard.writeText(json);
-  return { total: response.total, truncated: response.truncated ?? false };
+
+  let writePromise: Promise<void>;
+  if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+    const blobPromise = responsePromise.then(
+      (response) =>
+        new Blob([JSON.stringify(response, null, 2)], { type: 'text/plain' })
+    );
+    writePromise = navigator.clipboard.write([
+      new ClipboardItem({ 'text/plain': blobPromise }),
+    ]);
+  } else {
+    // Older browsers without ClipboardItem: fall back to the deferred writeText
+    // (which carries the focus caveat above, but is the best available there).
+    writePromise = responsePromise.then((response) =>
+      writeToClipboard(JSON.stringify(response, null, 2))
+    );
+  }
+
+  return Promise.all([responsePromise, writePromise]).then(([response]) => ({
+    total: response.total,
+    truncated: response.truncated ?? false,
+  }));
 }
