@@ -263,10 +263,11 @@ const defaultComponents: Components = {
       // Task lists: flush to content edge so the row itself can be the drag handle
       return <ul className="list-none pl-0 mb-4 space-y-1 text-gray-700">{children}</ul>;
     }
-    return <ul className="list-disc list-inside mb-4 space-y-1 text-gray-700">{children}</ul>;
+    // list-outside + padding: 折り返し行やネストしたリストがマーカー位置に食い込まない（GitHub同等）
+    return <ul className="list-disc list-outside pl-6 mb-4 space-y-1 text-gray-700">{children}</ul>;
   },
-  ol: ({ children }) => <ol className="list-decimal list-inside mb-4 space-y-1 text-gray-700">{children}</ol>,
-  li: ({ children }) => <li className="ml-4">{children}</li>,
+  ol: ({ children }) => <ol className="list-decimal list-outside pl-6 mb-4 space-y-1 text-gray-700">{children}</ol>,
+  li: ({ children }) => <li>{children}</li>,
 
   // Links
   a: ({ href, children }) => {
@@ -540,7 +541,7 @@ export function MarkdownRenderer({
             </InteractiveTodoItem>
           );
         }
-        return <li className="ml-4">{children}</li>;
+        return <li>{children}</li>;
       };
     }
     if (components) Object.assign(result, components);
@@ -592,6 +593,21 @@ export function extractFirstLine(markdown: string, maxLength?: number): string {
 }
 
 /**
+ * Extract a multi-line preview from markdown content
+ * 改行を保持したまま先頭からmaxLength文字を切り出す（引用や複数段落がブロック構造のままパースされる）
+ * @param markdown Markdown content
+ * @param maxLength Maximum length for truncation
+ * @returns Truncated markdown preserving line structure
+ */
+export function extractPreview(markdown: string, maxLength: number): string {
+  const trimmed = markdown.trim();
+  if (trimmed.length <= maxLength) {
+    return trimmed;
+  }
+  return trimmed.slice(0, maxLength).trimEnd() + '...';
+}
+
+/**
  * Inline markdown renderer for list/card previews
  * Renders markdown inline without block-level margins
  * @param props Component props with content string
@@ -619,7 +635,7 @@ export function InlineMarkdownRenderer({
         />
       );
     },
-    p: ({ children }) => <span className="text-gray-900">{children}</span>,
+    p: ({ children }) => <span className="block text-gray-900">{children}</span>,
     h1: ({ children }) => <strong className="text-base font-semibold text-gray-900">{children}</strong>,
     h2: ({ children }) => <strong className="text-base font-semibold text-gray-900">{children}</strong>,
     h3: ({ children }) => <strong className="text-sm font-semibold text-gray-900">{children}</strong>,
@@ -663,7 +679,9 @@ export function InlineMarkdownRenderer({
     ul: ({ children }) => <span>{children}</span>,
     ol: ({ children }) => <span>{children}</span>,
     li: ({ children }) => <span className="mr-2">{children}</span>,
-    blockquote: ({ children }) => <span className="italic text-gray-600">{children}</span>,
+    blockquote: ({ children }) => (
+      <span className="block border-l-2 border-gray-300 pl-2 text-gray-600">{children}</span>
+    ),
     // Show placeholder for code blocks (including Mermaid diagrams)
     pre: () => <span className="text-gray-500 text-xs">[code]</span>,
     hr: () => null,
