@@ -199,6 +199,11 @@ stateDiagram-v2
 - **役割**: ブラウザ拡張（Chrome）や iOS Safari Share Extension から保存した Web 記事のアーカイブ。
 - **主要データ**: `issues.type = article`、`title` 必須、`meta` に `originalUrl`（必須）、`siteName`、`archivedAt` を JSON で保持。本文は Readability で抽出した Markdown。
 - **機能要件**: 保存（`POST /api/articles`）、一覧・詳細・削除、コメント・ラベル・プロジェクト・リンクの付与。
+- **ハイライトとコメント**（Web / iOS）:
+  - 記事本文の任意のテキスト範囲をハイライトできる（色はアプリのグリーン系）。アンカーは W3C TextQuoteSelector（選択テキスト + 前後の文脈）で、記事本文が不変スナップショットのため引用のみで復元する。
+  - ハイライトを選択すると sheet からコメント追加 / 削除 / コピーができる。ハイライト削除時は紐づくコメントも削除する。
+  - コメントは 1 ハイライトに複数付けられ、Task / Memo と同じ UX（追加・編集・削除・コピー、三点リーダー）。表示はハイライト末尾のコメントアイコン（簡易確認）と、記事末尾のタイムライン（引用 + コメント）の 2 通り。
+  - データモデルは `highlights` テーブル + `comments.highlight_id`（`docs/er-diagram.md`）。API は `/api/articles/{id}/highlights` 配下（契約は `openapi.yaml`）。
 
 ### 4.11 検索（keyword / semantic）
 

@@ -23,6 +23,11 @@ interface EditableContentProps {
    * (used by ItemDetail to mirror LinkSection's modal-open behavior).
    */
   onIssueLinkClick?: (id: number, type: IssueType) => void;
+  /**
+   * Ref to the rendered (view-mode) body container. Used by the article
+   * highlight layer to walk the DOM and anchor highlights via TextQuoteSelector.
+   */
+  contentRef?: React.Ref<HTMLDivElement>;
 }
 
 export default function EditableContent({
@@ -35,6 +40,7 @@ export default function EditableContent({
   showTitleEdit = false,
   enableInteractiveTodos = false,
   onIssueLinkClick,
+  contentRef,
 }: EditableContentProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editingContent, setEditingContent] = useState(content);
@@ -286,7 +292,7 @@ export default function EditableContent({
           </div>
         </div>
       ) : (
-        <div className="prose prose-sm max-w-none mt-1 break-words">
+        <div ref={contentRef} className="prose prose-sm max-w-none mt-1 break-words">
           <MarkdownRenderer
             content={enableInteractiveTodos ? displayContent : content}
             interactiveTodos={

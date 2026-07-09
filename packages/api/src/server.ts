@@ -205,6 +205,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
         { name: 'URL Links', description: 'External URL link management endpoints' },
         { name: 'Projects', description: 'Project management endpoints' },
         { name: 'Comments', description: 'Comment management endpoints' },
+        { name: 'Highlights', description: 'Article highlight and highlight-comment endpoints' },
         { name: 'Attachments', description: 'Image attachment endpoints' },
         { name: 'ActivityLog', description: 'Activity log endpoints' },
         { name: 'Sync', description: 'Offline sync endpoints (delta pull + outbox push)' },

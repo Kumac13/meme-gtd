@@ -30,6 +30,8 @@ type EventType =
   | 'comment.created'
   | 'comment.updated'
   | 'comment.deleted'
+  | 'highlight.created'
+  | 'highlight.deleted'
   | 'search.exported';
 
 export interface ActivityLogEntry {

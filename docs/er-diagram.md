@@ -59,7 +59,22 @@ erDiagram
         TEXT     uuid UK "sync identity"
         INTEGER  server_seq "sync cursor"
         INTEGER  issue_id FK
+        INTEGER  highlight_id FK "set for article highlight comments (016)"
         TEXT     body_md
+        TEXT     created_at
+        TEXT     updated_at
+        INTEGER  is_deleted
+    }
+
+    highlights {
+        INTEGER  id PK
+        TEXT     uuid UK "sync identity"
+        INTEGER  server_seq "sync cursor"
+        INTEGER  issue_id FK "article"
+        TEXT     exact "TextQuoteSelector.exact"
+        TEXT     prefix "context before"
+        TEXT     suffix "context after"
+        TEXT     color "green"
         TEXT     created_at
         TEXT     updated_at
         INTEGER  is_deleted
@@ -173,6 +188,8 @@ erDiagram
     issues            ||--o{ issue_labels      : "tagged with"
     labels            ||--o{ issue_labels      : "applied to"
     issues            ||--o{ comments          : "has"
+    issues            ||--o{ highlights        : "highlighted in (article)"
+    highlights        ||--o{ comments          : "annotated by (highlight_id)"
     comments          ||--o{ comment_revisions : "revised by"
     issues            ||--o{ links             : "source of"
     issues            ||--o{ links             : "target of"
@@ -211,6 +228,13 @@ erDiagram
 | 新形式（現行。新規コードはこちら） | `scheduled_start`, `scheduled_end`, `is_all_day`, `actual_start`, `actual_end`, `notify_before_minutes` |
 | 旧形式（非推奨。後方互換のため残存） | `scheduled_on`, `end_date`, `start_time`, `end_time`, `duration` |
 
+### highlights（migration 015、記事ハイライト）
+
+- 記事本文（`issues.type = article`）へのハイライト。アンカーは W3C TextQuoteSelector（`exact` = 選択テキスト、`prefix`/`suffix` = 前後の文脈）。記事本文は不変スナップショットのため引用のみで頑健にアンカリングでき、文字オフセットは持たない。`exact` は Copy と記事末コメントタイムラインの引用にも使う
+- `color`: 現状 `green` 固定
+- コメントは専用テーブルを作らず `comments.highlight_id`（migration 016）で紐づける。1ハイライトに複数コメント可。ハイライト削除時はサービス層（`HighlightService.remove`）が紐づくコメントも論理削除する（sync tombstone を is_deleted で伝播させるため hard cascade にしない）
+- 同期基盤: `uuid` / `server_seq` と `highlights_sync_ai` / `highlights_sync_au` トリガ（014 の issues/comments と同型）。comments 側は 017 で `comments_sync_au` を作り直し `highlight_id` を打刻列に追加
+
 ### links
 
 - `link_type`: `parent` / `child` / `relates` / `derived_from`
@@ -235,6 +259,7 @@ erDiagram
   - Label: `label.created`, `label.deleted`, `label.assigned`, `label.removed`
   - Link: `link.created`, `link.deleted`
   - Comment: `comment.created`, `comment.updated`, `comment.deleted`
+  - Highlight: `highlight.created`, `highlight.deleted`（payload に `highlight_id` / `highlight_exact` / `issue_id`）
   - Search: `search.exported`（`POST /api/search/export`）
 
 ### issue_embeddings（セマンティック検索）

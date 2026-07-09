@@ -161,6 +161,17 @@ export {
   type ListArticleFilters
 } from './articleRepository.js';
 
+// Highlight repository exports
+export {
+  createHighlight,
+  getHighlight,
+  listHighlights,
+  deleteHighlight,
+  addHighlightComment,
+  listHighlightComments,
+  type CreateHighlightInput
+} from './highlightRepository.js';
+
 // Embedding repository exports
 export {
   upsertEmbedding,

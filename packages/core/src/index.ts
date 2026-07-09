@@ -44,6 +44,13 @@ import {
   listArticles,
   countArticles,
   deleteArticle,
+  // Highlight functions
+  createHighlight,
+  getHighlight,
+  listHighlights,
+  deleteHighlight,
+  addHighlightComment,
+  listHighlightComments,
   // Label functions
   listAllLabels,
   getLabel,
@@ -702,6 +709,124 @@ export class ArticleService {
       this.logger.logArticleDeleted(id);
       return deleteArticle(this.db, id);
     })();
+  }
+}
+
+export interface HighlightServiceOptions {
+  config?: MgtdConfig;
+  db?: Database.Database;
+  sourceType?: SourceType;
+}
+
+/**
+ * Article highlights and their comments.
+ *
+ * Highlights attach to an article (issues.type = 'article'); comments reuse the
+ * shared comments table (issue_id = article, highlight_id = highlight), so they
+ * inherit revision history, #id mention rewriting, activity log and sync. The
+ * comment CRUD mirrors MemoService/TaskService intentionally (same duplicated
+ * pattern used across the repositories).
+ */
+export class HighlightService {
+  private readonly db: Database.Database;
+  private readonly logger: ActivityLogger;
+  private readonly linkService: LinkService;
+
+  constructor(private readonly options: HighlightServiceOptions) {
+    if (options.db) {
+      this.db = options.db;
+    } else if (options.config) {
+      this.db = ensureDatabase(options.config);
+    } else {
+      throw new Error('HighlightService requires either db or config option');
+    }
+    this.logger = new ActivityLogger(this.db, options.sourceType ?? 'api');
+    this.linkService = new LinkService({ db: this.db, sourceType: options.sourceType });
+  }
+
+  public create(
+    articleId: number,
+    input: { exact: string; prefix?: string; suffix?: string; color?: string }
+  ) {
+    return this.db.transaction(() => {
+      // Guard: highlights only attach to articles. Throws on wrong type / not found.
+      getArticle(this.db, articleId);
+      const highlight = createHighlight(this.db, { issueId: articleId, ...input });
+      this.logger.logHighlightCreated(highlight.id, articleId, highlight.exact);
+      return highlight;
+    })();
+  }
+
+  public list(articleId: number) {
+    return listHighlights(this.db, articleId);
+  }
+
+  public remove(highlightId: number) {
+    return this.db.transaction(() => {
+      const highlight = getHighlight(this.db, highlightId); // throws if not found
+      // Requirement: removing a highlight removes its comments too. Soft-delete
+      // through the service (not a hard FK cascade) so each deletion is logged
+      // and propagates as a sync tombstone via is_deleted.
+      for (const comment of listHighlightComments(this.db, highlightId)) {
+        this.logger.logCommentDeleted(comment.id, comment.issueId);
+        deleteComment(this.db, comment.id);
+      }
+      this.logger.logHighlightDeleted(highlightId, highlight.issueId, highlight.exact);
+      return deleteHighlight(this.db, highlightId);
+    })();
+  }
+
+  public addComment(articleId: number, highlightId: number, bodyMd: string) {
+    return this.db.transaction(() => {
+      const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, bodyMd, articleId);
+      const comment = addHighlightComment(this.db, articleId, highlightId, rewritten);
+      this.logger.logCommentCreated(comment.id, articleId, rewritten);
+      for (const targetId of mentionedIssueIds) {
+        if (targetId === articleId) continue;
+        this.linkService.createOrIgnore(articleId, targetId, 'relates');
+      }
+      return comment;
+    })();
+  }
+
+  public updateComment(commentId: number, bodyMd: string) {
+    return this.db.transaction(() => {
+      const row = this.db
+        .prepare('SELECT issue_id, body_md FROM comments WHERE id = ?')
+        .get(commentId) as { issue_id: number; body_md: string | null } | undefined;
+      const parentIssueId = row?.issue_id;
+      const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, bodyMd, parentIssueId);
+      const result = updateComment(this.db, commentId, rewritten);
+      if (row) {
+        if (!isInteractiveTodoChange(row.body_md, rewritten)) {
+          this.logger.logCommentUpdated(commentId, row.issue_id, {
+            old: row.body_md,
+            new: rewritten,
+          });
+        }
+        for (const targetId of mentionedIssueIds) {
+          if (targetId === row.issue_id) continue;
+          this.linkService.createOrIgnore(row.issue_id, targetId, 'relates');
+        }
+      }
+      return result;
+    })();
+  }
+
+  public deleteComment(commentId: number) {
+    return this.db.transaction(() => {
+      const row = this.db
+        .prepare('SELECT issue_id FROM comments WHERE id = ?')
+        .get(commentId) as { issue_id: number } | undefined;
+      if (row) {
+        this.logger.logCommentDeleted(commentId, row.issue_id);
+      }
+      return deleteComment(this.db, commentId);
+    })();
+  }
+
+  public listComments(highlightId: number) {
+    return listHighlightComments(this.db, highlightId);
   }
 }
 

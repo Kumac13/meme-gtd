@@ -457,6 +457,38 @@ export class ActivityLogger {
   }
 
   // ============================================================
+  // Highlight Events
+  // ============================================================
+
+  logHighlightCreated(highlightId: number, articleId: number, exact: string): void {
+    createActivityLog(this.db, {
+      eventType: 'highlight.created',
+      sourceType: this.sourceType,
+      payload: {
+        highlight_id: highlightId,
+        highlight_exact: exact,
+        issue_id: articleId,
+        issue_type: 'article',
+        issue_title: getIssueTitle(this.db, articleId),
+      },
+    });
+  }
+
+  logHighlightDeleted(highlightId: number, articleId: number, exact: string): void {
+    createActivityLog(this.db, {
+      eventType: 'highlight.deleted',
+      sourceType: this.sourceType,
+      payload: {
+        highlight_id: highlightId,
+        highlight_exact: exact,
+        issue_id: articleId,
+        issue_type: 'article',
+        issue_title: getIssueTitle(this.db, articleId),
+      },
+    });
+  }
+
+  // ============================================================
   // Search Events
   // ============================================================
 

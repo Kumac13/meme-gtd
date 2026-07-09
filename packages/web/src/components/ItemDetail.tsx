@@ -7,6 +7,7 @@ import { CommentsService } from '../api/services/CommentsService';
 import { ActivityLogService } from '../api/services/ActivityLogService';
 import EditableContent from './EditableContent';
 import CommentSection, { type Comment } from './CommentSection';
+import ArticleHighlights from './ArticleHighlights';
 import LinkSection from './LinkSection';
 import { ProjectsSection } from './ProjectsSection';
 import { LabelsSection } from './LabelsSection';
@@ -108,6 +109,9 @@ export default function ItemDetail({
   // Store callback in ref to avoid dependency issues
   const onCommentsLoadedRef = useRef(onCommentsLoaded);
   onCommentsLoadedRef.current = onCommentsLoaded;
+
+  // Rendered article body container, used by the highlight layer to anchor highlights.
+  const bodyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Skip fetching comments for articles (API not implemented)
@@ -266,7 +270,18 @@ export default function ItemDetail({
             showTitleEdit={itemType === 'task'}
             enableInteractiveTodos={itemType === 'task'}
             onIssueLinkClick={onItemClick}
+            contentRef={itemType === 'article' ? bodyRef : undefined}
           />
+
+          {/* Article highlights: selection -> highlight, click -> comment sheet, timeline */}
+          {itemType === 'article' && (
+            <ArticleHighlights
+              articleId={item.id}
+              contentRef={bodyRef}
+              onIssueLinkClick={onItemClick}
+              onLinksRefresh={bumpLinks}
+            />
+          )}
 
           {/* Links section */}
           <LinkSection

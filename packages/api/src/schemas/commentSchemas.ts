@@ -23,7 +23,8 @@ export type UpdateCommentRequest = z.infer<typeof UpdateCommentRequestSchema>;
  */
 export const CommentSchema = z.object({
   id: z.number().int().positive().describe('Unique comment ID'),
-  issueId: z.number().int().positive().describe('ID of the parent issue (memo or task)'),
+  issueId: z.number().int().positive().describe('ID of the parent issue (memo, task, or article)'),
+  highlightId: z.number().int().positive().optional().describe('ID of the article highlight this comment annotates (omitted for memo/task comments)'),
   bodyMd: z.string().describe('Comment content in Markdown format'),
   createdAt: z.string().datetime().describe('Creation timestamp'),
   updatedAt: z.string().datetime().describe('Last update timestamp'),

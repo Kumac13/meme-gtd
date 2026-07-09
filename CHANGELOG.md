@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.48.0 - 2026-07-09
+
+### New Features
+
+- **記事（Article）本文にハイライトとコメントを追加できるように（Web / バックエンド）**: 保存した Web 記事の本文をハイライトし、ハイライトごとにコメントを残せるようにした。もともと Instapaper を模して追加した Articles が、読んだ記事に印と考えを残せる場になる。今回はバックエンドと Web UI が対象（iOS は次フェーズ）。
+  - **アンカリングは W3C TextQuoteSelector**（選択テキスト `exact` + 前後文脈 `prefix`/`suffix`）。記事本文は保存後に変わらないスナップショットなので、引用のみで頑健にアンカリングでき、文字オフセットや正規化テキストの TS/Swift パリティ関数を持たずに済む（Hypothesis の設計思想に沿う）。
+  - **Web の描画は CSS Custom Highlight API**。react-markdown の DOM を改変せず任意範囲を緑（既存アクセントカラー）で着色する。テキスト選択で「Highlight」ボタン → 作成、ハイライトをクリックで sheet（Add Comment / Copy / Remove）、ハイライト末尾のアイコンでコメント簡易表示、記事末尾に引用+コメントのタイムライン。コメントは Task/Memo と同じ三点リーダー UX（編集・削除・コピー）。
+  - **コメントは既存 comments テーブルを流用**（`highlight_id` を追加）。1 ハイライトに複数コメント可。編集履歴・#id メンション・アクティビティログ・同期基盤をそのまま継承する。ハイライト削除時は紐づくコメントも論理削除する。
+  - **API**: `/api/articles/{id}/highlights` 配下に一覧・作成・削除、`/{highlightId}/comments` 配下にコメント CRUD を追加。`highlight.created` / `highlight.deleted` アクティビティイベントを追加。
+  - **スキーマ**: `highlights` テーブル（migration 015、sync 用 uuid/server_seq とトリガ込み）、`comments.highlight_id`（016）、`comments_sync_au` トリガの再作成（017）。
+
+### Tests
+
+- API 統合テスト（`highlights.test.ts`）: ハイライト CRUD、非記事への付与拒否（404）、ハイライトコメントの CRUD と複数コメント、ハイライト削除時のコメント連鎖論理削除、アクティビティログ記録を検証。
+- DB リポジトリテスト（`highlightRepository.test.ts`）: sync 打刻、論理削除の一覧除外、コメントの highlightId 付与と commentCount 反映を検証。
+- Web ユニットテスト（`highlightAnchor.test.ts`）: TextQuoteSelector の computeQuote / locateQuote 往復、ブロック跨ぎ、同一テキスト重複の prefix/suffix 曖昧性解消、空白正規化フォールバックを検証。
+
 ## 0.47.1 - 2026-07-07
 
 ### Bug Fixes

@@ -58,11 +58,11 @@ GTD (Getting Things Done) ベースのローカルファースト個人タスク
 
 | パッケージ | 責務 | 主要ファイル |
 |-----------|------|-------------|
-| `packages/shared` | ドメイン型の唯一の定義元（`Memo`/`Task`/`Article`/`Comment`/`Label`/`Link`/`Project`/ActivityLog型）。依存なし | `src/index.ts`, `src/types/` |
+| `packages/shared` | ドメイン型の唯一の定義元（`Memo`/`Task`/`Article`/`Comment`/`Highlight`/`Label`/`Link`/`Project`/ActivityLog型）。依存なし | `src/index.ts`, `src/types/` |
 | `packages/config` | 設定解決（`MGTD_CONFIG_PATH`, `DB_PATH`, `~/.config/mgtd/context.json`）。Zodで検証 | `src/index.ts` |
 | `packages/logger` | pinoロガーのラッパー | `src/index.ts` |
 | `packages/db` | SQLiteリポジトリ層（`src/*Repository.ts`）とマイグレーション実行 | `src/*Repository.ts`, `src/migrate.ts` |
-| `packages/core` | ドメインサービス（`MemoService`/`TaskService`/`LabelService`/`ArticleService` は `src/index.ts` 内、`LinkService`/`ProjectService`/`UrlLinkService` は個別ファイル）。全mutationで `ActivityLogger` によるイベント記録。embedding/ベクトル検索 | `src/index.ts`, `src/activity-log/`, `src/embedding/` |
+| `packages/core` | ドメインサービス（`MemoService`/`TaskService`/`LabelService`/`ArticleService`/`HighlightService` は `src/index.ts` 内、`LinkService`/`ProjectService`/`UrlLinkService` は個別ファイル）。全mutationで `ActivityLogger` によるイベント記録。embedding/ベクトル検索 | `src/index.ts`, `src/activity-log/`, `src/embedding/` |
 | `packages/api` | Fastify REST APIサーバー。Zodスキーマでバリデーション、OpenAPI specを自動生成。`packages/web/dist` をSPAとして配信 | `src/routes/`, `src/handlers/`, `src/schemas/`, `src/server.ts` |
 | `packages/cli` | oclif製CLI `mgtd`。**APIサーバーを経由せず core のサービスを直接呼ぶ** | `src/commands/`, `src/index.ts` |
 | `packages/web` | React 19 SPA。APIクライアントは openapi.yaml から自動生成（`src/api/` は生成物） | `src/App.tsx`, `src/pages/`, `src/components/` |
@@ -128,6 +128,7 @@ API契約は次の4段階で伝播する。**上流を変えたら下流を全�
 | URL Links | `/api/issues/{id}/url-links`, `/api/url-links/{id}` |
 | Projects | `/api/projects`, `/api/projects/{id}`, `/{id}/items`, `/{id}/items/{issueId}`, `/api/issues/{id}/projects` |
 | Articles | `/api/articles/`, `/api/articles/{id}` |
+| Highlights | `/api/articles/{id}/highlights`, `/{highlightId}`, `/{highlightId}/comments`, `/{highlightId}/comments/{commentId}`（記事本文へのハイライトとハイライトコメント） |
 | Attachments | `/api/attachments`（multipart画像アップロード）, `/api/attachments/{filename}`（配信） |
 | Activity Log | `/api/activity-log`, `/issues/{issueId}`, `/projects/{projectId}`, `/completed-tasks` |
 | Search | `/api/search/keyword`, `/api/search/semantic`, `/api/search/export` |

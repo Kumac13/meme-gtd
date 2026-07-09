@@ -36,6 +36,15 @@ mark[data-search-highlight] {
   font-weight: 600;
 }
 
+/* Article highlights (CSS Custom Highlight API). Green tint keeps body text
+   readable; the pending/selection preview is slightly stronger. */
+::highlight(article-highlight) {
+  background-color: rgba(45, 164, 78, 0.28); /* github-green-500 @ 28% */
+}
+::highlight(article-highlight-active) {
+  background-color: rgba(45, 164, 78, 0.45);
+}
+
 /* Prevent iOS auto-zoom on input focus */
 @media screen and (max-width: 768px) {
   input,

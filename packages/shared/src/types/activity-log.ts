@@ -55,6 +55,12 @@ export const ARTICLE_EVENT_TYPES = [
 ] as const;
 export type ArticleEventType = (typeof ARTICLE_EVENT_TYPES)[number];
 
+export const HIGHLIGHT_EVENT_TYPES = [
+  'highlight.created',
+  'highlight.deleted',
+] as const;
+export type HighlightEventType = (typeof HIGHLIGHT_EVENT_TYPES)[number];
+
 export const SEARCH_EVENT_TYPES = ['search.exported'] as const;
 
 // All event types - single source of truth
@@ -65,6 +71,7 @@ export const ALL_EVENT_TYPES = [
   ...LINK_EVENT_TYPES,
   ...COMMENT_EVENT_TYPES,
   ...ARTICLE_EVENT_TYPES,
+  ...HIGHLIGHT_EVENT_TYPES,
   ...SEARCH_EVENT_TYPES,
 ] as const;
 export type EventType = (typeof ALL_EVENT_TYPES)[number];
@@ -91,6 +98,8 @@ export interface BasePayload {
   label_name?: string;
   link_id?: number;
   comment_id?: number;
+  highlight_id?: number;
+  highlight_exact?: string;
 }
 
 // Activity log entry

@@ -1077,7 +1077,12 @@ paths:
                       type: integer
                       exclusiveMinimum: true
                       minimum: 0
-                      description: ID of the parent issue (memo or task)
+                      description: ID of the parent issue (memo, task, or article)
+                    highlightId:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: ID of the article highlight this comment annotates (omitted for memo/task comments)
                     bodyMd:
                       type: string
                       description: Comment content in Markdown format
@@ -1164,7 +1169,12 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
-                    description: ID of the parent issue (memo or task)
+                    description: ID of the parent issue (memo, task, or article)
+                  highlightId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: ID of the article highlight this comment annotates (omitted for memo/task comments)
                   bodyMd:
                     type: string
                     description: Comment content in Markdown format
@@ -1282,7 +1292,12 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
-                    description: ID of the parent issue (memo or task)
+                    description: ID of the parent issue (memo, task, or article)
+                  highlightId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: ID of the article highlight this comment annotates (omitted for memo/task comments)
                   bodyMd:
                     type: string
                     description: Comment content in Markdown format
@@ -3466,7 +3481,12 @@ paths:
                       type: integer
                       exclusiveMinimum: true
                       minimum: 0
-                      description: ID of the parent issue (memo or task)
+                      description: ID of the parent issue (memo, task, or article)
+                    highlightId:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: ID of the article highlight this comment annotates (omitted for memo/task comments)
                     bodyMd:
                       type: string
                       description: Comment content in Markdown format
@@ -3553,7 +3573,12 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
-                    description: ID of the parent issue (memo or task)
+                    description: ID of the parent issue (memo, task, or article)
+                  highlightId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: ID of the article highlight this comment annotates (omitted for memo/task comments)
                   bodyMd:
                     type: string
                     description: Comment content in Markdown format
@@ -3671,7 +3696,12 @@ paths:
                     type: integer
                     exclusiveMinimum: true
                     minimum: 0
-                    description: ID of the parent issue (memo or task)
+                    description: ID of the parent issue (memo, task, or article)
+                  highlightId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: ID of the article highlight this comment annotates (omitted for memo/task comments)
                   bodyMd:
                     type: string
                     description: Comment content in Markdown format
@@ -6605,6 +6635,8 @@ paths:
               - comment.created
               - comment.updated
               - comment.deleted
+              - highlight.created
+              - highlight.deleted
               - search.exported
           in: query
           name: eventType
@@ -6706,6 +6738,8 @@ paths:
                         - comment.created
                         - comment.updated
                         - comment.deleted
+                        - highlight.created
+                        - highlight.deleted
                         - search.exported
                       description: Event type (e.g., task.created, task.status_changed)
                     occurredAt:
@@ -6870,6 +6904,8 @@ paths:
                         - comment.created
                         - comment.updated
                         - comment.deleted
+                        - highlight.created
+                        - highlight.deleted
                         - search.exported
                       description: Event type (e.g., task.created, task.status_changed)
                     occurredAt:
@@ -7034,6 +7070,8 @@ paths:
                         - comment.created
                         - comment.updated
                         - comment.deleted
+                        - highlight.created
+                        - highlight.deleted
                         - search.exported
                       description: Event type (e.g., task.created, task.status_changed)
                     occurredAt:
@@ -8053,6 +8091,626 @@ paths:
                   - error
                   - message
                 additionalProperties: false
+  /api/articles/{id}/highlights:
+    get:
+      operationId: listArticleHighlights
+      summary: List article highlights
+      tags:
+        - Highlights
+      description: List all highlights on an article
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Article ID
+      responses:
+        "200":
+          description: Array of highlights for an article
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Unique highlight ID
+                    issueId:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: ID of the article this highlight belongs to
+                    exact:
+                      type: string
+                      description: The highlighted text
+                    prefix:
+                      type: string
+                      description: Context before the quote
+                    suffix:
+                      type: string
+                      description: Context after the quote
+                    color:
+                      type: string
+                      description: Highlight color key
+                    createdAt:
+                      type: string
+                      format: date-time
+                      description: Creation timestamp
+                    updatedAt:
+                      type: string
+                      format: date-time
+                      description: Last update timestamp
+                    commentCount:
+                      type: integer
+                      minimum: 0
+                      description: Number of comments on this highlight
+                  required:
+                    - id
+                    - issueId
+                    - exact
+                    - color
+                    - createdAt
+                    - updatedAt
+                  additionalProperties: false
+                description: Array of highlights for an article
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    post:
+      operationId: createArticleHighlight
+      summary: Create article highlight
+      tags:
+        - Highlights
+      description: Create a highlight on an article using a TextQuoteSelector anchor
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                exact:
+                  type: string
+                  minLength: 1
+                  description: The highlighted text (TextQuoteSelector.exact)
+                prefix:
+                  type: string
+                  description: Text immediately before the quote (disambiguates repeats)
+                suffix:
+                  type: string
+                  description: Text immediately after the quote
+                color:
+                  type: string
+                  description: Highlight color key (defaults to "green")
+              required:
+                - exact
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Article ID
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique highlight ID
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: ID of the article this highlight belongs to
+                  exact:
+                    type: string
+                    description: The highlighted text
+                  prefix:
+                    type: string
+                    description: Context before the quote
+                  suffix:
+                    type: string
+                    description: Context after the quote
+                  color:
+                    type: string
+                    description: Highlight color key
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                  commentCount:
+                    type: integer
+                    minimum: 0
+                    description: Number of comments on this highlight
+                required:
+                  - id
+                  - issueId
+                  - exact
+                  - color
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/articles/{id}/highlights/{highlightId}:
+    delete:
+      operationId: deleteArticleHighlight
+      summary: Delete article highlight
+      tags:
+        - Highlights
+      description: Delete a highlight (soft delete). Its comments are soft-deleted too.
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Article ID
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: highlightId
+          required: true
+          description: Highlight ID
+      responses:
+        "204":
+          description: Default Response
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/articles/{id}/highlights/{highlightId}/comments:
+    get:
+      operationId: listHighlightComments
+      summary: List highlight comments
+      tags:
+        - Highlights
+      description: List comments on a highlight
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Article ID
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: highlightId
+          required: true
+          description: Highlight ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Unique comment ID
+                    issueId:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: ID of the parent issue (memo, task, or article)
+                    highlightId:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: ID of the article highlight this comment annotates (omitted for memo/task comments)
+                    bodyMd:
+                      type: string
+                      description: Comment content in Markdown format
+                    createdAt:
+                      type: string
+                      format: date-time
+                      description: Creation timestamp
+                    updatedAt:
+                      type: string
+                      format: date-time
+                      description: Last update timestamp
+                  required:
+                    - id
+                    - issueId
+                    - bodyMd
+                    - createdAt
+                    - updatedAt
+                  additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    post:
+      operationId: createHighlightComment
+      summary: Create highlight comment
+      tags:
+        - Highlights
+      description: Add a comment to a highlight
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bodyMd:
+                  type: string
+                  minLength: 1
+                  description: Comment content in Markdown format
+              required:
+                - bodyMd
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Article ID
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: highlightId
+          required: true
+          description: Highlight ID
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique comment ID
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: ID of the parent issue (memo, task, or article)
+                  highlightId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: ID of the article highlight this comment annotates (omitted for memo/task comments)
+                  bodyMd:
+                    type: string
+                    description: Comment content in Markdown format
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - issueId
+                  - bodyMd
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/articles/{id}/highlights/{highlightId}/comments/{commentId}:
+    patch:
+      operationId: updateHighlightComment
+      summary: Update highlight comment
+      tags:
+        - Highlights
+      description: Update a comment on a highlight
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bodyMd:
+                  type: string
+                  minLength: 1
+                  description: Updated comment content in Markdown format
+              required:
+                - bodyMd
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Article ID
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: highlightId
+          required: true
+          description: Highlight ID
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: commentId
+          required: true
+          description: Comment ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique comment ID
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: ID of the parent issue (memo, task, or article)
+                  highlightId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: ID of the article highlight this comment annotates (omitted for memo/task comments)
+                  bodyMd:
+                    type: string
+                    description: Comment content in Markdown format
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - issueId
+                  - bodyMd
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    delete:
+      operationId: deleteHighlightComment
+      summary: Delete highlight comment
+      tags:
+        - Highlights
+      description: Delete a comment from a highlight
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Article ID
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: highlightId
+          required: true
+          description: Highlight ID
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: commentId
+          required: true
+          description: Comment ID
+      responses:
+        "204":
+          description: Default Response
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
   /api/search/keyword:
     get:
       operationId: keywordSearch
@@ -8906,6 +9564,8 @@ tags:
     description: Project management endpoints
   - name: Comments
     description: Comment management endpoints
+  - name: Highlights
+    description: Article highlight and highlight-comment endpoints
   - name: Attachments
     description: Image attachment endpoints
   - name: ActivityLog

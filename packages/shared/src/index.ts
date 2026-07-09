@@ -121,8 +121,39 @@ export interface Comment extends Timestamped {
   /** Sync cursor (migration 014). */
   serverSeq?: number;
   issueId: number;
+  /** Set when this comment annotates an article highlight (migration 016). NULL for memo/task comments. */
+  highlightId?: number;
   bodyMd: string;
   isDeleted: boolean;
+}
+
+/**
+ * A text highlight on an article body (migration 015).
+ *
+ * Anchored with a W3C TextQuoteSelector (exact quote + surrounding context).
+ * The article body is an immutable snapshot, so the quote alone is a robust
+ * anchor — no character offsets are stored. `exact` is also the text used for
+ * Copy and the bottom-of-article comment timeline quote.
+ */
+export interface Highlight extends Timestamped {
+  id: number;
+  /** Sync identity (migration 015). Always set by repositories. */
+  uuid?: string;
+  /** Sync cursor (migration 015). */
+  serverSeq?: number;
+  /** The article (issues.id) this highlight belongs to. */
+  issueId: number;
+  /** TextQuoteSelector.exact — the highlighted text. */
+  exact: string;
+  /** TextQuoteSelector.prefix — context immediately before the quote (disambiguates repeats). */
+  prefix?: string;
+  /** TextQuoteSelector.suffix — context immediately after the quote. */
+  suffix?: string;
+  /** Highlight color key (currently always 'green'). */
+  color: string;
+  isDeleted: boolean;
+  /** Number of non-deleted comments attached to this highlight. */
+  commentCount?: number;
 }
 
 export interface Label {
@@ -172,6 +203,7 @@ export type {
   LinkEventType,
   CommentEventType,
   ArticleEventType,
+  HighlightEventType,
   EventType,
   ProjectSnapshot,
   LabelSnapshot,
@@ -191,6 +223,7 @@ export {
   LINK_EVENT_TYPES,
   COMMENT_EVENT_TYPES,
   ARTICLE_EVENT_TYPES,
+  HIGHLIGHT_EVENT_TYPES,
   SEARCH_EVENT_TYPES,
   ALL_EVENT_TYPES,
 } from './types/activity-log.js';

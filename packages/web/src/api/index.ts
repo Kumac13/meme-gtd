@@ -11,6 +11,7 @@ export { ActivityLogService } from './services/ActivityLogService';
 export { ArticlesService } from './services/ArticlesService';
 export { AttachmentsService } from './services/AttachmentsService';
 export { CommentsService } from './services/CommentsService';
+export { HighlightsService } from './services/HighlightsService';
 export { LabelsService } from './services/LabelsService';
 export { LinksService } from './services/LinksService';
 export { MemosService } from './services/MemosService';

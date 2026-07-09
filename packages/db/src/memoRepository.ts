@@ -155,6 +155,7 @@ const commentRowToComment = (row: any): Comment => ({
   uuid: row.uuid,
   serverSeq: row.server_seq,
   issueId: row.issue_id,
+  ...(row.highlight_id != null && { highlightId: row.highlight_id }),
   bodyMd: row.body_md,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
