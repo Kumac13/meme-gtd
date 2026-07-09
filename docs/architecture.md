@@ -104,6 +104,7 @@ API契約は次の4段階で伝播する。**上流を変えたら下流を全�
 | `Memo.swift` | `memoSchemas.ts` |
 | `Article.swift`, `../Shared/ArticleModels.swift` | `articleSchemas.ts` |
 | `Comment.swift` | `commentSchemas.ts` |
+| `Highlight.swift` | `highlightSchemas.ts` |
 | `Label.swift` | `labelSchemas.ts` |
 | `Link.swift`（IssueLink / UrlLink / LinkType） | `linkSchemas.ts`, `urlLinkSchemas.ts` |
 | `Project.swift` | `projectSchemas.ts` |
@@ -202,6 +203,7 @@ iOSのオフライン対応（Phase 2で導入）。iOS側はローカルDB + �
 - **embedding はオプトイン**: `mgtd embedding sync` 実行後のみセマンティック検索が機能する。
 - **Zodスキーマとsharedの型は意図的に別物**: sharedはドメイン型（純粋なinterface）、apiのZodはHTTP契約（バリデーションルール・ページネーション等を含む）。統合しないこと。
 - **自動 `#id` メンション**: 本文・コメント保存時、`#123` は core サービス層（`rewriteIssueMentions`）が `[#123](/<type>/123)` に書き換え、同時に `relates` リンクを作成する。コードブロック・インラインコード・既存リンク内・`\#id`（エスケープ）・存在しないid・自己参照は変換対象外。一度作られたリンクは本文編集で `#id` が消えても残る（GitHubと同じ流儀）。
+- **記事ハイライトは Server モードのオンライン専用（iOS）**: highlights は現状 iOS オフライン同期の change-feed / push に組み込んでいない。理由は、既存 iOS クライアントの `SyncEntity` デコーダが未知の entity 値（`highlight`）で pull 全体を失敗させるため、フィードに流すには iOS 側の同期・データ層・移行を揃える必要があるから。iOS は `RemoteHighlightDataSource`（`/api/articles/{id}/highlights` 直叩き）で Server モードのオンライン時のみ動作し、Standalone は `EmptyHighlightDataSource`（空応答・書き込みは英語エラー）。Web はハイライトの同期を必要としない（REST 直呼び）。highlights を change-feed に載せるオフライン同期対応は将来のフォローアップ（その際に iOS のデコーダ寛容化と GRDB ミラー・Outbox・MigrationService を同時に入れる）。Web の描画は CSS Custom Highlight API、iOS は文章ブロックを UITextView 化して `.backgroundColor` + `UIEditMenuInteraction` の "Highlight" で実現する（v1 はブロック内選択のみ・段落テキストのみ選択可）。
 - **インタラクティブMarkdownチェックボックス（Task限定）**: Taskの本文・コメント内の `- [ ]` / `- [x]` は表示画面のままトグルできる。書き換えはクライアント側完結（Web: `packages/web/src/utils/todoMarkdown.ts`、iOS: `ios/.../Utilities/TodoMarkdown.swift`）。トグル結果は既存の `PATCH /api/tasks/{id}` 等で全文置換保存される。**インタラクティブ操作は activity log を積まない** — core層の `isInteractiveTodoChange` が old/new bodyMd を比較してログ呼び出しを抑止する。Memo・Articleは対象外。
 
 ## テストと検証

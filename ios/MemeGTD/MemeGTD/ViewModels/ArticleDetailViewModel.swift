@@ -32,6 +32,13 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
     @Published var issueLinks: [IssueLink] = []
     @Published var urlLinks: [UrlLink] = []
 
+    // Highlights (Server mode online; empty in Standalone / offline)
+    @Published var highlights: [Highlight] = []
+    /// highlightId -> its comments, for the bottom timeline and inline popovers.
+    @Published var highlightComments: [Int: [Comment]] = [:]
+    /// The highlight whose action sheet is open, if any.
+    @Published var activeHighlightId: Int?
+
     var linkedPickerItems: [IssuePickerItem] {
         issueLinks.map {
             IssuePickerItem(
@@ -73,15 +80,101 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
             self.error = error.localizedDescription
         }
 
-        // Load projects, labels, links & activity in parallel
+        // Load projects, labels, links, activity & highlights in parallel
         async let projectsResult: () = loadProjects()
         async let labelsResult: () = loadAllLabels()
         async let linksResult: () = loadLinks()
         async let urlLinksResult: () = loadUrlLinks()
         async let activityResult: () = loadActivityLog()
-        _ = await (projectsResult, labelsResult, linksResult, urlLinksResult, activityResult)
+        async let highlightsResult: () = loadHighlights()
+        _ = await (projectsResult, labelsResult, linksResult, urlLinksResult, activityResult, highlightsResult)
 
         isLoading = false
+    }
+
+    // MARK: - Highlights
+
+    func loadHighlights() async {
+        do {
+            let list = try await dataSources.highlights.listHighlights(articleId: articleId)
+            var comments: [Int: [Comment]] = [:]
+            for highlight in list where (highlight.commentCount ?? 0) > 0 {
+                if let list = try? await dataSources.highlights.listHighlightComments(
+                    articleId: articleId,
+                    highlightId: highlight.id
+                ) {
+                    comments[highlight.id] = list
+                }
+            }
+            highlights = list
+            highlightComments = comments
+        } catch {
+            // Non-critical: Standalone returns empty, offline errors. Leave as-is.
+        }
+    }
+
+    func createHighlight(_ quote: QuoteSelector) async {
+        do {
+            let request = CreateHighlightRequest(exact: quote.exact, prefix: quote.prefix, suffix: quote.suffix)
+            _ = try await dataSources.highlights.createHighlight(articleId: articleId, request)
+            await loadHighlights()
+            HapticManager.notification(.success)
+        } catch {
+            self.error = error.localizedDescription
+            HapticManager.notification(.error)
+        }
+    }
+
+    func removeHighlight(_ highlightId: Int) async {
+        do {
+            try await dataSources.highlights.deleteHighlight(articleId: articleId, highlightId: highlightId)
+            if activeHighlightId == highlightId { activeHighlightId = nil }
+            await loadHighlights()
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func addHighlightComment(_ highlightId: Int, bodyMd: String) async {
+        do {
+            _ = try await dataSources.highlights.createHighlightComment(
+                articleId: articleId,
+                highlightId: highlightId,
+                CreateCommentRequest(bodyMd: bodyMd)
+            )
+            await loadHighlights()
+            HapticManager.notification(.success)
+        } catch {
+            self.error = error.localizedDescription
+            HapticManager.notification(.error)
+        }
+    }
+
+    func updateHighlightComment(_ highlightId: Int, commentId: Int, bodyMd: String) async {
+        do {
+            _ = try await dataSources.highlights.updateHighlightComment(
+                articleId: articleId,
+                highlightId: highlightId,
+                commentId: commentId,
+                UpdateCommentRequest(bodyMd: bodyMd)
+            )
+            await loadHighlights()
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func deleteHighlightComment(_ highlightId: Int, commentId: Int) async {
+        do {
+            try await dataSources.highlights.deleteHighlightComment(
+                articleId: articleId,
+                highlightId: highlightId,
+                commentId: commentId
+            )
+            await loadHighlights()
+        } catch {
+            self.error = error.localizedDescription
+        }
     }
 
     // MARK: - Fetch without UI update (for pull-to-refresh)

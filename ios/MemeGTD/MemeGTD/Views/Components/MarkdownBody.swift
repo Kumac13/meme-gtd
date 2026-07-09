@@ -11,6 +11,9 @@ struct MarkdownBody: View {
     let searchQuery: String?
     let onIssueTap: ((Int, String) -> Void)?
     let onTodoToggle: ((Int, Bool) -> Void)?
+    /// When set (article reader), `.text` paragraphs become selectable and
+    /// highlightable. Nil elsewhere (memo/task) leaves rendering unchanged.
+    let articleHighlight: ArticleHighlightContext?
 
     init(
         _ text: String,
@@ -18,7 +21,8 @@ struct MarkdownBody: View {
         color: Color = Color(.label).opacity(0.75),
         searchQuery: String? = nil,
         onIssueTap: ((Int, String) -> Void)? = nil,
-        onTodoToggle: ((Int, Bool) -> Void)? = nil
+        onTodoToggle: ((Int, Bool) -> Void)? = nil,
+        articleHighlight: ArticleHighlightContext? = nil
     ) {
         self.text = text
         self.fontSize = fontSize
@@ -26,6 +30,7 @@ struct MarkdownBody: View {
         self.searchQuery = searchQuery
         self.onIssueTap = onIssueTap
         self.onTodoToggle = onTodoToggle
+        self.articleHighlight = articleHighlight
     }
 
     private var blocks: [MarkdownBlock] {
@@ -68,7 +73,16 @@ struct MarkdownBody: View {
             imageView(alt: alt, url: url)
         case .text(let content):
             if !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                inlineMarkdownText(content)
+                if let articleHighlight {
+                    SelectableMarkdownText(
+                        content: content,
+                        fontSize: fontSize,
+                        textColor: UIColor(color),
+                        context: articleHighlight
+                    )
+                } else {
+                    inlineMarkdownText(content)
+                }
             }
         }
     }
@@ -275,7 +289,7 @@ struct MarkdownBody: View {
 
 // MARK: - Internal issue URL parser
 
-private func parseInternalIssueURL(_ url: URL) -> (id: Int, type: String)? {
+func parseInternalIssueURL(_ url: URL) -> (id: Int, type: String)? {
     // Accept three forms:
     //   1. relative path-only (`/tasks/63`) from raw AttributedString
     //   2. our promoted custom scheme (`memegtd-internal://internal/tasks/63`)
@@ -531,7 +545,9 @@ private struct HighlightedCodeBlockView: View {
         .cornerRadius(8)
         .task(id: code) {
             guard !language.isEmpty else { return }
-            let result = try? await Highlight()
+            // Qualify to the HighlightSwift type; the app's `Highlight` model
+            // (article highlights) otherwise shadows it in this module.
+            let result = try? await HighlightSwift.Highlight()
                 .attributedText(code, language: resolvedLanguage, colors: .dark(.atomOne))
             highlightedCode = result
         }

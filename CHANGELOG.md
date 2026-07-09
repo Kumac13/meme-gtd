@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.49.0 - 2026-07-09
+
+### New Features
+
+- **記事ハイライトとコメントの iOS 対応（Server モード・オンライン）**: 0.48.0 で追加した記事ハイライト機能を iOS アプリでも使えるようにした。記事本文の段落を長押し選択すると iOS 標準の編集メニューに "Highlight" が追加され、ハイライトを作成できる（グリーン系の背景で描画）。ハイライトをタップすると sheet で Add Comment / Copy / Remove、記事末尾に引用+コメントのタイムラインが並び、コメントは Task/Memo と同じ三点リーダー（Copy/Edit/Delete）で操作できる。
+  - **ネイティブハイブリッド描画**: `MarkdownBody` の段落（`.text`）ブロックだけを UITextView（`SelectableMarkdownText`）に置き換えて `UIEditMenuInteraction` の "Highlight" と `.backgroundColor` ハイライトを実現。画像・コード・Mermaid・見出し・リストは従来の SwiftUI 描画を維持する。アンカリングは Web と同じ TextQuoteSelector（`HighlightAnchor` が Swift 実装）。
+  - **Server モードのオンライン専用**: iOS は `RemoteHighlightDataSource`（`/api/articles/{id}/highlights` 直叩き）で動作する。highlights を iOS オフライン同期の change-feed に載せると既存クライアントの pull が壊れるため、同期フィードには入れていない（設計理由: `docs/architecture.md`）。Standalone は空応答 + 英語エラーの安全実装。
+  - **v1 スコープ**: ハイライトの選択・作成は段落テキストのブロック内のみ（段落をまたぐ選択・見出し/リスト内の選択は対象外）。iOS のインライン・コメントアイコン（Web にはある）と、オフライン/Standalone のハイライト保存は将来のフォローアップ。
+
+### Tests
+
+- iOS ユニットテスト（`HighlightAnchorTests`）: TextQuoteSelector の computeQuote / locate 往復、同一テキスト重複の文脈による曖昧性解消、Web 由来（全文文脈）ハイライトのブロック内一意解決、Highlight / Comment（highlightId 有無）のデコードを検証。
+
 ## 0.48.0 - 2026-07-09
 
 ### New Features

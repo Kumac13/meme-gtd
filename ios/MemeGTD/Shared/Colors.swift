@@ -33,6 +33,10 @@ extension Color {
     static let accentDark = Color(hex: "#238636")   // github-green-600
     static let accentDarker = Color(hex: "#1a7f37") // github-green-700
 
+    // Article highlight background (green tint; keeps body text readable).
+    // Mirrors the Web `::highlight(article-highlight)` rgba(45,164,78,0.28).
+    static let highlightBackground = Color(hex: "#2da44e").opacity(0.28)
+
     // Background
     static let appBackground = Color(hex: "#f9fafb") // gray-50
     static let surface = Color.white

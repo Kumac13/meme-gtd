@@ -35,6 +35,9 @@ final class DataSourceProvider: ObservableObject {
     private(set) var memos: MemoDataSource
     private(set) var tasks: TaskDataSource
     private(set) var articles: ArticleDataSource
+    /// Article highlights are Server-mode online only; Standalone gets a
+    /// safe empty stand-in (see HighlightDataSource).
+    private(set) var highlights: HighlightDataSource
     private(set) var search: SearchDataSource
     private(set) var projects: ProjectDataSource
     private(set) var labels: LabelDataSource
@@ -48,6 +51,7 @@ final class DataSourceProvider: ObservableObject {
         self.memos = RemoteMemoDataSource()
         self.tasks = RemoteTaskDataSource()
         self.articles = RemoteArticleDataSource()
+        self.highlights = RemoteHighlightDataSource()
         self.search = RemoteSearchDataSource()
         self.projects = RemoteProjectDataSource()
         self.labels = RemoteLabelDataSource()
@@ -75,6 +79,7 @@ final class DataSourceProvider: ObservableObject {
             memos = LocalMemoDataSource(database: AppDatabase.shared)
             tasks = LocalTaskDataSource(database: AppDatabase.shared)
             articles = LocalArticleDataSource(database: AppDatabase.shared)
+            highlights = EmptyHighlightDataSource()
             search = LocalSearchDataSource(database: AppDatabase.shared)
             projects = EmptyProjectDataSource()
             labels = LocalLabelDataSource(database: AppDatabase.shared)
@@ -86,6 +91,9 @@ final class DataSourceProvider: ObservableObject {
         search = RemoteSearchDataSource()
         labels = RemoteLabelDataSource()
         issueRelations = RemoteIssueRelationsDataSource()
+        // Highlights are online-only (no outbox yet); the Remote source errors
+        // naturally when offline, matching the article read-only-offline model.
+        highlights = RemoteHighlightDataSource()
         let scheduler = SharedSync.scheduler
         syncScheduler = scheduler
         memos = OfflineFirstMemoDataSource(

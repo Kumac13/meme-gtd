@@ -1,5 +1,18 @@
 import SwiftUI
 
+/// Which highlight-comment editor sheet to present.
+enum HighlightCommentEditState: Identifiable {
+    case add(highlightId: Int)
+    case edit(highlightId: Int, comment: Comment)
+
+    var id: String {
+        switch self {
+        case .add(let highlightId): return "add-\(highlightId)"
+        case .edit(_, let comment): return "edit-\(comment.id)"
+        }
+    }
+}
+
 struct ArticleDetailView: View {
     let articleId: Int
     let initialTitle: String?
@@ -14,6 +27,10 @@ struct ArticleDetailView: View {
     @State private var showDeleteConfirm: Bool = false
     @State private var showInfoSheet: Bool = false
     @State private var showCopiedFeedback: Bool = false
+    @State private var commentEdit: HighlightCommentEditState?
+    /// Set when "Add Comment" is tapped in the action sheet; the editor opens in
+    /// the action sheet's onDismiss so only one sheet is presented at a time.
+    @State private var pendingAddHighlightId: Int?
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
     /// Server mode + Offline Sync ON + offline: the article is served from
@@ -109,7 +126,20 @@ struct ArticleDetailView: View {
                                 cleanBody,
                                 onIssueTap: { id, type in
                                     onNavigateToLinkedIssue?(id, type, "")
-                                }
+                                },
+                                articleHighlight: ArticleHighlightContext(
+                                    highlights: viewModel.highlights,
+                                    onCreate: { quote in
+                                        Task { await viewModel.createHighlight(quote) }
+                                    },
+                                    onTapHighlight: { highlightId in
+                                        HapticManager.impact(.light)
+                                        viewModel.activeHighlightId = highlightId
+                                    },
+                                    onIssueTap: { id, type in
+                                        onNavigateToLinkedIssue?(id, type, "")
+                                    }
+                                )
                             )
                             .padding(.horizontal, 16)
                             .padding(.vertical, 16)
@@ -137,6 +167,22 @@ struct ArticleDetailView: View {
                                 }
                             }
                         }
+
+                        // === Highlights & Comments timeline ===
+                        HighlightsTimelineSection(
+                            highlights: viewModel.highlights,
+                            commentsByHighlight: viewModel.highlightComments,
+                            onIssueTap: { id, type in onNavigateToLinkedIssue?(id, type, "") },
+                            onAddComment: { highlightId in
+                                commentEdit = .add(highlightId: highlightId)
+                            },
+                            onEditComment: { highlightId, comment in
+                                commentEdit = .edit(highlightId: highlightId, comment: comment)
+                            },
+                            onDeleteComment: { highlightId, commentId in
+                                Task { await viewModel.deleteHighlightComment(highlightId, commentId: commentId) }
+                            }
+                        )
                     }
 
                     Color.clear.frame(height: 24)
@@ -201,6 +247,51 @@ struct ArticleDetailView: View {
                 showBookmark: false
             )
             .presentationDetents([.fraction(0.7), .large])
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { viewModel.activeHighlightId != nil },
+                set: { if !$0 { viewModel.activeHighlightId = nil } }
+            ),
+            onDismiss: {
+                if let highlightId = pendingAddHighlightId {
+                    pendingAddHighlightId = nil
+                    commentEdit = .add(highlightId: highlightId)
+                }
+            }
+        ) {
+            if let highlightId = viewModel.activeHighlightId,
+               let highlight = viewModel.highlights.first(where: { $0.id == highlightId }) {
+                HighlightActionSheet(
+                    highlight: highlight,
+                    onAddComment: {
+                        pendingAddHighlightId = highlightId
+                        viewModel.activeHighlightId = nil
+                    },
+                    onCopy: {
+                        UIPasteboard.general.string = highlight.exact
+                        HapticManager.notification(.success)
+                        viewModel.activeHighlightId = nil
+                    },
+                    onRemove: {
+                        viewModel.activeHighlightId = nil
+                        Task { await viewModel.removeHighlight(highlightId) }
+                    }
+                )
+                .presentationDetents([.height(280)])
+            }
+        }
+        .sheet(item: $commentEdit) { edit in
+            switch edit {
+            case .add(let highlightId):
+                HighlightCommentEditor(title: "Add Comment") { body in
+                    Task { await viewModel.addHighlightComment(highlightId, bodyMd: body) }
+                }
+            case .edit(let highlightId, let comment):
+                HighlightCommentEditor(title: "Edit Comment", initialText: comment.bodyMd) { body in
+                    Task { await viewModel.updateHighlightComment(highlightId, commentId: comment.id, bodyMd: body) }
+                }
+            }
         }
         .alert("Delete Article", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
