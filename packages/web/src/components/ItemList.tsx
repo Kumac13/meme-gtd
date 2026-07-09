@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { formatDateTime, formatRelativeTime } from "../utils/dates";
-import { InlineMarkdownRenderer, extractFirstLine } from "../utils/markdown";
+import { InlineMarkdownRenderer, extractFirstLine, extractPreview } from "../utils/markdown";
 import { extractSnippet, highlightKeyword } from "../utils/searchHighlight";
 import { LabelBadge } from "./LabelBadge";
 import RelevanceIndicator from "./RelevanceIndicator";
@@ -284,7 +284,7 @@ export default function ItemList({
                           {item.bodyMd && item.bodyMd.trim() ? (
                             searchQuery
                               ? highlightKeyword(extractFirstLine(item.bodyMd, 150), searchQuery)
-                              : <InlineMarkdownRenderer content={extractFirstLine(item.bodyMd, 150)} />
+                              : <InlineMarkdownRenderer content={extractPreview(item.bodyMd, 300)} />
                           ) : (
                             <span className="text-gray-500">Memo #{item.id}</span>
                           )}
