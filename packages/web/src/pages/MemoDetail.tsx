@@ -151,7 +151,7 @@ function MobileThreadItem({
             rows={2}
             value={value}
             onChange={(event) => setValue(event.target.value)}
-            className="min-h-[44px] w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-github-green-500"
+            className="min-h-[44px] max-h-[50vh] w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-github-green-500"
           />
           <div className="mt-2 flex justify-end gap-2">
             <button

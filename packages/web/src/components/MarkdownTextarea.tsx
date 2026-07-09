@@ -140,7 +140,7 @@ export function MarkdownTextarea({
           onDrop={onDrop}
           aria-keyshortcuts="Control+Enter"
           rows={rows}
-          className={`w-full px-3 py-2 border-0 focus:outline-none focus:ring-0 font-mono text-sm resize-none md:resize-y overflow-hidden ${minHeightClass} ${
+          className={`w-full px-3 py-2 border-0 focus:outline-none focus:ring-0 font-mono text-sm resize-none md:resize-y max-h-[60vh] ${minHeightClass} ${
             isDragging ? 'bg-github-green-50' : ''
           } ${isUploading ? 'opacity-50' : ''}`}
           placeholder={placeholder}
