@@ -1,13 +1,20 @@
 # Changelog
 
+## 0.49.1 - 2026-07-09
+
+### Bug Fixes
+
+- **iOS 記事本文の描画崩れを修正し、ハイライトの選択を全文対応に作り直し**: 0.49.0 の「段落ごとに別テキストビュー」実装は、非スクロール UITextView の幅計算（`sizeThatFits`）を実装しておらず、実機で**本文が各行の左端で見切れて表示が崩れていた**。また段落跨ぎ選択ができず、段落テキスト以外（見出し・リスト）は選択できず、コメントアイコンも出していなかった。
+  - 本文全体を1つの選択可能な `UITextView`（`ArticleBodyTextView`）に属性文字列で描画する方式へ作り直し、`sizeThatFits` で幅にラップさせて見切れを解消。段落をまたぐ選択・見出し/リストを含むどこでも選択・作成が可能になり、コメント付きハイライトの末尾にコメントアイコン（`text.bubble.fill`）を表示する。見出し/リスト/引用/コード/画像（非同期添付）/太字・斜体・インラインコード/内部 `#id` リンクを属性文字列で描画する。
+  - リグレッション防止に、記事本文を PNG にレンダリングして見切れ（横方向オーバーフロー）とハイライトのアンカリングを検証する iOS テスト（`ArticleBodyRenderTests`）を追加。
+
 ## 0.49.0 - 2026-07-09
 
 ### New Features
 
 - **記事ハイライトとコメントの iOS 対応（Server モード・オンライン）**: 0.48.0 で追加した記事ハイライト機能を iOS アプリでも使えるようにした。記事本文の段落を長押し選択すると iOS 標準の編集メニューに "Highlight" が追加され、ハイライトを作成できる（グリーン系の背景で描画）。ハイライトをタップすると sheet で Add Comment / Copy / Remove、記事末尾に引用+コメントのタイムラインが並び、コメントは Task/Memo と同じ三点リーダー（Copy/Edit/Delete）で操作できる。
-  - **ネイティブハイブリッド描画**: `MarkdownBody` の段落（`.text`）ブロックだけを UITextView（`SelectableMarkdownText`）に置き換えて `UIEditMenuInteraction` の "Highlight" と `.backgroundColor` ハイライトを実現。画像・コード・Mermaid・見出し・リストは従来の SwiftUI 描画を維持する。アンカリングは Web と同じ TextQuoteSelector（`HighlightAnchor` が Swift 実装）。
-  - **Server モードのオンライン専用**: iOS は `RemoteHighlightDataSource`（`/api/articles/{id}/highlights` 直叩き）で動作する。highlights を iOS オフライン同期の change-feed に載せると既存クライアントの pull が壊れるため、同期フィードには入れていない（設計理由: `docs/architecture.md`）。Standalone は空応答 + 英語エラーの安全実装。
-  - **v1 スコープ**: ハイライトの選択・作成は段落テキストのブロック内のみ（段落をまたぐ選択・見出し/リスト内の選択は対象外）。iOS のインライン・コメントアイコン（Web にはある）と、オフライン/Standalone のハイライト保存は将来のフォローアップ。
+  - **記事本文を単一の選択可能ビューで描画**: 本文全体を1つの `UITextView`（`ArticleBodyTextView`）に属性文字列で描画し、iOS 標準のテキスト選択・編集メニューの "Highlight"・`.backgroundColor` ハイライトを実現。段落をまたぐ選択、見出し・リストを含むどこでも選択でき、ハイライト末尾にコメントアイコンを表示する。アンカリングは Web と同じ TextQuoteSelector（`HighlightAnchor` が Swift 実装）。
+  - **Server モードのオンライン専用**: iOS は `RemoteHighlightDataSource`（`/api/articles/{id}/highlights` 直叩き）で動作する。highlights を iOS オフライン同期の change-feed に載せると既存クライアントの pull が壊れるため、同期フィードには入れていない（設計理由: `docs/architecture.md`）。Standalone は空応答 + 英語エラーの安全実装。オフライン/Standalone のハイライト保存は将来のフォローアップ。
 
 ### Tests
 

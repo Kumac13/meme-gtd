@@ -122,24 +122,24 @@ struct ArticleDetailView: View {
                                 with: "",
                                 options: .regularExpression
                             )
-                            MarkdownBody(
-                                cleanBody,
+                            ArticleBodyTextView(
+                                markdown: cleanBody,
+                                fontSize: 15,
+                                textColor: UIColor.label.withAlphaComponent(0.85),
+                                highlights: viewModel.highlights,
+                                commentedHighlightIds: Set(
+                                    viewModel.highlightComments.filter { !$0.value.isEmpty }.keys
+                                ),
+                                onCreate: { quote in
+                                    Task { await viewModel.createHighlight(quote) }
+                                },
+                                onTapHighlight: { highlightId in
+                                    HapticManager.impact(.light)
+                                    viewModel.activeHighlightId = highlightId
+                                },
                                 onIssueTap: { id, type in
                                     onNavigateToLinkedIssue?(id, type, "")
-                                },
-                                articleHighlight: ArticleHighlightContext(
-                                    highlights: viewModel.highlights,
-                                    onCreate: { quote in
-                                        Task { await viewModel.createHighlight(quote) }
-                                    },
-                                    onTapHighlight: { highlightId in
-                                        HapticManager.impact(.light)
-                                        viewModel.activeHighlightId = highlightId
-                                    },
-                                    onIssueTap: { id, type in
-                                        onNavigateToLinkedIssue?(id, type, "")
-                                    }
-                                )
+                                }
                             )
                             .padding(.horizontal, 16)
                             .padding(.vertical, 16)

@@ -11,9 +11,6 @@ struct MarkdownBody: View {
     let searchQuery: String?
     let onIssueTap: ((Int, String) -> Void)?
     let onTodoToggle: ((Int, Bool) -> Void)?
-    /// When set (article reader), `.text` paragraphs become selectable and
-    /// highlightable. Nil elsewhere (memo/task) leaves rendering unchanged.
-    let articleHighlight: ArticleHighlightContext?
 
     init(
         _ text: String,
@@ -21,8 +18,7 @@ struct MarkdownBody: View {
         color: Color = Color(.label).opacity(0.75),
         searchQuery: String? = nil,
         onIssueTap: ((Int, String) -> Void)? = nil,
-        onTodoToggle: ((Int, Bool) -> Void)? = nil,
-        articleHighlight: ArticleHighlightContext? = nil
+        onTodoToggle: ((Int, Bool) -> Void)? = nil
     ) {
         self.text = text
         self.fontSize = fontSize
@@ -30,7 +26,6 @@ struct MarkdownBody: View {
         self.searchQuery = searchQuery
         self.onIssueTap = onIssueTap
         self.onTodoToggle = onTodoToggle
-        self.articleHighlight = articleHighlight
     }
 
     private var blocks: [MarkdownBlock] {
@@ -73,16 +68,7 @@ struct MarkdownBody: View {
             imageView(alt: alt, url: url)
         case .text(let content):
             if !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                if let articleHighlight {
-                    SelectableMarkdownText(
-                        content: content,
-                        fontSize: fontSize,
-                        textColor: UIColor(color),
-                        context: articleHighlight
-                    )
-                } else {
-                    inlineMarkdownText(content)
-                }
+                inlineMarkdownText(content)
             }
         }
     }
@@ -326,7 +312,7 @@ func parseInternalIssueURL(_ url: URL) -> (id: Int, type: String)? {
 
 // MARK: - Markdown parser
 
-private enum MarkdownBlock {
+enum MarkdownBlock {
     case text(String)
     case heading(level: Int, content: String)
     case codeBlock(language: String, code: String)
@@ -337,7 +323,7 @@ private enum MarkdownBlock {
     case image(alt: String, url: String)
 }
 
-private func parseBlocks(_ markdown: String) -> [MarkdownBlock] {
+func parseBlocks(_ markdown: String) -> [MarkdownBlock] {
     var blocks: [MarkdownBlock] = []
     let lines = markdown.components(separatedBy: "\n")
     var currentText = ""
