@@ -52,7 +52,7 @@ export default function MobileFloatingComposer({
             rows={1}
             placeholder={placeholder}
             disabled={disabled || submitting}
-            className="min-h-[42px] w-full resize-none overflow-hidden appearance-none rounded-xl border-0 bg-transparent px-3 pb-[7px] pt-[13px] pr-12 text-sm leading-[22px] text-gray-800 placeholder:text-gray-400 outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-60"
+            className="min-h-[42px] max-h-[40vh] w-full resize-none appearance-none rounded-xl border-0 bg-transparent px-3 pb-[7px] pt-[13px] pr-12 text-sm leading-[22px] text-gray-800 placeholder:text-gray-400 outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-60"
             style={{ outline: 'none', boxShadow: 'none', border: 'none' }}
           />
           <button
