@@ -112,6 +112,24 @@ export interface Task extends IssueBase {
   preview?: string;
 }
 
+export const TEMPLATE_TARGETS = ['task', 'article'] as const;
+export type TemplateTarget = (typeof TEMPLATE_TARGETS)[number];
+
+/**
+ * A creation-time scaffold stored as an issue (type='template', migration 015).
+ * Templates are intentionally NOT part of the `Issue` union: they are a separate
+ * concern handled by dedicated repositories/services and never flow through
+ * generic Issue consumers. `templateTarget` records what the template produces
+ * (task or article), chosen at creation. Applying a template copies its bodyMd +
+ * labels + projects onto a new issue of that target type.
+ */
+export interface Template extends Omit<IssueBase, 'type'> {
+  type: 'template';
+  templateTarget: TemplateTarget;
+  labels?: string[];
+  preview?: string;
+}
+
 export type Issue = Memo | Task | Article;
 
 export interface Comment extends Timestamped {

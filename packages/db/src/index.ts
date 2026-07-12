@@ -161,6 +161,19 @@ export {
   type ListArticleFilters
 } from './articleRepository.js';
 
+// Template repository exports
+export {
+  createTemplate,
+  getTemplate,
+  listTemplates,
+  countTemplates,
+  updateTemplate,
+  deleteTemplate,
+  type CreateTemplateInput,
+  type UpdateTemplateInput,
+  type ListTemplateFilters
+} from './templateRepository.js';
+
 // Embedding repository exports
 export {
   upsertEmbedding,

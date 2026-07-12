@@ -80,7 +80,7 @@ export const getAllEmbeddings = (
     SELECT e.issue_id, e.embedding, i.type as issue_type
     FROM issue_embeddings e
     JOIN issues i ON e.issue_id = i.id
-    WHERE i.is_deleted = 0
+    WHERE i.is_deleted = 0 AND i.type != 'template'
   `);
   const rows = stmt.all() as any[];
   return rows.map((row) => ({
@@ -118,6 +118,7 @@ export const listUnembeddedIssues = (
     FROM issues i
     LEFT JOIN issue_embeddings e ON i.id = e.issue_id
     WHERE i.is_deleted = 0
+      AND i.type != 'template'
       AND (
         e.issue_id IS NULL
         OR e.model != @currentModel
@@ -144,7 +145,7 @@ export const listEmbeddingHashes = (
     SELECT e.issue_id, e.content_hash
     FROM issue_embeddings e
     JOIN issues i ON e.issue_id = i.id
-    WHERE i.is_deleted = 0
+    WHERE i.is_deleted = 0 AND i.type != 'template'
   `);
   const rows = stmt.all() as any[];
   return rows.map((row) => ({
