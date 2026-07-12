@@ -39,6 +39,7 @@ final class DataSourceProvider: ObservableObject {
     private(set) var projects: ProjectDataSource
     private(set) var labels: LabelDataSource
     private(set) var issueRelations: IssueRelationsDataSource
+    private(set) var templates: TemplateDataSource
 
     /// Non-nil while offline sync is enabled. Exposed so the app can forward
     /// scene-activation triggers and views can hook pull-to-refresh.
@@ -52,6 +53,7 @@ final class DataSourceProvider: ObservableObject {
         self.projects = RemoteProjectDataSource()
         self.labels = RemoteLabelDataSource()
         self.issueRelations = RemoteIssueRelationsDataSource()
+        self.templates = RemoteTemplateDataSource()
         rebuildDataSources()
     }
 
@@ -79,6 +81,7 @@ final class DataSourceProvider: ObservableObject {
             projects = EmptyProjectDataSource()
             labels = LocalLabelDataSource(database: AppDatabase.shared)
             issueRelations = LocalIssueRelationsDataSource(database: AppDatabase.shared)
+            templates = EmptyTemplateDataSource()
             return
         }
 
@@ -86,6 +89,7 @@ final class DataSourceProvider: ObservableObject {
         search = RemoteSearchDataSource()
         labels = RemoteLabelDataSource()
         issueRelations = RemoteIssueRelationsDataSource()
+        templates = RemoteTemplateDataSource()
         let scheduler = SharedSync.scheduler
         syncScheduler = scheduler
         memos = OfflineFirstMemoDataSource(
