@@ -1,6 +1,6 @@
 {
   "name": "meme-gtd-db",
-  "version": "0.50.3",
+  "version": "0.50.4",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
