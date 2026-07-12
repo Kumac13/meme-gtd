@@ -13,7 +13,7 @@ import { PROJECT_STATUS_LABELS, sortProjectsByStatus } from '../utils/projectSta
 
 interface ProjectsSectionProps {
   itemId: number;
-  itemType: IssueType;
+  itemType: IssueType | 'template';
 }
 
 export function ProjectsSection({ itemId, itemType: _ }: ProjectsSectionProps) {
