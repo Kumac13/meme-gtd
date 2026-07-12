@@ -144,31 +144,28 @@ export default function TaskNew() {
           </Link>
           <h1 className="text-3xl font-bold text-gray-900">Create New Task</h1>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
-          <button
-            onClick={() => setPhase('form')}
-            className="w-full px-4 py-3 bg-github-green-600 text-white rounded-md text-sm font-medium hover:bg-github-green-700"
-          >
-            Start blank
-          </button>
-          <div>
-            <h2 className="text-sm font-medium text-gray-700 mb-2">Or start from a template</h2>
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <p className="px-4 py-3 text-sm text-gray-500 border-b border-gray-200">Choose a starting point</p>
+          <div className="divide-y divide-gray-200">
+            <button onClick={() => setPhase('form')} className="block w-full text-left p-4 hover:bg-gray-50">
+              <div className="text-sm font-medium text-gray-900">Blank task</div>
+              <div className="text-xs text-gray-500">Start from scratch</div>
+            </button>
             {tplLoading ? (
-              <p className="text-sm text-gray-500">Loading templates...</p>
-            ) : templates.length === 0 ? (
-              <p className="text-sm text-gray-500">No task templates yet.</p>
+              <div className="p-4 text-sm text-gray-500">Loading templates...</div>
             ) : (
-              <div className="border border-gray-200 rounded-lg divide-y divide-gray-200">
-                {templates.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => applyTemplate(t.id)}
-                    className="block w-full text-left p-3 hover:bg-gray-50 text-sm text-gray-900"
-                  >
-                    {t.title || `Template #${t.id}`}
-                  </button>
-                ))}
-              </div>
+              templates.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => applyTemplate(t.id)}
+                  className="block w-full text-left p-4 hover:bg-gray-50"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-900">{t.title || `Template #${t.id}`}</span>
+                    <span className="px-2 py-0.5 text-xs font-medium rounded bg-indigo-100 text-indigo-700">Template</span>
+                  </div>
+                </button>
+              ))
             )}
           </div>
         </div>
