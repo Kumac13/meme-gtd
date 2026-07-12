@@ -211,16 +211,16 @@ struct ArticleListView: View {
                 onDismiss: { showCreateArticle = false }
             )
         }
-        .confirmationDialog("Origin", isPresented: $showOriginPicker) {
-            Button("All") { viewModel.originFilter = "all"; viewModel.applyFilters() }
-            Button("Web") { viewModel.originFilter = "web"; viewModel.applyFilters() }
-            Button("Manual") { viewModel.originFilter = "manual"; viewModel.applyFilters() }
+        .sheet(isPresented: $showOriginPicker) {
+            originPickerSheet
+                .presentationDetents([.medium])
         }
         .sheet(isPresented: $showLabelPicker, onDismiss: { viewModel.labelFilters = selectedLabels; viewModel.applyFilters() }) {
             LabelPickerModal(
                 allLabels: viewModel.allLabels,
                 selectedNames: $selectedLabels,
                 onDismiss: { showLabelPicker = false },
+                showClear: true,
                 countFor: { $0.articleCount },
                 onLabelCreated: { label in viewModel.allLabels.append(label); selectedLabels.insert(label.name) }
             )
@@ -231,7 +231,7 @@ struct ArticleListView: View {
                 allProjects: viewModel.allProjects,
                 selectedIds: $selectedProjects,
                 onDismiss: { showProjectPicker = false },
-                onConfirm: { ids in selectedProjects = ids; showProjectPicker = false },
+                showClear: true,
                 includeNoProject: $selectedNoProject
             )
             .presentationDetents([.medium, .large])
@@ -274,5 +274,20 @@ struct ArticleListView: View {
             }
             await viewModel.loadFilterData()
         }
+    }
+
+    private var originPickerSheet: some View {
+        SingleChoiceFilterSheet(
+            title: "Origin",
+            options: ["all", "web", "manual"],
+            selected: viewModel.originFilter,
+            label: { $0 == "all" ? "All" : $0.capitalized },
+            onSelect: { origin in
+                viewModel.originFilter = origin
+                viewModel.applyFilters()
+                showOriginPicker = false
+            },
+            onDismiss: { showOriginPicker = false }
+        )
     }
 }

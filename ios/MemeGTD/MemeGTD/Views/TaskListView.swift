@@ -390,59 +390,17 @@ struct TaskListView: View {
     // MARK: - Status Picker Sheet
 
     private var statusPickerSheet: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button(action: { HapticManager.impact(.light); showStatusPicker = false }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundColor(Color(.tertiaryLabel))
-                }
-                Spacer()
-                Text("Status")
-                    .font(.system(size: 17, weight: .semibold))
-                Spacer()
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .hidden()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-
-            Divider()
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(TaskStatusFilter.allCases, id: \.self) { status in
-                        Button(action: {
-                            HapticManager.selection()
-                            viewModel.setStatusFilter(status)
-                            showStatusPicker = false
-                        }) {
-                            HStack {
-                                Text(status.displayLabel)
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.textPrimary)
-                                Spacer()
-                                if viewModel.statusFilter == status {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 22))
-                                        .foregroundColor(.accent)
-                                } else {
-                                    Image(systemName: "plus.circle")
-                                        .font(.system(size: 22))
-                                        .foregroundColor(Color(.systemGray3))
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                        }
-                        Divider().padding(.leading, 16)
-                    }
-                }
-            }
-        }
-        .background(Color(.systemBackground))
+        SingleChoiceFilterSheet(
+            title: "Status",
+            options: TaskStatusFilter.allCases,
+            selected: viewModel.statusFilter,
+            label: { $0.displayLabel },
+            onSelect: { status in
+                viewModel.setStatusFilter(status)
+                showStatusPicker = false
+            },
+            onDismiss: { showStatusPicker = false }
+        )
     }
 
 }

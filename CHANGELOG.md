@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.50.2 - 2026-07-12
+
+### Bug Fixes
+
+- iOS Article の Origin フィルタを独自 `confirmationDialog` から、Task Status と共有する単一選択 sheet コンポーネントへ変更。
+- Article の Labels / Projects フィルタで既存の共通 picker modal を Task と同じ設定で利用し、右上の Clear 操作を表示。
+
 ## 0.50.1 - 2026-07-12
 
 ### Bug Fixes
