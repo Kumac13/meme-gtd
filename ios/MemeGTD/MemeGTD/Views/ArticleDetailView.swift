@@ -207,6 +207,7 @@ struct ArticleDetailView: View {
                     Color.clear.frame(height: 24).id("threadBottom")
                 }
             }
+            .background(Color.menuBackground)
             .scrollDismissesKeyboard(.immediately)
             .ignoresSafeArea(edges: .top)
             .scrollEdgeEffectStyle(.soft, for: .bottom)

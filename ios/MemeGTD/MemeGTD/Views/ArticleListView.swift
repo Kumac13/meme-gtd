@@ -59,16 +59,43 @@ struct ArticleListView: View {
         .safeAreaInset(edge: .top) {
             VStack(spacing: 0) {
                 OfflineReadOnlyIndicator()
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        FilterPill(label: viewModel.originFilter == "all" ? "Origin" : viewModel.originFilter.capitalized, isActive: viewModel.originFilter != "all") { showOriginPicker = true }
-                        FilterPill(label: viewModel.labelFilters.isEmpty ? "Labels" : "\(viewModel.labelFilters.count) Labels", isActive: !viewModel.labelFilters.isEmpty) { selectedLabels = viewModel.labelFilters; showLabelPicker = true }
-                        FilterPill(label: viewModel.projectFilters.isEmpty && !viewModel.includeNoProject ? "Projects" : "Projects ✓", isActive: !viewModel.projectFilters.isEmpty || viewModel.includeNoProject) { selectedProjects = viewModel.projectFilters; selectedNoProject = viewModel.includeNoProject; showProjectPicker = true }
-                        FilterPill(label: viewModel.bookmarkFilter ? "Bookmarked" : "Bookmark", isActive: viewModel.bookmarkFilter) { viewModel.bookmarkFilter.toggle(); viewModel.applyFilters() }
+                HStack(spacing: 8) {
+                    FilterPill(
+                        label: viewModel.originFilter == "all" ? "Origin" : viewModel.originFilter.capitalized,
+                        isActive: viewModel.originFilter != "all"
+                    ) {
+                        showOriginPicker = true
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+
+                    FilterPill(
+                        label: viewModel.labelFilters.isEmpty ? "Labels" : "\(viewModel.labelFilters.count) Labels",
+                        isActive: !viewModel.labelFilters.isEmpty
+                    ) {
+                        selectedLabels = viewModel.labelFilters
+                        showLabelPicker = true
+                    }
+
+                    FilterPill(
+                        label: viewModel.projectFilters.isEmpty && !viewModel.includeNoProject ? "Projects" : "Projects ✓",
+                        isActive: !viewModel.projectFilters.isEmpty || viewModel.includeNoProject
+                    ) {
+                        selectedProjects = viewModel.projectFilters
+                        selectedNoProject = viewModel.includeNoProject
+                        showProjectPicker = true
+                    }
+
+                    FilterPill(
+                        label: viewModel.bookmarkFilter ? "Bookmarked" : "Bookmark",
+                        isActive: viewModel.bookmarkFilter,
+                        activeColor: .accent
+                    ) {
+                        viewModel.bookmarkFilter.toggle()
+                        viewModel.applyFilters()
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             }
         }
         .refreshable {
@@ -93,6 +120,26 @@ struct ArticleListView: View {
                 }
             }
         }
+        .safeAreaBar(edge: .bottom) {
+            HStack {
+                Spacer()
+                Button(action: {
+                    HapticManager.impact(.medium)
+                    showTemplateChooser = true
+                }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 52, height: 52)
+                        .background(Color.accent)
+                        .clipShape(Circle())
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 10)
+            .opacity(isSearching ? 0 : 1)
+            .allowsHitTesting(!isSearching)
+        }
         .toolbar {
             AppToolbar(
                 title: "Articles",
@@ -101,16 +148,6 @@ struct ArticleListView: View {
                 searchQuery: $viewModel.searchQuery,
                 searchPlaceholder: "Search articles...",
                 onSearch: { viewModel.search() },
-                trailing: {
-                    Button {
-                        HapticManager.impact(.light)
-                        showTemplateChooser = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundColor(.textPrimary)
-                    }
-                },
                 searchBarAction: {
                     if !articleStore.articles.isEmpty && hasActiveFilters {
                         Button(action: {

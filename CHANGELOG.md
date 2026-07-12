@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.50.1 - 2026-07-12
+
+### Bug Fixes
+
+- iOS Articles 一覧の New ボタンを Task 一覧と同じ画面右下の丸いフローティングボタンへ移動。
+- iOS Article Detail の背景を Task Detail と同じ `menuBackground` に統一。
+- iOS Articles の Origin / Labels / Projects / Bookmark フィルタを、Task 一覧と同じ固定フィルタバーとして常時表示。
+
 ## 0.50.0 - 2026-07-12
 
 ### New Features
