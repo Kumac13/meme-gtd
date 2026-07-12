@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.50.4 - 2026-07-12
+
+### Bug Fixes
+
+- iOS Articles が手動作成Articleの `meta.originalUrl` 欠落時に一覧レスポンス全体のデコードに失敗し、何も表示されなくなる問題を修正。API契約どおり `originalUrl` を optional として扱うようにした。
+
+### Tests
+
+- `originalUrl` を持たない手動Articleを含む一覧レスポンスのデコードテストを追加。
+
 ## 0.50.3 - 2026-07-12
 
 ### Bug Fixes

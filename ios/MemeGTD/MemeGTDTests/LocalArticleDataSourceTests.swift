@@ -56,6 +56,36 @@ final class LocalArticleDataSourceTests: XCTestCase {
 
     // MARK: - Insert (Share Extension path) + read round trip
 
+    func testManualArticleListResponseDecodesWithoutOriginalURL() throws {
+        let json = #"""
+        {
+          "data": [{
+            "id": 42,
+            "type": "article",
+            "title": "Manual article",
+            "bodyMd": "- Name: Manual article",
+            "origin": "manual",
+            "meta": {"archivedAt": "2026-07-12T00:00:00.000Z"},
+            "createdAt": "2026-07-12T00:00:00.000Z",
+            "updatedAt": "2026-07-12T00:00:00.000Z",
+            "isBookmarked": false,
+            "isDeleted": false,
+            "labels": ["Book"],
+            "commentCount": 0
+          }],
+          "total": 1,
+          "limit": 20,
+          "offset": 0
+        }
+        """#.data(using: .utf8)!
+
+        let response = try JSONDecoder().decode(ArticleListResponse.self, from: json)
+
+        XCTAssertEqual(response.data.count, 1)
+        XCTAssertEqual(response.data[0].origin, .manual)
+        XCTAssertNil(response.data[0].meta?.originalUrl)
+    }
+
     func testInsertRoundTripsMetaThroughListAndGet() async throws {
         let now = "2026-07-04T01:23:45.678Z"
         try await insertArticle(

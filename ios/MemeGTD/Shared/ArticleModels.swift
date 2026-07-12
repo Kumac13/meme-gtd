@@ -26,7 +26,8 @@ struct ArticleResponse: Codable {
 // nonisolated: decoded inside the nonisolated offline read cache
 // (OfflineFirstArticleDataSource) as well as on the MainActor.
 nonisolated struct ArticleMeta: Codable {
-    let originalUrl: String
+    /// Web-saved articles have a source URL; manual articles omit it.
+    let originalUrl: String?
     let siteName: String?
     let archivedAt: String
 }

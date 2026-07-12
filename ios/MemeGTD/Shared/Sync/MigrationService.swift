@@ -276,7 +276,9 @@ actor MigrationService {
                 case "article":
                     let meta = LocalArticleStore.articleMeta(from: issue.meta)
                     guard let title = issue.title, !title.isEmpty,
-                          let meta, !meta.originalUrl.isEmpty else {
+                          let meta,
+                          let originalUrl = meta.originalUrl,
+                          !originalUrl.isEmpty else {
                         plan.skips.append(MigrationSkip(
                             entity: "article",
                             identifier: issue.uuid,
@@ -298,7 +300,7 @@ actor MigrationService {
                                 createdAt: issue.createdAt,
                                 title: title,
                                 meta: SyncPushArticleMeta(
-                                    originalUrl: meta.originalUrl,
+                                    originalUrl: originalUrl,
                                     siteName: meta.siteName,
                                     archivedAt: meta.archivedAt
                                 )
