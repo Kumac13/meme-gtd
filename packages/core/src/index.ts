@@ -44,6 +44,13 @@ import {
   listArticles,
   countArticles,
   deleteArticle,
+  // Template functions
+  createTemplate,
+  getTemplate,
+  listTemplates,
+  countTemplates,
+  updateTemplate,
+  deleteTemplate,
   // Label functions
   listAllLabels,
   getLabel,
@@ -66,7 +73,10 @@ import {
   type ListTaskFilters,
   type PromotePreview,
   type UpdateMemoInput,
-  type UpdateTaskInput
+  type UpdateTaskInput,
+  type CreateTemplateInput,
+  type UpdateTemplateInput,
+  type ListTemplateFilters
 } from 'meme-gtd-db';
 
 export interface MemoServiceOptions {
@@ -702,6 +712,62 @@ export class ArticleService {
       this.logger.logArticleDeleted(id);
       return deleteArticle(this.db, id);
     })();
+  }
+}
+
+export interface TemplateServiceOptions {
+  config?: MgtdConfig;
+  db?: Database.Database;
+  sourceType?: SourceType;
+}
+
+/**
+ * Templates (issues with type='template', migration 015) are creation-time
+ * scaffolds. Applying a template is a client-side prefill (GET the template,
+ * seed the New Task / New Article form), so this service only does CRUD — there
+ * is no server-side "create from template". Per product decision, template
+ * mutations are intentionally NOT written to the activity log (templates never
+ * appear in issue/global timelines), which is why this service has no
+ * ActivityLogger. Template bodies are stored verbatim (no #id mention rewriting
+ * / relates links — those apply when the copied body lands on a real issue).
+ */
+export class TemplateService {
+  private readonly db: Database.Database;
+
+  constructor(private readonly options: TemplateServiceOptions) {
+    if (options.db) {
+      this.db = options.db;
+    } else if (options.config) {
+      this.db = ensureDatabase(options.config);
+    } else {
+      throw new Error('TemplateService requires either db or config option');
+    }
+  }
+
+  private withProjects<T extends { id: number }>(template: T) {
+    return { ...template, projectIds: getProjectsForIssue(this.db, template.id).map((p) => p.id) };
+  }
+
+  public create(input: CreateTemplateInput) {
+    return this.db.transaction(() => this.withProjects(createTemplate(this.db, input)))();
+  }
+
+  public get(id: number) {
+    return this.withProjects(getTemplate(this.db, id));
+  }
+
+  public list(filters: ListTemplateFilters = {}) {
+    const data = listTemplates(this.db, filters).map((t) => this.withProjects(t));
+    const total = countTemplates(this.db, filters);
+    return { data, total };
+  }
+
+  public update(id: number, input: UpdateTemplateInput) {
+    return this.db.transaction(() => this.withProjects(updateTemplate(this.db, id, input)))();
+  }
+
+  public remove(id: number) {
+    return this.db.transaction(() => deleteTemplate(this.db, id))();
   }
 }
 
