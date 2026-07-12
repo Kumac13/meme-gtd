@@ -2,10 +2,16 @@ import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import { LabelsService } from '../api/services/LabelsService';
+import { TemplatesService } from '../api/services/TemplatesService';
 import TaskForm from '../components/TaskForm';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import type { PendingLink } from '../types/links';
+
+interface TaskTemplateItem {
+  id: number;
+  title: string | null;
+}
 
 export default function TaskNew() {
   const [searchParams] = useSearchParams();
@@ -18,6 +24,11 @@ export default function TaskNew() {
   const [initialLinks, setInitialLinks] = useState<PendingLink[] | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Blank / template chooser (skipped when promoting a memo).
+  const [phase, setPhase] = useState<'choose' | 'form'>(fromMemoId ? 'form' : 'choose');
+  const [templates, setTemplates] = useState<TaskTemplateItem[]>([]);
+  const [tplLoading, setTplLoading] = useState(false);
 
   useEffect(() => {
     if (fromMemoId && fromMemoId !== null) {
@@ -55,8 +66,6 @@ export default function TaskNew() {
               },
             }));
 
-          // Show the derived_from link the new task will have to its source memo,
-          // so it appears in the Links section alongside the carried-over links.
           const memoIdNum = parseInt(fromMemoId as string, 10);
           const memoTitle = (memoData.bodyMd ?? '')
             .replace(/\s+/g, ' ')
@@ -66,7 +75,6 @@ export default function TaskNew() {
             linkKind: 'issue',
             targetIssueId: memoIdNum,
             linkType: 'derived_from',
-            // This is the promotion link — records the memo.promoted event.
             isPromotion: true,
             targetIssue: { id: memoIdNum, type: 'memo', title: memoTitle },
           };
@@ -82,12 +90,90 @@ export default function TaskNew() {
     }
   }, [fromMemoId]);
 
+  useEffect(() => {
+    if (phase === 'choose') {
+      const load = async () => {
+        try {
+          setTplLoading(true);
+          const res = await TemplatesService.listTemplates(undefined, undefined, undefined, 'task');
+          setTemplates((res?.data ?? []) as TaskTemplateItem[]);
+        } catch (err) {
+          console.error('Failed to load templates:', err);
+        } finally {
+          setTplLoading(false);
+        }
+      };
+      load();
+    }
+  }, [phase]);
+
+  // Apply a task template: prefill body/labels/projects (title stays empty).
+  const applyTemplate = async (templateId: number) => {
+    try {
+      setLoading(true);
+      const [tpl, allLabels] = await Promise.all([
+        TemplatesService.getTemplate(String(templateId)),
+        LabelsService.listLabels(),
+      ]);
+      const nameToId = new Map((allLabels as Array<{ id: number; name: string }>).map((l) => [l.name, l.id]));
+      setInitialBody(tpl.bodyMd);
+      setInitialLabelIds((tpl.labels ?? []).map((n: string) => nameToId.get(n)).filter((x): x is number => typeof x === 'number'));
+      setInitialProjectIds(tpl.projectIds ?? []);
+      setPhase('form');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to apply template');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
-    return <LoadingState message="Loading memo..." />;
+    return <LoadingState message={memo ? 'Loading memo...' : 'Loading...'} />;
   }
 
   if (error) {
-    return <ErrorState error={error} title="Error loading memo" />;
+    return <ErrorState error={error} title="Error creating task" />;
+  }
+
+  if (phase === 'choose') {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-2">
+        <div className="mb-6">
+          <Link to="/tasks" className="text-github-green-600 hover:text-github-green-800 text-sm font-medium mb-4 inline-block">
+            ← Back to tasks
+          </Link>
+          <h1 className="text-3xl font-bold text-gray-900">Create New Task</h1>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+          <button
+            onClick={() => setPhase('form')}
+            className="w-full px-4 py-3 bg-github-green-600 text-white rounded-md text-sm font-medium hover:bg-github-green-700"
+          >
+            Start blank
+          </button>
+          <div>
+            <h2 className="text-sm font-medium text-gray-700 mb-2">Or start from a template</h2>
+            {tplLoading ? (
+              <p className="text-sm text-gray-500">Loading templates...</p>
+            ) : templates.length === 0 ? (
+              <p className="text-sm text-gray-500">No task templates yet.</p>
+            ) : (
+              <div className="border border-gray-200 rounded-lg divide-y divide-gray-200">
+                {templates.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => applyTemplate(t.id)}
+                    className="block w-full text-left p-3 hover:bg-gray-50 text-sm text-gray-900"
+                  >
+                    {t.title || `Template #${t.id}`}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
