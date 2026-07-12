@@ -54,6 +54,10 @@ class CreateTaskViewModel: ObservableObject {
             self.selectedLabelNames = Set(labelNames)
             self.selectedProjectIds = Set(projectIds)
             self.pendingLinks = links
+        case .fromTemplate(let body, let labelNames, let projectIds):
+            self.bodyMd = body
+            self.selectedLabelNames = Set(labelNames)
+            self.selectedProjectIds = Set(projectIds)
         }
     }
 

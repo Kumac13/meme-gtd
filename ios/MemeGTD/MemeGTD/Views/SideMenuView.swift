@@ -4,6 +4,7 @@ enum AppTab: Hashable {
     case memos
     case tasks
     case articles
+    case templates
     case settings
 }
 
@@ -48,6 +49,15 @@ struct SideMenuView: View {
                 ) {
                     HapticManager.selection()
                     onNavigate(.articles)
+                }
+
+                MenuRow(
+                    icon: "doc.on.doc",
+                    label: "Templates",
+                    isSelected: selectedTab == .templates
+                ) {
+                    HapticManager.selection()
+                    onNavigate(.templates)
                 }
             }
             .padding(.horizontal, 12)

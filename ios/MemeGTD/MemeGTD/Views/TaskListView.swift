@@ -18,6 +18,8 @@ struct TaskListView: View {
     @State private var dateFrom: Date?
     @State private var dateTo: Date?
     @State private var createTaskMode: CreateTaskMode? = nil
+    @State private var showTemplateChooser: Bool = false
+    @State private var chosenCreateKind: CreateTaskModeKind? = nil
     @State private var showCopyDialog: Bool = false
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
@@ -183,7 +185,9 @@ struct TaskListView: View {
                 Spacer()
                 Button(action: {
                     HapticManager.impact(.medium)
-                    createTaskMode = CreateTaskMode(kind: .standard)
+                    // Pre-screen (requirement): choose Blank or a template
+                    // before entering the Create New Task form.
+                    showTemplateChooser = true
                 }) {
                     Image(systemName: "plus")
                         .font(.system(size: 20, weight: .semibold))
@@ -308,6 +312,30 @@ struct TaskListView: View {
                 onDismiss: { showDateRangePicker = false }
             )
             .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showTemplateChooser, onDismiss: {
+            if let kind = chosenCreateKind {
+                createTaskMode = CreateTaskMode(kind: kind)
+                chosenCreateKind = nil
+            }
+        }) {
+            TemplateChooserSheet(
+                target: "task",
+                onBlank: {
+                    chosenCreateKind = .standard
+                    showTemplateChooser = false
+                },
+                onTemplate: { template in
+                    chosenCreateKind = .fromTemplate(
+                        bodyMd: template.bodyMd,
+                        initialLabelNames: template.labels ?? [],
+                        initialProjectIds: template.projectIds ?? []
+                    )
+                    showTemplateChooser = false
+                },
+                onDismiss: { showTemplateChooser = false }
+            )
+            .presentationDetents([.medium, .large])
         }
         .sheet(item: $createTaskMode) { mode in
             CreateTaskModal(

@@ -144,6 +144,13 @@ enum CreateTaskModeKind {
         initialProjectIds: [Int],
         initialLinks: [PendingLink]
     )
+    /// Start from a template: body/labels/projects are pre-seeded from the
+    /// template (title stays empty — the user types it per task).
+    case fromTemplate(
+        bodyMd: String,
+        initialLabelNames: [String],
+        initialProjectIds: [Int]
+    )
 }
 
 struct PendingLink: Identifiable {

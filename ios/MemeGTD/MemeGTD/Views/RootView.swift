@@ -15,6 +15,11 @@ struct ArticleRoute: Hashable {
     let initialTitle: String
 }
 
+struct TemplateRoute: Hashable {
+    let templateId: Int
+    let initialTitle: String
+}
+
 struct RootView: View {
     @State private var selectedTab: AppTab = .memos
     @State private var isMenuOpen: Bool = false
@@ -57,6 +62,11 @@ struct RootView: View {
                             onMenuTap: { openMenu() },
                             navigationPath: $navigationPath
                         )
+                    case .templates:
+                        TemplateListView(
+                            onMenuTap: { openMenu() },
+                            navigationPath: $navigationPath
+                        )
                     case .settings:
                         SettingsView(onMenuTap: { openMenu() })
                     }
@@ -89,6 +99,13 @@ struct RootView: View {
                         onNavigateToLinkedIssue: { id, type, title in
                             navigateToIssue(id: id, type: type, title: title)
                         }
+                    )
+                }
+                .navigationDestination(for: TemplateRoute.self) { route in
+                    TemplateDetailView(
+                        templateId: route.templateId,
+                        initialTitle: route.initialTitle,
+                        onMenuTap: { openMenu() }
                     )
                 }
             }
