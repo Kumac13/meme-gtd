@@ -8053,6 +8053,577 @@ paths:
                   - error
                   - message
                 additionalProperties: false
+  /api/templates/:
+    post:
+      operationId: createTemplate
+      summary: Create template
+      tags:
+        - Templates
+      description: Create a new creation-time template
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  description: Template name
+                bodyMd:
+                  type: string
+                  description: Template body skeleton in Markdown, copied into the new issue
+                templateTarget:
+                  type: string
+                  enum:
+                    - task
+                    - article
+                  description: Issue type the template produces when applied
+                labels:
+                  type: array
+                  items:
+                    type: string
+                  description: Label names preset on the template (copied on apply)
+                projectIds:
+                  type: array
+                  items:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  description: Project ids preset on the template (copied on apply)
+              required:
+                - title
+                - bodyMd
+                - templateTarget
+              additionalProperties: false
+        required: true
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique template ID
+                  type:
+                    type: string
+                    enum:
+                      - template
+                    description: Issue type (always "template")
+                  templateTarget:
+                    type: string
+                    enum:
+                      - task
+                      - article
+                    description: Issue type the template produces when applied
+                  title:
+                    type: string
+                    nullable: true
+                    description: Template name
+                  bodyMd:
+                    type: string
+                    description: Template body skeleton in Markdown
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the template is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the template is soft-deleted
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Label names preset on the template
+                  projectIds:
+                    type: array
+                    items:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                    description: Project ids preset on the template
+                required:
+                  - id
+                  - type
+                  - templateTarget
+                  - title
+                  - bodyMd
+                  - createdAt
+                  - updatedAt
+                  - isBookmarked
+                  - isDeleted
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    get:
+      operationId: listTemplates
+      summary: List templates
+      tags:
+        - Templates
+      description: List templates with optional filters (target/search)
+      parameters:
+        - schema:
+            type: integer
+            exclusiveMinimum: true
+            minimum: 0
+          in: query
+          name: limit
+          required: false
+          description: Maximum number of templates to return
+        - schema:
+            type: integer
+            minimum: 0
+          in: query
+          name: offset
+          required: false
+          description: Number of templates to skip
+        - schema:
+            type: string
+          in: query
+          name: search
+          required: false
+          description: Search templates by title or body
+        - schema:
+            type: string
+            enum:
+              - task
+              - article
+          in: query
+          name: target
+          required: false
+          description: Restrict to templates producing this issue type
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                          description: Unique template ID
+                        type:
+                          type: string
+                          enum:
+                            - template
+                          description: Issue type (always "template")
+                        templateTarget:
+                          type: string
+                          enum:
+                            - task
+                            - article
+                          description: Issue type the template produces when applied
+                        title:
+                          type: string
+                          nullable: true
+                          description: Template name
+                        bodyMd:
+                          type: string
+                          description: Template body skeleton in Markdown
+                        createdAt:
+                          type: string
+                          format: date-time
+                          description: Creation timestamp
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          description: Last update timestamp
+                        isBookmarked:
+                          type: boolean
+                          description: Whether the template is bookmarked
+                        isDeleted:
+                          type: boolean
+                          description: Whether the template is soft-deleted
+                        labels:
+                          type: array
+                          items:
+                            type: string
+                          description: Label names preset on the template
+                        projectIds:
+                          type: array
+                          items:
+                            type: integer
+                            exclusiveMinimum: true
+                            minimum: 0
+                          description: Project ids preset on the template
+                      required:
+                        - id
+                        - type
+                        - templateTarget
+                        - title
+                        - bodyMd
+                        - createdAt
+                        - updatedAt
+                        - isBookmarked
+                        - isDeleted
+                      additionalProperties: false
+                    description: Array of templates
+                  total:
+                    type: integer
+                    minimum: 0
+                    description: Total count of templates matching the filters (ignoring pagination)
+                  limit:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Maximum number of templates returned per page
+                  offset:
+                    type: integer
+                    minimum: 0
+                    description: Number of templates skipped
+                required:
+                  - data
+                  - total
+                  - limit
+                  - offset
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/templates/{id}:
+    get:
+      operationId: getTemplate
+      summary: Get template
+      tags:
+        - Templates
+      description: Get template by ID
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Template ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique template ID
+                  type:
+                    type: string
+                    enum:
+                      - template
+                    description: Issue type (always "template")
+                  templateTarget:
+                    type: string
+                    enum:
+                      - task
+                      - article
+                    description: Issue type the template produces when applied
+                  title:
+                    type: string
+                    nullable: true
+                    description: Template name
+                  bodyMd:
+                    type: string
+                    description: Template body skeleton in Markdown
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the template is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the template is soft-deleted
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Label names preset on the template
+                  projectIds:
+                    type: array
+                    items:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                    description: Project ids preset on the template
+                required:
+                  - id
+                  - type
+                  - templateTarget
+                  - title
+                  - bodyMd
+                  - createdAt
+                  - updatedAt
+                  - isBookmarked
+                  - isDeleted
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    patch:
+      operationId: updateTemplate
+      summary: Update template
+      tags:
+        - Templates
+      description: Update a template's fields, labels and projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  description: Template name
+                bodyMd:
+                  type: string
+                  description: Template body skeleton in Markdown
+                templateTarget:
+                  type: string
+                  enum:
+                    - task
+                    - article
+                  description: Issue type the template produces when applied
+                labels:
+                  type: array
+                  items:
+                    type: string
+                  description: Label names (full replacement)
+                projectIds:
+                  type: array
+                  items:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                  description: Project ids (full replacement)
+              additionalProperties: false
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Template ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique template ID
+                  type:
+                    type: string
+                    enum:
+                      - template
+                    description: Issue type (always "template")
+                  templateTarget:
+                    type: string
+                    enum:
+                      - task
+                      - article
+                    description: Issue type the template produces when applied
+                  title:
+                    type: string
+                    nullable: true
+                    description: Template name
+                  bodyMd:
+                    type: string
+                    description: Template body skeleton in Markdown
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the template is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the template is soft-deleted
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Label names preset on the template
+                  projectIds:
+                    type: array
+                    items:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                    description: Project ids preset on the template
+                required:
+                  - id
+                  - type
+                  - templateTarget
+                  - title
+                  - bodyMd
+                  - createdAt
+                  - updatedAt
+                  - isBookmarked
+                  - isDeleted
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    delete:
+      operationId: deleteTemplate
+      summary: Delete template
+      tags:
+        - Templates
+      description: Delete template (soft delete)
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Template ID
+      responses:
+        "204":
+          description: Default Response
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
   /api/search/keyword:
     get:
       operationId: keywordSearch
@@ -8910,5 +9481,7 @@ tags:
     description: Image attachment endpoints
   - name: ActivityLog
     description: Activity log endpoints
+  - name: Templates
+    description: Creation-time template endpoints
   - name: Sync
     description: Offline sync endpoints (delta pull + outbox push)
