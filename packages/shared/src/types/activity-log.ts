@@ -51,7 +51,9 @@ export type CommentEventType = (typeof COMMENT_EVENT_TYPES)[number];
 
 export const ARTICLE_EVENT_TYPES = [
   'article.created',
+  'article.updated',
   'article.deleted',
+  'article.bookmarked',
 ] as const;
 export type ArticleEventType = (typeof ARTICLE_EVENT_TYPES)[number];
 

@@ -428,7 +428,7 @@ export class ActivityLogger {
     articleId: number,
     title: string,
     bodyMd: string,
-    originalUrl: string
+    originalUrl?: string
   ): void {
     const payload = buildArticleCreatedPayload(
       this.db,
@@ -441,6 +441,39 @@ export class ActivityLogger {
       eventType: 'article.created',
       sourceType: this.sourceType,
       payload: { ...payload },
+    });
+  }
+
+  logArticleUpdated(
+    articleId: number,
+    diff: {
+      title?: { old: string | null; new: string | null };
+      body?: { old: string | null; new: string | null };
+    }
+  ): void {
+    createActivityLog(this.db, {
+      eventType: 'article.updated',
+      sourceType: this.sourceType,
+      payload: {
+        issue_id: articleId,
+        issue_type: 'article',
+        title: getIssueTitle(this.db, articleId),
+        ...(diff.title ? { title_diff: diff.title } : {}),
+        ...(diff.body ? { body: diff.body } : {}),
+      },
+    });
+  }
+
+  logArticleBookmarked(articleId: number, isBookmarked: boolean): void {
+    createActivityLog(this.db, {
+      eventType: 'article.bookmarked',
+      sourceType: this.sourceType,
+      payload: {
+        issue_id: articleId,
+        issue_type: 'article',
+        title: getIssueTitle(this.db, articleId),
+        is_bookmarked: isBookmarked,
+      },
     });
   }
 

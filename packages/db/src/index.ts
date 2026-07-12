@@ -156,8 +156,11 @@ export {
   getArticle,
   listArticles,
   countArticles,
+  updateArticle,
+  setArticleBookmark,
   deleteArticle,
   type CreateArticleInput,
+  type UpdateArticleInput,
   type ListArticleFilters
 } from './articleRepository.js';
 

@@ -56,8 +56,13 @@ export interface IssueBase extends Timestamped {
   isDeleted: boolean;
 }
 
+export const ARTICLE_ORIGINS = ['web', 'manual'] as const;
+/** issues.origin — how the article came to be: saved from the web or written by hand (migration 016). */
+export type ArticleOrigin = (typeof ARTICLE_ORIGINS)[number];
+
 export interface ArticleMeta {
-  originalUrl: string;
+  /** Present for web-saved articles (origin='web'); absent for manual ones. */
+  originalUrl?: string;
   siteName?: string;
   archivedAt: string;
 }
@@ -65,6 +70,7 @@ export interface ArticleMeta {
 export interface Article extends IssueBase {
   type: 'article';
   title: string;
+  origin: ArticleOrigin;
   meta: ArticleMeta;
   // Article doesn't use status/scheduling usually, but they are nullable in IssueBase
   status: null;

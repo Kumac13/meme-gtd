@@ -6590,7 +6590,9 @@ paths:
               - memo.deleted
               - memo.bookmarked
               - article.created
+              - article.updated
               - article.deleted
+              - article.bookmarked
               - label.created
               - label.deleted
               - label.assigned
@@ -6691,7 +6693,9 @@ paths:
                         - memo.deleted
                         - memo.bookmarked
                         - article.created
+                        - article.updated
                         - article.deleted
+                        - article.bookmarked
                         - label.created
                         - label.deleted
                         - label.assigned
@@ -6855,7 +6859,9 @@ paths:
                         - memo.deleted
                         - memo.bookmarked
                         - article.created
+                        - article.updated
                         - article.deleted
+                        - article.bookmarked
                         - label.created
                         - label.deleted
                         - label.assigned
@@ -7019,7 +7025,9 @@ paths:
                         - memo.deleted
                         - memo.bookmarked
                         - article.created
+                        - article.updated
                         - article.deleted
+                        - article.bookmarked
                         - label.created
                         - label.deleted
                         - label.assigned
@@ -7632,7 +7640,7 @@ paths:
                 originalUrl:
                   type: string
                   format: uri
-                  description: Original URL of the article
+                  description: Original URL (present for web-saved articles; omit for manual creation)
                 siteName:
                   type: string
                   nullable: true
@@ -7645,7 +7653,6 @@ paths:
               required:
                 - title
                 - bodyMd
-                - originalUrl
               additionalProperties: false
         required: true
       responses:
@@ -7672,12 +7679,18 @@ paths:
                   bodyMd:
                     type: string
                     description: Article content in Markdown format
+                  origin:
+                    type: string
+                    enum:
+                      - web
+                      - manual
+                    description: "How the article came to be: saved from the web or written by hand (issues.origin)"
                   meta:
                     type: object
                     properties:
                       originalUrl:
                         type: string
-                        description: Original URL of the article
+                        description: Original URL (absent for manually created articles)
                       siteName:
                         type: string
                         nullable: true
@@ -7686,7 +7699,6 @@ paths:
                         type: string
                         description: Timestamp when the article was archived
                     required:
-                      - originalUrl
                       - archivedAt
                     additionalProperties: false
                     description: Article metadata
@@ -7718,6 +7730,7 @@ paths:
                   - type
                   - title
                   - bodyMd
+                  - origin
                   - meta
                   - createdAt
                   - updatedAt
@@ -7775,6 +7788,36 @@ paths:
           name: search
           required: false
           description: Search articles by title or content
+        - schema:
+            type: string
+          in: query
+          name: label
+          required: false
+          description: Filter by label name(s). Supports comma-separated values for OR logic (e.g., wine,book)
+        - schema:
+            type: string
+          in: query
+          name: projectId
+          required: false
+          description: Filter by project ID(s). Supports comma-separated values for OR logic (e.g., 1,2,3)
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          in: query
+          name: bookmarked
+          required: false
+          description: Filter by bookmark status
+        - schema:
+            type: string
+            enum:
+              - web
+              - manual
+          in: query
+          name: origin
+          required: false
+          description: "Filter by origin: saved from the web or created manually"
       responses:
         "200":
           description: Default Response
@@ -7804,12 +7847,18 @@ paths:
                         bodyMd:
                           type: string
                           description: Article content in Markdown format
+                        origin:
+                          type: string
+                          enum:
+                            - web
+                            - manual
+                          description: "How the article came to be: saved from the web or written by hand (issues.origin)"
                         meta:
                           type: object
                           properties:
                             originalUrl:
                               type: string
-                              description: Original URL of the article
+                              description: Original URL (absent for manually created articles)
                             siteName:
                               type: string
                               nullable: true
@@ -7818,7 +7867,6 @@ paths:
                               type: string
                               description: Timestamp when the article was archived
                           required:
-                            - originalUrl
                             - archivedAt
                           additionalProperties: false
                           description: Article metadata
@@ -7850,6 +7898,7 @@ paths:
                         - type
                         - title
                         - bodyMd
+                        - origin
                         - meta
                         - createdAt
                         - updatedAt
@@ -7938,12 +7987,18 @@ paths:
                   bodyMd:
                     type: string
                     description: Article content in Markdown format
+                  origin:
+                    type: string
+                    enum:
+                      - web
+                      - manual
+                    description: "How the article came to be: saved from the web or written by hand (issues.origin)"
                   meta:
                     type: object
                     properties:
                       originalUrl:
                         type: string
-                        description: Original URL of the article
+                        description: Original URL (absent for manually created articles)
                       siteName:
                         type: string
                         nullable: true
@@ -7952,7 +8007,6 @@ paths:
                         type: string
                         description: Timestamp when the article was archived
                     required:
-                      - originalUrl
                       - archivedAt
                     additionalProperties: false
                     description: Article metadata
@@ -7984,11 +8038,168 @@ paths:
                   - type
                   - title
                   - bodyMd
+                  - origin
                   - meta
                   - createdAt
                   - updatedAt
                   - isBookmarked
                   - isDeleted
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    patch:
+      operationId: updateArticle
+      summary: Update article
+      tags:
+        - Articles
+      description: Update a manually created article's title/body. Web-saved articles are read-only (400).
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  description: Article title
+                bodyMd:
+                  type: string
+                  description: Article content in Markdown format
+              additionalProperties: false
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Article ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique article ID
+                  type:
+                    type: string
+                    enum:
+                      - article
+                    description: Issue type (always "article")
+                  title:
+                    type: string
+                    description: Article title
+                  bodyMd:
+                    type: string
+                    description: Article content in Markdown format
+                  origin:
+                    type: string
+                    enum:
+                      - web
+                      - manual
+                    description: "How the article came to be: saved from the web or written by hand (issues.origin)"
+                  meta:
+                    type: object
+                    properties:
+                      originalUrl:
+                        type: string
+                        description: Original URL (absent for manually created articles)
+                      siteName:
+                        type: string
+                        nullable: true
+                        description: Name of the source site
+                      archivedAt:
+                        type: string
+                        description: Timestamp when the article was archived
+                    required:
+                      - archivedAt
+                    additionalProperties: false
+                    description: Article metadata
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the article is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the article is soft-deleted
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this article
+                  commentCount:
+                    type: integer
+                    minimum: 0
+                    description: Number of comments on this article
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - origin
+                  - meta
+                  - createdAt
+                  - updatedAt
+                  - isBookmarked
+                  - isDeleted
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
                 additionalProperties: false
         "404":
           description: Default Response
@@ -8027,6 +8238,597 @@ paths:
           name: id
           required: true
           description: Article ID
+      responses:
+        "204":
+          description: Default Response
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/articles/{id}/bookmark:
+    post:
+      operationId: bookmarkArticle
+      summary: Bookmark article
+      tags:
+        - Articles
+      description: Bookmark article
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Article ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique article ID
+                  type:
+                    type: string
+                    enum:
+                      - article
+                    description: Issue type (always "article")
+                  title:
+                    type: string
+                    description: Article title
+                  bodyMd:
+                    type: string
+                    description: Article content in Markdown format
+                  origin:
+                    type: string
+                    enum:
+                      - web
+                      - manual
+                    description: "How the article came to be: saved from the web or written by hand (issues.origin)"
+                  meta:
+                    type: object
+                    properties:
+                      originalUrl:
+                        type: string
+                        description: Original URL (absent for manually created articles)
+                      siteName:
+                        type: string
+                        nullable: true
+                        description: Name of the source site
+                      archivedAt:
+                        type: string
+                        description: Timestamp when the article was archived
+                    required:
+                      - archivedAt
+                    additionalProperties: false
+                    description: Article metadata
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the article is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the article is soft-deleted
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this article
+                  commentCount:
+                    type: integer
+                    minimum: 0
+                    description: Number of comments on this article
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - origin
+                  - meta
+                  - createdAt
+                  - updatedAt
+                  - isBookmarked
+                  - isDeleted
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/articles/{id}/unbookmark:
+    post:
+      operationId: unbookmarkArticle
+      summary: Unbookmark article
+      tags:
+        - Articles
+      description: Unbookmark article
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Article ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique article ID
+                  type:
+                    type: string
+                    enum:
+                      - article
+                    description: Issue type (always "article")
+                  title:
+                    type: string
+                    description: Article title
+                  bodyMd:
+                    type: string
+                    description: Article content in Markdown format
+                  origin:
+                    type: string
+                    enum:
+                      - web
+                      - manual
+                    description: "How the article came to be: saved from the web or written by hand (issues.origin)"
+                  meta:
+                    type: object
+                    properties:
+                      originalUrl:
+                        type: string
+                        description: Original URL (absent for manually created articles)
+                      siteName:
+                        type: string
+                        nullable: true
+                        description: Name of the source site
+                      archivedAt:
+                        type: string
+                        description: Timestamp when the article was archived
+                    required:
+                      - archivedAt
+                    additionalProperties: false
+                    description: Article metadata
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                  isBookmarked:
+                    type: boolean
+                    description: Whether the article is bookmarked
+                  isDeleted:
+                    type: boolean
+                    description: Whether the article is soft-deleted
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of label names assigned to this article
+                  commentCount:
+                    type: integer
+                    minimum: 0
+                    description: Number of comments on this article
+                required:
+                  - id
+                  - type
+                  - title
+                  - bodyMd
+                  - origin
+                  - meta
+                  - createdAt
+                  - updatedAt
+                  - isBookmarked
+                  - isDeleted
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/articles/{articleId}/comments:
+    get:
+      operationId: listArticleComments
+      summary: List article comments
+      tags:
+        - Comments
+      description: List all comments for an article
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: articleId
+          required: true
+          description: Article ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: Unique comment ID
+                    issueId:
+                      type: integer
+                      exclusiveMinimum: true
+                      minimum: 0
+                      description: ID of the parent issue (memo or task)
+                    bodyMd:
+                      type: string
+                      description: Comment content in Markdown format
+                    createdAt:
+                      type: string
+                      format: date-time
+                      description: Creation timestamp
+                    updatedAt:
+                      type: string
+                      format: date-time
+                      description: Last update timestamp
+                  required:
+                    - id
+                    - issueId
+                    - bodyMd
+                    - createdAt
+                    - updatedAt
+                  additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    post:
+      operationId: createArticleComment
+      summary: Create article comment
+      tags:
+        - Comments
+      description: Create comment on article
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bodyMd:
+                  type: string
+                  minLength: 1
+                  description: Comment content in Markdown format
+              required:
+                - bodyMd
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: articleId
+          required: true
+          description: Article ID
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique comment ID
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: ID of the parent issue (memo or task)
+                  bodyMd:
+                    type: string
+                    description: Comment content in Markdown format
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - issueId
+                  - bodyMd
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/articles/{articleId}/comments/{commentId}:
+    patch:
+      operationId: updateArticleComment
+      summary: Update article comment
+      tags:
+        - Comments
+      description: Update comment on article
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bodyMd:
+                  type: string
+                  minLength: 1
+                  description: Updated comment content in Markdown format
+              required:
+                - bodyMd
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: articleId
+          required: true
+          description: Article ID
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: commentId
+          required: true
+          description: Comment ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique comment ID
+                  issueId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: ID of the parent issue (memo or task)
+                  bodyMd:
+                    type: string
+                    description: Comment content in Markdown format
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Last update timestamp
+                required:
+                  - id
+                  - issueId
+                  - bodyMd
+                  - createdAt
+                  - updatedAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+    delete:
+      operationId: deleteArticleComment
+      summary: Delete article comment
+      tags:
+        - Comments
+      description: Delete comment from article
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: articleId
+          required: true
+          description: Article ID
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: commentId
+          required: true
+          description: Comment ID
       responses:
         "204":
           description: Default Response

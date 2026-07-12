@@ -57,3 +57,15 @@ export const TaskCommentIdParamsSchema = TaskCommentParamsSchema.extend({
 });
 
 export type TaskCommentIdParams = z.infer<typeof TaskCommentIdParamsSchema>;
+
+export const ArticleCommentParamsSchema = z.object({
+  articleId: z.string().regex(/^\d+$/, 'Article ID must be a number').describe('Article ID'),
+});
+
+export type ArticleCommentParams = z.infer<typeof ArticleCommentParamsSchema>;
+
+export const ArticleCommentIdParamsSchema = ArticleCommentParamsSchema.extend({
+  commentId: z.string().regex(/^\d+$/, 'Comment ID must be a number').describe('Comment ID'),
+});
+
+export type ArticleCommentIdParams = z.infer<typeof ArticleCommentIdParamsSchema>;
