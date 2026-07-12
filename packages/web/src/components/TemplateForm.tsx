@@ -80,7 +80,7 @@ export default function TemplateForm({
       onCancel={handleCancel}
       renderExtraFields={() => (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Creates</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Target</label>
           <div className="flex rounded-md border border-gray-300 overflow-hidden">
             <button
               type="button"

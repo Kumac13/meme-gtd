@@ -1,19 +1,23 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { IoCheckboxOutline, IoDocumentTextOutline } from 'react-icons/io5';
 import { TemplatesService } from '../../api/services/TemplatesService';
 import SearchInput from '../../components/SearchInput';
+import ItemList from '../../components/ItemList';
 import LoadingState from '../../components/LoadingState';
 import ErrorState from '../../components/ErrorState';
 import EmptyState from '../../components/EmptyState';
 import Pagination from '../../components/Pagination';
-import { LabelBadge } from '../../components/LabelBadge';
 
 interface TemplateItem {
   id: number;
+  type: 'template';
   title: string | null;
+  bodyMd: string;
   templateTarget: 'task' | 'article';
+  isBookmarked: boolean;
   labels?: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 const PAGE_SIZE = 20;
@@ -72,7 +76,6 @@ export default function TemplatesList() {
   );
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Delete this template?')) return;
     await TemplatesService.deleteTemplate(String(id));
     setItems((prev) => prev.filter((t) => t.id !== id));
     setTotal((prev) => prev - 1);
@@ -110,59 +113,13 @@ export default function TemplatesList() {
         />
       ) : (
         <>
-          <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
-            {items.map((t) => (
-              <div key={t.id} className="relative">
-                <Link to={`/templates/${t.id}`} className="block p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center justify-between gap-3">
-                    {/* 種類（何を生むか）は行頭アイコンの形と色で示す — タグ（ピル）とは役割を分ける */}
-                    <span
-                      className="flex-shrink-0"
-                      title={t.templateTarget === 'task' ? 'Creates a task' : 'Creates an article'}
-                    >
-                      {t.templateTarget === 'task' ? (
-                        <IoCheckboxOutline className="w-5 h-5 text-github-green-600" aria-label="Creates a task" />
-                      ) : (
-                        <IoDocumentTextOutline className="w-5 h-5 text-blue-500" aria-label="Creates an article" />
-                      )}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h2 className="text-base text-gray-900">{t.title || `Template #${t.id}`}</h2>
-                        {t.labels?.slice(0, 3).map((l, i) => (
-                          <LabelBadge key={i} name={l} />
-                        ))}
-                        {(t.labels?.length ?? 0) > 3 && (
-                          <span className="px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-gray-600">
-                            +{(t.labels?.length ?? 0) - 3} more
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-500">#{t.id}</div>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleDelete(t.id);
-                      }}
-                      className="p-1 text-gray-400 hover:text-red-600 rounded"
-                      aria-label="Delete template"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                </Link>
-              </div>
-            ))}
-          </div>
+          <ItemList
+            items={items}
+            itemType="template"
+            basePath="/templates"
+            currentFilters={searchParams}
+            onDelete={handleDelete}
+          />
           <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
         </>
       )}

@@ -61,7 +61,7 @@ type Item = BaseItem | Task | Project | Article; // Include Article
 
 interface ItemListProps {
   items: Item[];
-itemType: IssueType | "project";
+itemType: IssueType | "project" | "template";
   basePath: string;
   currentFilters?: URLSearchParams;
   onDelete?: (id: number) => Promise<void>;
@@ -86,6 +86,10 @@ function isProject(item: Item): item is Project {
 
 function isArticle(item: Item): item is Article {
   return "type" in item && (item as any).type === "article";
+}
+
+function isTemplate(item: Item): item is BaseItem & { type: "template" } {
+  return "type" in item && (item as any).type === "template";
 }
 
 export default function ItemList({
@@ -139,7 +143,7 @@ export default function ItemList({
     <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
       {items.map((item) => {
         let itemPath: string;
-        let itemType: "memo" | "task" | "project" | "article";
+        let itemType: "memo" | "task" | "project" | "article" | "template";
 
         if (isProject(item)) {
           itemType = "project";
@@ -150,6 +154,9 @@ export default function ItemList({
         } else if (isArticle(item)) { // Added for Article
           itemType = "article";
           itemPath = createItemDetailUrl({ basePath: "/articles", itemId: item.id, currentFilters });
+        } else if (isTemplate(item)) {
+          itemType = "template";
+          itemPath = createItemDetailUrl({ basePath: "/templates", itemId: item.id, currentFilters });
         } else {
           itemType = "memo";
           itemPath = createItemDetailUrl({ basePath: "/memos", itemId: item.id, currentFilters });
@@ -235,6 +242,32 @@ export default function ItemList({
                             Scheduled: {formatDateTime(item.scheduledOn).split(" ")[0]}
                           </span>
                         )}
+                        <span title={formatDateTime(item.createdAt)}>
+                          {formatRelativeTime(item.createdAt)}
+                        </span>
+                      </div>
+                    </>
+                  ) : isTemplate(item) ? (
+                    <>
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h2 className="text-base text-gray-900">
+                          {item.title || `Template #${item.id}`}
+                        </h2>
+                        {item.labels && item.labels.length > 0 && (
+                          <>
+                            {item.labels.slice(0, 3).map((label, idx) => (
+                              <LabelBadge key={idx} name={label} />
+                            ))}
+                            {item.labels.length > 3 && (
+                              <span className="px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-gray-600">
+                                +{item.labels.length - 3} more
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      <div className="flex items-center text-xs text-gray-500 space-x-3 mt-1">
+                        <span>#{item.id}</span>
                         <span title={formatDateTime(item.createdAt)}>
                           {formatRelativeTime(item.createdAt)}
                         </span>

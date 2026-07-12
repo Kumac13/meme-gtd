@@ -347,11 +347,11 @@ export default function ItemDetail({
             />
           )}
 
-          {/* Creates Section (template only) — what this template produces */}
+          {/* Target Section (template only) — the issue type this template produces (issues.template_target) */}
           {itemType === 'template' && 'templateTarget' in item && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-900">Creates</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Target</h3>
               </div>
               <div className="flex rounded-md border border-gray-300 overflow-hidden">
                 {(['task', 'article'] as const).map((target, i) => (
