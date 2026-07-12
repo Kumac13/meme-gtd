@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { TemplatesService } from '../../api/services/TemplatesService';
 import SearchInput from '../../components/SearchInput';
+import FilterBar from '../../components/FilterBar';
 import ItemList from '../../components/ItemList';
 import LoadingState from '../../components/LoadingState';
 import ErrorState from '../../components/ErrorState';
@@ -30,6 +31,8 @@ export default function TemplatesList() {
   const [error, setError] = useState<string | null>(null);
 
   const searchQuery = searchParams.get('q') || '';
+  const rawTarget = searchParams.get('target');
+  const targetFilter = rawTarget === 'task' || rawTarget === 'article' ? rawTarget : 'all';
   const currentPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -38,7 +41,12 @@ export default function TemplatesList() {
       try {
         setLoading(true);
         const offset = (currentPage - 1) * PAGE_SIZE;
-        const res = await TemplatesService.listTemplates(PAGE_SIZE, offset, searchQuery || undefined);
+        const res = await TemplatesService.listTemplates(
+          PAGE_SIZE,
+          offset,
+          searchQuery || undefined,
+          targetFilter === 'all' ? undefined : targetFilter
+        );
         setItems((res?.data ?? []) as TemplateItem[]);
         setTotal(res?.total ?? 0);
       } catch (err) {
@@ -48,7 +56,7 @@ export default function TemplatesList() {
       }
     };
     load();
-  }, [searchQuery, currentPage]);
+  }, [searchQuery, targetFilter, currentPage]);
 
   const handleSearchChange = (value: string) => {
     const params = new URLSearchParams(searchParams);
@@ -75,6 +83,17 @@ export default function TemplatesList() {
     [searchParams, setSearchParams]
   );
 
+  const handleTargetChange = (target: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (target === 'all') {
+      params.delete('target');
+    } else {
+      params.set('target', target);
+    }
+    params.delete('page');
+    setSearchParams(params);
+  };
+
   const handleDelete = async (id: number) => {
     await TemplatesService.deleteTemplate(String(id));
     setItems((prev) => prev.filter((t) => t.id !== id));
@@ -89,6 +108,15 @@ export default function TemplatesList() {
       <div className="mb-4">
         <SearchInput value={searchQuery} onChange={handleSearchChange} placeholder="Search templates" />
       </div>
+
+      <FilterBar
+        showStatusFilter
+        statusFilter={targetFilter}
+        onStatusFilterChange={handleTargetChange}
+        statusOptions={['all', 'task', 'article']}
+        statusLabels={{ task: 'Task', article: 'Article' }}
+        showBookmarkFilter={false}
+      />
 
       <div className="flex items-center justify-between mb-2">
         <div className="text-sm text-gray-500">
