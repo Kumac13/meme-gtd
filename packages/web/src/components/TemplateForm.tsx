@@ -51,11 +51,13 @@ export default function TemplateForm({
       projectIds: values.projectIds,
     };
     if (mode === 'create') {
-      const template = await TemplatesService.createTemplate(payload);
-      navigate(`/templates/${template.id}`);
+      await TemplatesService.createTemplate(payload);
+      navigate('/templates');
     } else if (mode === 'edit' && templateId) {
       await TemplatesService.updateTemplate(String(templateId), payload);
-      navigate(`/templates/${templateId}`);
+      // The detail route IS this edit form, so navigating to it again would be
+      // an invisible no-op — go back to the list as the completion feedback.
+      navigate('/templates');
     }
   };
 

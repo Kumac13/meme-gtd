@@ -13,6 +13,10 @@ interface TaskTemplateItem {
   title: string | null;
 }
 
+// Chooser fetch cap; combined with server-side search + a scrollable list so the
+// page stays usable however many templates exist.
+const TEMPLATE_PAGE = 50;
+
 export default function TaskNew() {
   const [searchParams] = useSearchParams();
   const fromMemoId = searchParams.get('fromMemo');
@@ -29,6 +33,8 @@ export default function TaskNew() {
   const [phase, setPhase] = useState<'choose' | 'form'>(fromMemoId ? 'form' : 'choose');
   const [templates, setTemplates] = useState<TaskTemplateItem[]>([]);
   const [tplLoading, setTplLoading] = useState(false);
+  const [tplSearch, setTplSearch] = useState('');
+  const [tplTotal, setTplTotal] = useState(0);
 
   useEffect(() => {
     if (fromMemoId && fromMemoId !== null) {
@@ -95,8 +101,10 @@ export default function TaskNew() {
       const load = async () => {
         try {
           setTplLoading(true);
-          const res = await TemplatesService.listTemplates(undefined, undefined, undefined, 'task');
+          // Server-side search + cap; the chooser list itself scrolls.
+          const res = await TemplatesService.listTemplates(TEMPLATE_PAGE, undefined, tplSearch || undefined, 'task');
           setTemplates((res?.data ?? []) as TaskTemplateItem[]);
+          setTplTotal(res?.total ?? 0);
         } catch (err) {
           console.error('Failed to load templates:', err);
         } finally {
@@ -105,7 +113,7 @@ export default function TaskNew() {
       };
       load();
     }
-  }, [phase]);
+  }, [phase, tplSearch]);
 
   // Apply a task template: prefill body/labels/projects (title stays empty).
   const applyTemplate = async (templateId: number) => {
@@ -146,28 +154,43 @@ export default function TaskNew() {
         </div>
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <p className="px-4 py-3 text-sm text-gray-500 border-b border-gray-200">Choose a starting point</p>
-          <div className="divide-y divide-gray-200">
-            <button onClick={() => setPhase('form')} className="block w-full text-left p-4 hover:bg-gray-50">
-              <div className="text-sm font-medium text-gray-900">Blank task</div>
-              <div className="text-xs text-gray-500">Start from scratch</div>
-            </button>
+          <button onClick={() => setPhase('form')} className="block w-full text-left p-4 hover:bg-gray-50 border-b border-gray-200">
+            <div className="text-sm font-medium text-gray-900">Blank task</div>
+            <div className="text-xs text-gray-500">Start from scratch</div>
+          </button>
+          <div className="p-3 border-b border-gray-200">
+            <input
+              type="text"
+              placeholder="Filter templates..."
+              value={tplSearch}
+              onChange={(e) => setTplSearch(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500"
+            />
+          </div>
+          <div className="max-h-80 overflow-y-auto divide-y divide-gray-200">
             {tplLoading ? (
               <div className="p-4 text-sm text-gray-500">Loading templates...</div>
+            ) : templates.length === 0 ? (
+              <div className="p-4 text-sm text-gray-500">
+                {tplSearch.trim() ? 'No templates match your filter' : 'No task templates yet'}
+              </div>
             ) : (
               templates.map((t) => (
                 <button
                   key={t.id}
                   onClick={() => applyTemplate(t.id)}
-                  className="block w-full text-left p-4 hover:bg-gray-50"
+                  className="block w-full text-left px-4 py-3 hover:bg-gray-50"
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-900">{t.title || `Template #${t.id}`}</span>
-                    <span className="px-2 py-0.5 text-xs font-medium rounded bg-indigo-100 text-indigo-700">Template</span>
-                  </div>
+                  <span className="text-sm text-gray-900">{t.title || `Template #${t.id}`}</span>
                 </button>
               ))
             )}
           </div>
+          {!tplLoading && tplTotal > templates.length && (
+            <p className="px-4 py-2 text-xs text-gray-500 border-t border-gray-200">
+              Showing {templates.length} of {tplTotal} — narrow with the filter
+            </p>
+          )}
         </div>
       </div>
     );
