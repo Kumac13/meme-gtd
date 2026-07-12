@@ -45,7 +45,7 @@ export interface IssueFormValues {
   links: PendingLink[];
 }
 
-export interface IssueFormProps {
+interface IssueFormProps {
   initialTitle?: string;
   initialBodyMd?: string;
   initialLabelIds?: number[];

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.50.3 - 2026-07-12
+
+### Bug Fixes
+
+- Knip が未使用として検出していた Web 内部型の不要な export を削除し、Claude hook を root entry として登録して、必須の `pnpm knip` チェックを成功させた。
+
 ## 0.50.2 - 2026-07-12
 
 ### Bug Fixes

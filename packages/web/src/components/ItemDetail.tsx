@@ -58,7 +58,7 @@ interface Task extends BaseItem {
 export type Item = BaseItem | Task;
 
 /** Issue types this detail view renders, plus templates (same screen anatomy). */
-export type DetailItemType = IssueType | 'template';
+type DetailItemType = IssueType | 'template';
 
 interface ItemDetailProps {
   item: Item;

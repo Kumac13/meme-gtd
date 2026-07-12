@@ -3,7 +3,8 @@
   "workspaces": {
     ".": {
       "entry": [
-        "scripts/*.mjs"
+        "scripts/*.mjs",
+        ".claude/hooks/*.mjs"
       ]
     },
     "packages/api": {
