@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.50.5 - 2026-07-12
+
+### Bug Fixes
+
+- iOS Article Details の編集操作と本文レイアウトを Task Details と同じ構造に統一。タイトル編集を右上の情報 sheet、本文編集を本文カードのメニューへ移し、手動ArticleではURLがない `Open` ボタンを表示しないようにした。
+- Webのリンク先パネルとiOS Article Detailsで、抽出処理用の内部マーカー `{#block-N}` が本文に露出する問題を修正。保存データは変更せず、各Article表示経路でマーカーを除去するようにした。
+
 ## 0.50.4 - 2026-07-12
 
 ### Bug Fixes

@@ -15,6 +15,7 @@ import { ScheduleSection } from './ScheduleSection';
 import { StatusSelector } from './StatusSelector';
 import { type ActivityLogEntry } from '../utils/activityLogHelpers';
 import { isDisplayedActivity } from './ActivityTimelineItem';
+import { stripArticleBlockIds } from '../utils/markdown';
 
 const TASK_STATUS_OPTIONS = [
   { value: 'inbox', label: 'Inbox' },
@@ -289,7 +290,7 @@ export default function ItemDetail({
         <div className="flex-1 min-w-0">
           {/* Body content */}
           <EditableContent
-            content={item.bodyMd}
+            content={itemType === 'article' ? stripArticleBlockIds(item.bodyMd) : item.bodyMd}
             createdAt={item.createdAt}
             updatedAt={item.updatedAt}
             onSave={handleUpdateBody}

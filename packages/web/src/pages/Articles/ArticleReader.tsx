@@ -6,6 +6,7 @@ import { ItemDetailPanel } from "../../components/ItemDetailPanel";
 import LoadingState from "../../components/LoadingState";
 import ErrorState from "../../components/ErrorState";
 import type { Article } from "meme-gtd-shared";
+import { stripArticleBlockIds } from "../../utils/markdown";
 
 export const ArticleReader: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -75,7 +76,7 @@ export const ArticleReader: React.FC = () => {
     // Before setting, cleanse bodyMd from block IDs
     const cleansedItem = {
       ...updatedItem,
-      bodyMd: updatedItem.bodyMd.replace(/\{#block-\d+\}/g, "") // Remove block IDs
+      bodyMd: stripArticleBlockIds(updatedItem.bodyMd)
     };
     setArticle(cleansedItem as Article);
   };
@@ -94,7 +95,7 @@ export const ArticleReader: React.FC = () => {
   // Clone article and cleanse bodyMd before passing to ItemDetail
   const cleansedArticle: Article = {
     ...article,
-    bodyMd: article.bodyMd.replace(/\{#block-\d+\}/g, "") // Remove block IDs for display
+    bodyMd: stripArticleBlockIds(article.bodyMd)
   };
 
   // Format date for display

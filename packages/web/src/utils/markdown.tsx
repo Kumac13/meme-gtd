@@ -457,6 +457,11 @@ interface MarkdownRendererProps {
   onIssueLinkClick?: (id: number, type: IssueType) => void;
 }
 
+/** Remove extractor-only block anchors before rendering archived articles. */
+export function stripArticleBlockIds(content: string): string {
+  return content.replace(/\{#block-\d+\}/g, '');
+}
+
 function hasTaskListClass(className: unknown): boolean {
   if (typeof className !== 'string') return false;
   return className.split(' ').includes('task-list-item');

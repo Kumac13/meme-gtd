@@ -53,15 +53,6 @@ struct ArticleDetailView: View {
                                     .foregroundColor(.textPrimary)
                                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                                if article.origin == .manual && !isOfflineReadOnly {
-                                    Button("Edit title") {
-                                        viewModel.replyBody = article.title
-                                        editingMode = .title
-                                    }
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.accent)
-                                }
-
                                 // Meta info row
                                 HStack(spacing: 8) {
                                     if let siteName = siteDisplayName(for: article) {
@@ -76,19 +67,18 @@ struct ArticleDetailView: View {
 
                                     Spacer()
 
-                                    // Open in browser
-                                    Button(action: {
-                                        if let url = URL(string: article.meta?.originalUrl ?? "") {
-                                            openURL(url)
+                                    if let originalUrl = article.meta?.originalUrl,
+                                       !originalUrl.isEmpty,
+                                       let url = URL(string: originalUrl) {
+                                        Button(action: { openURL(url) }) {
+                                            HStack(spacing: 3) {
+                                                Image(systemName: "safari")
+                                                    .font(.system(size: 12))
+                                                Text("Open")
+                                                    .font(.system(size: 12))
+                                            }
+                                            .foregroundColor(.accent)
                                         }
-                                    }) {
-                                        HStack(spacing: 3) {
-                                            Image(systemName: "safari")
-                                                .font(.system(size: 12))
-                                            Text("Open")
-                                                .font(.system(size: 12))
-                                        }
-                                        .foregroundColor(.accent)
                                     }
                                 }
 
@@ -116,44 +106,76 @@ struct ArticleDetailView: View {
                             .padding(.bottom, 12)
                         }
 
-                        // === Article Body (reader-like, no card) ===
-                        if article.origin == .manual && !isOfflineReadOnly {
-                            HStack {
-                                Spacer()
-                                Button {
-                                    viewModel.replyBody = article.bodyMd
-                                    editingMode = .body
-                                } label: {
-                                    Label("Edit body", systemImage: "pencil")
-                                        .font(.system(size: 12))
+                        sectionConnector
+
+                        // === Body Area (same card/menu structure as Task Details) ===
+                        areaCard {
+                            VStack(alignment: .leading, spacing: 0) {
+                                HStack {
+                                    HStack(spacing: 4) {
+                                        let isEdited = article.updatedAt != article.createdAt
+                                        Text(TimelineHelpers.relativeTimeString(iso: isEdited ? article.updatedAt : article.createdAt))
+                                        if isEdited {
+                                            Text("(edited)")
+                                        }
+                                    }
+                                    .font(.system(size: 11))
+                                    .foregroundColor(Color(.systemGray))
+
+                                    Spacer()
+
+                                    Menu {
+                                        Button(action: {
+                                            UIPasteboard.general.string = article.bodyMd
+                                            HapticManager.notification(.success)
+                                        }) {
+                                            Label("Copy", systemImage: "doc.on.doc")
+                                        }
+                                        if article.origin == .manual {
+                                            Button(action: {
+                                                viewModel.replyBody = article.bodyMd
+                                                editingMode = .body
+                                            }) {
+                                                Label("Edit", systemImage: "pencil")
+                                            }
+                                            .disabled(isOfflineReadOnly)
+                                        }
+                                    } label: {
+                                        Image(systemName: "ellipsis")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(.textSecondary)
+                                            .frame(width: 28, height: 20)
+                                            .contentShape(Rectangle())
+                                    }
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.top, 8)
+                                .padding(.bottom, -2)
+
+                                if !article.bodyMd.isEmpty {
+                                    let displayBody = article.bodyMd.replacingOccurrences(
+                                        of: "\\{#block-\\d+\\}",
+                                        with: "",
+                                        options: .regularExpression
+                                    )
+                                    ThreadItem(
+                                        bodyMd: displayBody,
+                                        labels: nil,
+                                        showMenu: false,
+                                        onIssueTap: { id, type in
+                                            onNavigateToLinkedIssue?(id, type, "")
+                                        }
+                                    )
+                                } else {
+                                    Text("No content available.")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.textSecondary)
+                                        .italic()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 10)
+                                        .padding(.horizontal, 16)
                                 }
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.top, 10)
-                        }
-                        if !article.bodyMd.isEmpty {
-                            let cleanBody = article.bodyMd.replacingOccurrences(
-                                of: "\\{#block-\\d+\\}",
-                                with: "",
-                                options: .regularExpression
-                            )
-                            MarkdownBody(
-                                cleanBody,
-                                onIssueTap: { id, type in
-                                    onNavigateToLinkedIssue?(id, type, "")
-                                }
-                            )
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 16)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        } else {
-                            Text("No content available.")
-                                .font(.system(size: 14))
-                                .foregroundColor(.textSecondary)
-                                .italic()
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 16)
-                                .padding(.horizontal, 16)
                         }
 
                         // === Timeline: Comments + activities interleaved ===
@@ -295,6 +317,7 @@ struct ArticleDetailView: View {
                 viewModel: viewModel,
                 showCopiedFeedback: $showCopiedFeedback,
                 isReadOnly: isOfflineReadOnly,
+                onEditTitle: editTitleAction,
                 onDelete: { showDeleteConfirm = true },
                 onNavigateToIssue: { target in
                     onNavigateToLinkedIssue?(target.id, target.type, target.title)
@@ -335,6 +358,15 @@ struct ArticleDetailView: View {
         // Negative ids are device-local rows with no server identity — not a
         // number to surface.
         viewModel.article?.title ?? initialTitle ?? (articleId > 0 ? "#\(articleId)" : "")
+    }
+
+    private var editTitleAction: (() -> Void)? {
+        guard viewModel.article?.origin == .manual else { return nil }
+        return {
+            guard let article = viewModel.article else { return }
+            viewModel.replyBody = article.title
+            editingMode = .title
+        }
     }
 
     // MARK: - Site display name

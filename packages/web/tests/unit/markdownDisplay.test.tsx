@@ -1,6 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MarkdownRenderer, InlineMarkdownRenderer, extractPreview } from '../../src/utils/markdown';
+import { MarkdownRenderer, InlineMarkdownRenderer, extractPreview, stripArticleBlockIds } from '../../src/utils/markdown';
+
+describe('stripArticleBlockIds', () => {
+  it('removes extractor block anchors without changing surrounding markdown', () => {
+    expect(stripArticleBlockIds('First {#block-17}\n\n## Next {#block-18}')).toBe('First \n\n## Next ');
+  });
+
+  it('leaves similar non-anchor text unchanged', () => {
+    expect(stripArticleBlockIds('Example {#block-x} and block-17')).toBe('Example {#block-x} and block-17');
+  });
+});
 
 describe('MarkdownRenderer list alignment', () => {
   // list-inside だと折り返し行がマーカーの下に回り込むため、list-outside + padding を使う（GitHub同等）
