@@ -5,6 +5,7 @@ struct MemeGTDApp: App {
     @StateObject private var taskStore = TaskStore()
     @StateObject private var memoStore = MemoStore()
     @StateObject private var articleStore = ArticleStore()
+    @StateObject private var templateStore = TemplateStore()
     @StateObject private var dataSources = DataSourceProvider()
     @Environment(\.scenePhase) private var scenePhase
 
@@ -21,6 +22,7 @@ struct MemeGTDApp: App {
                 .environmentObject(taskStore)
                 .environmentObject(memoStore)
                 .environmentObject(articleStore)
+                .environmentObject(templateStore)
                 .environmentObject(dataSources)
                 .preferredColorScheme(.light)
         }

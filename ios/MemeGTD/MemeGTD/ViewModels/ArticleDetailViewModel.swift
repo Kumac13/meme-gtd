@@ -8,6 +8,9 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
     @Published var error: String?
     @Published var isBookmarking: Bool = false
     @Published var activityLogs: [ActivityLogEntry] = []
+    @Published var comments: [Comment] = []
+    @Published var replyBody: String = ""
+    @Published var isSubmittingReply: Bool = false
 
     // Activity event types to display in timeline
     private static let displayedEventTypes: Set<String> = [
@@ -17,9 +20,10 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
     ]
 
     var timelineEntries: [TimelineEntry] {
-        activityLogs
+        let activities = activityLogs
             .filter { Self.displayedEventTypes.contains($0.eventType) }
             .map { TimelineEntry.activity($0) }
+        return (activities + comments.map { TimelineEntry.comment($0) })
             .sorted { $0.timestamp < $1.timestamp }
     }
 
@@ -79,28 +83,31 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
         async let linksResult: () = loadLinks()
         async let urlLinksResult: () = loadUrlLinks()
         async let activityResult: () = loadActivityLog()
-        _ = await (projectsResult, labelsResult, linksResult, urlLinksResult, activityResult)
+        async let commentsResult: () = loadComments()
+        _ = await (projectsResult, labelsResult, linksResult, urlLinksResult, activityResult, commentsResult)
 
         isLoading = false
     }
 
     // MARK: - Fetch without UI update (for pull-to-refresh)
 
-    func fetchArticle() async -> (Article, [ActivityLogEntry])? {
+    func fetchArticle() async -> (Article, [Comment], [ActivityLogEntry])? {
         do {
             let article: Article = try await dataSources.articles.getArticle(id: articleId)
             let activities: [ActivityLogEntry] = try await dataSources.issueRelations.listActivityLog(
                 issueId: articleId
             )
-            return (article, activities)
+            let comments = try await dataSources.articles.listComments(articleId: articleId)
+            return (article, comments, activities)
         } catch {
             self.error = error.localizedDescription
             return nil
         }
     }
 
-    func applyArticle(_ article: Article, activities: [ActivityLogEntry]) {
+    func applyArticle(_ article: Article, comments: [Comment], activities: [ActivityLogEntry]) {
         self.article = article
+        self.comments = comments
         self.activityLogs = activities
     }
 
@@ -271,10 +278,91 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
             .map { $0 }
     }
 
-    // MARK: - Bookmark (no-op: API not implemented for articles)
+    // MARK: - Bookmark
 
     func toggleBookmark() async {
-        // Bookmark API not available for articles
+        guard let current = article else { return }
+        isBookmarking = true
+        defer { isBookmarking = false }
+        do {
+            let updated = current.isBookmarked
+                ? try await dataSources.articles.unbookmarkArticle(id: articleId)
+                : try await dataSources.articles.bookmarkArticle(id: articleId)
+            article = updated
+            articleStore?.needsReload = true
+            HapticManager.impact(.light)
+        } catch {
+            self.error = error.localizedDescription
+            HapticManager.notification(.error)
+        }
+    }
+
+    // MARK: - Article and comments
+
+    func updateArticle(title: String? = nil, bodyMd: String? = nil) async {
+        do {
+            let updated = try await dataSources.articles.updateArticle(
+                id: articleId,
+                UpdateArticleRequest(title: title, bodyMd: bodyMd)
+            )
+            article = updated
+            articleStore?.needsReload = true
+            HapticManager.notification(.success)
+        } catch {
+            self.error = error.localizedDescription
+            HapticManager.notification(.error)
+        }
+    }
+
+    private func loadComments() async {
+        do {
+            comments = try await dataSources.articles.listComments(articleId: articleId)
+        } catch {
+            // Non-critical in offline read-only mode.
+        }
+    }
+
+    func addComment() async {
+        let body = replyBody.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !body.isEmpty else { return }
+        isSubmittingReply = true
+        defer { isSubmittingReply = false }
+        do {
+            let comment = try await dataSources.articles.createComment(
+                articleId: articleId,
+                CreateCommentRequest(bodyMd: body)
+            )
+            comments.append(comment)
+            replyBody = ""
+            HapticManager.notification(.success)
+        } catch {
+            self.error = error.localizedDescription
+            HapticManager.notification(.error)
+        }
+    }
+
+    func updateComment(_ commentId: Int, bodyMd: String) async {
+        do {
+            let updated = try await dataSources.articles.updateComment(
+                articleId: articleId,
+                commentId: commentId,
+                UpdateCommentRequest(bodyMd: bodyMd)
+            )
+            if let index = comments.firstIndex(where: { $0.id == commentId }) {
+                comments[index] = updated
+            }
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func deleteComment(_ commentId: Int) async {
+        do {
+            try await dataSources.articles.deleteComment(articleId: articleId, commentId: commentId)
+            comments.removeAll { $0.id == commentId }
+        } catch {
+            self.error = error.localizedDescription
+        }
     }
 
     // MARK: - Delete

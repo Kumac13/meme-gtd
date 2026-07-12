@@ -61,6 +61,8 @@ const issueRowToChangeData = (row: any): Record<string, unknown> => ({
   bodyMd: row.body_md,
   status: row.status,
   taskKind: row.task_kind,
+  templateTarget: row.template_target,
+  origin: row.origin,
   scheduledStart: row.scheduled_start,
   scheduledEnd: row.scheduled_end,
   isAllDay: toBoolean(row.is_all_day ?? 0),

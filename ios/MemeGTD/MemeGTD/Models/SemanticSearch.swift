@@ -89,6 +89,7 @@ extension SemanticSearchResultItem {
             type: issue.type,
             title: issue.title ?? "",
             bodyMd: issue.bodyMd,
+            origin: .web,
             meta: nil,
             createdAt: issue.createdAt,
             updatedAt: issue.updatedAt,

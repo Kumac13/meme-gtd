@@ -19,4 +19,5 @@ export { SearchService } from './services/SearchService';
 export { SyncService } from './services/SyncService';
 export { SystemService } from './services/SystemService';
 export { TasksService } from './services/TasksService';
+export { TemplatesService } from './services/TemplatesService';
 export { UrlLinksService } from './services/UrlLinksService';

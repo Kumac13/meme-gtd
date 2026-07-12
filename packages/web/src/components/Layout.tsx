@@ -8,6 +8,7 @@ export default function Layout() {
   const isProjectsActive = location.pathname.startsWith("/projects");
   const isCalendarActive = location.pathname.startsWith("/calendar");
   const isArticlesActive = location.pathname.startsWith("/articles");
+  const isTemplatesActive = location.pathname.startsWith("/templates");
   const isActivityActive = location.pathname.startsWith("/activity");
 
   return (
@@ -59,6 +60,16 @@ export default function Layout() {
                   }`}
                 >
                   Articles
+                </Link>
+                <Link
+                  to="/templates"
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                    isTemplatesActive
+                      ? "border-github-green-500 text-gray-900"
+                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                  }`}
+                >
+                  Templates
                 </Link>
                 <Link
                   to="/calendar"

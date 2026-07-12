@@ -56,9 +56,12 @@ export const searchByKeyword = (
   const order = options.order === 'asc' ? 'ASC' : 'DESC';
   const q = `%${query}%`;
 
+  // Templates (type='template') are scaffolds, not user content. Callers that
+  // scope to explicit types never include 'template'; when no types are given
+  // (cross-type keyword search) exclude templates so they don't surface.
   const typesFilter = options.types && options.types.length > 0
     ? `AND i.type IN (${options.types.map(() => '?').join(', ')})`
-    : '';
+    : `AND i.type != 'template'`;
   const typesParams = options.types ?? [];
 
   const statusFilter = options.status ? 'AND i.status = ?' : '';

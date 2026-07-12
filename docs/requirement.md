@@ -196,9 +196,9 @@ stateDiagram-v2
 
 ### 4.10 記事（Article）
 
-- **役割**: ブラウザ拡張（Chrome）や iOS Safari Share Extension から保存した Web 記事のアーカイブ。
-- **主要データ**: `issues.type = article`、`title` 必須、`meta` に `originalUrl`（必須）、`siteName`、`archivedAt` を JSON で保持。本文は Readability で抽出した Markdown。
-- **機能要件**: 保存（`POST /api/articles`）、一覧・詳細・削除、コメント・ラベル・プロジェクト・リンクの付与。
+- **役割**: Web 記事のアーカイブと、読書メモなど継続的にコメントを追記する手動記事。
+- **主要データ**: `issues.type = article`、`title` 必須、`origin = web | manual`。Web保存では `meta` に `originalUrl`、`siteName`、`archivedAt` を保持し、本文は Readability で抽出した Markdown。手動作成では `originalUrl` を持たない。
+- **機能要件**: Web保存・手動作成、一覧・詳細・削除・ブックマーク、コメント・ラベル・プロジェクト・リンクの付与。手動記事はタイトル・本文を編集でき、Web保存記事の本文はアーカイブの同一性を保つため read-only とする。
 
 ### 4.11 検索（keyword / semantic）
 

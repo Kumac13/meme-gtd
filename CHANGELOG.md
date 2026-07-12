@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.50.3 - 2026-07-12
+
+### Bug Fixes
+
+- Knip が未使用として検出していた Web 内部型の不要な export を削除し、Claude hook を root entry として登録して、必須の `pnpm knip` チェックを成功させた。
+
+## 0.50.2 - 2026-07-12
+
+### Bug Fixes
+
+- iOS Article の Origin フィルタを独自 `confirmationDialog` から、Task Status と共有する単一選択 sheet コンポーネントへ変更。
+- Article の Labels / Projects フィルタで既存の共通 picker modal を Task と同じ設定で利用し、右上の Clear 操作を表示。
+
+## 0.50.1 - 2026-07-12
+
+### Bug Fixes
+
+- iOS Articles 一覧の New ボタンを Task 一覧と同じ画面右下の丸いフローティングボタンへ移動。
+- iOS Article Detail の背景を Task Detail と同じ `menuBackground` に統一。
+- iOS Articles の Origin / Labels / Projects / Bookmark フィルタを、Task 一覧と同じ固定フィルタバーとして常時表示。
+
+## 0.50.0 - 2026-07-12
+
+### New Features
+
+- 作成時テンプレートを Web / iOS に追加。Task / Article 用テンプレートを作成・編集し、新規作成時に Blank またはテンプレートを選択して本文・ラベル・プロジェクトを引き継げるようにした。
+- Article を Web 保存専用から一般化し、Web / iOS から手動作成、本文編集、コメント CRUD、ブックマーク、ラベル・プロジェクト・origin フィルタを利用可能にした。Web 保存記事の本文はアーカイブとして read-only のまま維持する。
+
+### Tests
+
+- テンプレート CRUD・生成、手動記事、origin、Web 記事の更新拒否、記事コメント・フィルタを API 統合テストで検証。Web と iOS の既存テスト、および Simulator / 実機ビルドも通過。
+
 ## 0.47.3 - 2026-07-09
 
 ### Bug Fixes

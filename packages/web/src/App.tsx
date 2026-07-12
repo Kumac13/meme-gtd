@@ -19,6 +19,10 @@ import Calendar from "./pages/Calendar";
 import ProjectDefaultRedirect from "./components/ProjectDefaultRedirect";
 import { ArticleList } from "./pages/Articles/ArticleList";
 import { ArticleReader } from "./pages/Articles/ArticleReader";
+import ArticleNew from "./pages/Articles/ArticleNew";
+import TemplatesList from "./pages/Templates/TemplatesList";
+import TemplateNew from "./pages/Templates/TemplateNew";
+import TemplateDetail from "./pages/Templates/TemplateDetail";
 import ActivityLogPage from "./pages/ActivityLog";
 
 function App() {
@@ -46,7 +50,11 @@ function App() {
               </Route>
               <Route path="calendar" element={<Calendar />} />
               <Route path="articles" element={<ArticleList />} />
+              <Route path="articles/new" element={<ArticleNew />} />
               <Route path="articles/:id" element={<ArticleReader />} />
+              <Route path="templates" element={<TemplatesList />} />
+              <Route path="templates/new" element={<TemplateNew />} />
+              <Route path="templates/:id" element={<TemplateDetail />} />
               <Route path="activity" element={<ActivityLogPage />} />
             </Route>
           </Routes>

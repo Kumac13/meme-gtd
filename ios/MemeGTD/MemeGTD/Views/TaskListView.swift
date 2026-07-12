@@ -18,6 +18,8 @@ struct TaskListView: View {
     @State private var dateFrom: Date?
     @State private var dateTo: Date?
     @State private var createTaskMode: CreateTaskMode? = nil
+    @State private var showTemplateChooser: Bool = false
+    @State private var chosenCreateKind: CreateTaskModeKind? = nil
     @State private var showCopyDialog: Bool = false
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
@@ -183,7 +185,9 @@ struct TaskListView: View {
                 Spacer()
                 Button(action: {
                     HapticManager.impact(.medium)
-                    createTaskMode = CreateTaskMode(kind: .standard)
+                    // Pre-screen (requirement): choose Blank or a template
+                    // before entering the Create New Task form.
+                    showTemplateChooser = true
                 }) {
                     Image(systemName: "plus")
                         .font(.system(size: 20, weight: .semibold))
@@ -309,6 +313,30 @@ struct TaskListView: View {
             )
             .presentationDetents([.medium])
         }
+        .sheet(isPresented: $showTemplateChooser, onDismiss: {
+            if let kind = chosenCreateKind {
+                createTaskMode = CreateTaskMode(kind: kind)
+                chosenCreateKind = nil
+            }
+        }) {
+            TemplateChooserSheet(
+                target: "task",
+                onBlank: {
+                    chosenCreateKind = .standard
+                    showTemplateChooser = false
+                },
+                onTemplate: { template in
+                    chosenCreateKind = .fromTemplate(
+                        bodyMd: template.bodyMd,
+                        initialLabelNames: template.labels ?? [],
+                        initialProjectIds: template.projectIds ?? []
+                    )
+                    showTemplateChooser = false
+                },
+                onDismiss: { showTemplateChooser = false }
+            )
+            .presentationDetents([.medium, .large])
+        }
         .sheet(item: $createTaskMode) { mode in
             CreateTaskModal(
                 mode: mode.kind,
@@ -362,59 +390,17 @@ struct TaskListView: View {
     // MARK: - Status Picker Sheet
 
     private var statusPickerSheet: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button(action: { HapticManager.impact(.light); showStatusPicker = false }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundColor(Color(.tertiaryLabel))
-                }
-                Spacer()
-                Text("Status")
-                    .font(.system(size: 17, weight: .semibold))
-                Spacer()
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .hidden()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-
-            Divider()
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(TaskStatusFilter.allCases, id: \.self) { status in
-                        Button(action: {
-                            HapticManager.selection()
-                            viewModel.setStatusFilter(status)
-                            showStatusPicker = false
-                        }) {
-                            HStack {
-                                Text(status.displayLabel)
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.textPrimary)
-                                Spacer()
-                                if viewModel.statusFilter == status {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 22))
-                                        .foregroundColor(.accent)
-                                } else {
-                                    Image(systemName: "plus.circle")
-                                        .font(.system(size: 22))
-                                        .foregroundColor(Color(.systemGray3))
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                        }
-                        Divider().padding(.leading, 16)
-                    }
-                }
-            }
-        }
-        .background(Color(.systemBackground))
+        SingleChoiceFilterSheet(
+            title: "Status",
+            options: TaskStatusFilter.allCases,
+            selected: viewModel.statusFilter,
+            label: { $0.displayLabel },
+            onSelect: { status in
+                viewModel.setStatusFilter(status)
+                showStatusPicker = false
+            },
+            onDismiss: { showStatusPicker = false }
+        )
     }
 
 }

@@ -3,6 +3,7 @@ import type { IssueType, TaskKind } from 'meme-gtd-shared';
 import { MemosService } from '../api/services/MemosService';
 import { TasksService } from '../api/services/TasksService';
 import { ArticlesService } from '../api/services/ArticlesService';
+import { TemplatesService } from '../api/services/TemplatesService';
 import { CommentsService } from '../api/services/CommentsService';
 import { ActivityLogService } from '../api/services/ActivityLogService';
 import EditableContent from './EditableContent';
@@ -56,9 +57,12 @@ interface Task extends BaseItem {
 
 export type Item = BaseItem | Task;
 
+/** Issue types this detail view renders, plus templates (same screen anatomy). */
+type DetailItemType = IssueType | 'template';
+
 interface ItemDetailProps {
   item: Item;
-  itemType: IssueType;
+  itemType: DetailItemType;
   onDelete: () => Promise<void>;
   onBookmarkToggle?: () => Promise<void>;
   onUpdate: (updatedItem: Item) => void;
@@ -110,8 +114,9 @@ export default function ItemDetail({
   onCommentsLoadedRef.current = onCommentsLoaded;
 
   useEffect(() => {
-    // Skip fetching comments for articles (API not implemented)
-    if (itemType === 'article') {
+    // Skip fetching comments for templates (scaffolds have no comments/activity
+    // by design).
+    if (itemType === 'template') {
       setCommentsLoading(false);
       return;
     }
@@ -122,7 +127,9 @@ export default function ItemDetail({
         const [commentsResponse, activitiesResponse] = await Promise.all([
           itemType === 'memo'
             ? CommentsService.listMemoComments(String(item.id))
-            : CommentsService.listTaskComments(String(item.id)),
+            : itemType === 'article'
+              ? CommentsService.listArticleComments(String(item.id))
+              : CommentsService.listTaskComments(String(item.id)),
           ActivityLogService.getIssueActivityLog(item.id, 100, 'asc')
             .then((res) => res.filter(isDisplayedActivity))
             .catch(() => [] as ActivityLogEntry[]),
@@ -145,7 +152,9 @@ export default function ItemDetail({
     const newComment =
       itemType === 'memo'
         ? await CommentsService.createMemoComment(String(item.id), { bodyMd })
-        : await CommentsService.createTaskComment(String(item.id), { bodyMd });
+        : itemType === 'article'
+          ? await CommentsService.createArticleComment(String(item.id), { bodyMd })
+          : await CommentsService.createTaskComment(String(item.id), { bodyMd });
     const updatedComments = [...comments, newComment];
     setComments(updatedComments);
     onCommentsLoadedRef.current?.(updatedComments);
@@ -156,7 +165,9 @@ export default function ItemDetail({
     const updatedComment =
       itemType === 'memo'
         ? await CommentsService.updateMemoComment(String(item.id), String(commentId), { bodyMd })
-        : await CommentsService.updateTaskComment(String(item.id), String(commentId), { bodyMd });
+        : itemType === 'article'
+          ? await CommentsService.updateArticleComment(String(item.id), String(commentId), { bodyMd })
+          : await CommentsService.updateTaskComment(String(item.id), String(commentId), { bodyMd });
     const updatedComments = comments.map((c) => (c.id === commentId ? updatedComment : c));
     setComments(updatedComments);
     onCommentsLoadedRef.current?.(updatedComments);
@@ -166,6 +177,8 @@ export default function ItemDetail({
   const handleDeleteComment = async (commentId: number) => {
     if (itemType === 'memo') {
       await CommentsService.deleteMemoComment(String(item.id), String(commentId));
+    } else if (itemType === 'article') {
+      await CommentsService.deleteArticleComment(String(item.id), String(commentId));
     } else {
       await CommentsService.deleteTaskComment(String(item.id), String(commentId));
     }
@@ -180,10 +193,20 @@ export default function ItemDetail({
         ? await MemosService.updateMemo(String(item.id), {
           bodyMd: newBody,
         })
-        : await TasksService.updateTask(String(item.id), {
-          title: newTitle !== undefined ? newTitle : item.title || undefined,
-          bodyMd: newBody,
-        });
+        : itemType === 'template'
+          ? await TemplatesService.updateTemplate(String(item.id), {
+            title: newTitle !== undefined ? newTitle : item.title || undefined,
+            bodyMd: newBody,
+          })
+          : itemType === 'article'
+            ? await ArticlesService.updateArticle(String(item.id), {
+              title: newTitle !== undefined ? newTitle : item.title || undefined,
+              bodyMd: newBody,
+            })
+            : await TasksService.updateTask(String(item.id), {
+              title: newTitle !== undefined ? newTitle : item.title || undefined,
+              bodyMd: newBody,
+            });
     onUpdate(updatedItem as Item);
     bumpLinks();
   };
@@ -191,6 +214,13 @@ export default function ItemDetail({
   const handleDeleteBody = async () => {
     await onDelete();
   };
+
+  // Web-saved articles are archived snapshots (issues.origin='web'): the body
+  // is read-only and only comments can be edited. Manual articles are fully
+  // editable.
+  const articleOrigin = itemType === 'article' ? (item as { origin?: string }).origin : undefined;
+  const isWebArticle = articleOrigin === 'web';
+  const isManualArticle = itemType === 'article' && articleOrigin === 'manual';
 
   const handleLabelsChanged = () => {
     // Refresh item data to show updated labels
@@ -200,6 +230,8 @@ export default function ItemDetail({
         updatedItem = await MemosService.getMemo(String(item.id));
       } else if (itemType === 'article') {
         updatedItem = await ArticlesService.getArticle(String(item.id));
+      } else if (itemType === 'template') {
+        updatedItem = await TemplatesService.getTemplate(String(item.id));
       } else {
         updatedItem = await TasksService.getTask(String(item.id));
       }
@@ -216,7 +248,7 @@ export default function ItemDetail({
         <div className={`flex flex-col gap-3 mb-3 ${mode === 'page' ? 'sm:flex-row sm:items-start sm:justify-between' : ''}`}>
           {mode === 'page' && (
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-              {item.title || `${itemType === 'memo' ? 'Memo' : itemType === 'article' ? 'Article' : 'Task'} #${item.id}`}
+              {item.title || `${itemType === 'memo' ? 'Memo' : itemType === 'article' ? 'Article' : itemType === 'template' ? 'Template' : 'Task'} #${item.id}`}
             </h1>
           )}
           <div className={`flex items-center gap-2 flex-wrap justify-end ${mode === 'panel' ? 'w-full' : 'sm:flex-nowrap'}`}>
@@ -263,28 +295,31 @@ export default function ItemDetail({
             onSave={handleUpdateBody}
             onDelete={handleDeleteBody}
             title={item.title}
-            showTitleEdit={itemType === 'task'}
+            showTitleEdit={itemType === 'task' || itemType === 'template' || isManualArticle}
             enableInteractiveTodos={itemType === 'task'}
+            readOnly={isWebArticle}
             onIssueLinkClick={onItemClick}
           />
 
-          {/* Links section */}
-          <LinkSection
-            itemId={item.id}
-            itemType={itemType}
-            onItemClick={onItemClick}
-            onBeforeNavigate={onBeforeNavigate}
-            parentTask={itemType === 'task' ? {
-              id: item.id,
-              title: item.title || '',
-              status: 'status' in item ? item.status : null,
-              labels: item.labels || [],
-            } : undefined}
-            refreshKey={linksRefreshKey}
-          />
+          {/* Links section (not for templates — scaffolds have no links) */}
+          {itemType !== 'template' && (
+            <LinkSection
+              itemId={item.id}
+              itemType={itemType}
+              onItemClick={onItemClick}
+              onBeforeNavigate={onBeforeNavigate}
+              parentTask={itemType === 'task' ? {
+                id: item.id,
+                title: item.title || '',
+                status: 'status' in item ? item.status : null,
+                labels: item.labels || [],
+              } : undefined}
+              refreshKey={linksRefreshKey}
+            />
+          )}
 
-          {/* Comments section (memo/task only) */}
-          {itemType !== 'article' && (
+          {/* Comments section (memo/task/article) */}
+          {itemType !== 'template' && (
             <CommentSection
               comments={comments}
               loading={commentsLoading}
@@ -331,6 +366,34 @@ export default function ItemDetail({
                 }
               }}
             />
+          )}
+
+          {/* Target Section (template only) — the issue type this template produces (issues.template_target) */}
+          {itemType === 'template' && 'templateTarget' in item && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-gray-900">Target</h3>
+              </div>
+              <div className="flex rounded-md border border-gray-300 overflow-hidden">
+                {(['task', 'article'] as const).map((target, i) => (
+                  <button
+                    key={target}
+                    type="button"
+                    onClick={async () => {
+                      const updated = await TemplatesService.updateTemplate(String(item.id), { templateTarget: target });
+                      onUpdate(updated as unknown as Item);
+                    }}
+                    className={`flex-1 px-3 py-2 text-sm ${i > 0 ? 'border-l border-gray-300' : ''} ${
+                      (item as { templateTarget?: string }).templateTarget === target
+                        ? 'bg-github-green-600 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {target === 'task' ? 'Task' : 'Article'}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* Labels Section */}

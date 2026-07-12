@@ -6,7 +6,7 @@
 
 `schema/` 配下の SQL マイグレーションを反映した、現行スキーマの ER 図です。カラム定義の最終的な正は `schema/*.sql`。
 
-- 中心テーブルは `issues` （memo / task / article を 1 つのテーブルで管理）。
+- 中心テーブルは `issues` （memo / task / article / template を 1 つのテーブルで管理）。
 - `issues_fts` は FTS5 仮想テーブル、`schema_migrations` はマイグレーション履歴、`sync_state` は単一行のメタテーブルのため独立。
 - `activity_log` は payload(JSON) から仮想カラムで `issue_id` 等を参照するイベントソース型。**外部キー制約は持たない**ため、論理的な関係を点線（破線）で示しています。
 - `sync_sequence` / `sync_tombstones` / `sync_applied_ops` と `uuid` / `server_seq` カラムは iOS オフライン同期の基盤（migration 014、意味は後述の「同期基盤」）。
@@ -17,7 +17,7 @@ erDiagram
         INTEGER  id PK
         TEXT     uuid UK "sync identity"
         INTEGER  server_seq "sync cursor"
-        TEXT     type "memo|task|article"
+        TEXT     type "memo|task|article|template"
         TEXT     title
         TEXT     body_md
         TEXT     status
@@ -37,6 +37,8 @@ erDiagram
         TEXT     actual_start
         TEXT     actual_end
         TEXT     task_kind "event|action"
+        TEXT     template_target "task|article (template only)"
+        TEXT     origin "web|manual (article only)"
     }
 
     labels {
@@ -196,11 +198,13 @@ erDiagram
 
 ### issues
 
-- `type`: `memo` / `task` / `article`（migration 010 で `article` 追加）
+- `type`: `memo` / `task` / `article` / `template`（010 で `article`、015 で `template` 追加）
+- `template_target`（templateのみ）: `task` / `article`。そのテンプレートが生成する型。作成時に選ぶ。template 以外では NULL（migration 015）
+- `origin`（articleのみ）: `web` / `manual`。Web保存か手動作成かを表し、article 以外では NULL（migrations 016–017）
 - `status`（taskのみ使用）: `inbox` / `open` / `next` / `waiting` / `scheduled` / `someday` / `done` / `canceled` の8値。memoでは未使用（NULL）
 - `task_kind`（taskのみ）: `event`（予定）/ `action`（作業、デフォルト）
 - `title`: task/articleは必須。memoは常にNULL（未使用）
-- `meta`（JSON）: articleは `originalUrl`（必須）/ `siteName` / `archivedAt` を保持
+- `meta`（JSON）: Web保存 article は `originalUrl` / `siteName` / `archivedAt` を保持。手動 article では `originalUrl` を持たない
 - `is_bookmarked` / `is_deleted`: 0/1フラグ。削除は論理削除
 - 日時カラムはISO 8601文字列
 

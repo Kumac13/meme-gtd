@@ -72,9 +72,49 @@ nonisolated final class OfflineFirstArticleDataSource: ArticleDataSource {
 
     // MARK: - Writes (online only)
 
+    func createArticle(_ request: CreateManualArticleRequest) async throws -> Article {
+        try await onlineWrite { try await remote.createArticle(request) }
+    }
+
+    func updateArticle(id: Int, _ request: UpdateArticleRequest) async throws -> Article {
+        try await onlineWrite { try await remote.updateArticle(id: id, request) }
+    }
+
+    func bookmarkArticle(id: Int) async throws -> Article {
+        try await onlineWrite { try await remote.bookmarkArticle(id: id) }
+    }
+
+    func unbookmarkArticle(id: Int) async throws -> Article {
+        try await onlineWrite { try await remote.unbookmarkArticle(id: id) }
+    }
+
+    func listComments(articleId: Int) async throws -> [Comment] {
+        try await onlineWrite { try await remote.listComments(articleId: articleId) }
+    }
+
+    func createComment(articleId: Int, _ request: CreateCommentRequest) async throws -> Comment {
+        try await onlineWrite { try await remote.createComment(articleId: articleId, request) }
+    }
+
+    func updateComment(articleId: Int, commentId: Int, _ request: UpdateCommentRequest) async throws -> Comment {
+        try await onlineWrite { try await remote.updateComment(articleId: articleId, commentId: commentId, request) }
+    }
+
+    func deleteComment(articleId: Int, commentId: Int) async throws {
+        try await onlineWrite { try await remote.deleteComment(articleId: articleId, commentId: commentId) }
+    }
+
     func deleteArticle(id: Int) async throws {
         do {
             try await remote.deleteArticle(id: id)
+        } catch where OfflineFirstSupport.isNetworkError(error) {
+            throw OfflineReadOnlyError()
+        }
+    }
+
+    private func onlineWrite<T>(_ operation: () async throws -> T) async throws -> T {
+        do {
+            return try await operation()
         } catch where OfflineFirstSupport.isNetworkError(error) {
             throw OfflineReadOnlyError()
         }

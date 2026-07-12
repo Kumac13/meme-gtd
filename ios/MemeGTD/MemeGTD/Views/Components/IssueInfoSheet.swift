@@ -15,6 +15,9 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
     var onNavigateToIssue: ((TargetIssue) -> Void)?
     var labelCountKeyPath: KeyPath<IssueLabel, Int> = \.memoCount
     var showBookmark: Bool = true
+    /// Templates have no links, so their detail sheet hides the section
+    /// (same opt-out pattern as `showBookmark`).
+    var showLinks: Bool = true
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
@@ -217,6 +220,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                 Divider().padding(.leading, 16)
 
                 // Links
+                if showLinks {
                 VStack(alignment: .leading, spacing: 0) {
                     Button(action: { showLinkPicker = true }) {
                         HStack {
@@ -290,6 +294,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                 .padding(.vertical, 14)
 
                 Divider().padding(.leading, 16)
+                }
 
                 // Copy All Contents
                 Button(action: {

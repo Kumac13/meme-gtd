@@ -14,6 +14,7 @@ struct ArticleDetailView: View {
     @State private var showDeleteConfirm: Bool = false
     @State private var showInfoSheet: Bool = false
     @State private var showCopiedFeedback: Bool = false
+    @State private var editingMode: EditingMode = .none
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
     /// Server mode + Offline Sync ON + offline: the article is served from
@@ -21,6 +22,13 @@ struct ArticleDetailView: View {
     /// Phase 7). Never true in Standalone.
     private var isOfflineReadOnly: Bool {
         connectivity.isOfflineReadOnly
+    }
+
+    enum EditingMode: Equatable {
+        case none
+        case title
+        case body
+        case comment(Int)
     }
 
     init(articleId: Int, initialTitle: String? = nil, onMenuTap: @escaping () -> Void, onNavigateToLinkedIssue: ((Int, String, String) -> Void)? = nil) {
@@ -33,6 +41,7 @@ struct ArticleDetailView: View {
 
     var body: some View {
         GeometryReader { geo in
+        ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
                     if let article = viewModel.article {
@@ -43,6 +52,15 @@ struct ArticleDetailView: View {
                                     .font(.system(size: 18, weight: .semibold))
                                     .foregroundColor(.textPrimary)
                                     .frame(maxWidth: .infinity, alignment: .leading)
+
+                                if article.origin == .manual && !isOfflineReadOnly {
+                                    Button("Edit title") {
+                                        viewModel.replyBody = article.title
+                                        editingMode = .title
+                                    }
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.accent)
+                                }
 
                                 // Meta info row
                                 HStack(spacing: 8) {
@@ -99,6 +117,20 @@ struct ArticleDetailView: View {
                         }
 
                         // === Article Body (reader-like, no card) ===
+                        if article.origin == .manual && !isOfflineReadOnly {
+                            HStack {
+                                Spacer()
+                                Button {
+                                    viewModel.replyBody = article.bodyMd
+                                    editingMode = .body
+                                } label: {
+                                    Label("Edit body", systemImage: "pencil")
+                                        .font(.system(size: 12))
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 10)
+                        }
                         if !article.bodyMd.isEmpty {
                             let cleanBody = article.bodyMd.replacingOccurrences(
                                 of: "\\{#block-\\d+\\}",
@@ -124,24 +156,58 @@ struct ArticleDetailView: View {
                                 .padding(.horizontal, 16)
                         }
 
-                        // === Timeline: Activities only (no comments) ===
+                        // === Timeline: Comments + activities interleaved ===
                         if !viewModel.timelineEntries.isEmpty {
-                            sectionConnector
-
                             ForEach(viewModel.timelineEntries) { entry in
+                                sectionConnector
                                 switch entry {
                                 case .activity(let activity):
                                     ActivityItemView(activity: activity, issueId: articleId)
-                                case .comment:
-                                    EmptyView()
+                                case .comment(let comment):
+                                    areaCard {
+                                        VStack(alignment: .leading, spacing: 0) {
+                                            HStack {
+                                                Text(TimelineHelpers.relativeTimeString(iso: comment.updatedAt))
+                                                    .font(.system(size: 11))
+                                                    .foregroundColor(Color(.systemGray))
+                                                Spacer()
+                                                Menu {
+                                                    Button("Copy") { UIPasteboard.general.string = comment.bodyMd }
+                                                    Button("Edit") {
+                                                        viewModel.replyBody = comment.bodyMd
+                                                        editingMode = .comment(comment.id)
+                                                    }
+                                                    .disabled(isOfflineReadOnly)
+                                                    Button("Delete", role: .destructive) {
+                                                        Task { await viewModel.deleteComment(comment.id) }
+                                                    }
+                                                    .disabled(isOfflineReadOnly)
+                                                } label: {
+                                                    Image(systemName: "ellipsis")
+                                                        .foregroundColor(.textSecondary)
+                                                }
+                                            }
+                                            .padding(.horizontal, 16)
+                                            .padding(.top, 8)
+                                            ThreadItem(
+                                                bodyMd: comment.bodyMd,
+                                                labels: nil,
+                                                showMenu: false,
+                                                onIssueTap: { id, type in
+                                                    onNavigateToLinkedIssue?(id, type, "")
+                                                }
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
 
-                    Color.clear.frame(height: 24)
+                    Color.clear.frame(height: 24).id("threadBottom")
                 }
             }
+            .background(Color.menuBackground)
             .scrollDismissesKeyboard(.immediately)
             .ignoresSafeArea(edges: .top)
             .scrollEdgeEffectStyle(.soft, for: .bottom)
@@ -159,14 +225,50 @@ struct ArticleDetailView: View {
                             try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
                         }
 
-                        if let (article, activities) = result {
-                            viewModel.applyArticle(article, activities: activities)
+                        if let (article, comments, activities) = result {
+                            viewModel.applyArticle(article, comments: comments, activities: activities)
                         }
                         HapticManager.notification(.success)
                         continuation.resume()
                     }
                 }
             }
+            .onChange(of: viewModel.timelineEntries.count) { _ in
+                withAnimation { proxy.scrollTo("threadBottom", anchor: .bottom) }
+            }
+            .safeAreaBar(edge: .bottom) {
+                FloatingComposer(
+                    text: $viewModel.replyBody,
+                    placeholder: editingMode == .none ? "Add a comment..." : "Edit...",
+                    disabled: viewModel.isLoading || isOfflineReadOnly,
+                    submitting: viewModel.isSubmittingReply,
+                    notice: editingMode == .none ? nil : "Editing",
+                    onDismissNotice: {
+                        editingMode = .none
+                        viewModel.replyBody = ""
+                    },
+                    onAttachImage: {},
+                    isUploadingImage: false,
+                    onExpand: {
+                        withAnimation { proxy.scrollTo("threadBottom", anchor: .bottom) }
+                    },
+                    onSubmit: {
+                        switch editingMode {
+                        case .title:
+                            Task { await viewModel.updateArticle(title: viewModel.replyBody); editingMode = .none; viewModel.replyBody = "" }
+                        case .body:
+                            Task { await viewModel.updateArticle(bodyMd: viewModel.replyBody); editingMode = .none; viewModel.replyBody = "" }
+                        case .comment(let id):
+                            Task { await viewModel.updateComment(id, bodyMd: viewModel.replyBody); editingMode = .none; viewModel.replyBody = "" }
+                        case .none:
+                            Task { await viewModel.addComment() }
+                        }
+                    }
+                )
+                .padding(.horizontal, 16)
+                .padding(.bottom, 10)
+            }
+        }
         }
         .enableSwipeBack()
         .navigationBarBackButtonHidden(true)
@@ -198,7 +300,7 @@ struct ArticleDetailView: View {
                     onNavigateToLinkedIssue?(target.id, target.type, target.title)
                 },
                 labelCountKeyPath: \.articleCount,
-                showBookmark: false
+                showBookmark: true
             )
             .presentationDetents([.fraction(0.7), .large])
         }

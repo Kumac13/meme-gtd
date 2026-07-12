@@ -336,7 +336,8 @@ interface ArticleCreatedPayload {
   issue_type: 'article';
   title: string;
   body: string;
-  original_url: string;
+  /** Absent for manually created articles (origin='manual'). */
+  original_url?: string;
   labels: LabelSnapshot[];
   projects: ProjectSnapshot[];
 }
@@ -346,7 +347,7 @@ export const buildArticleCreatedPayload = (
   articleId: number,
   title: string,
   bodyMd: string,
-  originalUrl: string
+  originalUrl?: string
 ): ArticleCreatedPayload => {
   return {
     issue_id: articleId,

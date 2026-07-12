@@ -207,6 +207,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
         { name: 'Comments', description: 'Comment management endpoints' },
         { name: 'Attachments', description: 'Image attachment endpoints' },
         { name: 'ActivityLog', description: 'Activity log endpoints' },
+        { name: 'Templates', description: 'Creation-time template endpoints' },
         { name: 'Sync', description: 'Offline sync endpoints (delta pull + outbox push)' },
       ],
     },
@@ -262,6 +263,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   // Register Article routes
   const { default: articlesRoutes } = await import('./routes/articles.js');
   await app.register(articlesRoutes, { prefix: '/api/articles' });
+
+  const { default: templatesRoutes } = await import('./routes/templates.js');
+  await app.register(templatesRoutes, { prefix: '/api/templates' });
 
   // Register Search routes
   const { default: searchRoutes } = await import('./routes/search.js');

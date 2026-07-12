@@ -156,10 +156,26 @@ export {
   getArticle,
   listArticles,
   countArticles,
+  updateArticle,
+  setArticleBookmark,
   deleteArticle,
   type CreateArticleInput,
+  type UpdateArticleInput,
   type ListArticleFilters
 } from './articleRepository.js';
+
+// Template repository exports
+export {
+  createTemplate,
+  getTemplate,
+  listTemplates,
+  countTemplates,
+  updateTemplate,
+  deleteTemplate,
+  type CreateTemplateInput,
+  type UpdateTemplateInput,
+  type ListTemplateFilters
+} from './templateRepository.js';
 
 // Embedding repository exports
 export {

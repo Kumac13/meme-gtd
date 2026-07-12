@@ -27,7 +27,10 @@ const migrations = [
   { version: '011_add_url_links', file: path.join(schemaDir, '011_add_url_links.sql') },
   { version: '012_add_task_kind', file: path.join(schemaDir, '012_add_task_kind.sql') },
   { version: '013_add_embeddings', file: path.join(schemaDir, '013_add_embeddings.sql') },
-  { version: '014_add_sync_support', file: path.join(schemaDir, '014_add_sync_support.sql') }
+  { version: '014_add_sync_support', file: path.join(schemaDir, '014_add_sync_support.sql') },
+  { version: '015_add_template_issue_type', file: path.join(schemaDir, '015_add_template_issue_type.sql') },
+  { version: '016_add_article_origin', file: path.join(schemaDir, '016_add_article_origin.sql') },
+  { version: '017_backfill_article_origin', file: path.join(schemaDir, '017_backfill_article_origin.sql') }
 ] as const;
 
 const prepareDatabase = (db: Database.Database): void => {

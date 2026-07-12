@@ -43,7 +43,16 @@ import {
   getArticle,
   listArticles,
   countArticles,
+  updateArticle,
+  setArticleBookmark,
   deleteArticle,
+  // Template functions
+  createTemplate,
+  getTemplate,
+  listTemplates,
+  countTemplates,
+  updateTemplate,
+  deleteTemplate,
   // Label functions
   listAllLabels,
   getLabel,
@@ -58,6 +67,7 @@ import {
   listLinks,
   // Types
   type CreateArticleInput,
+  type UpdateArticleInput,
   type CreateMemoInput,
   type CreateTaskInput,
   type DemoteTaskInput,
@@ -66,7 +76,10 @@ import {
   type ListTaskFilters,
   type PromotePreview,
   type UpdateMemoInput,
-  type UpdateTaskInput
+  type UpdateTaskInput,
+  type CreateTemplateInput,
+  type UpdateTemplateInput,
+  type ListTemplateFilters
 } from 'meme-gtd-db';
 
 export interface MemoServiceOptions {
@@ -638,10 +651,13 @@ export class ArticleService {
     this.linkService = new LinkService({ db: this.db, sourceType: options.sourceType });
   }
 
-  public create(input: CreateArticleInput) {
+  public create(input: Omit<CreateArticleInput, 'origin'>) {
     return this.db.transaction(() => {
       const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, input.bodyMd);
-      const article = createArticle(this.db, { ...input, bodyMd: rewritten });
+      // origin は作成経路で決まる: Web保存（拡張/Share Extension）は必ず
+      // originalUrl を持ち、手動作成は持たない（issues.origin, migration 016）。
+      const origin = input.originalUrl ? ('web' as const) : ('manual' as const);
+      const article = createArticle(this.db, { ...input, origin, bodyMd: rewritten });
       this.logger.logArticleCreated(
         article.id,
         input.title,
@@ -672,7 +688,7 @@ export class ArticleService {
   }) {
     return this.db.transaction(() => {
       const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, input.bodyMd);
-      const article = createArticle(this.db, { ...input, bodyMd: rewritten });
+      const article = createArticle(this.db, { ...input, origin: 'web', bodyMd: rewritten });
       this.logger.logArticleCreated(
         article.id,
         input.title,
@@ -697,11 +713,172 @@ export class ArticleService {
     return { data, total };
   }
 
+  /**
+   * Update title/body. Web-saved articles (origin='web') are read-only —
+   * the body is an archived snapshot of the source page; only comments may
+   * be added to them. Enforced here so every caller (API, future CLI) gets
+   * the same rule.
+   */
+  public update(id: number, input: UpdateArticleInput) {
+    return this.db.transaction(() => {
+      const before = getArticle(this.db, id);
+      if (before.origin === 'web') {
+        throw new Error('Web-saved articles are read-only (only comments can be edited)');
+      }
+
+      let finalInput = input;
+      let mentionedIssueIds: number[] = [];
+      if (input.bodyMd !== undefined) {
+        const result = rewriteIssueMentions(this.db, input.bodyMd, id);
+        finalInput = { ...input, bodyMd: result.rewritten };
+        mentionedIssueIds = result.mentionedIssueIds;
+      }
+
+      const article = updateArticle(this.db, id, finalInput);
+
+      const diff: {
+        title?: { old: string | null; new: string | null };
+        body?: { old: string | null; new: string | null };
+      } = {};
+      if (input.title !== undefined && input.title !== before.title) {
+        diff.title = { old: before.title, new: input.title };
+      }
+      if (finalInput.bodyMd !== undefined && finalInput.bodyMd !== before.bodyMd) {
+        diff.body = { old: before.bodyMd, new: finalInput.bodyMd };
+      }
+      if (diff.title || diff.body) {
+        this.logger.logArticleUpdated(id, diff);
+      }
+
+      for (const targetId of mentionedIssueIds) {
+        if (targetId === id) continue;
+        this.linkService.createOrIgnore(id, targetId, 'relates');
+      }
+      return article;
+    })();
+  }
+
+  public setBookmark(id: number, isBookmarked: boolean) {
+    return this.db.transaction(() => {
+      const article = setArticleBookmark(this.db, id, isBookmarked);
+      this.logger.logArticleBookmarked(id, isBookmarked);
+      return article;
+    })();
+  }
+
+  // Comments (same machinery as memos/tasks — the comments table is keyed by
+  // issue_id and type-agnostic).
+
+  public addComment(articleId: number, bodyMd: string) {
+    return this.db.transaction(() => {
+      // Ensure the id refers to an article (throws otherwise).
+      getArticle(this.db, articleId);
+      const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, bodyMd, articleId);
+      const comment = addComment(this.db, articleId, rewritten);
+      this.logger.logCommentCreated(comment.id, articleId, rewritten);
+      for (const targetId of mentionedIssueIds) {
+        if (targetId === articleId) continue;
+        this.linkService.createOrIgnore(articleId, targetId, 'relates');
+      }
+      return comment;
+    })();
+  }
+
+  public updateComment(commentId: number, bodyMd: string) {
+    return this.db.transaction(() => {
+      const row = this.db.prepare('SELECT issue_id, body_md FROM comments WHERE id = ?').get(commentId) as { issue_id: number; body_md: string | null } | undefined;
+      const parentIssueId = row?.issue_id;
+      const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, bodyMd, parentIssueId);
+      const result = updateComment(this.db, commentId, rewritten);
+      if (row) {
+        this.logger.logCommentUpdated(commentId, row.issue_id, {
+          old: row.body_md,
+          new: rewritten,
+        });
+        for (const targetId of mentionedIssueIds) {
+          if (targetId === row.issue_id) continue;
+          this.linkService.createOrIgnore(row.issue_id, targetId, 'relates');
+        }
+      }
+      return result;
+    })();
+  }
+
+  public deleteComment(commentId: number) {
+    return this.db.transaction(() => {
+      const row = this.db.prepare('SELECT issue_id FROM comments WHERE id = ?').get(commentId) as { issue_id: number } | undefined;
+      if (row) {
+        this.logger.logCommentDeleted(commentId, row.issue_id);
+      }
+      return deleteComment(this.db, commentId);
+    })();
+  }
+
+  public listComments(articleId: number) {
+    return listComments(this.db, articleId);
+  }
+
   public remove(id: number) {
     return this.db.transaction(() => {
       this.logger.logArticleDeleted(id);
       return deleteArticle(this.db, id);
     })();
+  }
+}
+
+export interface TemplateServiceOptions {
+  config?: MgtdConfig;
+  db?: Database.Database;
+  sourceType?: SourceType;
+}
+
+/**
+ * Templates (issues with type='template', migration 015) are creation-time
+ * scaffolds. Applying a template is a client-side prefill (GET the template,
+ * seed the New Task / New Article form), so this service only does CRUD — there
+ * is no server-side "create from template". Per product decision, template
+ * mutations are intentionally NOT written to the activity log (templates never
+ * appear in issue/global timelines), which is why this service has no
+ * ActivityLogger. Template bodies are stored verbatim (no #id mention rewriting
+ * / relates links — those apply when the copied body lands on a real issue).
+ */
+export class TemplateService {
+  private readonly db: Database.Database;
+
+  constructor(private readonly options: TemplateServiceOptions) {
+    if (options.db) {
+      this.db = options.db;
+    } else if (options.config) {
+      this.db = ensureDatabase(options.config);
+    } else {
+      throw new Error('TemplateService requires either db or config option');
+    }
+  }
+
+  private withProjects<T extends { id: number }>(template: T) {
+    return { ...template, projectIds: getProjectsForIssue(this.db, template.id).map((p) => p.id) };
+  }
+
+  public create(input: CreateTemplateInput) {
+    return this.db.transaction(() => this.withProjects(createTemplate(this.db, input)))();
+  }
+
+  public get(id: number) {
+    return this.withProjects(getTemplate(this.db, id));
+  }
+
+  public list(filters: ListTemplateFilters = {}) {
+    const data = listTemplates(this.db, filters).map((t) => this.withProjects(t));
+    const total = countTemplates(this.db, filters);
+    return { data, total };
+  }
+
+  public update(id: number, input: UpdateTemplateInput) {
+    return this.db.transaction(() => this.withProjects(updateTemplate(this.db, id, input)))();
+  }
+
+  public remove(id: number) {
+    return this.db.transaction(() => deleteTemplate(this.db, id))();
   }
 }
 

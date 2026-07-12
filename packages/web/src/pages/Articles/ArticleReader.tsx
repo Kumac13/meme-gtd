@@ -14,6 +14,7 @@ export const ArticleReader: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [bookmarking, setBookmarking] = useState(false);
   // Support clicking on linked items within the reader
   const [selectedItem, setSelectedItem] = useState<{ id: number; type: "memo" | "task" | "article" } | null>(null);
 
@@ -49,6 +50,24 @@ export const ArticleReader: React.FC = () => {
       const message = err instanceof Error ? err.message : "Unknown error";
       setError("Failed to delete article: " + message);
       setDeleting(false);
+    }
+  };
+
+  const handleBookmarkToggle = async () => {
+    if (!id || !article) return;
+    try {
+      setBookmarking(true);
+      if (article.isBookmarked) {
+        await ArticlesService.unbookmarkArticle(String(id));
+      } else {
+        await ArticlesService.bookmarkArticle(String(id));
+      }
+      setArticle({ ...article, isBookmarked: !article.isBookmarked });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setError("Failed to update bookmark: " + message);
+    } finally {
+      setBookmarking(false);
     }
   };
 
@@ -139,8 +158,10 @@ export const ArticleReader: React.FC = () => {
         item={cleansedArticle}
         itemType="article"
         onDelete={handleDelete}
+        onBookmarkToggle={handleBookmarkToggle}
         onUpdate={handleUpdate}
         deleting={deleting}
+        bookmarking={bookmarking}
         onItemClick={handleItemClick}
         sidebarActions={articleSidebarActions}
       />
