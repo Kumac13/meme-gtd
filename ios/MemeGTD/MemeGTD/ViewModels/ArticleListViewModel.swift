@@ -12,6 +12,13 @@ class ArticleListViewModel: ObservableObject {
 
     // Search
     @Published var searchQuery: String = ""
+    @Published var originFilter: String = "all"
+    @Published var labelFilters: Set<String> = []
+    @Published var projectFilters: Set<Int> = []
+    @Published var includeNoProject = false
+    @Published var bookmarkFilter = false
+    @Published var allLabels: [IssueLabel] = []
+    @Published var allProjects: [Project] = []
 
     // Search match info (issueId -> match label + snippet)
     @Published var searchMatchInfos: [Int: String] = [:]
@@ -30,10 +37,19 @@ class ArticleListViewModel: ObservableObject {
     // MARK: - Query building
 
     private func buildListQueryItems(offset: Int) -> [URLQueryItem] {
-        [
+        var items = [
             URLQueryItem(name: "limit", value: String(pageSize)),
             URLQueryItem(name: "offset", value: String(offset)),
         ]
+        if originFilter != "all" { items.append(URLQueryItem(name: "origin", value: originFilter)) }
+        if !labelFilters.isEmpty { items.append(URLQueryItem(name: "label", value: labelFilters.joined(separator: ","))) }
+        if !projectFilters.isEmpty || includeNoProject {
+            var ids = includeNoProject ? ["none"] : []
+            ids.append(contentsOf: projectFilters.map(String.init))
+            items.append(URLQueryItem(name: "projectId", value: ids.joined(separator: ",")))
+        }
+        if bookmarkFilter { items.append(URLQueryItem(name: "bookmarked", value: "true")) }
+        return items
     }
 
     private func buildSearchQueryItems(offset: Int) -> [URLQueryItem] {
@@ -145,6 +161,15 @@ class ArticleListViewModel: ObservableObject {
         Task { await loadArticles() }
     }
 
+    func applyFilters() { Task { await loadArticles() } }
+
+    func loadFilterData() async {
+        async let labels = dataSources.labels.listLabels()
+        async let projects = dataSources.projects.listProjects()
+        allLabels = (try? await labels) ?? []
+        allProjects = (try? await projects) ?? []
+    }
+
     // MARK: - Copy / export search results
 
     @Published var isExporting: Bool = false
@@ -161,12 +186,12 @@ class ArticleListViewModel: ObservableObject {
         let filters = SearchExportFilters(
             query: searchQuery.isEmpty ? nil : searchQuery,
             searchMode: searchQuery.isEmpty ? nil : "keyword",
-            labels: nil,
+            labels: labelFilters.isEmpty ? nil : Array(labelFilters),
             dateFrom: nil,
             dateTo: nil,
-            bookmarked: nil,
-            projectIds: nil,
-            includeNoProject: nil,
+            bookmarked: bookmarkFilter ? true : nil,
+            projectIds: projectFilters.isEmpty ? nil : Array(projectFilters),
+            includeNoProject: includeNoProject ? true : nil,
             status: nil
         )
 

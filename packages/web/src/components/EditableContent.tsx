@@ -19,6 +19,11 @@ interface EditableContentProps {
   showTitleEdit?: boolean;
   enableInteractiveTodos?: boolean;
   /**
+   * Hide the Edit action (Copy/Delete stay available). Used for web-saved
+   * articles whose body is an archived snapshot (issues.origin='web').
+   */
+  readOnly?: boolean;
+  /**
    * Click handler for internal issue links inside the rendered body
    * (used by ItemDetail to mirror LinkSection's modal-open behavior).
    */
@@ -34,6 +39,7 @@ export default function EditableContent({
   title,
   showTitleEdit = false,
   enableInteractiveTodos = false,
+  readOnly = false,
   onIssueLinkClick,
 }: EditableContentProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -200,15 +206,17 @@ export default function EditableContent({
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setIsMenuOpen(false)} />
                 <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-20">
-                  <button
-                    onClick={() => {
-                      handleStartEdit();
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                  >
-                    Edit
-                  </button>
+                  {!readOnly && (
+                    <button
+                      onClick={() => {
+                        handleStartEdit();
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Edit
+                    </button>
+                  )}
                   <button
                     onClick={async () => {
                       await handleCopy();

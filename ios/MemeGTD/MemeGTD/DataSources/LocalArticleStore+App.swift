@@ -117,12 +117,14 @@ nonisolated extension LocalArticleStore {
                 """,
             arguments: [uuid]
         )
+        let meta = articleMeta(from: row["meta"])
         return Article(
             id: serverId ?? -Int(rowid),
             type: row["type"],
             title: row["title"] ?? "",
             bodyMd: row["body_md"],
-            meta: articleMeta(from: row["meta"]),
+            origin: meta?.originalUrl == nil ? .manual : .web,
+            meta: meta,
             createdAt: row["created_at"],
             updatedAt: row["updated_at"],
             isBookmarked: row["is_bookmarked"],

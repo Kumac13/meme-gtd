@@ -38,6 +38,7 @@ erDiagram
         TEXT     actual_end
         TEXT     task_kind "event|action"
         TEXT     template_target "task|article (template only)"
+        TEXT     origin "web|manual (article only)"
     }
 
     labels {
@@ -199,10 +200,11 @@ erDiagram
 
 - `type`: `memo` / `task` / `article` / `template`（010 で `article`、015 で `template` 追加）
 - `template_target`（templateのみ）: `task` / `article`。そのテンプレートが生成する型。作成時に選ぶ。template 以外では NULL（migration 015）
+- `origin`（articleのみ）: `web` / `manual`。Web保存か手動作成かを表し、article 以外では NULL（migrations 016–017）
 - `status`（taskのみ使用）: `inbox` / `open` / `next` / `waiting` / `scheduled` / `someday` / `done` / `canceled` の8値。memoでは未使用（NULL）
 - `task_kind`（taskのみ）: `event`（予定）/ `action`（作業、デフォルト）
 - `title`: task/articleは必須。memoは常にNULL（未使用）
-- `meta`（JSON）: articleは `originalUrl`（必須）/ `siteName` / `archivedAt` を保持
+- `meta`（JSON）: Web保存 article は `originalUrl` / `siteName` / `archivedAt` を保持。手動 article では `originalUrl` を持たない
 - `is_bookmarked` / `is_deleted`: 0/1フラグ。削除は論理削除
 - 日時カラムはISO 8601文字列
 

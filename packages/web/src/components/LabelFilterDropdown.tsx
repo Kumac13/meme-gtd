@@ -7,13 +7,14 @@ interface Label {
   name: string;
   taskCount: number;
   memoCount: number;
+  articleCount: number;
 }
 
 interface LabelFilterDropdownProps {
   selectedLabels: Set<string>;
   onToggle: (labelName: string) => void;
   onClear: () => void;
-  countKey: 'taskCount' | 'memoCount';
+  countKey: 'taskCount' | 'memoCount' | 'articleCount';
 }
 
 export default function LabelFilterDropdown({
@@ -28,7 +29,7 @@ export default function LabelFilterDropdown({
 
   useEffect(() => {
     LabelsService.listLabels()
-      .then((data) => setLabels(data.map((l) => ({ id: l.id, name: l.name, taskCount: l.taskCount, memoCount: l.memoCount })).sort((a, b) => b[countKey] - a[countKey])))
+      .then((data) => setLabels(data.map((l) => ({ id: l.id, name: l.name, taskCount: l.taskCount, memoCount: l.memoCount, articleCount: l.articleCount })).sort((a, b) => b[countKey] - a[countKey])))
       .catch(console.error);
   }, [countKey]);
 

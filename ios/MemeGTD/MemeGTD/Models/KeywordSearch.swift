@@ -137,6 +137,7 @@ extension KeywordSearchResultItem {
             type: type,
             title: title ?? "",
             bodyMd: bodyMd,
+            origin: .web,
             meta: nil,
             createdAt: createdAt,
             updatedAt: updatedAt,

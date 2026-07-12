@@ -9,9 +9,20 @@ struct ArticleListView: View {
     @StateObject private var viewModel = ArticleListViewModel()
     @State private var isSearching: Bool = false
     @State private var showCopyDialog: Bool = false
+    @State private var showTemplateChooser = false
+    @State private var createTemplate: Template?
+    @State private var showCreateArticle = false
+    @State private var showOriginPicker = false
+    @State private var showLabelPicker = false
+    @State private var selectedLabels: Set<String> = []
+    @State private var showProjectPicker = false
+    @State private var selectedProjects: Set<Int> = []
+    @State private var selectedNoProject = false
 
     private var hasActiveFilters: Bool {
-        !viewModel.searchQuery.isEmpty
+        !viewModel.searchQuery.isEmpty || viewModel.originFilter != "all" ||
+        !viewModel.labelFilters.isEmpty || !viewModel.projectFilters.isEmpty ||
+        viewModel.includeNoProject || viewModel.bookmarkFilter
     }
 
     var body: some View {
@@ -46,7 +57,19 @@ struct ArticleListView: View {
         .scrollDismissesKeyboard(.immediately)
         .scrollEdgeEffectStyle(.soft, for: .bottom)
         .safeAreaInset(edge: .top) {
-            OfflineReadOnlyIndicator()
+            VStack(spacing: 0) {
+                OfflineReadOnlyIndicator()
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        FilterPill(label: viewModel.originFilter == "all" ? "Origin" : viewModel.originFilter.capitalized, isActive: viewModel.originFilter != "all") { showOriginPicker = true }
+                        FilterPill(label: viewModel.labelFilters.isEmpty ? "Labels" : "\(viewModel.labelFilters.count) Labels", isActive: !viewModel.labelFilters.isEmpty) { selectedLabels = viewModel.labelFilters; showLabelPicker = true }
+                        FilterPill(label: viewModel.projectFilters.isEmpty && !viewModel.includeNoProject ? "Projects" : "Projects ✓", isActive: !viewModel.projectFilters.isEmpty || viewModel.includeNoProject) { selectedProjects = viewModel.projectFilters; selectedNoProject = viewModel.includeNoProject; showProjectPicker = true }
+                        FilterPill(label: viewModel.bookmarkFilter ? "Bookmarked" : "Bookmark", isActive: viewModel.bookmarkFilter) { viewModel.bookmarkFilter.toggle(); viewModel.applyFilters() }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                }
+            }
         }
         .refreshable {
             await withCheckedContinuation { continuation in
@@ -78,6 +101,16 @@ struct ArticleListView: View {
                 searchQuery: $viewModel.searchQuery,
                 searchPlaceholder: "Search articles...",
                 onSearch: { viewModel.search() },
+                trailing: {
+                    Button {
+                        HapticManager.impact(.light)
+                        showTemplateChooser = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundColor(.textPrimary)
+                    }
+                },
                 searchBarAction: {
                     if !articleStore.articles.isEmpty && hasActiveFilters {
                         Button(action: {
@@ -112,6 +145,59 @@ struct ArticleListView: View {
                 }
             )
             .presentationDetents([.height(220)])
+        }
+        .sheet(isPresented: $showTemplateChooser) {
+            TemplateChooserSheet(
+                target: "article",
+                onBlank: {
+                    createTemplate = nil
+                    showTemplateChooser = false
+                    showCreateArticle = true
+                },
+                onTemplate: { template in
+                    createTemplate = template
+                    showTemplateChooser = false
+                    showCreateArticle = true
+                },
+                onDismiss: { showTemplateChooser = false }
+            )
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showCreateArticle) {
+            CreateArticleModal(
+                template: createTemplate,
+                onCreated: { article in
+                    showCreateArticle = false
+                    articleStore.needsReload = true
+                    navigationPath.append(ArticleRoute(articleId: article.id, initialTitle: article.title))
+                },
+                onDismiss: { showCreateArticle = false }
+            )
+        }
+        .confirmationDialog("Origin", isPresented: $showOriginPicker) {
+            Button("All") { viewModel.originFilter = "all"; viewModel.applyFilters() }
+            Button("Web") { viewModel.originFilter = "web"; viewModel.applyFilters() }
+            Button("Manual") { viewModel.originFilter = "manual"; viewModel.applyFilters() }
+        }
+        .sheet(isPresented: $showLabelPicker, onDismiss: { viewModel.labelFilters = selectedLabels; viewModel.applyFilters() }) {
+            LabelPickerModal(
+                allLabels: viewModel.allLabels,
+                selectedNames: $selectedLabels,
+                onDismiss: { showLabelPicker = false },
+                countFor: { $0.articleCount },
+                onLabelCreated: { label in viewModel.allLabels.append(label); selectedLabels.insert(label.name) }
+            )
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showProjectPicker, onDismiss: { viewModel.projectFilters = selectedProjects; viewModel.includeNoProject = selectedNoProject; viewModel.applyFilters() }) {
+            ProjectPickerModal(
+                allProjects: viewModel.allProjects,
+                selectedIds: $selectedProjects,
+                onDismiss: { showProjectPicker = false },
+                onConfirm: { ids in selectedProjects = ids; showProjectPicker = false },
+                includeNoProject: $selectedNoProject
+            )
+            .presentationDetents([.medium, .large])
         }
         .overlay(alignment: .top) {
             if viewModel.showCopiedFeedback {
@@ -149,6 +235,7 @@ struct ArticleListView: View {
             if articleStore.articles.isEmpty {
                 await viewModel.loadArticles()
             }
+            await viewModel.loadFilterData()
         }
     }
 }

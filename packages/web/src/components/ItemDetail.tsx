@@ -114,9 +114,9 @@ export default function ItemDetail({
   onCommentsLoadedRef.current = onCommentsLoaded;
 
   useEffect(() => {
-    // Skip fetching comments for articles (API not implemented) and templates
-    // (scaffolds have no comments/activity by design).
-    if (itemType === 'article' || itemType === 'template') {
+    // Skip fetching comments for templates (scaffolds have no comments/activity
+    // by design).
+    if (itemType === 'template') {
       setCommentsLoading(false);
       return;
     }
@@ -127,7 +127,9 @@ export default function ItemDetail({
         const [commentsResponse, activitiesResponse] = await Promise.all([
           itemType === 'memo'
             ? CommentsService.listMemoComments(String(item.id))
-            : CommentsService.listTaskComments(String(item.id)),
+            : itemType === 'article'
+              ? CommentsService.listArticleComments(String(item.id))
+              : CommentsService.listTaskComments(String(item.id)),
           ActivityLogService.getIssueActivityLog(item.id, 100, 'asc')
             .then((res) => res.filter(isDisplayedActivity))
             .catch(() => [] as ActivityLogEntry[]),
@@ -150,7 +152,9 @@ export default function ItemDetail({
     const newComment =
       itemType === 'memo'
         ? await CommentsService.createMemoComment(String(item.id), { bodyMd })
-        : await CommentsService.createTaskComment(String(item.id), { bodyMd });
+        : itemType === 'article'
+          ? await CommentsService.createArticleComment(String(item.id), { bodyMd })
+          : await CommentsService.createTaskComment(String(item.id), { bodyMd });
     const updatedComments = [...comments, newComment];
     setComments(updatedComments);
     onCommentsLoadedRef.current?.(updatedComments);
@@ -161,7 +165,9 @@ export default function ItemDetail({
     const updatedComment =
       itemType === 'memo'
         ? await CommentsService.updateMemoComment(String(item.id), String(commentId), { bodyMd })
-        : await CommentsService.updateTaskComment(String(item.id), String(commentId), { bodyMd });
+        : itemType === 'article'
+          ? await CommentsService.updateArticleComment(String(item.id), String(commentId), { bodyMd })
+          : await CommentsService.updateTaskComment(String(item.id), String(commentId), { bodyMd });
     const updatedComments = comments.map((c) => (c.id === commentId ? updatedComment : c));
     setComments(updatedComments);
     onCommentsLoadedRef.current?.(updatedComments);
@@ -171,6 +177,8 @@ export default function ItemDetail({
   const handleDeleteComment = async (commentId: number) => {
     if (itemType === 'memo') {
       await CommentsService.deleteMemoComment(String(item.id), String(commentId));
+    } else if (itemType === 'article') {
+      await CommentsService.deleteArticleComment(String(item.id), String(commentId));
     } else {
       await CommentsService.deleteTaskComment(String(item.id), String(commentId));
     }
@@ -190,10 +198,15 @@ export default function ItemDetail({
             title: newTitle !== undefined ? newTitle : item.title || undefined,
             bodyMd: newBody,
           })
-          : await TasksService.updateTask(String(item.id), {
-            title: newTitle !== undefined ? newTitle : item.title || undefined,
-            bodyMd: newBody,
-          });
+          : itemType === 'article'
+            ? await ArticlesService.updateArticle(String(item.id), {
+              title: newTitle !== undefined ? newTitle : item.title || undefined,
+              bodyMd: newBody,
+            })
+            : await TasksService.updateTask(String(item.id), {
+              title: newTitle !== undefined ? newTitle : item.title || undefined,
+              bodyMd: newBody,
+            });
     onUpdate(updatedItem as Item);
     bumpLinks();
   };
@@ -201,6 +214,13 @@ export default function ItemDetail({
   const handleDeleteBody = async () => {
     await onDelete();
   };
+
+  // Web-saved articles are archived snapshots (issues.origin='web'): the body
+  // is read-only and only comments can be edited. Manual articles are fully
+  // editable.
+  const articleOrigin = itemType === 'article' ? (item as { origin?: string }).origin : undefined;
+  const isWebArticle = articleOrigin === 'web';
+  const isManualArticle = itemType === 'article' && articleOrigin === 'manual';
 
   const handleLabelsChanged = () => {
     // Refresh item data to show updated labels
@@ -275,8 +295,9 @@ export default function ItemDetail({
             onSave={handleUpdateBody}
             onDelete={handleDeleteBody}
             title={item.title}
-            showTitleEdit={itemType === 'task' || itemType === 'template'}
+            showTitleEdit={itemType === 'task' || itemType === 'template' || isManualArticle}
             enableInteractiveTodos={itemType === 'task'}
+            readOnly={isWebArticle}
             onIssueLinkClick={onItemClick}
           />
 
@@ -297,8 +318,8 @@ export default function ItemDetail({
             />
           )}
 
-          {/* Comments section (memo/task only) */}
-          {itemType !== 'article' && itemType !== 'template' && (
+          {/* Comments section (memo/task/article) */}
+          {itemType !== 'template' && (
             <CommentSection
               comments={comments}
               loading={commentsLoading}
