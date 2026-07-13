@@ -1,12 +1,9 @@
 import Combine
 import SwiftUI
 
-/// Detail VM for a template. Conforms to IssueDetailProvider so the shared
-/// IssueInfoSheet drives Labels/Projects exactly like TaskDetailViewModel.
-/// Templates have no links/bookmark, so those members are inert (the sheet is
-/// shown with showLinks/showBookmark = false).
+/// Template detail exposes only the metadata and copy capabilities it supports.
 @MainActor
-class TemplateDetailViewModel: ObservableObject, IssueDetailProvider {
+class TemplateDetailViewModel: ObservableObject, IssueMetadataProvider, IssueCopyProvider {
     let templateId: Int
 
     @Published var template: Template?
@@ -26,24 +23,7 @@ class TemplateDetailViewModel: ObservableObject, IssueDetailProvider {
         self.templateId = templateId
     }
 
-    // MARK: - IssueDetailProvider
-
-    var issueId: Int { templateId }
-    var issueTypeLabel: String { "template" }
-
-    var issueLinks: [IssueLink] { [] }
-    var linkedPickerItems: [IssuePickerItem] { [] }
-    func searchIssues(query _: String) async -> [IssuePickerItem] { [] }
-    func createIssueLink(targetIssueId _: Int, linkType _: LinkType) async {}
-    func deleteIssueLink(_ linkId: Int) async {}
-
-    var urlLinks: [UrlLink] { [] }
-    func createUrlLink(url _: String, title _: String?) async {}
-    func deleteUrlLink(_ urlLinkId: Int) async {}
-
-    var isBookmarking: Bool { false }
-    var isBookmarked: Bool { false }
-    func toggleBookmark() async {}
+    // MARK: - Shared detail capabilities
 
     var issueLabels: [String] { template?.labels ?? [] }
 

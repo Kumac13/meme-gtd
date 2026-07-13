@@ -2,8 +2,7 @@ import Combine
 import SwiftUI
 
 @MainActor
-class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
-    var issueId: Int { memoId }
+class MemoDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkProvider, IssueBookmarkProvider, IssueCopyProvider {
     var issueTypeLabel: String { "memo" }
     var isBookmarked: Bool { memo?.isBookmarked ?? false }
     var issueLabels: [String] { memo?.labels ?? [] }

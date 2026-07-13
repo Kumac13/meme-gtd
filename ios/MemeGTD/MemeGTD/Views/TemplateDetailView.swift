@@ -208,6 +208,9 @@ struct TemplateDetailView: View {
                 IssueInfoSheet(
                     viewModel: viewModel,
                     showCopiedFeedback: $showCopiedFeedback,
+                    bookmarkProvider: nil,
+                    linkProvider: nil,
+                    copyProvider: viewModel,
                     onEditTitle: {
                         if let template = viewModel.template {
                             viewModel.replyBody = template.title ?? ""
@@ -215,9 +218,7 @@ struct TemplateDetailView: View {
                         }
                     },
                     onDelete: { showDeleteConfirm = true },
-                    labelCountKeyPath: \.taskCount,
-                    showBookmark: false,
-                    showLinks: false
+                    labelCountKeyPath: \.taskCount
                 )
                 .presentationDetents([.fraction(0.7), .large])
             }

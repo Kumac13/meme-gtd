@@ -327,14 +327,16 @@ struct ArticleDetailView: View {
             IssueInfoSheet(
                 viewModel: viewModel,
                 showCopiedFeedback: $showCopiedFeedback,
+                bookmarkProvider: viewModel,
+                linkProvider: viewModel,
+                copyProvider: viewModel,
                 isReadOnly: isOfflineReadOnly,
                 onEditTitle: editTitleAction,
                 onDelete: { showDeleteConfirm = true },
                 onNavigateToIssue: { target in
                     linkedIssueNavigation.requestAfterDismiss(target)
                 },
-                labelCountKeyPath: \.articleCount,
-                showBookmark: true
+                labelCountKeyPath: \.articleCount
             )
             .presentationDetents([.fraction(0.7), .large])
         }

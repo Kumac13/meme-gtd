@@ -195,6 +195,9 @@ struct MemoDetailView: View {
             IssueInfoSheet(
                 viewModel: viewModel,
                 showCopiedFeedback: $showCopiedFeedback,
+                bookmarkProvider: viewModel,
+                linkProvider: viewModel,
+                copyProvider: viewModel,
                 onPromoteToTask: {
                     let fallback = viewModel.memo?.bodyMd ?? ""
                     Task { @MainActor in

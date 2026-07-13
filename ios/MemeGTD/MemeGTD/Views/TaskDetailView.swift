@@ -327,6 +327,9 @@ struct TaskDetailView: View {
             IssueInfoSheet(
                 viewModel: viewModel,
                 showCopiedFeedback: $showCopiedFeedback,
+                bookmarkProvider: viewModel,
+                linkProvider: viewModel,
+                copyProvider: viewModel,
                 isReadOnly: isOfflineReadOnly,
                 onEditTitle: {
                     if let task = viewModel.task {

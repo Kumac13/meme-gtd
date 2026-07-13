@@ -2,7 +2,7 @@ import Combine
 import SwiftUI
 
 @MainActor
-class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
+class ArticleDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkProvider, IssueBookmarkProvider, IssueCopyProvider {
     @Published var article: Article?
     @Published var isLoading: Bool = false
     @Published var error: String?
@@ -48,8 +48,7 @@ class ArticleDetailViewModel: ObservableObject, IssueDetailProvider {
         }
     }
 
-    // IssueDetailProvider
-    var issueId: Int { articleId }
+    // Shared detail capabilities
     var issueTypeLabel: String { "article" }
     var isBookmarked: Bool { article?.isBookmarked ?? false }
     var issueLabels: [String] { article?.labels ?? [] }
