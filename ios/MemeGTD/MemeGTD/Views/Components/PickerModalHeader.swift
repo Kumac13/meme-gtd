@@ -8,29 +8,11 @@ struct PickerModalHeader: View {
     let onConfirm: () -> Void
 
     var body: some View {
-        HStack {
-            Button(action: { HapticManager.impact(.light); onDismiss() }) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundColor(Color(.tertiaryLabel))
-            }
-
-            Spacer()
-
-            Text(title)
-                .font(.system(size: 17, weight: .semibold))
-
-            Spacer()
-
-            Button(action: onConfirm) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 28))
-                    .foregroundColor(.accent)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        ModalHeader(
+            title: title,
+            onDismiss: onDismiss,
+            trailingAction: .confirm(isEnabled: true, action: onConfirm)
+        )
     }
 }
 

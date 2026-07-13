@@ -357,25 +357,13 @@ struct MemoListView: View {
         }
         .overlay(alignment: .top) {
             if viewModel.showCopiedFeedback {
-                Text("Copied!")
-                    .font(.system(size: 13, weight: .semibold))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(.regularMaterial, in: Capsule())
-                    .padding(.top, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                FeedbackToast(message: "Copied!")
             }
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.showCopiedFeedback)
         .overlay(alignment: .top) {
             if let conflictToastMessage {
-                Text(conflictToastMessage)
-                    .font(.system(size: 13, weight: .semibold))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(.regularMaterial, in: Capsule())
-                    .padding(.top, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                FeedbackToast(message: conflictToastMessage)
             }
         }
         .animation(.easeInOut(duration: 0.2), value: conflictToastMessage)
@@ -482,10 +470,10 @@ struct MemoListView: View {
             }
         }
         .overlay {
-            if viewModel.isLoading && memoStore.memos.isEmpty {
-                ProgressView("Loading memos...")
-                    .foregroundColor(.textSecondary)
-            }
+            LoadingOverlay(
+                isPresented: viewModel.isLoading && memoStore.memos.isEmpty,
+                message: "Loading memos..."
+            )
         }
     }
 

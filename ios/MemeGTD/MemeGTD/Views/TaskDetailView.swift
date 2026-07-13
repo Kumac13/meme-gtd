@@ -54,7 +54,7 @@ struct TaskDetailView: View {
                 LazyVStack(spacing: 0) {
                     if let task = viewModel.task {
                         // === Title Area (glass, extends to top of screen) ===
-                        areaCard {
+                        IssueAreaCard {
                             TaskTitleSection(
                                 title: task.title,
                                 status: task.status,
@@ -68,10 +68,10 @@ struct TaskDetailView: View {
                         }
 
                         // --- Connector line ---
-                        sectionConnector
+                        IssueSectionConnector()
 
                         // === Body Area (glass, full width) ===
-                        areaCard {
+                        IssueAreaCard {
                             VStack(alignment: .leading, spacing: 0) {
                                 // Timestamp + menu
                                 HStack {
@@ -140,11 +140,11 @@ struct TaskDetailView: View {
 
                         // === Timeline: Comments + Activities interleaved ===
                         ForEach(viewModel.timelineEntries) { entry in
-                            sectionConnector
+                            IssueSectionConnector()
 
                             switch entry {
                             case .comment(let comment):
-                                areaCard {
+                                IssueAreaCard {
                                     VStack(alignment: .leading, spacing: 0) {
                                         HStack {
                                             HStack(spacing: 4) {
@@ -404,10 +404,10 @@ struct TaskDetailView: View {
             }
         }
         .overlay {
-            if viewModel.isLoading && viewModel.task == nil {
-                ProgressView("Loading...")
-                    .foregroundColor(.textSecondary)
-            }
+            LoadingOverlay(
+                isPresented: viewModel.isLoading && viewModel.task == nil,
+                message: "Loading..."
+            )
         }
         .task {
             viewModel.taskStore = taskStore
@@ -424,14 +424,6 @@ struct TaskDetailView: View {
         // number to surface.
         let title = viewModel.task?.title ?? initialTitle ?? (taskId > 0 ? "#\(taskId)" : "")
         return title
-    }
-
-    // MARK: - Area card (glass effect, full width, no rounded corners)
-
-    private func areaCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        content()
-            .frame(maxWidth: .infinity)
-            .glassEffect(.regular, in: Rectangle())
     }
 
     // MARK: - Image upload
@@ -486,16 +478,6 @@ struct TaskDetailView: View {
         }
     }
 
-    // MARK: - Section connector (line between areas)
-
-    private var sectionConnector: some View {
-        Rectangle()
-            .fill(Color(.systemGray3))
-            .frame(width: 2, height: 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, 24)
-    }
-
     // MARK: - Status Picker Sheet
 
     private var statusPickerSheet: some View {
@@ -504,23 +486,7 @@ struct TaskDetailView: View {
         ]
 
         return VStack(spacing: 0) {
-            HStack {
-                Button(action: { HapticManager.impact(.light); showStatusPicker = false }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundColor(Color(.tertiaryLabel))
-                }
-                Spacer()
-                Text("Status")
-                    .font(.system(size: 17, weight: .semibold))
-                Spacer()
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .hidden()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            ModalHeader(title: "Status", onDismiss: { showStatusPicker = false })
 
             Divider()
 

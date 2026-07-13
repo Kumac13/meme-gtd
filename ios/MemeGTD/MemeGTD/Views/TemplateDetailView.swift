@@ -38,7 +38,7 @@ struct TemplateDetailView: View {
                 LazyVStack(spacing: 0) {
                     if let template = viewModel.template {
                         // === Title Area (glass, extends to top of screen) ===
-                        areaCard {
+                        IssueAreaCard {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(template.title ?? "Template #\(template.id)")
                                     .font(.system(size: 18, weight: .semibold))
@@ -69,10 +69,10 @@ struct TemplateDetailView: View {
                             .padding(.top, geo.safeAreaInsets.top)
                         }
 
-                        sectionConnector
+                        IssueSectionConnector()
 
                         // === Body Area (glass, full width) ===
-                        areaCard {
+                        IssueAreaCard {
                             VStack(alignment: .leading, spacing: 0) {
                                 HStack {
                                     HStack(spacing: 4) {
@@ -238,10 +238,10 @@ struct TemplateDetailView: View {
                 Text("Are you sure you want to delete this template? This action cannot be undone.")
             }
             .overlay {
-                if viewModel.isLoading && viewModel.template == nil {
-                    ProgressView("Loading...")
-                        .foregroundColor(.textSecondary)
-                }
+                LoadingOverlay(
+                    isPresented: viewModel.isLoading && viewModel.template == nil,
+                    message: "Loading..."
+                )
             }
             .task {
                 viewModel.templateStore = templateStore
@@ -255,14 +255,6 @@ struct TemplateDetailView: View {
 
     private var toolbarTitle: String {
         viewModel.template?.title ?? initialTitle ?? (templateId > 0 ? "#\(templateId)" : "")
-    }
-
-    // MARK: - Area card (glass effect, full width, no rounded corners)
-
-    private func areaCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        content()
-            .frame(maxWidth: .infinity)
-            .glassEffect(.regular, in: Rectangle())
     }
 
     // MARK: - Composer helpers
@@ -283,37 +275,11 @@ struct TemplateDetailView: View {
         }
     }
 
-    // MARK: - Section connector
-
-    private var sectionConnector: some View {
-        Rectangle()
-            .fill(Color(.systemGray3))
-            .frame(width: 2, height: 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, 24)
-    }
-
     // MARK: - Target Picker Sheet (issues.template_target)
 
     private var targetPickerSheet: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button(action: { HapticManager.impact(.light); showTargetPicker = false }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundColor(Color(.tertiaryLabel))
-                }
-                Spacer()
-                Text("Target")
-                    .font(.system(size: 17, weight: .semibold))
-                Spacer()
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .hidden()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            ModalHeader(title: "Target", onDismiss: { showTargetPicker = false })
 
             Divider()
 

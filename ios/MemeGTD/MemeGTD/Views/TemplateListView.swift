@@ -83,16 +83,8 @@ struct TemplateListView: View {
         .safeAreaBar(edge: .bottom) {
             HStack {
                 Spacer()
-                Button(action: {
-                    HapticManager.impact(.medium)
+                FloatingCreateButton {
                     showCreateModal = true
-                }) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 52, height: 52)
-                        .background(Color.accent)
-                        .clipShape(Circle())
                 }
             }
             .padding(.horizontal, 16)
@@ -136,10 +128,10 @@ struct TemplateListView: View {
             .presentationDetents([.large])
         }
         .overlay {
-            if viewModel.isLoading && templateStore.templates.isEmpty {
-                ProgressView("Loading templates...")
-                    .foregroundColor(.textSecondary)
-            }
+            LoadingOverlay(
+                isPresented: viewModel.isLoading && templateStore.templates.isEmpty,
+                message: "Loading templates..."
+            )
         }
         .task {
             viewModel.store = templateStore
@@ -154,23 +146,7 @@ struct TemplateListView: View {
 
     private var targetPickerSheet: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button(action: { HapticManager.impact(.light); showTargetPicker = false }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundColor(Color(.tertiaryLabel))
-                }
-                Spacer()
-                Text("Target")
-                    .font(.system(size: 17, weight: .semibold))
-                Spacer()
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .hidden()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            ModalHeader(title: "Target", onDismiss: { showTargetPicker = false })
 
             Divider()
 

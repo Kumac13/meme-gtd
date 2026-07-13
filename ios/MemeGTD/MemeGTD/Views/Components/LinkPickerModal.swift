@@ -148,7 +148,7 @@ struct LinkPickerModal<VM: IssueDetailProvider>: View {
                 .font(.system(size: 12, weight: .medium))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .frame(width: badgeWidth)
+                .frame(width: IssueTypeBadge.defaultWidth)
                 .background(Color.accent.opacity(0.15))
                 .foregroundColor(.accentDark)
                 .clipShape(Capsule())
@@ -283,37 +283,6 @@ struct LinkPickerModal<VM: IssueDetailProvider>: View {
         .padding(.bottom, 4)
     }
 
-    // MARK: - Issue type badge (same Capsule shape, fixed width, green family)
-
-    private var badgeWidth: CGFloat { 56 }
-
-    @ViewBuilder
-    private func issueTypeBadge(_ type: String) -> some View {
-        let label = type.capitalized
-        let (bg, fg) = issueTypeColors(type)
-        Text(label)
-            .font(.system(size: 12, weight: .medium))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .frame(width: badgeWidth)
-            .background(bg)
-            .foregroundColor(fg)
-            .clipShape(Capsule())
-    }
-
-    private func issueTypeColors(_ type: String) -> (Color, Color) {
-        switch type {
-        case "task":
-            return (Color(hex: "#1a7f37"), Color.white)
-        case "memo":
-            return (Color(hex: "#dafbe1"), Color(hex: "#1a7f37"))
-        case "article":
-            return (Color(hex: "#b4e6be"), Color(hex: "#0d5821"))
-        default:
-            return (Color.accent.opacity(0.15), Color.accentDark)
-        }
-    }
-
     // MARK: - Linked item row
 
     private func linkedRow(_ item: IssuePickerItem) -> some View {
@@ -327,7 +296,7 @@ struct LinkPickerModal<VM: IssueDetailProvider>: View {
                     .frame(width: 14)
             }
 
-            issueTypeBadge(item.type)
+            IssueTypeBadge(type: item.type)
 
             Text(item.title)
                 .font(.system(size: 15, weight: .medium))
@@ -370,7 +339,7 @@ struct LinkPickerModal<VM: IssueDetailProvider>: View {
 
     private func issueRow(_ item: IssuePickerItem, isLinked: Bool) -> some View {
         HStack(spacing: 8) {
-            issueTypeBadge(item.type)
+            IssueTypeBadge(type: item.type)
 
             Text(item.title)
                 .font(.system(size: 15, weight: .medium))

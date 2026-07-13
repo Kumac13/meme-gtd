@@ -46,7 +46,7 @@ struct ArticleDetailView: View {
                 LazyVStack(spacing: 0) {
                     if let article = viewModel.article {
                         // === Header Area (glass card): Title + Meta ===
-                        areaCard {
+                        IssueAreaCard {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(article.title)
                                     .font(.system(size: 18, weight: .semibold))
@@ -106,10 +106,10 @@ struct ArticleDetailView: View {
                             .padding(.bottom, 12)
                         }
 
-                        sectionConnector
+                        IssueSectionConnector()
 
                         // === Body Area (same card/menu structure as Task Details) ===
-                        areaCard {
+                        IssueAreaCard {
                             VStack(alignment: .leading, spacing: 0) {
                                 HStack {
                                     HStack(spacing: 4) {
@@ -181,12 +181,12 @@ struct ArticleDetailView: View {
                         // === Timeline: Comments + activities interleaved ===
                         if !viewModel.timelineEntries.isEmpty {
                             ForEach(viewModel.timelineEntries) { entry in
-                                sectionConnector
+                                IssueSectionConnector()
                                 switch entry {
                                 case .activity(let activity):
                                     ActivityItemView(activity: activity, issueId: articleId)
                                 case .comment(let comment):
-                                    areaCard {
+                                    IssueAreaCard {
                                         VStack(alignment: .leading, spacing: 0) {
                                             HStack {
                                                 Text(TimelineHelpers.relativeTimeString(iso: comment.updatedAt))
@@ -344,10 +344,10 @@ struct ArticleDetailView: View {
             Text("Are you sure you want to delete this article? This action cannot be undone.")
         }
         .overlay {
-            if viewModel.isLoading && viewModel.article == nil {
-                ProgressView("Loading...")
-                    .foregroundColor(.textSecondary)
-            }
+            LoadingOverlay(
+                isPresented: viewModel.isLoading && viewModel.article == nil,
+                message: "Loading..."
+            )
         }
         .task {
             viewModel.articleStore = articleStore
@@ -386,21 +386,4 @@ struct ArticleDetailView: View {
         return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
     }
 
-    // MARK: - Area card (glass effect, full width)
-
-    private func areaCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        content()
-            .frame(maxWidth: .infinity)
-            .glassEffect(.regular, in: Rectangle())
-    }
-
-    // MARK: - Section connector (line between areas)
-
-    private var sectionConnector: some View {
-        Rectangle()
-            .fill(Color(.systemGray3))
-            .frame(width: 2, height: 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, 24)
-    }
 }

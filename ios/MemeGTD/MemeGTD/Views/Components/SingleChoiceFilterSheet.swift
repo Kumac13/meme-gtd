@@ -11,26 +11,7 @@ struct SingleChoiceFilterSheet<Option: Hashable>: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button(action: {
-                    HapticManager.impact(.light)
-                    onDismiss()
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundColor(Color(.tertiaryLabel))
-                }
-                Spacer()
-                Text(title)
-                    .font(.system(size: 17, weight: .semibold))
-                Spacer()
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .hidden()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            ModalHeader(title: title, onDismiss: onDismiss)
 
             Divider()
 

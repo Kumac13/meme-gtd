@@ -296,10 +296,10 @@ struct MemoDetailView: View {
             }
         }
         .overlay {
-            if viewModel.isLoading && viewModel.memo == nil {
-                ProgressView("Loading...")
-                    .foregroundColor(.textSecondary)
-            }
+            LoadingOverlay(
+                isPresented: viewModel.isLoading && viewModel.memo == nil,
+                message: "Loading..."
+            )
         }
         .task {
             viewModel.memoStore = memoStore

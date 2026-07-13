@@ -35,41 +35,15 @@ struct CreateTemplateModal: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack {
-            Button(action: {
-                HapticManager.impact(.light)
-                onDismiss()
-            }) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundColor(Color(.tertiaryLabel))
-            }
-
-            Spacer()
-
-            Text("New Template")
-                .font(.system(size: 17, weight: .semibold))
-
-            Spacer()
-
-            Button(action: { submit() }) {
-                if viewModel.isSubmitting {
-                    ProgressView()
-                        .frame(width: 28, height: 28)
-                } else {
-                    Text("Create")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(
-                            viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                ? Color(.systemGray3) : .accent
-                        )
-                }
-            }
-            .disabled(viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isSubmitting)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        ModalHeader(
+            title: "New Template",
+            onDismiss: onDismiss,
+            trailingAction: .create(
+                isEnabled: !viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                isSubmitting: viewModel.isSubmitting,
+                action: submit
+            )
+        )
     }
 
     // MARK: - Full Form
@@ -202,13 +176,7 @@ struct CreateTemplateModal: View {
                 if !viewModel.selectedLabelNames.isEmpty {
                     FlowLayout(spacing: 6) {
                         ForEach(Array(viewModel.selectedLabelNames).sorted(), id: \.self) { name in
-                            Text(name)
-                                .font(.system(size: 12, weight: .medium))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(LabelColorHelper.bgColor(for: name))
-                                .foregroundColor(LabelColorHelper.textColor(for: name))
-                                .clipShape(Capsule())
+                            IssueLabelChip(name: name)
                         }
                     }
                     .padding(.top, 8)

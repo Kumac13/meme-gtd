@@ -10,38 +10,15 @@ struct CreateIssueModalHeader: View {
     let onCreate: () -> Void
 
     var body: some View {
-        HStack {
-            Button(action: {
-                HapticManager.impact(.light)
-                onDismiss()
-            }) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundColor(Color(.tertiaryLabel))
-            }
-
-            Spacer()
-
-            Text(title)
-                .font(.system(size: 17, weight: .semibold))
-
-            Spacer()
-
-            Button(action: onCreate) {
-                if isSubmitting {
-                    ProgressView()
-                        .frame(width: 28, height: 28)
-                } else {
-                    Text("Create")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(isCreateDisabled ? Color(.systemGray3) : .accent)
-                }
-            }
-            .disabled(isCreateDisabled || isSubmitting)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        ModalHeader(
+            title: title,
+            onDismiss: onDismiss,
+            trailingAction: .create(
+                isEnabled: !isCreateDisabled,
+                isSubmitting: isSubmitting,
+                action: onCreate
+            )
+        )
     }
 }
 
@@ -152,13 +129,7 @@ struct CreateIssueMetadataSection: View {
                 } else {
                     FlowLayout(spacing: 6) {
                         ForEach(Array(selectedLabelNames).sorted(), id: \.self) { name in
-                            Text(name)
-                                .font(.system(size: 12, weight: .medium))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(LabelColorHelper.bgColor(for: name))
-                                .foregroundColor(LabelColorHelper.textColor(for: name))
-                                .clipShape(Capsule())
+                            IssueLabelChip(name: name)
                         }
                     }
                     .padding(.top, 8)

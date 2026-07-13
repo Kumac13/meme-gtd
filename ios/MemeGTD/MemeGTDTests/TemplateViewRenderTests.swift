@@ -93,4 +93,23 @@ final class TemplateViewRenderTests: XCTestCase {
         .environmentObject(DataSourceProvider())
         try snapshotInWindow(view, size: CGSize(width: 390, height: 500), name: "template-chooser")
     }
+
+    func testRenderSharedIssuePrimitives() throws {
+        let view = VStack(alignment: .leading, spacing: 12) {
+            ModalHeader(title: "Shared Header", onDismiss: {})
+            HStack {
+                IssueTypeBadge(type: "task")
+                CompactRelativeTimeText(iso: "2026-07-13T11:55:00Z")
+                IssueLabelChips(labels: ["work", "ios"])
+            }
+            IssueAreaCard {
+                Text("Shared detail card")
+                    .padding()
+            }
+            IssueSectionConnector()
+            FeedbackToast(message: "Copied!")
+            FloatingCreateButton(action: {})
+        }
+        try writePNG(view, name: "shared-issue-primitives")
+    }
 }

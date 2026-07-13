@@ -144,7 +144,7 @@ struct CreateTaskLinkPicker: View {
                 .font(.system(size: 12, weight: .medium))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .frame(width: badgeWidth)
+                .frame(width: IssueTypeBadge.defaultWidth)
                 .background(Color.accent.opacity(0.15))
                 .foregroundColor(.accentDark)
                 .clipShape(Capsule())
@@ -262,35 +262,6 @@ struct CreateTaskLinkPicker: View {
 
     // MARK: - Issue type badge
 
-    private var badgeWidth: CGFloat { 56 }
-
-    @ViewBuilder
-    private func issueTypeBadge(_ type: String) -> some View {
-        let label = type.capitalized
-        let (bg, fg) = issueTypeColors(type)
-        Text(label)
-            .font(.system(size: 12, weight: .medium))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .frame(width: badgeWidth)
-            .background(bg)
-            .foregroundColor(fg)
-            .clipShape(Capsule())
-    }
-
-    private func issueTypeColors(_ type: String) -> (Color, Color) {
-        switch type {
-        case "task":
-            return (Color(hex: "#1a7f37"), Color.white)
-        case "memo":
-            return (Color(hex: "#dafbe1"), Color(hex: "#1a7f37"))
-        case "article":
-            return (Color(hex: "#b4e6be"), Color(hex: "#0d5821"))
-        default:
-            return (Color.accent.opacity(0.15), Color.accentDark)
-        }
-    }
-
     // MARK: - Pending link row
 
     private func pendingLinkRow(_ link: PendingLink) -> some View {
@@ -328,7 +299,7 @@ struct CreateTaskLinkPicker: View {
 
     private func issueRow(_ item: IssuePickerItem) -> some View {
         HStack(spacing: 8) {
-            issueTypeBadge(item.type)
+            IssueTypeBadge(type: item.type)
 
             Text(item.title)
                 .font(.system(size: 15, weight: .medium))

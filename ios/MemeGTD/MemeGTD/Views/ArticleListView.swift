@@ -123,16 +123,8 @@ struct ArticleListView: View {
         .safeAreaBar(edge: .bottom) {
             HStack {
                 Spacer()
-                Button(action: {
-                    HapticManager.impact(.medium)
+                FloatingCreateButton {
                     showTemplateChooser = true
-                }) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 52, height: 52)
-                        .background(Color.accent)
-                        .clipShape(Circle())
                 }
             }
             .padding(.horizontal, 16)
@@ -238,13 +230,7 @@ struct ArticleListView: View {
         }
         .overlay(alignment: .top) {
             if viewModel.showCopiedFeedback {
-                Text("Copied!")
-                    .font(.system(size: 13, weight: .semibold))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(.regularMaterial, in: Capsule())
-                    .padding(.top, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                FeedbackToast(message: "Copied!")
             }
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.showCopiedFeedback)
@@ -261,10 +247,10 @@ struct ArticleListView: View {
             }
         }
         .overlay {
-            if viewModel.isLoading && articleStore.articles.isEmpty {
-                ProgressView("Loading articles...")
-                    .foregroundColor(.textSecondary)
-            }
+            LoadingOverlay(
+                isPresented: viewModel.isLoading && articleStore.articles.isEmpty,
+                message: "Loading articles..."
+            )
         }
         .task {
             viewModel.store = articleStore

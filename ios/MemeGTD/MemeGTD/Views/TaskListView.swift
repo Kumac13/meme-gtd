@@ -183,21 +183,11 @@ struct TaskListView: View {
         .safeAreaBar(edge: .bottom) {
             HStack {
                 Spacer()
-                Button(action: {
-                    HapticManager.impact(.medium)
+                FloatingCreateButton(disabled: isOfflineReadOnly) {
                     // Pre-screen (requirement): choose Blank or a template
                     // before entering the Create New Task form.
                     showTemplateChooser = true
-                }) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 52, height: 52)
-                        .background(Color.accent)
-                        .clipShape(Circle())
                 }
-                .disabled(isOfflineReadOnly)
-                .opacity(isOfflineReadOnly ? 0.4 : 1)
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 10)
@@ -249,13 +239,7 @@ struct TaskListView: View {
         }
         .overlay(alignment: .top) {
             if viewModel.showCopiedFeedback {
-                Text("Copied!")
-                    .font(.system(size: 13, weight: .semibold))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(.regularMaterial, in: Capsule())
-                    .padding(.top, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                FeedbackToast(message: "Copied!")
             }
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.showCopiedFeedback)
@@ -348,10 +332,10 @@ struct TaskListView: View {
             .presentationDetents([.large])
         }
         .overlay {
-            if viewModel.isLoading && taskStore.tasks.isEmpty {
-                ProgressView("Loading tasks...")
-                    .foregroundColor(.textSecondary)
-            }
+            LoadingOverlay(
+                isPresented: viewModel.isLoading && taskStore.tasks.isEmpty,
+                message: "Loading tasks..."
+            )
         }
         .task {
             viewModel.store = taskStore
