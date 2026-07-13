@@ -12,7 +12,7 @@ struct TemplateListView: View {
     @StateObject private var viewModel = TemplateListViewModel()
     @State private var isSearching: Bool = false
     @State private var showTargetPicker: Bool = false
-    @State private var showCreateModal: Bool = false
+    @StateObject private var creation = CreationPresentationCoordinator<Void>()
 
     var body: some View {
         ScrollView {
@@ -84,7 +84,7 @@ struct TemplateListView: View {
             HStack {
                 Spacer()
                 FloatingCreateButton {
-                    showCreateModal = true
+                    creation.present(())
                 }
             }
             .padding(.horizontal, 16)
@@ -118,12 +118,12 @@ struct TemplateListView: View {
             targetPickerSheet
                 .presentationDetents([.medium])
         }
-        .sheet(isPresented: $showCreateModal) {
+        .sheet(item: $creation.activeRequest) { _ in
             CreateTemplateModal(
                 onCreated: { _ in
                     Task { await viewModel.loadTemplates() }
                 },
-                onDismiss: { showCreateModal = false }
+                onDismiss: creation.dismissForm
             )
             .presentationDetents([.large])
         }

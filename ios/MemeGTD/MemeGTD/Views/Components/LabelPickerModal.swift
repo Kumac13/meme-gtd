@@ -4,6 +4,7 @@ struct LabelPickerModal: View {
     let allLabels: [IssueLabel]
     @Binding var selectedNames: Set<String>
     let onDismiss: () -> Void
+    var onConfirm: ((Set<String>) -> Void)? = nil
     var showClear: Bool = false
     var countFor: (IssueLabel) -> Int
     var onLabelCreated: ((IssueLabel) -> Void)? = nil
@@ -32,7 +33,9 @@ struct LabelPickerModal: View {
                         HapticManager.impact(.light)
                         selectedNames.removeAll()
                     })
-                    : .placeholder
+                    : onConfirm.map { confirm in
+                        .confirm(isEnabled: true, action: { confirm(selectedNames) })
+                    } ?? .placeholder
             )
 
             Divider()

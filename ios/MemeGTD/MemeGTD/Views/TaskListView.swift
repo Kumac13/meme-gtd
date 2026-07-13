@@ -17,9 +17,7 @@ struct TaskListView: View {
     @State private var showDateRangePicker: Bool = false
     @State private var dateFrom: Date?
     @State private var dateTo: Date?
-    @State private var createTaskMode: CreateTaskMode? = nil
-    @State private var showTemplateChooser: Bool = false
-    @State private var chosenCreateKind: CreateTaskModeKind? = nil
+    @StateObject private var creation = CreationPresentationCoordinator<CreateTaskModeKind>()
     @State private var showCopyDialog: Bool = false
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
@@ -186,7 +184,7 @@ struct TaskListView: View {
                 FloatingCreateButton(disabled: isOfflineReadOnly) {
                     // Pre-screen (requirement): choose Blank or a template
                     // before entering the Create New Task form.
-                    showTemplateChooser = true
+                    creation.beginChoosing()
                 }
             }
             .padding(.horizontal, 16)
@@ -297,37 +295,30 @@ struct TaskListView: View {
             )
             .presentationDetents([.medium])
         }
-        .sheet(isPresented: $showTemplateChooser, onDismiss: {
-            if let kind = chosenCreateKind {
-                createTaskMode = CreateTaskMode(kind: kind)
-                chosenCreateKind = nil
-            }
-        }) {
+        .sheet(isPresented: $creation.isChooserPresented, onDismiss: creation.chooserDidDismiss) {
             TemplateChooserSheet(
                 target: "task",
                 onBlank: {
-                    chosenCreateKind = .standard
-                    showTemplateChooser = false
+                    creation.choose(.standard)
                 },
                 onTemplate: { template in
-                    chosenCreateKind = .fromTemplate(
+                    creation.choose(.fromTemplate(
                         bodyMd: template.bodyMd,
                         initialLabelNames: template.labels ?? [],
                         initialProjectIds: template.projectIds ?? []
-                    )
-                    showTemplateChooser = false
+                    ))
                 },
-                onDismiss: { showTemplateChooser = false }
+                onDismiss: creation.cancelChooser
             )
             .presentationDetents([.medium, .large])
         }
-        .sheet(item: $createTaskMode) { mode in
+        .sheet(item: $creation.activeRequest) { request in
             CreateTaskModal(
-                mode: mode.kind,
+                mode: request.payload,
                 onCreated: { _ in
                     Task { await viewModel.loadTasks() }
                 },
-                onDismiss: { createTaskMode = nil }
+                onDismiss: creation.dismissForm
             )
             .presentationDetents([.large])
         }

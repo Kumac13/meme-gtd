@@ -26,13 +26,6 @@ struct CreateManualArticleRequest: Codable {
     let labels: [String]?
 }
 
-/// Identifies one Article creation presentation. A fresh identity prevents
-/// SwiftUI from reusing form state from a previous blank/template selection.
-struct CreateArticleMode: Identifiable {
-    let id = UUID()
-    let template: Template?
-}
-
 struct UpdateArticleRequest: Codable {
     let title: String?
     let bodyMd: String?

@@ -1,5 +1,25 @@
 import SwiftUI
 
+struct CreateIssueMetadataOptions {
+    let labels: [IssueLabel]?
+    let projects: [Project]?
+}
+
+@MainActor
+enum CreateIssueMetadataOptionsLoader {
+    static func load(
+        labels: @escaping @MainActor () async throws -> [IssueLabel],
+        projects: @escaping @MainActor () async throws -> [Project]
+    ) async -> CreateIssueMetadataOptions {
+        async let labelsResult = try? labels()
+        async let projectsResult = try? projects()
+        return await CreateIssueMetadataOptions(
+            labels: labelsResult,
+            projects: projectsResult
+        )
+    }
+}
+
 /// Shared form chrome for issue creation screens. Keeping these pieces here
 /// prevents Task and Article creation from drifting apart visually.
 struct CreateIssueModalHeader: View {
@@ -71,6 +91,8 @@ struct CreateIssueMetadataSection: View {
 
     @State private var showLabelPicker = false
     @State private var showProjectPicker = false
+    @State private var labelDraft: Set<String> = []
+    @State private var projectDraft: Set<Int> = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -83,12 +105,16 @@ struct CreateIssueMetadataSection: View {
         .sheet(isPresented: $showLabelPicker) {
             LabelPickerModal(
                 allLabels: allLabels,
-                selectedNames: $selectedLabelNames,
+                selectedNames: $labelDraft,
                 onDismiss: { showLabelPicker = false },
+                onConfirm: { names in
+                    selectedLabelNames = names
+                    showLabelPicker = false
+                },
                 countFor: labelCount,
                 onLabelCreated: { newLabel in
                     allLabels.append(newLabel)
-                    selectedLabelNames.insert(newLabel.name)
+                    labelDraft.insert(newLabel.name)
                 }
             )
             .presentationDetents([.medium, .large])
@@ -96,7 +122,7 @@ struct CreateIssueMetadataSection: View {
         .sheet(isPresented: $showProjectPicker) {
             ProjectPickerModal(
                 allProjects: allProjects,
-                selectedIds: $selectedProjectIds,
+                selectedIds: $projectDraft,
                 onDismiss: { showProjectPicker = false },
                 onConfirm: { ids in
                     selectedProjectIds = ids
@@ -112,20 +138,24 @@ struct CreateIssueMetadataSection: View {
     }
 
     private func loadOptions() async {
-        async let labelsResult = try? dataSources.labels.listLabels()
-        async let projectsResult = try? dataSources.projects.listProjects()
-        let (labels, projects) = await (labelsResult, projectsResult)
+        let options = await CreateIssueMetadataOptionsLoader.load(
+            labels: { try await dataSources.labels.listLabels() },
+            projects: { try await dataSources.projects.listProjects() }
+        )
 
-        if let labels {
+        if let labels = options.labels {
             allLabels = labels
         }
-        if let projects {
+        if let projects = options.projects {
             allProjects = projects
         }
     }
 
     private var labelsRow: some View {
-        FormNavigationRow(title: "Labels", action: { showLabelPicker = true }) {
+        FormNavigationRow(title: "Labels", action: {
+            labelDraft = selectedLabelNames
+            showLabelPicker = true
+        }) {
             if selectedLabelNames.isEmpty {
                 EmptyFormSelection()
             } else {
@@ -139,7 +169,10 @@ struct CreateIssueMetadataSection: View {
     }
 
     private var projectsRow: some View {
-        FormNavigationRow(title: "Projects", action: { showProjectPicker = true }) {
+        FormNavigationRow(title: "Projects", action: {
+            projectDraft = selectedProjectIds
+            showProjectPicker = true
+        }) {
             if selectedProjectIds.isEmpty {
                 EmptyFormSelection()
             } else {

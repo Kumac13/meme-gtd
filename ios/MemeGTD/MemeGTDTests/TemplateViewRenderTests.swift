@@ -163,4 +163,16 @@ final class TemplateViewRenderTests: XCTestCase {
         }
         try writePNG(view, name: "shared-picker-components")
     }
+
+    func testRenderSharedQuickCaptureComposer() throws {
+        let view = FloatingComposer(
+            text: .constant("Quick memo"),
+            placeholder: "Write a memo...",
+            onAttachImage: {},
+            onSubmit: {}
+        )
+        .padding()
+
+        try writePNG(view, name: "shared-quick-capture-composer")
+    }
 }
