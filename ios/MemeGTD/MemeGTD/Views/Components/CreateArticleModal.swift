@@ -6,76 +6,131 @@ struct CreateArticleModal: View {
     let onDismiss: () -> Void
 
     @EnvironmentObject var dataSources: DataSourceProvider
+
     @State private var title = ""
-    @State private var bodyMd = ""
+    @State private var bodyMd: String
+    @State private var selectedLabelNames: Set<String>
+    @State private var selectedProjectIds: Set<Int>
+    @State private var allLabels: [IssueLabel] = []
+    @State private var allProjects: [Project] = []
     @State private var isSubmitting = false
     @State private var error: String?
 
+    init(
+        template: Template?,
+        onCreated: @escaping (Article) -> Void,
+        onDismiss: @escaping () -> Void
+    ) {
+        self.template = template
+        self.onCreated = onCreated
+        self.onDismiss = onDismiss
+        self._bodyMd = State(initialValue: template?.bodyMd ?? "")
+        self._selectedLabelNames = State(initialValue: Set(template?.labels ?? []))
+        self._selectedProjectIds = State(initialValue: Set(template?.projectIds ?? []))
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button(action: onDismiss) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundColor(Color(.tertiaryLabel))
-                }
-                Spacer()
-                Text("New Article").font(.system(size: 17, weight: .semibold))
-                Spacer()
-                Button("Create") { submit() }
-                    .font(.system(size: 17, weight: .semibold))
-                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSubmitting)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            header
 
             Divider()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Title").font(.system(size: 13, weight: .medium)).foregroundColor(.textSecondary)
-                        AutoFocusTextField(placeholder: "Article title...", text: $title)
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Body").font(.system(size: 13, weight: .medium)).foregroundColor(.textSecondary)
-                        TextEditor(text: $bodyMd)
-                            .font(.system(size: 15))
-                            .frame(minHeight: 220)
-                            .scrollContentBackground(.hidden)
-                    }
-                    if let error {
-                        Text(error).font(.footnote).foregroundColor(.red)
-                    }
-                }
-                .padding(16)
-            }
+            fullForm
         }
         .background(Color(.systemBackground))
-        .onAppear { bodyMd = template?.bodyMd ?? "" }
+        .task { await loadData() }
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        CreateIssueModalHeader(
+            title: "New Article",
+            isSubmitting: isSubmitting,
+            isCreateDisabled: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            onDismiss: onDismiss,
+            onCreate: submit
+        )
+    }
+
+    // MARK: - Full Form
+
+    private var fullForm: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                CreateIssueTextFields(
+                    titlePlaceholder: "Article title...",
+                    title: $title,
+                    bodyMd: $bodyMd
+                )
+
+                Divider().padding(.leading, 16)
+
+                CreateIssueMetadataSection(
+                    allLabels: $allLabels,
+                    selectedLabelNames: $selectedLabelNames,
+                    allProjects: $allProjects,
+                    selectedProjectIds: $selectedProjectIds,
+                    labelCount: { $0.articleCount }
+                )
+
+                if let error {
+                    CreateIssueErrorBanner(message: error)
+                }
+
+                Color.clear.frame(height: 40)
+            }
+        }
+        .scrollDismissesKeyboard(.immediately)
+    }
+
+    private func loadData() async {
+        do {
+            async let labelsResult = dataSources.labels.listLabels()
+            async let projectsResult = dataSources.projects.listProjects()
+            let (labels, projects) = try await (labelsResult, projectsResult)
+            allLabels = labels
+            allProjects = projects
+        } catch {
+            // Label/project metadata is non-critical for creating an article.
+        }
     }
 
     private func submit() {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
+
         isSubmitting = true
+        error = nil
+
         Task {
             do {
                 let article = try await dataSources.articles.createArticle(
                     CreateManualArticleRequest(
-                        title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+                        title: trimmedTitle,
                         bodyMd: bodyMd,
-                        labels: template?.labels
+                        labels: selectedLabelNames.isEmpty ? nil : Array(selectedLabelNames).sorted()
                     )
                 )
-                for projectId in template?.projectIds ?? [] {
-                    _ = try await dataSources.projects.addProjectItem(
-                        projectId: projectId,
-                        AddProjectItemRequest(issueId: article.id)
-                    )
+
+                let dataSources = dataSources
+                await withTaskGroup(of: Void.self) { group in
+                    for projectId in selectedProjectIds {
+                        group.addTask {
+                            let _: ProjectItem? = try? await dataSources.projects.addProjectItem(
+                                projectId: projectId,
+                                AddProjectItemRequest(issueId: article.id)
+                            )
+                        }
+                    }
                 }
+
+                HapticManager.notification(.success)
+                isSubmitting = false
                 onCreated(article)
             } catch {
                 self.error = error.localizedDescription
+                HapticManager.notification(.error)
                 isSubmitting = false
             }
         }

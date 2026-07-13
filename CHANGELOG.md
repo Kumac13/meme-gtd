@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.50.6 - 2026-07-13
+
+### Bug Fixes
+
+- iOS の New Article でラベルとプロジェクトを選択できるようにし、作成時に選択内容を反映するよう修正。Task と Article の作成画面は、ヘッダー、Title/Description、Label/Project picker、エラー表示の共通コンポーネントを利用して UI の再乖離を防ぐ構造にした。
+
 ## 0.50.5 - 2026-07-12
 
 ### Bug Fixes

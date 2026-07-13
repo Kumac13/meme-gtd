@@ -9,11 +9,7 @@ struct CreateTaskModal: View {
     @StateObject private var viewModel: CreateTaskViewModel
 
     @State private var showStatusPicker = false
-    @State private var showLabelPicker = false
-    @State private var showProjectPicker = false
     @State private var showLinkPicker = false
-    @State private var selectedLabelNames: Set<String> = []
-    @State private var selectedProjectIds: Set<Int> = []
 
     init(mode: CreateTaskModeKind, onCreated: @escaping (TaskItem) -> Void, onDismiss: @escaping () -> Void) {
         self.mode = mode
@@ -41,50 +37,19 @@ struct CreateTaskModal: View {
         .task {
             viewModel.dataSources = dataSources
             await viewModel.loadData()
-            // Sync initial selections for picker state
-            selectedLabelNames = viewModel.selectedLabelNames
-            selectedProjectIds = viewModel.selectedProjectIds
         }
     }
 
     // MARK: - Header
 
     private var header: some View {
-        HStack {
-            Button(action: {
-                HapticManager.impact(.light)
-                onDismiss()
-            }) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundColor(Color(.tertiaryLabel))
-            }
-
-            Spacer()
-
-            Text(headerTitle)
-                .font(.system(size: 17, weight: .semibold))
-
-            Spacer()
-
-            Button(action: { submit() }) {
-                if viewModel.isSubmitting {
-                    ProgressView()
-                        .frame(width: 28, height: 28)
-                } else {
-                    Text("Create")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(
-                            viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                ? Color(.systemGray3) : .accent
-                        )
-                }
-            }
-            .disabled(viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isSubmitting)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        CreateIssueModalHeader(
+            title: headerTitle,
+            isSubmitting: viewModel.isSubmitting,
+            isCreateDisabled: viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            onDismiss: onDismiss,
+            onCreate: submit
+        )
     }
 
     // MARK: - Full Form
@@ -92,34 +57,11 @@ struct CreateTaskModal: View {
     private var fullForm: some View {
         ScrollView {
             VStack(spacing: 0) {
-                // Title
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Title")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.textSecondary)
-                    AutoFocusTextField(
-                        placeholder: "Task title...",
-                        text: $viewModel.title
-                    )
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-
-                Divider().padding(.leading, 16)
-
-                // Description
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Description")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.textSecondary)
-                    TextEditor(text: $viewModel.bodyMd)
-                        .font(.system(size: 15))
-                        .frame(minHeight: 80, maxHeight: 160)
-                        .scrollContentBackground(.hidden)
-                        .tint(Color.accent)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                CreateIssueTextFields(
+                    titlePlaceholder: "Task title...",
+                    title: $viewModel.title,
+                    bodyMd: $viewModel.bodyMd
+                )
 
                 Divider().padding(.leading, 16)
 
@@ -138,13 +80,13 @@ struct CreateTaskModal: View {
 
                 Divider().padding(.leading, 16)
 
-                // Labels
-                labelsRow
-
-                Divider().padding(.leading, 16)
-
-                // Projects
-                projectsRow
+                CreateIssueMetadataSection(
+                    allLabels: $viewModel.allLabels,
+                    selectedLabelNames: $viewModel.selectedLabelNames,
+                    allProjects: $viewModel.allProjects,
+                    selectedProjectIds: $viewModel.selectedProjectIds,
+                    labelCount: { $0.taskCount }
+                )
 
                 Divider().padding(.leading, 16)
 
@@ -152,7 +94,7 @@ struct CreateTaskModal: View {
                 linksRow
 
                 if let error = viewModel.error {
-                    errorBanner(error)
+                    CreateIssueErrorBanner(message: error)
                 }
 
                 Color.clear.frame(height: 40)
@@ -162,36 +104,6 @@ struct CreateTaskModal: View {
         .sheet(isPresented: $showStatusPicker) {
             statusPickerSheet
                 .presentationDetents([.medium])
-        }
-        .sheet(isPresented: $showLabelPicker) {
-            LabelPickerModal(
-                allLabels: viewModel.allLabels,
-                selectedNames: $selectedLabelNames,
-                onDismiss: { showLabelPicker = false },
-                countFor: { $0.taskCount },
-                onLabelCreated: { newLabel in
-                    viewModel.allLabels.append(newLabel)
-                    selectedLabelNames.insert(newLabel.name)
-                }
-            )
-            .presentationDetents([.medium, .large])
-        }
-        .onChange(of: selectedLabelNames) { _, newValue in
-            viewModel.selectedLabelNames = newValue
-        }
-        .sheet(isPresented: $showProjectPicker) {
-            ProjectPickerModal(
-                allProjects: viewModel.allProjects,
-                selectedIds: $selectedProjectIds,
-                onDismiss: { showProjectPicker = false },
-                onConfirm: { ids in
-                    viewModel.selectedProjectIds = ids
-                    selectedProjectIds = ids
-                    showProjectPicker = false
-                },
-                includeNoProject: .constant(false)
-            )
-            .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showLinkPicker) {
             CreateTaskLinkPicker(
@@ -321,90 +233,6 @@ struct CreateTaskModal: View {
         .padding(.vertical, 12)
     }
 
-    // MARK: - Labels Row
-
-    private var labelsRow: some View {
-        Button(action: {
-            HapticManager.impact(.light)
-            selectedLabelNames = viewModel.selectedLabelNames
-            showLabelPicker = true
-        }) {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Text("Labels")
-                        .font(.system(size: 15))
-                        .foregroundColor(.textPrimary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(.systemGray3))
-                }
-
-                if !viewModel.selectedLabelNames.isEmpty {
-                    FlowLayout(spacing: 6) {
-                        ForEach(Array(viewModel.selectedLabelNames).sorted(), id: \.self) { name in
-                            Text(name)
-                                .font(.system(size: 12, weight: .medium))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(LabelColorHelper.bgColor(for: name))
-                                .foregroundColor(LabelColorHelper.textColor(for: name))
-                                .clipShape(Capsule())
-                        }
-                    }
-                    .padding(.top, 8)
-                } else {
-                    Text("None")
-                        .font(.system(size: 13))
-                        .foregroundColor(.textSecondary)
-                        .padding(.top, 4)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-        }
-    }
-
-    // MARK: - Projects Row
-
-    private var projectsRow: some View {
-        Button(action: {
-            HapticManager.impact(.light)
-            selectedProjectIds = viewModel.selectedProjectIds
-            showProjectPicker = true
-        }) {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Text("Projects")
-                        .font(.system(size: 15))
-                        .foregroundColor(.textPrimary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(.systemGray3))
-                }
-
-                if !viewModel.selectedProjectIds.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(viewModel.allProjects.filter { viewModel.selectedProjectIds.contains($0.id) }) { project in
-                            Text(project.name)
-                                .font(.system(size: 13))
-                                .foregroundColor(.textSecondary)
-                        }
-                    }
-                    .padding(.top, 6)
-                } else {
-                    Text("None")
-                        .font(.system(size: 13))
-                        .foregroundColor(.textSecondary)
-                        .padding(.top, 4)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-        }
-    }
-
     // MARK: - Links Row
 
     private var linksRow: some View {
@@ -526,22 +354,6 @@ struct CreateTaskModal: View {
             }
         }
         .background(Color(.systemBackground))
-    }
-
-    // MARK: - Error Banner
-
-    private func errorBanner(_ message: String) -> some View {
-        HStack {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 14))
-                .foregroundColor(.red)
-            Text(message)
-                .font(.system(size: 13))
-                .foregroundColor(.red)
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
     }
 
     // MARK: - Submit
