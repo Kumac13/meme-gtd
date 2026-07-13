@@ -332,11 +332,12 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
 
     // MARK: - Comments
 
-    func addComment() async {
+    func addComment() async -> Bool {
         let body = replyBody.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !body.isEmpty else { return }
+        guard !body.isEmpty else { return false }
 
         isSubmittingReply = true
+        defer { isSubmittingReply = false }
 
         do {
             let request = CreateCommentRequest(bodyMd: body)
@@ -348,12 +349,12 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
             replyBody = ""
             HapticManager.notification(.success)
             await loadLinks()
+            return true
         } catch {
             self.error = error.localizedDescription
             HapticManager.notification(.error)
+            return false
         }
-
-        isSubmittingReply = false
     }
 
     func updateComment(_ commentId: Int, bodyMd: String) async {

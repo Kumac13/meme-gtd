@@ -242,11 +242,6 @@ struct TaskDetailView: View {
                     }
                 }
             }
-            .onChange(of: viewModel.timelineEntries.count) { _ in
-                withAnimation {
-                    proxy.scrollTo("threadBottom", anchor: .bottom)
-                }
-            }
             .safeAreaBar(edge: .bottom) {
                 FloatingComposer(
                     text: $viewModel.replyBody,
@@ -286,7 +281,14 @@ struct TaskDetailView: View {
                                 viewModel.replyBody = ""
                             }
                         case .none:
-                            Task { await viewModel.addComment() }
+                            Task {
+                                if await viewModel.addComment() {
+                                    await Task.yield()
+                                    withAnimation {
+                                        proxy.scrollTo("threadBottom", anchor: .bottom)
+                                    }
+                                }
+                            }
                         }
                     }
                 )

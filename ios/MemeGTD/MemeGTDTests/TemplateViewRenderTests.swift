@@ -137,6 +137,7 @@ final class TemplateViewRenderTests: XCTestCase {
                 labelCount: { _ in 0 }
             )
         }
+        .environmentObject(DataSourceProvider())
         try writePNG(view, name: "shared-creation-form")
     }
 

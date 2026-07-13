@@ -11,6 +11,7 @@ struct ArticleListView: View {
     @State private var showCopyDialog: Bool = false
     @State private var showTemplateChooser = false
     @State private var createTemplate: Template?
+    @State private var shouldOpenCreateArticle = false
     @State private var showCreateArticle = false
     @State private var showOriginPicker = false
     @State private var showLabelPicker = false
@@ -175,18 +176,22 @@ struct ArticleListView: View {
             )
             .presentationDetents([.height(220)])
         }
-        .sheet(isPresented: $showTemplateChooser) {
+        .sheet(isPresented: $showTemplateChooser, onDismiss: {
+            guard shouldOpenCreateArticle else { return }
+            shouldOpenCreateArticle = false
+            showCreateArticle = true
+        }) {
             TemplateChooserSheet(
                 target: "article",
                 onBlank: {
                     createTemplate = nil
+                    shouldOpenCreateArticle = true
                     showTemplateChooser = false
-                    showCreateArticle = true
                 },
                 onTemplate: { template in
                     createTemplate = template
+                    shouldOpenCreateArticle = true
                     showTemplateChooser = false
-                    showCreateArticle = true
                 },
                 onDismiss: { showTemplateChooser = false }
             )
@@ -195,6 +200,8 @@ struct ArticleListView: View {
         .sheet(isPresented: $showCreateArticle) {
             CreateArticleModal(
                 template: createTemplate,
+                initialLabels: viewModel.allLabels,
+                initialProjects: viewModel.allProjects,
                 onCreated: { article in
                     showCreateArticle = false
                     articleStore.needsReload = true

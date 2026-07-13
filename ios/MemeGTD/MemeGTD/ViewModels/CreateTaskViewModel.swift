@@ -64,16 +64,6 @@ class CreateTaskViewModel: ObservableObject {
     // MARK: - Load Data
 
     func loadData() async {
-        do {
-            async let labelsResult: [IssueLabel] = dataSources.labels.listLabels()
-            async let projectsResult: [Project] = dataSources.projects.listProjects()
-            let (labels, projects) = try await (labelsResult, projectsResult)
-            allLabels = labels
-            allProjects = projects
-        } catch {
-            // Non-critical
-        }
-
         // Set up initial pending link for linkedTo mode (needs title from search)
         if case .linkedTo(let sourceTaskId) = mode {
             do {

@@ -61,6 +61,8 @@ struct CreateIssueTextFields: View {
 }
 
 struct CreateIssueMetadataSection: View {
+    @EnvironmentObject private var dataSources: DataSourceProvider
+
     @Binding var allLabels: [IssueLabel]
     @Binding var selectedLabelNames: Set<String>
     @Binding var allProjects: [Project]
@@ -103,6 +105,22 @@ struct CreateIssueMetadataSection: View {
                 includeNoProject: .constant(false)
             )
             .presentationDetents([.medium, .large])
+        }
+        .task {
+            await loadOptions()
+        }
+    }
+
+    private func loadOptions() async {
+        async let labelsResult = try? dataSources.labels.listLabels()
+        async let projectsResult = try? dataSources.projects.listProjects()
+        let (labels, projects) = await (labelsResult, projectsResult)
+
+        if let labels {
+            allLabels = labels
+        }
+        if let projects {
+            allProjects = projects
         }
     }
 

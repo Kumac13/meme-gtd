@@ -18,6 +18,8 @@ struct CreateArticleModal: View {
 
     init(
         template: Template?,
+        initialLabels: [IssueLabel] = [],
+        initialProjects: [Project] = [],
         onCreated: @escaping (Article) -> Void,
         onDismiss: @escaping () -> Void
     ) {
@@ -27,6 +29,8 @@ struct CreateArticleModal: View {
         self._bodyMd = State(initialValue: template?.bodyMd ?? "")
         self._selectedLabelNames = State(initialValue: Set(template?.labels ?? []))
         self._selectedProjectIds = State(initialValue: Set(template?.projectIds ?? []))
+        self._allLabels = State(initialValue: initialLabels)
+        self._allProjects = State(initialValue: initialProjects)
     }
 
     var body: some View {
@@ -38,7 +42,6 @@ struct CreateArticleModal: View {
             fullForm
         }
         .background(Color(.systemBackground))
-        .task { await loadData() }
     }
 
     // MARK: - Header
@@ -82,18 +85,6 @@ struct CreateArticleModal: View {
             }
         }
         .scrollDismissesKeyboard(.immediately)
-    }
-
-    private func loadData() async {
-        do {
-            async let labelsResult = dataSources.labels.listLabels()
-            async let projectsResult = dataSources.projects.listProjects()
-            let (labels, projects) = try await (labelsResult, projectsResult)
-            allLabels = labels
-            allProjects = projects
-        } catch {
-            // Label/project metadata is non-critical for creating an article.
-        }
     }
 
     private func submit() {

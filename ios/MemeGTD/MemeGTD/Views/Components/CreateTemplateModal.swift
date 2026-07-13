@@ -21,7 +21,6 @@ struct CreateTemplateModal: View {
         .background(Color(.systemBackground))
         .task {
             viewModel.dataSources = dataSources
-            await viewModel.loadData()
         }
     }
 
