@@ -26,6 +26,7 @@ struct CreateIssueTextFields: View {
     let titlePlaceholder: String
     @Binding var title: String
     @Binding var bodyMd: String
+    var bodyLabel: String = "Description"
 
     var body: some View {
         VStack(spacing: 0) {
@@ -44,7 +45,7 @@ struct CreateIssueTextFields: View {
             Divider().padding(.leading, 16)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Description")
+                Text(bodyLabel)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.textSecondary)
                 TextEditor(text: $bodyMd)
@@ -106,74 +107,32 @@ struct CreateIssueMetadataSection: View {
     }
 
     private var labelsRow: some View {
-        Button(action: {
-            HapticManager.impact(.light)
-            showLabelPicker = true
-        }) {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Text("Labels")
-                        .font(.system(size: 15))
-                        .foregroundColor(.textPrimary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(.systemGray3))
-                }
-
-                if selectedLabelNames.isEmpty {
-                    Text("None")
-                        .font(.system(size: 13))
-                        .foregroundColor(.textSecondary)
-                        .padding(.top, 4)
-                } else {
-                    FlowLayout(spacing: 6) {
-                        ForEach(Array(selectedLabelNames).sorted(), id: \.self) { name in
-                            IssueLabelChip(name: name)
-                        }
+        FormNavigationRow(title: "Labels", action: { showLabelPicker = true }) {
+            if selectedLabelNames.isEmpty {
+                EmptyFormSelection()
+            } else {
+                FlowLayout(spacing: 6) {
+                    ForEach(Array(selectedLabelNames).sorted(), id: \.self) { name in
+                        IssueLabelChip(name: name)
                     }
-                    .padding(.top, 8)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
         }
     }
 
     private var projectsRow: some View {
-        Button(action: {
-            HapticManager.impact(.light)
-            showProjectPicker = true
-        }) {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Text("Projects")
-                        .font(.system(size: 15))
-                        .foregroundColor(.textPrimary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(.systemGray3))
-                }
-
-                if selectedProjectIds.isEmpty {
-                    Text("None")
-                        .font(.system(size: 13))
-                        .foregroundColor(.textSecondary)
-                        .padding(.top, 4)
-                } else {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(allProjects.filter { selectedProjectIds.contains($0.id) }) { project in
-                            Text(project.name)
-                                .font(.system(size: 13))
-                                .foregroundColor(.textSecondary)
-                        }
+        FormNavigationRow(title: "Projects", action: { showProjectPicker = true }) {
+            if selectedProjectIds.isEmpty {
+                EmptyFormSelection()
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(allProjects.filter { selectedProjectIds.contains($0.id) }) { project in
+                        Text(project.name)
+                            .font(.system(size: 13))
+                            .foregroundColor(.textSecondary)
                     }
-                    .padding(.top, 6)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
         }
     }
 }

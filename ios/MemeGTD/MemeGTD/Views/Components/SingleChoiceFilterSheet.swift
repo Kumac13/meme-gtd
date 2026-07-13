@@ -27,9 +27,7 @@ struct SingleChoiceFilterSheet<Option: Hashable>: View {
                                     .font(.system(size: 16))
                                     .foregroundColor(.textPrimary)
                                 Spacer()
-                                Image(systemName: selected == option ? "checkmark.circle.fill" : "plus.circle")
-                                    .font(.system(size: 22))
-                                    .foregroundColor(selected == option ? .accent : Color(.systemGray3))
+                                PickerSelectionIndicator(isSelected: selected == option)
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 14)

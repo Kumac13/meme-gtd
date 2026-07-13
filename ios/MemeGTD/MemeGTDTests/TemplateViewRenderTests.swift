@@ -112,4 +112,54 @@ final class TemplateViewRenderTests: XCTestCase {
         }
         try writePNG(view, name: "shared-issue-primitives")
     }
+
+    func testRenderSharedCreationForm() throws {
+        let view = VStack(spacing: 0) {
+            CreateIssueModalHeader(
+                title: "New Item",
+                isSubmitting: false,
+                isCreateDisabled: false,
+                onDismiss: {},
+                onCreate: {}
+            )
+            Divider()
+            CreateIssueTextFields(
+                titlePlaceholder: "Title...",
+                title: .constant("Example"),
+                bodyMd: .constant("Body")
+            )
+            Divider().padding(.leading, 16)
+            CreateIssueMetadataSection(
+                allLabels: .constant([]),
+                selectedLabelNames: .constant([]),
+                allProjects: .constant([]),
+                selectedProjectIds: .constant([]),
+                labelCount: { _ in 0 }
+            )
+        }
+        try writePNG(view, name: "shared-creation-form")
+    }
+
+    func testRenderSharedPickerComponents() throws {
+        let view = VStack(spacing: 0) {
+            SingleChoiceFilterSheet(
+                title: "Status",
+                options: ["open", "done"],
+                selected: "open",
+                label: { $0.capitalized },
+                onSelect: { _ in },
+                onDismiss: {}
+            )
+            .frame(height: 260)
+
+            ExternalURLForm(
+                urlText: .constant("https://example.com"),
+                titleText: .constant("Example"),
+                onBack: {},
+                onSubmit: { _, _ in }
+            )
+            .frame(height: 360)
+        }
+        try writePNG(view, name: "shared-picker-components")
+    }
 }

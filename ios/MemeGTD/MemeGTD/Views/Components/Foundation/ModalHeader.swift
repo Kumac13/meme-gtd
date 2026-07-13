@@ -7,6 +7,7 @@ struct ModalHeader: View {
         case placeholder
         case confirm(isEnabled: Bool, action: () -> Void)
         case create(isEnabled: Bool, isSubmitting: Bool, action: () -> Void)
+        case clear(isEnabled: Bool, action: () -> Void)
     }
 
     let title: String
@@ -70,6 +71,12 @@ struct ModalHeader: View {
                 }
             }
             .disabled(!isEnabled || isSubmitting)
+
+        case .clear(let isEnabled, let action):
+            Button("Clear", action: action)
+                .font(.system(size: 16))
+                .foregroundColor(isEnabled ? .accent : Color(.systemGray3))
+                .disabled(!isEnabled)
         }
     }
 }

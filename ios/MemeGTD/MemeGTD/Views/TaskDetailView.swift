@@ -485,45 +485,16 @@ struct TaskDetailView: View {
             .inbox, .open, .next, .waiting, .scheduled, .someday, .done, .canceled,
         ]
 
-        return VStack(spacing: 0) {
-            ModalHeader(title: "Status", onDismiss: { showStatusPicker = false })
-
-            Divider()
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(statuses, id: \.self) { status in
-                        let isSelected = viewModel.task?.status == status.rawValue
-                        Button(action: {
-                            HapticManager.selection()
-                            Task {
-                                await viewModel.updateTask(status: status.rawValue)
-                            }
-                            showStatusPicker = false
-                        }) {
-                            HStack {
-                                Text(status.displayLabel)
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.textPrimary)
-                                Spacer()
-                                if isSelected {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 22))
-                                        .foregroundColor(.accent)
-                                } else {
-                                    Image(systemName: "circle")
-                                        .font(.system(size: 22))
-                                        .foregroundColor(Color(.systemGray3))
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                        }
-                        Divider().padding(.leading, 16)
-                    }
-                }
-            }
-        }
-        .background(Color(.systemBackground))
+        return SingleChoiceFilterSheet(
+            title: "Status",
+            options: statuses,
+            selected: TaskStatusFilter(rawValue: viewModel.task?.status ?? "") ?? .inbox,
+            label: { $0.displayLabel },
+            onSelect: { status in
+                Task { await viewModel.updateTask(status: status.rawValue) }
+                showStatusPicker = false
+            },
+            onDismiss: { showStatusPicker = false }
+        )
     }
 }

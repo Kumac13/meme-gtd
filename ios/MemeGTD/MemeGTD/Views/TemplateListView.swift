@@ -145,42 +145,16 @@ struct TemplateListView: View {
     // MARK: - Target Picker Sheet (issues.template_target)
 
     private var targetPickerSheet: some View {
-        VStack(spacing: 0) {
-            ModalHeader(title: "Target", onDismiss: { showTargetPicker = false })
-
-            Divider()
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(TemplateTargetFilter.allCases, id: \.self) { filter in
-                        Button(action: {
-                            HapticManager.selection()
-                            viewModel.setTargetFilter(filter)
-                            showTargetPicker = false
-                        }) {
-                            HStack {
-                                Text(filter.displayLabel)
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.textPrimary)
-                                Spacer()
-                                if viewModel.targetFilter == filter {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 22))
-                                        .foregroundColor(.accent)
-                                } else {
-                                    Image(systemName: "circle")
-                                        .font(.system(size: 22))
-                                        .foregroundColor(Color(.systemGray3))
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                        }
-                        Divider().padding(.leading, 16)
-                    }
-                }
-            }
-        }
-        .background(Color(.systemBackground))
+        SingleChoiceFilterSheet(
+            title: "Target",
+            options: TemplateTargetFilter.allCases,
+            selected: viewModel.targetFilter,
+            label: { $0.displayLabel },
+            onSelect: { filter in
+                viewModel.setTargetFilter(filter)
+                showTargetPicker = false
+            },
+            onDismiss: { showTargetPicker = false }
+        )
     }
 }

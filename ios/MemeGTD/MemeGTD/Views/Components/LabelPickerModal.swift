@@ -24,38 +24,16 @@ struct LabelPickerModal: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button(action: { HapticManager.impact(.light); onDismiss() }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundColor(Color(.tertiaryLabel))
-                }
-                Spacer()
-
-                Text("Labels")
-                    .font(.system(size: 17, weight: .semibold))
-
-                Spacer()
-
-                if showClear {
-                    Button(action: {
+            ModalHeader(
+                title: "Labels",
+                onDismiss: onDismiss,
+                trailingAction: showClear
+                    ? .clear(isEnabled: !selectedNames.isEmpty, action: {
                         HapticManager.impact(.light)
                         selectedNames.removeAll()
-                    }) {
-                        Text("Clear")
-                            .font(.system(size: 16))
-                            .foregroundColor(selectedNames.isEmpty ? Color(.systemGray3) : .accent)
-                    }
-                    .disabled(selectedNames.isEmpty)
-                } else {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .hidden()
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+                    })
+                    : .placeholder
+            )
 
             Divider()
 
@@ -108,15 +86,7 @@ struct LabelPickerModal: View {
                                         .foregroundColor(Color(.secondaryLabel))
                                         .padding(.trailing, 4)
 
-                                    if isSelected {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .font(.system(size: 22))
-                                            .foregroundColor(.accent)
-                                    } else {
-                                        Image(systemName: "plus.circle")
-                                            .font(.system(size: 22))
-                                            .foregroundColor(Color(.systemGray3))
-                                    }
+                                    PickerSelectionIndicator(isSelected: isSelected)
                                 }
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 10)
