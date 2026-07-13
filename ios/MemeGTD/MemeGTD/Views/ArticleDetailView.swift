@@ -255,9 +255,6 @@ struct ArticleDetailView: View {
                     }
                 }
             }
-            .onChange(of: viewModel.timelineEntries.count) { _ in
-                withAnimation { proxy.scrollTo("threadBottom", anchor: .bottom) }
-            }
             .safeAreaBar(edge: .bottom) {
                 FloatingComposer(
                     text: $viewModel.replyBody,
@@ -272,7 +269,9 @@ struct ArticleDetailView: View {
                     onAttachImage: {},
                     isUploadingImage: false,
                     onExpand: {
-                        withAnimation { proxy.scrollTo("threadBottom", anchor: .bottom) }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation { proxy.scrollTo("threadBottom", anchor: .bottom) }
+                        }
                     },
                     onSubmit: {
                         switch editingMode {
@@ -283,7 +282,12 @@ struct ArticleDetailView: View {
                         case .comment(let id):
                             Task { await viewModel.updateComment(id, bodyMd: viewModel.replyBody); editingMode = .none; viewModel.replyBody = "" }
                         case .none:
-                            Task { await viewModel.addComment() }
+                            Task {
+                                await viewModel.addComment()
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    withAnimation { proxy.scrollTo("threadBottom", anchor: .bottom) }
+                                }
+                            }
                         }
                     }
                 )
