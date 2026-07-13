@@ -10,9 +10,8 @@ struct ArticleListView: View {
     @State private var isSearching: Bool = false
     @State private var showCopyDialog: Bool = false
     @State private var showTemplateChooser = false
-    @State private var createTemplate: Template?
-    @State private var shouldOpenCreateArticle = false
-    @State private var showCreateArticle = false
+    @State private var pendingCreateArticleMode: CreateArticleMode?
+    @State private var createArticleMode: CreateArticleMode?
     @State private var showOriginPicker = false
     @State private var showLabelPicker = false
     @State private var selectedLabels: Set<String> = []
@@ -177,37 +176,35 @@ struct ArticleListView: View {
             .presentationDetents([.height(220)])
         }
         .sheet(isPresented: $showTemplateChooser, onDismiss: {
-            guard shouldOpenCreateArticle else { return }
-            shouldOpenCreateArticle = false
-            showCreateArticle = true
+            guard let mode = pendingCreateArticleMode else { return }
+            pendingCreateArticleMode = nil
+            createArticleMode = mode
         }) {
             TemplateChooserSheet(
                 target: "article",
                 onBlank: {
-                    createTemplate = nil
-                    shouldOpenCreateArticle = true
+                    pendingCreateArticleMode = CreateArticleMode(template: nil)
                     showTemplateChooser = false
                 },
                 onTemplate: { template in
-                    createTemplate = template
-                    shouldOpenCreateArticle = true
+                    pendingCreateArticleMode = CreateArticleMode(template: template)
                     showTemplateChooser = false
                 },
                 onDismiss: { showTemplateChooser = false }
             )
             .presentationDetents([.medium, .large])
         }
-        .sheet(isPresented: $showCreateArticle) {
+        .sheet(item: $createArticleMode) { mode in
             CreateArticleModal(
-                template: createTemplate,
+                template: mode.template,
                 initialLabels: viewModel.allLabels,
                 initialProjects: viewModel.allProjects,
                 onCreated: { article in
-                    showCreateArticle = false
+                    createArticleMode = nil
                     articleStore.needsReload = true
                     navigationPath.append(ArticleRoute(articleId: article.id, initialTitle: article.title))
                 },
-                onDismiss: { showCreateArticle = false }
+                onDismiss: { createArticleMode = nil }
             )
         }
         .sheet(isPresented: $showOriginPicker) {
