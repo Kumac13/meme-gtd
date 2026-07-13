@@ -239,8 +239,11 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                         VStack(alignment: .leading, spacing: 6) {
                             ForEach(viewModel.issueLinks) { link in
                                 Button(action: {
-                                    dismiss()
-                                    onNavigateToIssue?(link.targetIssue)
+                                    if let onNavigateToIssue {
+                                        onNavigateToIssue(link.targetIssue)
+                                    } else {
+                                        dismiss()
+                                    }
                                 }) {
                                     HStack(spacing: 6) {
                                         Image(systemName: link.linkType.iconName)

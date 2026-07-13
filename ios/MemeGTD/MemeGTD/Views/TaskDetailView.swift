@@ -12,7 +12,7 @@ struct TaskDetailView: View {
     @StateObject private var viewModel: TaskDetailViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirm: Bool = false
-    @State private var showInfoSheet: Bool = false
+    @StateObject private var linkedIssueNavigation = DeferredSheetActionCoordinator<TargetIssue>()
     @State private var showCopiedFeedback: Bool = false
     @State private var showStatusPicker: Bool = false
     @State private var editingMode: EditingMode = .none
@@ -306,7 +306,7 @@ struct TaskDetailView: View {
                 trailing: {
                     Button(action: {
                         HapticManager.impact(.light)
-                        showInfoSheet = true
+                        linkedIssueNavigation.present()
                     }) {
                         Image(systemName: "ellipsis")
                             .font(.system(size: 17, weight: .medium))
@@ -316,7 +316,14 @@ struct TaskDetailView: View {
             )
         }
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showInfoSheet) {
+        .sheet(
+            isPresented: $linkedIssueNavigation.isPresented,
+            onDismiss: {
+                linkedIssueNavigation.performPending { target in
+                    onNavigateToLinkedIssue?(target.id, target.type, target.title)
+                }
+            }
+        ) {
             IssueInfoSheet(
                 viewModel: viewModel,
                 showCopiedFeedback: $showCopiedFeedback,
@@ -341,7 +348,7 @@ struct TaskDetailView: View {
                     }
                 },
                 onNavigateToIssue: { target in
-                    onNavigateToLinkedIssue?(target.id, target.type, target.title)
+                    linkedIssueNavigation.requestAfterDismiss(target)
                 },
                 labelCountKeyPath: \.taskCount
             )

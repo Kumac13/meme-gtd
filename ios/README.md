@@ -139,6 +139,8 @@ Memo の作成は modal form ではなく、一覧下部のクイックキャプ
 
 作成画面の表示は `CreationPresentationCoordinator` を使う。Template chooser を使う Task / Article は chooser を閉じた後に UUID 付きの作成要求を `sheet(item:)` へ渡し、Template の直接作成も同じ要求型を使う。blank / Template の選択や直接表示ごとにフォームを新規生成し、キャンセルした payload や以前の入力状態を引き継がない。
 
+Sheet内から親の`NavigationPath`を変更するときは、`DeferredSheetActionCoordinator`で遷移payloadを保留し、Sheetの`onDismiss`後に実行する。Memo / Task / Article DetailのIssueリンクはこの共通経路を使い、dismissとnavigationを同時実行しない。
+
 リンク選択は保存済み Detail と未保存 Task のどちらも `IssueLinkPicker` を使う。recent/search、300ms debounce、loading/empty、外部 URL フォーム、mutation の処理中表示は同コンポーネントだけが所有する。呼び出し側には現在の selection と、永続化または保留配列を変更する callback だけを置く。
 
 一時的な UI 状態は、それを必要とする View 群の最小共通祖先が所有する。子 View へは読み取り値、`Binding`、操作 callback の順に必要最小限だけ渡す。

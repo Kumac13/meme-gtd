@@ -12,7 +12,7 @@ struct ArticleDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @State private var showDeleteConfirm: Bool = false
-    @State private var showInfoSheet: Bool = false
+    @StateObject private var linkedIssueNavigation = DeferredSheetActionCoordinator<TargetIssue>()
     @State private var showCopiedFeedback: Bool = false
     @State private var editingMode: EditingMode = .none
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
@@ -306,7 +306,7 @@ struct ArticleDetailView: View {
                 trailing: {
                     Button(action: {
                         HapticManager.impact(.light)
-                        showInfoSheet = true
+                        linkedIssueNavigation.present()
                     }) {
                         Image(systemName: "ellipsis")
                             .font(.system(size: 17, weight: .medium))
@@ -316,7 +316,14 @@ struct ArticleDetailView: View {
             )
         }
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showInfoSheet) {
+        .sheet(
+            isPresented: $linkedIssueNavigation.isPresented,
+            onDismiss: {
+                linkedIssueNavigation.performPending { target in
+                    onNavigateToLinkedIssue?(target.id, target.type, target.title)
+                }
+            }
+        ) {
             IssueInfoSheet(
                 viewModel: viewModel,
                 showCopiedFeedback: $showCopiedFeedback,
@@ -324,7 +331,7 @@ struct ArticleDetailView: View {
                 onEditTitle: editTitleAction,
                 onDelete: { showDeleteConfirm = true },
                 onNavigateToIssue: { target in
-                    onNavigateToLinkedIssue?(target.id, target.type, target.title)
+                    linkedIssueNavigation.requestAfterDismiss(target)
                 },
                 labelCountKeyPath: \.articleCount,
                 showBookmark: true

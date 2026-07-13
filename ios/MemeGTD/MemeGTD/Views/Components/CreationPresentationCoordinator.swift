@@ -52,3 +52,28 @@ final class CreationPresentationCoordinator<Payload>: ObservableObject {
         activeRequest = nil
     }
 }
+
+/// Defers an action that changes the parent navigation/presentation hierarchy
+/// until the currently presented sheet has completely dismissed.
+@MainActor
+final class DeferredSheetActionCoordinator<Payload>: ObservableObject {
+    @Published var isPresented = false
+
+    private var pendingPayload: Payload?
+
+    func present() {
+        pendingPayload = nil
+        isPresented = true
+    }
+
+    func requestAfterDismiss(_ payload: Payload) {
+        pendingPayload = payload
+        isPresented = false
+    }
+
+    func performPending(_ action: (Payload) -> Void) {
+        guard let payload = pendingPayload else { return }
+        pendingPayload = nil
+        action(payload)
+    }
+}

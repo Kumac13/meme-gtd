@@ -12,7 +12,7 @@ struct MemoDetailView: View {
     @StateObject private var viewModel: MemoDetailViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirm: Bool = false
-    @State private var showInfoSheet: Bool = false
+    @StateObject private var linkedIssueNavigation = DeferredSheetActionCoordinator<TargetIssue>()
     @State private var showCopiedFeedback: Bool = false
     @State private var editingMemo: Bool = false
     @State private var editingCommentId: Int? = nil
@@ -174,7 +174,7 @@ struct MemoDetailView: View {
                 trailing: {
                     Button(action: {
                         HapticManager.impact(.light)
-                        showInfoSheet = true
+                        linkedIssueNavigation.present()
                     }) {
                         Image(systemName: "ellipsis")
                             .font(.system(size: 17, weight: .medium))
@@ -184,7 +184,14 @@ struct MemoDetailView: View {
             )
         }
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showInfoSheet) {
+        .sheet(
+            isPresented: $linkedIssueNavigation.isPresented,
+            onDismiss: {
+                linkedIssueNavigation.performPending { target in
+                    onNavigateToLinkedIssue?(target.id, target.type, target.title)
+                }
+            }
+        ) {
             IssueInfoSheet(
                 viewModel: viewModel,
                 showCopiedFeedback: $showCopiedFeedback,
@@ -235,7 +242,7 @@ struct MemoDetailView: View {
                     }
                 },
                 onNavigateToIssue: { target in
-                    onNavigateToLinkedIssue?(target.id, target.type, target.title)
+                    linkedIssueNavigation.requestAfterDismiss(target)
                 }
             )
             .presentationDetents([.fraction(0.6), .large])

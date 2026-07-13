@@ -110,4 +110,22 @@ final class CreationPresentationTests: XCTestCase {
         XCTAssertNil(options.labels)
         XCTAssertEqual(options.projects?.map(\.name), ["Shared UI"])
     }
+
+    func testDeferredSheetActionRunsOnlyAfterDismissal() {
+        let coordinator = DeferredSheetActionCoordinator<String>()
+        var navigatedTo: String?
+
+        coordinator.present()
+        coordinator.requestAfterDismiss("linked-task")
+
+        XCTAssertFalse(coordinator.isPresented)
+        XCTAssertNil(navigatedTo)
+
+        coordinator.performPending { navigatedTo = $0 }
+        XCTAssertEqual(navigatedTo, "linked-task")
+
+        navigatedTo = nil
+        coordinator.performPending { navigatedTo = $0 }
+        XCTAssertNil(navigatedTo)
+    }
 }
