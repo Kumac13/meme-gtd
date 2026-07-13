@@ -1,6 +1,6 @@
 {
   "name": "meme-gtd-logger",
-  "version": "0.50.5",
+  "version": "0.50.6",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
