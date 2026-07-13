@@ -1,6 +1,6 @@
 {
   "name": "meme-gtd-cli",
-  "version": "0.50.6",
+  "version": "0.50.7",
   "private": false,
   "type": "module",
   "description": "CLI entry point for meme-gtd",
