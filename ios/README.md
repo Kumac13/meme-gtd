@@ -141,6 +141,8 @@ Memo の作成は modal form ではなく、一覧下部のクイックキャプ
 
 Sheet内から親の`NavigationPath`を変更するときは、`DeferredSheetActionCoordinator`で遷移payloadを保留し、Sheetの`onDismiss`後に実行する。Memo / Task / Article DetailのIssueリンクはこの共通経路を使い、dismissとnavigationを同時実行しない。
 
+Issue IDの遷移先は`IssueRouteDestination`で解決する。activity payloadを含むすべての呼び出し側は`memo` / `task` / `article` / `template`のtypeを渡し、未知typeをTaskとして扱わない。
+
 リンク選択は保存済み Detail と未保存 Task のどちらも `IssueLinkPicker` を使う。recent/search、300ms debounce、loading/empty、外部 URL フォーム、mutation の処理中表示は同コンポーネントだけが所有する。呼び出し側には現在の selection と、永続化または保留配列を変更する callback だけを置く。
 
 一時的な UI 状態は、それを必要とする View 群の最小共通祖先が所有する。子 View へは読み取り値、`Binding`、操作 callback の順に必要最小限だけ渡す。
