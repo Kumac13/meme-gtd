@@ -15,60 +15,27 @@ struct TemplateListView: View {
     @StateObject private var creation = CreationPresentationCoordinator<Void>()
 
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(templateStore.templates) { template in
-                    Button(action: {
-                        HapticManager.selection()
-                        navigationPath.append(
-                            TemplateRoute(templateId: template.id, initialTitle: template.title ?? "")
-                        )
-                    }) {
-                        TemplateCell(template: template)
-                            .padding(.horizontal, 16)
-                    }
-                    .buttonStyle(.plain)
-
-                    Divider()
-                        .padding(.horizontal, 16)
-                }
-
-                if templateStore.hasMore {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .onAppear {
-                            Task { await viewModel.loadOlderTemplates() }
-                        }
-                }
+        StandardIssueList(
+            items: templateStore.templates,
+            hasMore: templateStore.hasMore,
+            onSelect: { template in
+                navigationPath.append(
+                    TemplateRoute(templateId: template.id, initialTitle: template.title ?? "")
+                )
+            },
+            onLoadMore: {
+                await viewModel.loadOlderTemplates()
             }
+        ) { template in
+            TemplateCell(template: template)
         }
-        .scrollDismissesKeyboard(.immediately)
-        .scrollEdgeEffectStyle(.soft, for: .bottom)
-        .refreshable {
-            await withCheckedContinuation { continuation in
-                Task { @MainActor in
-                    HapticManager.impact(.medium)
-
-                    let start = Date()
-                    let response = await viewModel.fetchTemplates()
-
-                    let elapsed = Date().timeIntervalSince(start)
-                    let remaining = 0.75 - elapsed
-                    if remaining > 0 {
-                        try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
-                    }
-
-                    if let response = response {
-                        viewModel.applyTemplates(response)
-                    }
-                    HapticManager.notification(.success)
-                    continuation.resume()
-                }
+        .issueListRefreshable {
+            if let response = await viewModel.fetchTemplates() {
+                viewModel.applyTemplates(response)
             }
         }
         .safeAreaInset(edge: .top) {
-            HStack(spacing: 8) {
+            IssueListFilterBar {
                 FilterPill(
                     label: viewModel.targetFilter.displayLabel,
                     isActive: viewModel.targetFilter != .all
@@ -76,21 +43,11 @@ struct TemplateListView: View {
                     showTargetPicker = true
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
         }
         .safeAreaBar(edge: .bottom) {
-            HStack {
-                Spacer()
-                FloatingCreateButton {
-                    creation.present(())
-                }
+            IssueListCreateBar(isSearching: isSearching) {
+                creation.present(())
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 10)
-            .opacity(isSearching ? 0 : 1)
-            .allowsHitTesting(!isSearching)
         }
         .toolbar {
             AppToolbar(
@@ -109,11 +66,7 @@ struct TemplateListView: View {
                 Task { await viewModel.loadTemplates() }
             }
         }
-        .onChange(of: isSearching) { _, newValue in
-            if !newValue {
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            }
-        }
+        .issueListSearchLifecycle(isSearching: isSearching)
         .sheet(isPresented: $showTargetPicker) {
             targetPickerSheet
                 .presentationDetents([.medium])

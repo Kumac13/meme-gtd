@@ -24,40 +24,33 @@ struct ArticleListView: View {
     }
 
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(articleStore.articles) { article in
-                    Button(action: {
-                        HapticManager.selection()
-                        navigationPath.append(
-                            ArticleRoute(articleId: article.id, initialTitle: article.title)
-                        )
-                    }) {
-                        ArticleCell(article: article, snippet: viewModel.searchMatchInfos[article.id], searchQuery: viewModel.searchQuery.isEmpty ? nil : viewModel.searchQuery)
-                            .padding(.horizontal, 16)
-                    }
-                    .buttonStyle(.plain)
-
-                    Divider()
-                        .padding(.horizontal, 16)
-                }
-
-                if articleStore.hasMore {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .onAppear {
-                            Task { await viewModel.loadOlderArticles() }
-                        }
-                }
+        StandardIssueList(
+            items: articleStore.articles,
+            hasMore: articleStore.hasMore,
+            onSelect: { article in
+                navigationPath.append(
+                    ArticleRoute(articleId: article.id, initialTitle: article.title)
+                )
+            },
+            onLoadMore: {
+                await viewModel.loadOlderArticles()
+            }
+        ) { article in
+            ArticleCell(
+                article: article,
+                snippet: viewModel.searchMatchInfos[article.id],
+                searchQuery: viewModel.searchQuery.isEmpty ? nil : viewModel.searchQuery
+            )
+        }
+        .issueListRefreshable {
+            if let response = await viewModel.fetchArticles() {
+                viewModel.applyArticles(response)
             }
         }
-        .scrollDismissesKeyboard(.immediately)
-        .scrollEdgeEffectStyle(.soft, for: .bottom)
         .safeAreaInset(edge: .top) {
             VStack(spacing: 0) {
                 OfflineReadOnlyIndicator()
-                HStack(spacing: 8) {
+                IssueListFilterBar {
                     FilterPill(
                         label: viewModel.originFilter == "all" ? "Origin" : viewModel.originFilter.capitalized,
                         isActive: viewModel.originFilter != "all"
@@ -91,44 +84,12 @@ struct ArticleListView: View {
                         viewModel.applyFilters()
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-            }
-        }
-        .refreshable {
-            await withCheckedContinuation { continuation in
-                Task { @MainActor in
-                    HapticManager.impact(.medium)
-
-                    let start = Date()
-                    let response = await viewModel.fetchArticles()
-
-                    let elapsed = Date().timeIntervalSince(start)
-                    let remaining = 0.75 - elapsed
-                    if remaining > 0 {
-                        try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
-                    }
-
-                    if let response = response {
-                        viewModel.applyArticles(response)
-                    }
-                    HapticManager.notification(.success)
-                    continuation.resume()
-                }
             }
         }
         .safeAreaBar(edge: .bottom) {
-            HStack {
-                Spacer()
-                FloatingCreateButton {
-                    creation.beginChoosing()
-                }
+            IssueListCreateBar(isSearching: isSearching) {
+                creation.beginChoosing()
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 10)
-            .opacity(isSearching ? 0 : 1)
-            .allowsHitTesting(!isSearching)
         }
         .toolbar {
             AppToolbar(
@@ -139,22 +100,13 @@ struct ArticleListView: View {
                 searchPlaceholder: "Search articles...",
                 onSearch: { viewModel.search() },
                 searchBarAction: {
-                    if !articleStore.articles.isEmpty && hasActiveFilters {
-                        Button(action: {
-                            HapticManager.impact(.light)
+                    IssueListExportButton(
+                        isVisible: !articleStore.articles.isEmpty && hasActiveFilters,
+                        isExporting: viewModel.isExporting,
+                        action: {
                             showCopyDialog = true
-                        }) {
-                            if viewModel.isExporting {
-                                ProgressView()
-                                    .controlSize(.mini)
-                            } else {
-                                Image(systemName: "doc.on.doc")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(Color(.systemGray))
-                            }
                         }
-                        .disabled(viewModel.isExporting)
-                    }
+                    )
                 }
             )
         }
@@ -237,11 +189,7 @@ struct ArticleListView: View {
                 Task { await viewModel.loadArticles() }
             }
         }
-        .onChange(of: isSearching) { _, newValue in
-            if !newValue {
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            }
-        }
+        .issueListSearchLifecycle(isSearching: isSearching)
         .overlay {
             LoadingOverlay(
                 isPresented: viewModel.isLoading && articleStore.articles.isEmpty,

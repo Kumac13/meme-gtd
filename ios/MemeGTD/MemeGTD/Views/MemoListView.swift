@@ -133,58 +133,25 @@ struct MemoListView: View {
             // unfiltered feed). Without this, the prior mode's pixel offset
             // bleeds into the new mode and lands the user mid-list.
             .id(viewModel.isDateFiltered ? "filtered" : "feed")
-            .refreshable {
-                await withCheckedContinuation { continuation in
-                    Task { @MainActor in
-                        HapticManager.impact(.medium)
+            .issueListRefreshable {
+                // Sync trigger: pull-to-refresh (no-op while Offline Sync is off).
+                dataSources.syncScheduler?.requestSync()
 
-                        // Sync trigger: pull-to-refresh (no-op while Offline
-                        // Sync is off). The refresh below reads the local DB
-                        // immediately; if the sync run brings changes, the
-                        // engine's notification reloads the list afterwards.
-                        dataSources.syncScheduler?.requestSync()
+                if viewModel.isDateFiltered {
+                    await viewModel.loadAllMemos()
+                    return
+                }
 
-                        let start = Date()
+                let hasMore = memoStore.hasMore
+                let response = hasMore
+                    ? await viewModel.fetchOlderMemos()
+                    : await viewModel.fetchMemos()
 
-                        if viewModel.isDateFiltered {
-                            // Schedule filter active: keep the full filtered
-                            // range loaded instead of resetting to the newest
-                            // page. loadAllMemos updates the store directly.
-                            await viewModel.loadAllMemos()
-
-                            let elapsed = Date().timeIntervalSince(start)
-                            let remaining = 0.75 - elapsed
-                            if remaining > 0 {
-                                try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
-                            }
-                            HapticManager.notification(.success)
-                            continuation.resume()
-                            return
-                        }
-
-                        let hasMore = memoStore.hasMore
-                        let response: MemoListResponse?
-                        if hasMore {
-                            response = await viewModel.fetchOlderMemos()
-                        } else {
-                            response = await viewModel.fetchMemos()
-                        }
-
-                        let elapsed = Date().timeIntervalSince(start)
-                        let remaining = 0.75 - elapsed
-                        if remaining > 0 {
-                            try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
-                        }
-
-                        if let response = response {
-                            if hasMore {
-                                viewModel.applyOlderMemos(response)
-                            } else {
-                                viewModel.applyMemos(response)
-                            }
-                        }
-                        HapticManager.notification(.success)
-                        continuation.resume()
+                if let response {
+                    if hasMore {
+                        viewModel.applyOlderMemos(response)
+                    } else {
+                        viewModel.applyMemos(response)
                     }
                 }
             }
@@ -257,59 +224,51 @@ struct MemoListView: View {
                 // Standalone: semantic search is server-only, so the mode
                 // picker is hidden and search stays on its keyword default.
                 if isSearching && !isStandalone {
-                    Picker("Search Mode", selection: $viewModel.searchMode) {
-                        ForEach(SearchMode.allCases, id: \.self) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .background(.regularMaterial, in: Capsule())
-                    .padding(.horizontal, 16)
-                    .onChange(of: viewModel.searchMode) { _, _ in
+                    IssueSearchModePicker(
+                        selection: $viewModel.searchMode,
+                        verticalPadding: 0
+                    ) {
                         if viewModel.isSearching {
                             viewModel.search()
                         }
                     }
                 }
 
-                HStack(spacing: 8) {
-                FilterPill(
-                    label: labelFilterDisplayLabel,
-                    isActive: !viewModel.labelFilters.isEmpty
-                ) {
-                    selectedLabelNames = viewModel.labelFilters
-                    showLabelPicker = true
-                }
+                IssueListFilterBar {
+                    FilterPill(
+                        label: labelFilterDisplayLabel,
+                        isActive: !viewModel.labelFilters.isEmpty
+                    ) {
+                        selectedLabelNames = viewModel.labelFilters
+                        showLabelPicker = true
+                    }
 
-                FilterPill(
-                    label: projectFilterDisplayLabel,
-                    isActive: !viewModel.projectFilters.isEmpty || viewModel.includeNoProject
-                ) {
-                    selectedProjectIds = viewModel.projectFilters
-                    selectedNoProject = viewModel.includeNoProject
-                    showProjectPicker = true
-                }
+                    FilterPill(
+                        label: projectFilterDisplayLabel,
+                        isActive: !viewModel.projectFilters.isEmpty || viewModel.includeNoProject
+                    ) {
+                        selectedProjectIds = viewModel.projectFilters
+                        selectedNoProject = viewModel.includeNoProject
+                        showProjectPicker = true
+                    }
 
-                FilterPill(
-                    label: scheduleFilterDisplayLabel,
-                    isActive: viewModel.createdFrom != nil || viewModel.createdTo != nil
-                ) {
-                    dateFrom = viewModel.createdFrom
-                    dateTo = viewModel.createdTo
-                    showDateRangePicker = true
-                }
+                    FilterPill(
+                        label: scheduleFilterDisplayLabel,
+                        isActive: viewModel.createdFrom != nil || viewModel.createdTo != nil
+                    ) {
+                        dateFrom = viewModel.createdFrom
+                        dateTo = viewModel.createdTo
+                        showDateRangePicker = true
+                    }
 
-                FilterPill(
-                    label: viewModel.bookmarkFilter ? "Bookmarked" : "Bookmark",
-                    isActive: viewModel.bookmarkFilter,
-                    activeColor: .accent
-                ) {
-                    viewModel.toggleBookmarkFilter()
+                    FilterPill(
+                        label: viewModel.bookmarkFilter ? "Bookmarked" : "Bookmark",
+                        isActive: viewModel.bookmarkFilter,
+                        activeColor: .accent
+                    ) {
+                        viewModel.toggleBookmarkFilter()
+                    }
                 }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
             }
         }
         .toolbar {
@@ -321,22 +280,13 @@ struct MemoListView: View {
                 searchPlaceholder: "Search memos...",
                 onSearch: { viewModel.search() },
                 searchBarAction: {
-                    if !memoStore.memos.isEmpty && hasActiveFilters {
-                        Button(action: {
-                            HapticManager.impact(.light)
+                    IssueListExportButton(
+                        isVisible: !memoStore.memos.isEmpty && hasActiveFilters,
+                        isExporting: viewModel.isExporting,
+                        action: {
                             showCopyDialog = true
-                        }) {
-                            if viewModel.isExporting {
-                                ProgressView()
-                                    .controlSize(.mini)
-                            } else {
-                                Image(systemName: "doc.on.doc")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(Color(.systemGray))
-                            }
                         }
-                        .disabled(viewModel.isExporting)
-                    }
+                    )
                 }
             )
         }
@@ -394,11 +344,7 @@ struct MemoListView: View {
                 viewModel.reload()
             }
         }
-        .onChange(of: isSearching) { _, newValue in
-            if !newValue {
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            }
-        }
+        .issueListSearchLifecycle(isSearching: isSearching)
         .sheet(isPresented: $showLabelPicker, onDismiss: {
             viewModel.setLabelFilters(selectedLabelNames)
         }) {
