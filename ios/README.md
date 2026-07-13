@@ -148,6 +148,8 @@ Issue IDの遷移先は`IssueRouteDestination`で解決する。activity payload
 
 リンク選択は保存済み Detail と未保存 Task のどちらも `IssueLinkPicker` を使う。recent/search、300ms debounce、loading/empty、外部 URL フォーム、mutation の処理中表示は同コンポーネントだけが所有する。呼び出し側には現在の selection と、永続化または保留配列を変更する callback だけを置く。
 
+link pickerのTask / Memo / Article横断検索は`IssuePickerSearchService`を使う。検索結果の取得・整形・並び順・上限はserviceに置き、呼び出し側には画面固有の除外IDだけを残す。
+
 一時的な UI 状態は、それを必要とする View 群の最小共通祖先が所有する。子 View へは読み取り値、`Binding`、操作 callback の順に必要最小限だけ渡す。
 
 ### Liquid Glass（iOS 26）

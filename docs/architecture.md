@@ -134,6 +134,8 @@ Sheet 内の操作から親の navigation hierarchy を変更する場合は `De
 
 Issue IDからDetailへ遷移するroute判定は`IssueRouteDestination`を単一の正とする。activity payloadやIssue linkの`type`を`memo` / `task` / `article` / `template`へ明示的に対応させ、未知または欠落したtypeをTaskへfallbackさせない。
 
+Issue link pickerの横断候補検索は`IssuePickerSearchService`を単一の正とする。Task / Memo / Articleの並列取得、表示用title整形、更新日時順、件数制限をserviceが所有し、Detailは自分自身、作成画面は追加済みlinkのIDを除外条件として渡す。
+
 Memo は作成 sheet を表示しないため `CreationPresentationCoordinator` の対象外であり、上記の `FloatingComposer` 経路を正とする。この差はリソース名の分岐ではなく、modal form と quick capture という interaction capability の差として扱う。
 
 共通部品にリソース種別の分岐を増やして万能画面にしない。リソース固有機能は呼び出し側の View に残し、複数画面で同じ意味を持つ表示だけを共通化する。

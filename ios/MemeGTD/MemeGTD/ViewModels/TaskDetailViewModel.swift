@@ -213,72 +213,10 @@ class TaskDetailViewModel: ObservableObject, IssueDetailProvider {
     }
 
     func searchIssues(query: String) async -> [IssuePickerItem] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        var results: [IssuePickerItem] = []
-
-        let dataSources = dataSources
-        await withTaskGroup(of: [IssuePickerItem].self) { group in
-            let searchQuery: [URLQueryItem] = trimmed.isEmpty ? [] : [
-                URLQueryItem(name: "search", value: trimmed),
-            ]
-
-            // Search tasks
-            group.addTask {
-                do {
-                    let response: SearchTasksResponse = try await dataSources.tasks.searchTasks(
-                        queryItems: searchQuery
-                    )
-                    return response.data.map {
-                        IssuePickerItem(id: $0.id, type: "task", title: $0.title, status: $0.status, updatedAt: $0.updatedAt)
-                    }
-                } catch {
-                    return []
-                }
-            }
-
-            // Search memos
-            group.addTask {
-                do {
-                    let response: MemoListResponse = try await dataSources.memos.listMemos(
-                        queryItems: searchQuery
-                    )
-                    return response.data.map {
-                        let firstLine = $0.bodyMd.components(separatedBy: "\n")
-                            .first(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }) ?? $0.bodyMd
-                        let title = String(firstLine.prefix(50))
-                        return IssuePickerItem(id: $0.id, type: "memo", title: title, status: nil, updatedAt: $0.updatedAt)
-                    }
-                } catch {
-                    return []
-                }
-            }
-
-            // Search articles
-            group.addTask {
-                do {
-                    let response: SearchArticlesResponse = try await dataSources.articles.searchArticles(
-                        queryItems: searchQuery
-                    )
-                    return response.data.map {
-                        let title = $0.title.count > 50 ? String($0.title.prefix(50)) + "..." : $0.title
-                        return IssuePickerItem(id: $0.id, type: "article", title: title, status: nil, updatedAt: $0.updatedAt)
-                    }
-                } catch {
-                    return []
-                }
-            }
-
-            for await items in group {
-                results.append(contentsOf: items)
-            }
-        }
-
-        return results
-            .filter { $0.id != taskId }
-            .sorted { $0.updatedAt > $1.updatedAt }
-            .prefix(10)
-            .map { $0 }
+        await IssuePickerSearchService(dataSources: dataSources).search(
+            query: query,
+            excludingIDs: [taskId]
+        )
     }
 
     // MARK: - Bookmark
