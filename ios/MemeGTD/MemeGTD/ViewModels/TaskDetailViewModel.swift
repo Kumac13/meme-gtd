@@ -58,6 +58,10 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
         IssueRelationService(issueId: taskId, dataSource: dataSources.issueRelations)
     }
 
+    private var issueMetadataService: IssueMetadataService {
+        IssueMetadataService(issueId: taskId, dataSources: dataSources)
+    }
+
     init(taskId: Int) {
         self.taskId = taskId
     }
@@ -76,13 +80,12 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
             self.error = error.localizedDescription
         }
 
-        // Load projects, labels, links & activity in parallel
-        async let projectsResult: () = loadProjects()
-        async let labelsResult: () = loadAllLabels()
+        // Load metadata, links & activity in parallel
+        async let metadataResult: () = loadMetadataOptions()
         async let linksResult: () = loadLinks()
         async let urlLinksResult: () = loadUrlLinks()
         async let activityResult: () = loadActivityLog()
-        _ = await (projectsResult, labelsResult, linksResult, urlLinksResult, activityResult)
+        _ = await (metadataResult, linksResult, urlLinksResult, activityResult)
 
         isLoading = false
     }
@@ -109,21 +112,17 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
         self.activityLogs = activities
     }
 
-    private func loadProjects() async {
-        do {
-            associatedProjects = try await dataSources.projects.listIssueProjects(issueId: taskId)
-            allProjects = try await dataSources.projects.listProjects()
-        } catch {
-            // Non-critical
-        }
+    private func loadMetadataOptions() async {
+        let options = await issueMetadataService.loadOptions()
+        if let labels = options.labels { allLabels = labels }
+        if let associated = options.associatedProjects { associatedProjects = associated }
+        if let projects = options.allProjects { allProjects = projects }
     }
 
-    private func loadAllLabels() async {
-        do {
-            allLabels = try await dataSources.labels.listLabels()
-        } catch {
-            // Non-critical
-        }
+    private func reloadProjectOptions() async {
+        let options = await issueMetadataService.loadProjectOptions()
+        if let associated = options.associated { associatedProjects = associated }
+        if let projects = options.all { allProjects = projects }
     }
 
     // MARK: - Activity Log
@@ -381,31 +380,17 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
 
     func confirmProjects(_ selectedIds: Set<Int>) {
         let currentIds = Set(associatedProjects.map(\.id))
-        let toAdd = selectedIds.subtracting(currentIds)
-        let toRemove = currentIds.subtracting(selectedIds)
 
         Task {
-            for projectId in toAdd {
-                do {
-                    let _: ProjectItem = try await dataSources.projects.addProjectItem(
-                        projectId: projectId,
-                        AddProjectItemRequest(issueId: taskId)
-                    )
-                } catch {
-                    self.error = error.localizedDescription
-                }
+            do {
+                try await issueMetadataService.applyProjects(
+                    selectedIds: selectedIds,
+                    currentIds: currentIds
+                )
+            } catch {
+                self.error = error.localizedDescription
             }
-            for projectId in toRemove {
-                do {
-                    try await dataSources.projects.removeProjectItem(
-                        projectId: projectId,
-                        issueId: taskId
-                    )
-                } catch {
-                    self.error = error.localizedDescription
-                }
-            }
-            await loadProjects()
+            await reloadProjectOptions()
             await self.loadActivityLog()
             taskStore?.needsReload = true
         }
@@ -414,40 +399,21 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
     // MARK: - Labels
 
     func addNewLabel(_ label: IssueLabel) {
-        if !allLabels.contains(where: { $0.id == label.id }) {
-            allLabels.append(label)
-        }
+        allLabels = issueMetadataService.reconciling(allLabels, with: label)
     }
 
     func confirmLabels(_ selectedNames: Set<String>) {
         let currentNames = Set(task?.labels ?? [])
-        let toAdd = selectedNames.subtracting(currentNames)
-        let toRemove = currentNames.subtracting(selectedNames)
 
         Task {
-            for name in toAdd {
-                if let label = allLabels.first(where: { $0.name == name }) {
-                    do {
-                        let _: AssignLabelResponse = try await dataSources.labels.assignLabel(
-                            issueId: taskId,
-                            AssignLabelRequest(labelId: label.id)
-                        )
-                    } catch {
-                        self.error = error.localizedDescription
-                    }
-                }
-            }
-            for name in toRemove {
-                if let label = allLabels.first(where: { $0.name == name }) {
-                    do {
-                        try await dataSources.labels.removeLabel(
-                            issueId: taskId,
-                            labelId: label.id
-                        )
-                    } catch {
-                        self.error = error.localizedDescription
-                    }
-                }
+            do {
+                try await issueMetadataService.applyLabels(
+                    selectedNames: selectedNames,
+                    currentNames: currentNames,
+                    allLabels: allLabels
+                )
+            } catch {
+                self.error = error.localizedDescription
             }
             // Reload task to get updated labels
             do {

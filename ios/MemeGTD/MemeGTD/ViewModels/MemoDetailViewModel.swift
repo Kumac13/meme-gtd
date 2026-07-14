@@ -38,6 +38,10 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
         IssueRelationService(issueId: memoId, dataSource: dataSources.issueRelations)
     }
 
+    private var issueMetadataService: IssueMetadataService {
+        IssueMetadataService(issueId: memoId, dataSources: dataSources)
+    }
+
     init(memoId: Int) {
         self.memoId = memoId
     }
@@ -56,12 +60,11 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
             self.error = error.localizedDescription
         }
 
-        // Load projects, labels & links in parallel
-        async let projectsResult: () = loadProjects()
-        async let labelsResult: () = loadAllLabels()
+        // Load metadata & links in parallel
+        async let metadataResult: () = loadMetadataOptions()
         async let linksResult: () = loadLinks()
         async let urlLinksResult: () = loadUrlLinks()
-        _ = await (projectsResult, labelsResult, linksResult, urlLinksResult)
+        _ = await (metadataResult, linksResult, urlLinksResult)
 
         isLoading = false
     }
@@ -84,21 +87,17 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
         self.comments = comments
     }
 
-    private func loadProjects() async {
-        do {
-            associatedProjects = try await dataSources.projects.listIssueProjects(issueId: memoId)
-            allProjects = try await dataSources.projects.listProjects()
-        } catch {
-            // Non-critical, just log
-        }
+    private func loadMetadataOptions() async {
+        let options = await issueMetadataService.loadOptions()
+        if let labels = options.labels { allLabels = labels }
+        if let associated = options.associatedProjects { associatedProjects = associated }
+        if let projects = options.allProjects { allProjects = projects }
     }
 
-    private func loadAllLabels() async {
-        do {
-            allLabels = try await dataSources.labels.listLabels()
-        } catch {
-            // Non-critical
-        }
+    private func reloadProjectOptions() async {
+        let options = await issueMetadataService.loadProjectOptions()
+        if let associated = options.associated { associatedProjects = associated }
+        if let projects = options.all { allProjects = projects }
     }
 
     // MARK: - URL Links
@@ -287,72 +286,38 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
 
     func confirmProjects(_ selectedIds: Set<Int>) {
         let currentIds = Set(associatedProjects.map(\.id))
-        let toAdd = selectedIds.subtracting(currentIds)
-        let toRemove = currentIds.subtracting(selectedIds)
 
         Task {
-            for projectId in toAdd {
-                do {
-                    let _: ProjectItem = try await dataSources.projects.addProjectItem(
-                        projectId: projectId,
-                        AddProjectItemRequest(issueId: memoId)
-                    )
-                } catch {
-                    self.error = error.localizedDescription
-                }
+            do {
+                try await issueMetadataService.applyProjects(
+                    selectedIds: selectedIds,
+                    currentIds: currentIds
+                )
+            } catch {
+                self.error = error.localizedDescription
             }
-            for projectId in toRemove {
-                do {
-                    try await dataSources.projects.removeProjectItem(
-                        projectId: projectId,
-                        issueId: memoId
-                    )
-                } catch {
-                    self.error = error.localizedDescription
-                }
-            }
-            // Reload
-            await loadProjects()
+            await reloadProjectOptions()
         }
     }
 
     // MARK: - Labels (confirm-based: apply diff on confirm)
 
     func addNewLabel(_ label: IssueLabel) {
-        if !allLabels.contains(where: { $0.id == label.id }) {
-            allLabels.append(label)
-        }
+        allLabels = issueMetadataService.reconciling(allLabels, with: label)
     }
 
     func confirmLabels(_ selectedNames: Set<String>) {
         let currentNames = Set(memo?.labels ?? [])
-        let toAdd = selectedNames.subtracting(currentNames)
-        let toRemove = currentNames.subtracting(selectedNames)
 
         Task {
-            for name in toAdd {
-                if let label = allLabels.first(where: { $0.name == name }) {
-                    do {
-                        let _: AssignLabelResponse = try await dataSources.labels.assignLabel(
-                            issueId: memoId,
-                            AssignLabelRequest(labelId: label.id)
-                        )
-                    } catch {
-                        self.error = error.localizedDescription
-                    }
-                }
-            }
-            for name in toRemove {
-                if let label = allLabels.first(where: { $0.name == name }) {
-                    do {
-                        try await dataSources.labels.removeLabel(
-                            issueId: memoId,
-                            labelId: label.id
-                        )
-                    } catch {
-                        self.error = error.localizedDescription
-                    }
-                }
+            do {
+                try await issueMetadataService.applyLabels(
+                    selectedNames: selectedNames,
+                    currentNames: currentNames,
+                    allLabels: allLabels
+                )
+            } catch {
+                self.error = error.localizedDescription
             }
             // Reload memo to get updated labels
             do {

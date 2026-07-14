@@ -19,6 +19,10 @@ class TemplateDetailViewModel: ObservableObject, IssueMetadataProvider, IssueCop
     var templateStore: TemplateStore?
     var dataSources = DataSourceProvider()
 
+    private var issueMetadataService: IssueMetadataService {
+        IssueMetadataService(issueId: templateId, dataSources: dataSources)
+    }
+
     init(templateId: Int) {
         self.templateId = templateId
     }
@@ -28,40 +32,21 @@ class TemplateDetailViewModel: ObservableObject, IssueMetadataProvider, IssueCop
     var issueLabels: [String] { template?.labels ?? [] }
 
     func addNewLabel(_ label: IssueLabel) {
-        if !allLabels.contains(where: { $0.id == label.id }) {
-            allLabels.append(label)
-        }
+        allLabels = issueMetadataService.reconciling(allLabels, with: label)
     }
 
     func confirmLabels(_ selectedNames: Set<String>) {
         let currentNames = Set(template?.labels ?? [])
-        let toAdd = selectedNames.subtracting(currentNames)
-        let toRemove = currentNames.subtracting(selectedNames)
 
         Task {
-            for name in toAdd {
-                if let label = allLabels.first(where: { $0.name == name }) {
-                    do {
-                        let _: AssignLabelResponse = try await dataSources.labels.assignLabel(
-                            issueId: templateId,
-                            AssignLabelRequest(labelId: label.id)
-                        )
-                    } catch {
-                        self.error = error.localizedDescription
-                    }
-                }
-            }
-            for name in toRemove {
-                if let label = allLabels.first(where: { $0.name == name }) {
-                    do {
-                        try await dataSources.labels.removeLabel(
-                            issueId: templateId,
-                            labelId: label.id
-                        )
-                    } catch {
-                        self.error = error.localizedDescription
-                    }
-                }
+            do {
+                try await issueMetadataService.applyLabels(
+                    selectedNames: selectedNames,
+                    currentNames: currentNames,
+                    allLabels: allLabels
+                )
+            } catch {
+                self.error = error.localizedDescription
             }
             do {
                 let updated: Template = try await dataSources.templates.getTemplate(id: templateId)
@@ -76,31 +61,17 @@ class TemplateDetailViewModel: ObservableObject, IssueMetadataProvider, IssueCop
 
     func confirmProjects(_ selectedIds: Set<Int>) {
         let currentIds = Set(associatedProjects.map(\.id))
-        let toAdd = selectedIds.subtracting(currentIds)
-        let toRemove = currentIds.subtracting(selectedIds)
 
         Task {
-            for projectId in toAdd {
-                do {
-                    let _: ProjectItem = try await dataSources.projects.addProjectItem(
-                        projectId: projectId,
-                        AddProjectItemRequest(issueId: templateId)
-                    )
-                } catch {
-                    self.error = error.localizedDescription
-                }
+            do {
+                try await issueMetadataService.applyProjects(
+                    selectedIds: selectedIds,
+                    currentIds: currentIds
+                )
+            } catch {
+                self.error = error.localizedDescription
             }
-            for projectId in toRemove {
-                do {
-                    try await dataSources.projects.removeProjectItem(
-                        projectId: projectId,
-                        issueId: templateId
-                    )
-                } catch {
-                    self.error = error.localizedDescription
-                }
-            }
-            await loadProjects()
+            await reloadProjectOptions()
             templateStore?.needsReload = true
         }
     }
@@ -128,9 +99,7 @@ class TemplateDetailViewModel: ObservableObject, IssueMetadataProvider, IssueCop
         }
         isLoading = false
 
-        async let labelsTask: Void = loadLabels()
-        async let projectsTask: Void = loadProjects()
-        _ = await (labelsTask, projectsTask)
+        await loadMetadataOptions()
     }
 
     func fetchTemplate() async -> Template? {
@@ -147,24 +116,17 @@ class TemplateDetailViewModel: ObservableObject, IssueMetadataProvider, IssueCop
         templateStore?.updateItem(fetched)
     }
 
-    private func loadLabels() async {
-        do {
-            allLabels = try await dataSources.labels.listLabels()
-        } catch {
-            // Non-critical
-        }
+    private func loadMetadataOptions() async {
+        let options = await issueMetadataService.loadOptions()
+        if let labels = options.labels { allLabels = labels }
+        if let associated = options.associatedProjects { associatedProjects = associated }
+        if let projects = options.allProjects { allProjects = projects }
     }
 
-    private func loadProjects() async {
-        do {
-            async let associated: [Project] = dataSources.projects.listIssueProjects(issueId: templateId)
-            async let all: [Project] = dataSources.projects.listProjects()
-            let (a, b) = try await (associated, all)
-            associatedProjects = a
-            allProjects = b
-        } catch {
-            // Non-critical
-        }
+    private func reloadProjectOptions() async {
+        let options = await issueMetadataService.loadProjectOptions()
+        if let associated = options.associated { associatedProjects = associated }
+        if let projects = options.all { allProjects = projects }
     }
 
     // MARK: - Update / Delete

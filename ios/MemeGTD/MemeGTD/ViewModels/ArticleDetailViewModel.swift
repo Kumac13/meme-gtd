@@ -56,6 +56,10 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLink
         IssueRelationService(issueId: articleId, dataSource: dataSources.issueRelations)
     }
 
+    private var issueMetadataService: IssueMetadataService {
+        IssueMetadataService(issueId: articleId, dataSources: dataSources)
+    }
+
     init(articleId: Int) {
         self.articleId = articleId
     }
@@ -72,14 +76,13 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLink
             self.error = error.localizedDescription
         }
 
-        // Load projects, labels, links & activity in parallel
-        async let projectsResult: () = loadProjects()
-        async let labelsResult: () = loadAllLabels()
+        // Load metadata, links & activity in parallel
+        async let metadataResult: () = loadMetadataOptions()
         async let linksResult: () = loadLinks()
         async let urlLinksResult: () = loadUrlLinks()
         async let activityResult: () = loadActivityLog()
         async let commentsResult: () = loadComments()
-        _ = await (projectsResult, labelsResult, linksResult, urlLinksResult, activityResult, commentsResult)
+        _ = await (metadataResult, linksResult, urlLinksResult, activityResult, commentsResult)
 
         isLoading = false
     }
@@ -106,21 +109,17 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLink
         self.activityLogs = activities
     }
 
-    private func loadProjects() async {
-        do {
-            associatedProjects = try await dataSources.projects.listIssueProjects(issueId: articleId)
-            allProjects = try await dataSources.projects.listProjects()
-        } catch {
-            // Non-critical
-        }
+    private func loadMetadataOptions() async {
+        let options = await issueMetadataService.loadOptions()
+        if let labels = options.labels { allLabels = labels }
+        if let associated = options.associatedProjects { associatedProjects = associated }
+        if let projects = options.allProjects { allProjects = projects }
     }
 
-    private func loadAllLabels() async {
-        do {
-            allLabels = try await dataSources.labels.listLabels()
-        } catch {
-            // Non-critical
-        }
+    private func reloadProjectOptions() async {
+        let options = await issueMetadataService.loadProjectOptions()
+        if let associated = options.associated { associatedProjects = associated }
+        if let projects = options.all { allProjects = projects }
     }
 
     // MARK: - Activity Log
@@ -305,31 +304,17 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLink
 
     func confirmProjects(_ selectedIds: Set<Int>) {
         let currentIds = Set(associatedProjects.map(\.id))
-        let toAdd = selectedIds.subtracting(currentIds)
-        let toRemove = currentIds.subtracting(selectedIds)
 
         Task {
-            for projectId in toAdd {
-                do {
-                    let _: ProjectItem = try await dataSources.projects.addProjectItem(
-                        projectId: projectId,
-                        AddProjectItemRequest(issueId: articleId)
-                    )
-                } catch {
-                    self.error = error.localizedDescription
-                }
+            do {
+                try await issueMetadataService.applyProjects(
+                    selectedIds: selectedIds,
+                    currentIds: currentIds
+                )
+            } catch {
+                self.error = error.localizedDescription
             }
-            for projectId in toRemove {
-                do {
-                    try await dataSources.projects.removeProjectItem(
-                        projectId: projectId,
-                        issueId: articleId
-                    )
-                } catch {
-                    self.error = error.localizedDescription
-                }
-            }
-            await loadProjects()
+            await reloadProjectOptions()
             await loadActivityLog()
             articleStore?.needsReload = true
         }
@@ -338,40 +323,21 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLink
     // MARK: - Labels
 
     func addNewLabel(_ label: IssueLabel) {
-        if !allLabels.contains(where: { $0.id == label.id }) {
-            allLabels.append(label)
-        }
+        allLabels = issueMetadataService.reconciling(allLabels, with: label)
     }
 
     func confirmLabels(_ selectedNames: Set<String>) {
         let currentNames = Set(article?.labels ?? [])
-        let toAdd = selectedNames.subtracting(currentNames)
-        let toRemove = currentNames.subtracting(selectedNames)
 
         Task {
-            for name in toAdd {
-                if let label = allLabels.first(where: { $0.name == name }) {
-                    do {
-                        let _: AssignLabelResponse = try await dataSources.labels.assignLabel(
-                            issueId: articleId,
-                            AssignLabelRequest(labelId: label.id)
-                        )
-                    } catch {
-                        self.error = error.localizedDescription
-                    }
-                }
-            }
-            for name in toRemove {
-                if let label = allLabels.first(where: { $0.name == name }) {
-                    do {
-                        try await dataSources.labels.removeLabel(
-                            issueId: articleId,
-                            labelId: label.id
-                        )
-                    } catch {
-                        self.error = error.localizedDescription
-                    }
-                }
+            do {
+                try await issueMetadataService.applyLabels(
+                    selectedNames: selectedNames,
+                    currentNames: currentNames,
+                    allLabels: allLabels
+                )
+            } catch {
+                self.error = error.localizedDescription
             }
             // Reload article to get updated labels
             do {
