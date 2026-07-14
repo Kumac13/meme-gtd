@@ -244,9 +244,9 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLink
         }
     }
 
-    func addComment() async {
+    func addComment() async -> Bool {
         let body = replyBody.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !body.isEmpty else { return }
+        guard !body.isEmpty else { return false }
         isSubmittingReply = true
         defer { isSubmittingReply = false }
         do {
@@ -257,9 +257,11 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLink
             comments.append(comment)
             replyBody = ""
             HapticManager.notification(.success)
+            return true
         } catch {
             self.error = error.localizedDescription
             HapticManager.notification(.error)
+            return false
         }
     }
 

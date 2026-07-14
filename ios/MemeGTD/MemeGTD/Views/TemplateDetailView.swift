@@ -34,6 +34,10 @@ struct TemplateDetailView: View {
 
     var body: some View {
         GeometryReader { geo in
+        IssueDetailScrollShell(
+            policy: IssueDetailScrollPolicy(initialPosition: .top),
+            isContentReady: viewModel.template != nil
+        ) { _ in
             ScrollView {
                 LazyVStack(spacing: 0) {
                     if let template = viewModel.template {
@@ -131,7 +135,7 @@ struct TemplateDetailView: View {
                         }
                     }
 
-                    Color.clear.frame(height: 24)
+                    IssueDetailBottomAnchor()
                 }
             }
             .background(Color.menuBackground)
@@ -249,6 +253,7 @@ struct TemplateDetailView: View {
                 viewModel.dataSources = dataSources
                 await viewModel.loadTemplate()
             }
+        }
         }
     }
 

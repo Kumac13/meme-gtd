@@ -41,7 +41,10 @@ struct ArticleDetailView: View {
 
     var body: some View {
         GeometryReader { geo in
-        ScrollViewReader { proxy in
+        IssueDetailScrollShell(
+            policy: IssueDetailScrollPolicy(initialPosition: .top),
+            isContentReady: viewModel.article != nil
+        ) { scrollActions in
             ScrollView {
                 LazyVStack(spacing: 0) {
                     if let article = viewModel.article {
@@ -226,7 +229,7 @@ struct ArticleDetailView: View {
                         }
                     }
 
-                    Color.clear.frame(height: 24).id("threadBottom")
+                    IssueDetailBottomAnchor()
                 }
             }
             .background(Color.menuBackground)
@@ -269,9 +272,7 @@ struct ArticleDetailView: View {
                     onAttachImage: {},
                     isUploadingImage: false,
                     onExpand: {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            withAnimation { proxy.scrollTo("threadBottom", anchor: .bottom) }
-                        }
+                        scrollActions.composerDidExpand()
                     },
                     onSubmit: {
                         switch editingMode {
@@ -283,9 +284,8 @@ struct ArticleDetailView: View {
                             Task { await viewModel.updateComment(id, bodyMd: viewModel.replyBody); editingMode = .none; viewModel.replyBody = "" }
                         case .none:
                             Task {
-                                await viewModel.addComment()
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    withAnimation { proxy.scrollTo("threadBottom", anchor: .bottom) }
+                                if await viewModel.addComment() {
+                                    scrollActions.submissionDidComplete()
                                 }
                             }
                         }

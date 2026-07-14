@@ -49,7 +49,10 @@ struct TaskDetailView: View {
 
     var body: some View {
         GeometryReader { geo in
-        ScrollViewReader { proxy in
+        IssueDetailScrollShell(
+            policy: IssueDetailScrollPolicy(initialPosition: .top),
+            isContentReady: viewModel.task != nil
+        ) { scrollActions in
             ScrollView {
                 LazyVStack(spacing: 0) {
                     if let task = viewModel.task {
@@ -212,8 +215,7 @@ struct TaskDetailView: View {
                         }
                     }
 
-                    Color.clear.frame(height: 24)
-                        .id("threadBottom")
+                    IssueDetailBottomAnchor()
                 }
             }
             .background(Color.menuBackground)
@@ -256,9 +258,7 @@ struct TaskDetailView: View {
                     onAttachImage: { showImagePicker = true },
                     isUploadingImage: isUploadingImage,
                     onExpand: {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            withAnimation { proxy.scrollTo("threadBottom", anchor: .bottom) }
-                        }
+                        scrollActions.composerDidExpand()
                     },
                     onSubmit: {
                         switch editingMode {
@@ -283,10 +283,7 @@ struct TaskDetailView: View {
                         case .none:
                             Task {
                                 if await viewModel.addComment() {
-                                    await Task.yield()
-                                    withAnimation {
-                                        proxy.scrollTo("threadBottom", anchor: .bottom)
-                                    }
+                                    scrollActions.submissionDidComplete()
                                 }
                             }
                         }

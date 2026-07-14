@@ -33,7 +33,10 @@ struct MemoDetailView: View {
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
+        IssueDetailScrollShell(
+            policy: IssueDetailScrollPolicy(initialPosition: .bottom),
+            isContentReady: viewModel.memo != nil
+        ) { scrollActions in
             ScrollView {
                 LazyVStack(spacing: 0) {
                     if let memo = viewModel.memo {
@@ -90,8 +93,7 @@ struct MemoDetailView: View {
                         }
                     }
 
-                    Color.clear.frame(height: 1)
-                        .id("threadBottom")
+                    IssueDetailBottomAnchor(height: 1)
                 }
             }
             .scrollDismissesKeyboard(.immediately)
@@ -118,11 +120,6 @@ struct MemoDetailView: View {
                     }
                 }
             }
-            .onChange(of: viewModel.comments.count) { _ in
-                withAnimation {
-                    proxy.scrollTo("threadBottom", anchor: .bottom)
-                }
-            }
             .safeAreaBar(edge: .bottom) {
                 FloatingComposer(
                     text: $viewModel.replyBody,
@@ -138,9 +135,7 @@ struct MemoDetailView: View {
                     onAttachImage: { showImagePicker = true },
                     isUploadingImage: isUploadingImage,
                     onExpand: {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            withAnimation { proxy.scrollTo("threadBottom", anchor: .bottom) }
-                        }
+                        scrollActions.composerDidExpand()
                     },
                     onSubmit: {
                         if editingMemo {
@@ -156,7 +151,11 @@ struct MemoDetailView: View {
                                 viewModel.replyBody = ""
                             }
                         } else {
-                            Task { await viewModel.addComment() }
+                            Task {
+                                if await viewModel.addComment() {
+                                    scrollActions.submissionDidComplete()
+                                }
+                            }
                         }
                     }
                 )

@@ -198,9 +198,9 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
 
     // MARK: - Comments
 
-    func addComment() async {
+    func addComment() async -> Bool {
         let body = replyBody.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !body.isEmpty else { return }
+        guard !body.isEmpty else { return false }
 
         isSubmittingReply = true
 
@@ -215,12 +215,14 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
             HapticManager.notification(.success)
             // Server may have created relates links from `#id` mentions.
             await loadLinks()
+            isSubmittingReply = false
+            return true
         } catch {
             self.error = error.localizedDescription
             HapticManager.notification(.error)
+            isSubmittingReply = false
+            return false
         }
-
-        isSubmittingReply = false
     }
 
     func updateComment(_ commentId: Int, bodyMd: String) async {
