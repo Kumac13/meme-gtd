@@ -37,15 +37,7 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLink
     @Published var urlLinks: [UrlLink] = []
 
     var linkedPickerItems: [IssuePickerItem] {
-        issueLinks.map {
-            IssuePickerItem(
-                id: $0.targetIssue.id,
-                type: $0.targetIssue.type,
-                title: $0.targetIssue.title,
-                status: $0.targetIssue.status,
-                updatedAt: $0.createdAt
-            )
-        }
+        IssueRelationService.pickerItems(from: issueLinks)
     }
 
     // Shared detail capabilities
@@ -59,6 +51,10 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLink
     /// Data source seam. Views overwrite this with the app-wide provider from
     /// the environment (same wiring point as `articleStore`).
     var dataSources = DataSourceProvider()
+
+    private var issueRelationService: IssueRelationService {
+        IssueRelationService(issueId: articleId, dataSource: dataSources.issueRelations)
+    }
 
     init(articleId: Int) {
         self.articleId = articleId
@@ -141,7 +137,7 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLink
 
     private func loadUrlLinks() async {
         do {
-            urlLinks = try await dataSources.issueRelations.listUrlLinks(issueId: articleId)
+            urlLinks = try await issueRelationService.loadUrlLinks()
         } catch {
             // Non-critical
         }
@@ -149,12 +145,7 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLink
 
     func createUrlLink(url: String, title: String?) async {
         do {
-            let request = CreateUrlLinkRequest(url: url, title: title)
-            let _: UrlLink = try await dataSources.issueRelations.createUrlLink(
-                issueId: articleId,
-                request
-            )
-            await loadUrlLinks()
+            urlLinks = try await issueRelationService.createUrlLink(url: url, title: title)
             HapticManager.notification(.success)
         } catch {
             self.error = error.localizedDescription
@@ -164,8 +155,7 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLink
 
     func deleteUrlLink(_ urlLinkId: Int) async {
         do {
-            try await dataSources.issueRelations.deleteUrlLink(urlLinkId: urlLinkId)
-            urlLinks.removeAll { $0.id == urlLinkId }
+            urlLinks = try await issueRelationService.deleteUrlLink(urlLinkId, from: urlLinks)
         } catch {
             self.error = error.localizedDescription
         }
@@ -175,7 +165,7 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLink
 
     private func loadLinks() async {
         do {
-            issueLinks = try await dataSources.issueRelations.listLinks(issueId: articleId)
+            issueLinks = try await issueRelationService.loadIssueLinks()
         } catch {
             // Non-critical
         }
@@ -183,13 +173,10 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLink
 
     func createIssueLink(targetIssueId: Int, linkType: LinkType) async {
         do {
-            let request = CreateLinkRequest(
-                sourceIssueId: articleId,
+            issueLinks = try await issueRelationService.createIssueLink(
                 targetIssueId: targetIssueId,
                 linkType: linkType
             )
-            let _: CreateLinkResponse = try await dataSources.issueRelations.createLink(request)
-            await loadLinks()
             await loadActivityLog()
             HapticManager.notification(.success)
         } catch {
@@ -200,8 +187,7 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLink
 
     func deleteIssueLink(_ linkId: Int) async {
         do {
-            try await dataSources.issueRelations.deleteLink(linkId: linkId)
-            issueLinks.removeAll { $0.id == linkId }
+            issueLinks = try await issueRelationService.deleteIssueLink(linkId, from: issueLinks)
             await loadActivityLog()
         } catch {
             self.error = error.localizedDescription

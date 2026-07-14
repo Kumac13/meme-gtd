@@ -150,6 +150,8 @@ Issue IDの遷移先は`IssueRouteDestination`で解決する。activity payload
 
 link pickerのTask / Memo / Article横断検索は`IssuePickerSearchService`を使う。検索結果の取得・整形・並び順・上限はserviceに置き、呼び出し側には画面固有の除外IDだけを残す。
 
+保存済みDetailのIssue Link / 外部URL操作は`IssueRelationService`を使う。取得、追加後の再取得、削除後の配列更新、picker item変換はserviceに置き、Task / Articleのactivity再取得など画面固有の副作用は各ViewModelに残す。
+
 Detailの共通interfaceはMetadata、Links、Bookmark、Copyのcapability別protocolで構成する。`IssueInfoSheet`はMetadata以外をoptionalとして扱うため、Templateは対応しないLinks・Bookmarkの空実装を持たない。新しいリソースも、実際に提供するcapabilityだけへ適合させる。
 
 一時的な UI 状態は、それを必要とする View 群の最小共通祖先が所有する。子 View へは読み取り値、`Binding`、操作 callback の順に必要最小限だけ渡す。
