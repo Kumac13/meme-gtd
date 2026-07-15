@@ -45,17 +45,7 @@ struct MemoListView: View {
         Settings.shared.appMode == .standalone
     }
 
-    /// LazyVStack under defaultScrollAnchor(.bottom) fails to materialize its
-    /// cells when the view is CREATED with content already present (tab
-    /// return; iOS 26 — the list stays blank until a scroll gesture forces a
-    /// layout pass). First launch works because content arrives after the
-    /// first empty layout. This flag reproduces that working order: the first
-    /// frame renders empty, then `.task` flips it and the rows come in
-    /// through the insertion path.
-    @State private var renderContent = false
-
     private var reversedMemos: [Memo] {
-        guard renderContent else { return [] }
         if viewModel.searchMode == .semantic && isSearching {
             return memoStore.memos
         }
@@ -71,14 +61,14 @@ struct MemoListView: View {
     var body: some View {
         ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: 0) {
-                        if renderContent && !memoStore.hasMore && !memoStore.memos.isEmpty {
-                        Text("No older memos")
-                            .font(.caption)
-                            .foregroundColor(Color(.systemGray))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                    }
+                    VStack(spacing: 0) {
+                        if !memoStore.hasMore && !memoStore.memos.isEmpty {
+                            Text("No older memos")
+                                .font(.caption)
+                                .foregroundColor(Color(.systemGray))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                        }
 
                     ForEach(Array(reversedMemos.enumerated()), id: \.element.id) { index, memo in
                         let previousMemo = index > 0 ? reversedMemos[index - 1] : nil
@@ -165,7 +155,6 @@ struct MemoListView: View {
                 // relaunch). They now load concurrently after the list kicks
                 // off.
                 if memoStore.memos.isEmpty {
-                    renderContent = true
                     await viewModel.loadMemos()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         withAnimation {
@@ -173,11 +162,6 @@ struct MemoListView: View {
                         }
                     }
                 } else {
-                    // Tab return with existing content: inject the rows AFTER
-                    // the first (empty) layout pass so the LazyVStack takes
-                    // the same insertion path as first launch (see
-                    // renderContent), then re-anchor to the newest memo.
-                    renderContent = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         proxy.scrollTo("bottom", anchor: .bottom)
                     }
