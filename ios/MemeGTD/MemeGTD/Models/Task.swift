@@ -133,6 +133,13 @@ enum CreateTaskModeKind {
     case standard
     /// Full form, pre-populate a relates link to the source task
     case linkedTo(sourceTaskId: Int)
+    /// リンク元タスクへの relates を維持したままテンプレートから作成する
+    case linkedToTemplate(
+        sourceTaskId: Int,
+        bodyMd: String,
+        initialLabelNames: [String],
+        initialProjectIds: [Int]
+    )
     /// Full form, inherit parent's projects/labels/status, auto-create child link
     case quickChild(parentTask: TaskItem, parentProjects: [Project], parentLabels: [String])
     /// Promote a memo to a task. The form is the same as `.standard`; pickers are pre-seeded

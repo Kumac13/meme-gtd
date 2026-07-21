@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.50.8 - 2026-07-21
+
+### Bug Fixes
+
+- Web / iOS の Task Detail から New Task を開いた場合も、一覧からの新規作成と同じ Blank／Template chooser を経由するよう修正。元タスクへの `relates` リンクを維持したまま、テンプレートの本文・ラベル・プロジェクトを引き継ぐようにした。
+- Web の Task / Article / Task Detail に重複していたテンプレート一覧取得、絞り込み、フォーム初期値への変換を共通 `TemplateChooser` に集約した。
+
+### Tests
+
+- Web の共通 Template chooser が対象別テンプレートを取得し、Blank 選択とテンプレートのラベル・プロジェクト変換を行うことを検証するテストを追加。
+
 ## 0.50.7 - 2026-07-13
 
 ### Bug Fixes

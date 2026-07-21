@@ -16,6 +16,8 @@ struct TaskDetailView: View {
     @State private var showStatusPicker: Bool = false
     @State private var editingMode: EditingMode = .none
     @State private var createTaskMode: CreateTaskMode? = nil
+    @StateObject private var newTaskCreation = CreationPresentationCoordinator<CreateTaskModeKind>()
+    @State private var beginNewTaskAfterInfoDismiss = false
     @StateObject private var imageAttachment = ImageAttachmentCoordinator()
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
@@ -213,6 +215,10 @@ struct TaskDetailView: View {
                 linkedIssueNavigation.performPending { target in
                     onNavigateToLinkedIssue?(target.id, target.type, target.title)
                 }
+                if beginNewTaskAfterInfoDismiss {
+                    beginNewTaskAfterInfoDismiss = false
+                    newTaskCreation.beginChoosing()
+                }
             }
         ) {
             IssueInfoSheet(
@@ -230,7 +236,7 @@ struct TaskDetailView: View {
                 },
                 onDelete: { showDeleteConfirm = true },
                 onNewTask: {
-                    createTaskMode = CreateTaskMode(kind: .linkedTo(sourceTaskId: taskId))
+                    beginNewTaskAfterInfoDismiss = true
                 },
                 onAddChild: {
                     if let task = viewModel.task {
@@ -251,6 +257,37 @@ struct TaskDetailView: View {
         .sheet(isPresented: $showStatusPicker) {
             statusPickerSheet
                 .presentationDetents([.medium])
+        }
+        .sheet(
+            isPresented: $newTaskCreation.isChooserPresented,
+            onDismiss: newTaskCreation.chooserDidDismiss
+        ) {
+            TemplateChooserSheet(
+                target: "task",
+                onBlank: {
+                    newTaskCreation.choose(.linkedTo(sourceTaskId: taskId))
+                },
+                onTemplate: { template in
+                    newTaskCreation.choose(.linkedToTemplate(
+                        sourceTaskId: taskId,
+                        bodyMd: template.bodyMd,
+                        initialLabelNames: template.labels ?? [],
+                        initialProjectIds: template.projectIds ?? []
+                    ))
+                },
+                onDismiss: newTaskCreation.cancelChooser
+            )
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(item: $newTaskCreation.activeRequest) { request in
+            CreateTaskModal(
+                mode: request.payload,
+                onCreated: { _ in
+                    Task { await viewModel.loadTask() }
+                },
+                onDismiss: newTaskCreation.dismissForm
+            )
+            .presentationDetents([.large])
         }
         .sheet(item: $createTaskMode) { mode in
             CreateTaskModal(
