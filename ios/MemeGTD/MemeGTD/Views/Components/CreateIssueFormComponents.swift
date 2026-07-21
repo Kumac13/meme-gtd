@@ -1,5 +1,25 @@
 import SwiftUI
 
+struct CreateIssueMetadataOptions {
+    let labels: [IssueLabel]?
+    let projects: [Project]?
+}
+
+@MainActor
+enum CreateIssueMetadataOptionsLoader {
+    static func load(
+        labels: @escaping @MainActor () async throws -> [IssueLabel],
+        projects: @escaping @MainActor () async throws -> [Project]
+    ) async -> CreateIssueMetadataOptions {
+        async let labelsResult = try? labels()
+        async let projectsResult = try? projects()
+        return await CreateIssueMetadataOptions(
+            labels: labelsResult,
+            projects: projectsResult
+        )
+    }
+}
+
 /// Shared form chrome for issue creation screens. Keeping these pieces here
 /// prevents Task and Article creation from drifting apart visually.
 struct CreateIssueModalHeader: View {
@@ -10,38 +30,15 @@ struct CreateIssueModalHeader: View {
     let onCreate: () -> Void
 
     var body: some View {
-        HStack {
-            Button(action: {
-                HapticManager.impact(.light)
-                onDismiss()
-            }) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundColor(Color(.tertiaryLabel))
-            }
-
-            Spacer()
-
-            Text(title)
-                .font(.system(size: 17, weight: .semibold))
-
-            Spacer()
-
-            Button(action: onCreate) {
-                if isSubmitting {
-                    ProgressView()
-                        .frame(width: 28, height: 28)
-                } else {
-                    Text("Create")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(isCreateDisabled ? Color(.systemGray3) : .accent)
-                }
-            }
-            .disabled(isCreateDisabled || isSubmitting)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        ModalHeader(
+            title: title,
+            onDismiss: onDismiss,
+            trailingAction: .create(
+                isEnabled: !isCreateDisabled,
+                isSubmitting: isSubmitting,
+                action: onCreate
+            )
+        )
     }
 }
 
@@ -49,6 +46,7 @@ struct CreateIssueTextFields: View {
     let titlePlaceholder: String
     @Binding var title: String
     @Binding var bodyMd: String
+    var bodyLabel: String = "Description"
 
     var body: some View {
         VStack(spacing: 0) {
@@ -67,7 +65,7 @@ struct CreateIssueTextFields: View {
             Divider().padding(.leading, 16)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Description")
+                Text(bodyLabel)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.textSecondary)
                 TextEditor(text: $bodyMd)
@@ -83,6 +81,8 @@ struct CreateIssueTextFields: View {
 }
 
 struct CreateIssueMetadataSection: View {
+    @EnvironmentObject private var dataSources: DataSourceProvider
+
     @Binding var allLabels: [IssueLabel]
     @Binding var selectedLabelNames: Set<String>
     @Binding var allProjects: [Project]
@@ -91,6 +91,8 @@ struct CreateIssueMetadataSection: View {
 
     @State private var showLabelPicker = false
     @State private var showProjectPicker = false
+    @State private var labelDraft: Set<String> = []
+    @State private var projectDraft: Set<Int> = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -103,12 +105,16 @@ struct CreateIssueMetadataSection: View {
         .sheet(isPresented: $showLabelPicker) {
             LabelPickerModal(
                 allLabels: allLabels,
-                selectedNames: $selectedLabelNames,
+                selectedNames: $labelDraft,
                 onDismiss: { showLabelPicker = false },
+                onConfirm: { names in
+                    selectedLabelNames = names
+                    showLabelPicker = false
+                },
                 countFor: labelCount,
                 onLabelCreated: { newLabel in
                     allLabels.append(newLabel)
-                    selectedLabelNames.insert(newLabel.name)
+                    labelDraft.insert(newLabel.name)
                 }
             )
             .presentationDetents([.medium, .large])
@@ -116,7 +122,7 @@ struct CreateIssueMetadataSection: View {
         .sheet(isPresented: $showProjectPicker) {
             ProjectPickerModal(
                 allProjects: allProjects,
-                selectedIds: $selectedProjectIds,
+                selectedIds: $projectDraft,
                 onDismiss: { showProjectPicker = false },
                 onConfirm: { ids in
                     selectedProjectIds = ids
@@ -126,83 +132,58 @@ struct CreateIssueMetadataSection: View {
             )
             .presentationDetents([.medium, .large])
         }
+        .task {
+            await loadOptions()
+        }
+    }
+
+    private func loadOptions() async {
+        let options = await CreateIssueMetadataOptionsLoader.load(
+            labels: { try await dataSources.labels.listLabels() },
+            projects: { try await dataSources.projects.listProjects() }
+        )
+
+        if let labels = options.labels {
+            allLabels = labels
+        }
+        if let projects = options.projects {
+            allProjects = projects
+        }
     }
 
     private var labelsRow: some View {
-        Button(action: {
-            HapticManager.impact(.light)
+        FormNavigationRow(title: "Labels", action: {
+            labelDraft = selectedLabelNames
             showLabelPicker = true
         }) {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Text("Labels")
-                        .font(.system(size: 15))
-                        .foregroundColor(.textPrimary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(.systemGray3))
-                }
-
-                if selectedLabelNames.isEmpty {
-                    Text("None")
-                        .font(.system(size: 13))
-                        .foregroundColor(.textSecondary)
-                        .padding(.top, 4)
-                } else {
-                    FlowLayout(spacing: 6) {
-                        ForEach(Array(selectedLabelNames).sorted(), id: \.self) { name in
-                            Text(name)
-                                .font(.system(size: 12, weight: .medium))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(LabelColorHelper.bgColor(for: name))
-                                .foregroundColor(LabelColorHelper.textColor(for: name))
-                                .clipShape(Capsule())
-                        }
+            if selectedLabelNames.isEmpty {
+                EmptyFormSelection()
+            } else {
+                FlowLayout(spacing: 6) {
+                    ForEach(Array(selectedLabelNames).sorted(), id: \.self) { name in
+                        IssueLabelChip(name: name)
                     }
-                    .padding(.top, 8)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
         }
     }
 
     private var projectsRow: some View {
-        Button(action: {
-            HapticManager.impact(.light)
+        FormNavigationRow(title: "Projects", action: {
+            projectDraft = selectedProjectIds
             showProjectPicker = true
         }) {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Text("Projects")
-                        .font(.system(size: 15))
-                        .foregroundColor(.textPrimary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(.systemGray3))
-                }
-
-                if selectedProjectIds.isEmpty {
-                    Text("None")
-                        .font(.system(size: 13))
-                        .foregroundColor(.textSecondary)
-                        .padding(.top, 4)
-                } else {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(allProjects.filter { selectedProjectIds.contains($0.id) }) { project in
-                            Text(project.name)
-                                .font(.system(size: 13))
-                                .foregroundColor(.textSecondary)
-                        }
+            if selectedProjectIds.isEmpty {
+                EmptyFormSelection()
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(allProjects.filter { selectedProjectIds.contains($0.id) }) { project in
+                        Text(project.name)
+                            .font(.system(size: 13))
+                            .foregroundColor(.textSecondary)
                     }
-                    .padding(.top, 6)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
         }
     }
 }

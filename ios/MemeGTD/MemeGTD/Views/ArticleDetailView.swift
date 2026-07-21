@@ -12,9 +12,10 @@ struct ArticleDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @State private var showDeleteConfirm: Bool = false
-    @State private var showInfoSheet: Bool = false
+    @StateObject private var linkedIssueNavigation = DeferredSheetActionCoordinator<TargetIssue>()
     @State private var showCopiedFeedback: Bool = false
     @State private var editingMode: EditingMode = .none
+    @StateObject private var imageAttachment = ImageAttachmentCoordinator()
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
     /// Server mode + Offline Sync ON + offline: the article is served from
@@ -41,12 +42,15 @@ struct ArticleDetailView: View {
 
     var body: some View {
         GeometryReader { geo in
-        ScrollViewReader { proxy in
+        IssueDetailScrollShell(
+            policy: IssueDetailScrollPolicy(initialPosition: .top),
+            isContentReady: viewModel.article != nil
+        ) { scrollActions in
             ScrollView {
                 LazyVStack(spacing: 0) {
                     if let article = viewModel.article {
                         // === Header Area (glass card): Title + Meta ===
-                        areaCard {
+                        IssueAreaCard {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(article.title)
                                     .font(.system(size: 18, weight: .semibold))
@@ -106,127 +110,49 @@ struct ArticleDetailView: View {
                             .padding(.bottom, 12)
                         }
 
-                        sectionConnector
+                        IssueSectionConnector()
 
                         // === Body Area (same card/menu structure as Task Details) ===
-                        areaCard {
-                            VStack(alignment: .leading, spacing: 0) {
-                                HStack {
-                                    HStack(spacing: 4) {
-                                        let isEdited = article.updatedAt != article.createdAt
-                                        Text(TimelineHelpers.relativeTimeString(iso: isEdited ? article.updatedAt : article.createdAt))
-                                        if isEdited {
-                                            Text("(edited)")
-                                        }
-                                    }
-                                    .font(.system(size: 11))
-                                    .foregroundColor(Color(.systemGray))
-
-                                    Spacer()
-
-                                    Menu {
-                                        Button(action: {
-                                            UIPasteboard.general.string = article.bodyMd
-                                            HapticManager.notification(.success)
-                                        }) {
-                                            Label("Copy", systemImage: "doc.on.doc")
-                                        }
-                                        if article.origin == .manual {
-                                            Button(action: {
-                                                viewModel.replyBody = article.bodyMd
-                                                editingMode = .body
-                                            }) {
-                                                Label("Edit", systemImage: "pencil")
-                                            }
-                                            .disabled(isOfflineReadOnly)
-                                        }
-                                    } label: {
-                                        Image(systemName: "ellipsis")
-                                            .font(.system(size: 13))
-                                            .foregroundColor(.textSecondary)
-                                            .frame(width: 28, height: 20)
-                                            .contentShape(Rectangle())
-                                    }
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.top, 8)
-                                .padding(.bottom, -2)
-
-                                if !article.bodyMd.isEmpty {
-                                    let displayBody = article.bodyMd.replacingOccurrences(
-                                        of: "\\{#block-\\d+\\}",
-                                        with: "",
-                                        options: .regularExpression
-                                    )
-                                    ThreadItem(
-                                        bodyMd: displayBody,
-                                        labels: nil,
-                                        showMenu: false,
-                                        onIssueTap: { id, type in
-                                            onNavigateToLinkedIssue?(id, type, "")
-                                        }
-                                    )
-                                } else {
-                                    Text("No content available.")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.textSecondary)
-                                        .italic()
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(.vertical, 10)
-                                        .padding(.horizontal, 16)
-                                }
+                        let displayBody = article.bodyMd.replacingOccurrences(
+                            of: "\\{#block-\\d+\\}",
+                            with: "",
+                            options: .regularExpression
+                        )
+                        IssueContentCard(
+                            bodyMd: displayBody,
+                            createdAt: article.createdAt,
+                            updatedAt: article.updatedAt,
+                            emptyText: "No content available.",
+                            copyText: article.bodyMd,
+                            mutationsDisabled: isOfflineReadOnly,
+                            onEdit: article.origin == .manual ? {
+                                viewModel.replyBody = article.bodyMd
+                                editingMode = .body
+                            } : nil,
+                            onIssueTap: { id, type in
+                                onNavigateToLinkedIssue?(id, type, "")
                             }
-                        }
+                        )
 
                         // === Timeline: Comments + activities interleaved ===
-                        if !viewModel.timelineEntries.isEmpty {
-                            ForEach(viewModel.timelineEntries) { entry in
-                                sectionConnector
-                                switch entry {
-                                case .activity(let activity):
-                                    ActivityItemView(activity: activity, issueId: articleId)
-                                case .comment(let comment):
-                                    areaCard {
-                                        VStack(alignment: .leading, spacing: 0) {
-                                            HStack {
-                                                Text(TimelineHelpers.relativeTimeString(iso: comment.updatedAt))
-                                                    .font(.system(size: 11))
-                                                    .foregroundColor(Color(.systemGray))
-                                                Spacer()
-                                                Menu {
-                                                    Button("Copy") { UIPasteboard.general.string = comment.bodyMd }
-                                                    Button("Edit") {
-                                                        viewModel.replyBody = comment.bodyMd
-                                                        editingMode = .comment(comment.id)
-                                                    }
-                                                    .disabled(isOfflineReadOnly)
-                                                    Button("Delete", role: .destructive) {
-                                                        Task { await viewModel.deleteComment(comment.id) }
-                                                    }
-                                                    .disabled(isOfflineReadOnly)
-                                                } label: {
-                                                    Image(systemName: "ellipsis")
-                                                        .foregroundColor(.textSecondary)
-                                                }
-                                            }
-                                            .padding(.horizontal, 16)
-                                            .padding(.top, 8)
-                                            ThreadItem(
-                                                bodyMd: comment.bodyMd,
-                                                labels: nil,
-                                                showMenu: false,
-                                                onIssueTap: { id, type in
-                                                    onNavigateToLinkedIssue?(id, type, "")
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
+                        IssueTimeline(
+                            entries: viewModel.timelineEntries,
+                            issueId: articleId,
+                            mutationsDisabled: isOfflineReadOnly,
+                            onEditComment: { comment in
+                                viewModel.replyBody = comment.bodyMd
+                                editingMode = .comment(comment.id)
+                            },
+                            onDeleteComment: { comment in
+                                Task { await viewModel.deleteComment(comment.id) }
+                            },
+                            onIssueTap: { id, type in
+                                onNavigateToLinkedIssue?(id, type, "")
                             }
-                        }
+                        )
                     }
 
-                    Color.clear.frame(height: 24).id("threadBottom")
+                    IssueDetailBottomAnchor()
                 }
             }
             .background(Color.menuBackground)
@@ -266,12 +192,10 @@ struct ArticleDetailView: View {
                         editingMode = .none
                         viewModel.replyBody = ""
                     },
-                    onAttachImage: {},
-                    isUploadingImage: false,
+                    onAttachImage: imageAttachment.presentImagePicker,
+                    isUploadingImage: imageAttachment.isUploading,
                     onExpand: {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            withAnimation { proxy.scrollTo("threadBottom", anchor: .bottom) }
-                        }
+                        scrollActions.composerDidExpand()
                     },
                     onSubmit: {
                         switch editingMode {
@@ -283,9 +207,8 @@ struct ArticleDetailView: View {
                             Task { await viewModel.updateComment(id, bodyMd: viewModel.replyBody); editingMode = .none; viewModel.replyBody = "" }
                         case .none:
                             Task {
-                                await viewModel.addComment()
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    withAnimation { proxy.scrollTo("threadBottom", anchor: .bottom) }
+                                if await viewModel.addComment() {
+                                    scrollActions.submissionDidComplete()
                                 }
                             }
                         }
@@ -306,7 +229,7 @@ struct ArticleDetailView: View {
                 trailing: {
                     Button(action: {
                         HapticManager.impact(.light)
-                        showInfoSheet = true
+                        linkedIssueNavigation.present()
                     }) {
                         Image(systemName: "ellipsis")
                             .font(.system(size: 17, weight: .medium))
@@ -316,18 +239,27 @@ struct ArticleDetailView: View {
             )
         }
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showInfoSheet) {
+        .sheet(
+            isPresented: $linkedIssueNavigation.isPresented,
+            onDismiss: {
+                linkedIssueNavigation.performPending { target in
+                    onNavigateToLinkedIssue?(target.id, target.type, target.title)
+                }
+            }
+        ) {
             IssueInfoSheet(
                 viewModel: viewModel,
                 showCopiedFeedback: $showCopiedFeedback,
+                bookmarkProvider: viewModel,
+                linkProvider: viewModel,
+                copyProvider: viewModel,
                 isReadOnly: isOfflineReadOnly,
                 onEditTitle: editTitleAction,
                 onDelete: { showDeleteConfirm = true },
                 onNavigateToIssue: { target in
-                    onNavigateToLinkedIssue?(target.id, target.type, target.title)
+                    linkedIssueNavigation.requestAfterDismiss(target)
                 },
-                labelCountKeyPath: \.articleCount,
-                showBookmark: true
+                labelCountKeyPath: \.articleCount
             )
             .presentationDetents([.fraction(0.7), .large])
         }
@@ -343,11 +275,12 @@ struct ArticleDetailView: View {
         } message: {
             Text("Are you sure you want to delete this article? This action cannot be undone.")
         }
+        .imageAttachmentPresentation(coordinator: imageAttachment, text: $viewModel.replyBody)
         .overlay {
-            if viewModel.isLoading && viewModel.article == nil {
-                ProgressView("Loading...")
-                    .foregroundColor(.textSecondary)
-            }
+            LoadingOverlay(
+                isPresented: viewModel.isLoading && viewModel.article == nil,
+                message: "Loading..."
+            )
         }
         .task {
             viewModel.articleStore = articleStore
@@ -386,21 +319,4 @@ struct ArticleDetailView: View {
         return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
     }
 
-    // MARK: - Area card (glass effect, full width)
-
-    private func areaCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        content()
-            .frame(maxWidth: .infinity)
-            .glassEffect(.regular, in: Rectangle())
-    }
-
-    // MARK: - Section connector (line between areas)
-
-    private var sectionConnector: some View {
-        Rectangle()
-            .fill(Color(.systemGray3))
-            .frame(width: 2, height: 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, 24)
-    }
 }

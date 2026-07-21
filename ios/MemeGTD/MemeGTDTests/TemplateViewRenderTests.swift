@@ -93,4 +93,86 @@ final class TemplateViewRenderTests: XCTestCase {
         .environmentObject(DataSourceProvider())
         try snapshotInWindow(view, size: CGSize(width: 390, height: 500), name: "template-chooser")
     }
+
+    func testRenderSharedIssuePrimitives() throws {
+        let view = VStack(alignment: .leading, spacing: 12) {
+            ModalHeader(title: "Shared Header", onDismiss: {})
+            HStack {
+                IssueTypeBadge(type: "task")
+                CompactRelativeTimeText(iso: "2026-07-13T11:55:00Z")
+                IssueLabelChips(labels: ["work", "ios"])
+            }
+            IssueAreaCard {
+                Text("Shared detail card")
+                    .padding()
+            }
+            IssueSectionConnector()
+            FeedbackToast(message: "Copied!")
+            FloatingCreateButton(action: {})
+        }
+        try writePNG(view, name: "shared-issue-primitives")
+    }
+
+    func testRenderSharedCreationForm() throws {
+        let view = VStack(spacing: 0) {
+            CreateIssueModalHeader(
+                title: "New Item",
+                isSubmitting: false,
+                isCreateDisabled: false,
+                onDismiss: {},
+                onCreate: {}
+            )
+            Divider()
+            CreateIssueTextFields(
+                titlePlaceholder: "Title...",
+                title: .constant("Example"),
+                bodyMd: .constant("Body")
+            )
+            Divider().padding(.leading, 16)
+            CreateIssueMetadataSection(
+                allLabels: .constant([]),
+                selectedLabelNames: .constant([]),
+                allProjects: .constant([]),
+                selectedProjectIds: .constant([]),
+                labelCount: { _ in 0 }
+            )
+        }
+        .environmentObject(DataSourceProvider())
+        try writePNG(view, name: "shared-creation-form")
+    }
+
+    func testRenderSharedPickerComponents() throws {
+        let view = VStack(spacing: 0) {
+            SingleChoiceFilterSheet(
+                title: "Status",
+                options: ["open", "done"],
+                selected: "open",
+                label: { $0.capitalized },
+                onSelect: { _ in },
+                onDismiss: {}
+            )
+            .frame(height: 260)
+
+            ExternalURLForm(
+                urlText: .constant("https://example.com"),
+                titleText: .constant("Example"),
+                onBack: {},
+                onSubmit: { _, _ in }
+            )
+            .frame(height: 360)
+        }
+        try writePNG(view, name: "shared-picker-components")
+    }
+
+    func testRenderSharedQuickCaptureComposer() throws {
+        let view = FloatingComposer(
+            text: .constant("Quick memo"),
+            placeholder: "Write a memo...",
+            onAttachImage: {},
+            onSubmit: {}
+        )
+        .padding()
+
+        try writePNG(view, name: "shared-quick-capture-composer")
+    }
 }

@@ -11,26 +11,7 @@ struct CopyOptionsSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button(action: {
-                    HapticManager.impact(.light)
-                    isPresented = false
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundColor(Color(.tertiaryLabel))
-                }
-                Spacer()
-                Text("Copy Search Results")
-                    .font(.system(size: 17, weight: .semibold))
-                Spacer()
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .hidden()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            ModalHeader(title: "Copy Search Results", onDismiss: { isPresented = false })
 
             Divider()
 

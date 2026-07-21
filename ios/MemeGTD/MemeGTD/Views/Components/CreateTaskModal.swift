@@ -117,45 +117,22 @@ struct CreateTaskModal: View {
     // MARK: - Status Row
 
     private var statusRow: some View {
-        Button(action: {
-            HapticManager.impact(.light)
-            showStatusPicker = true
-        }) {
-            HStack {
-                Text("Status")
-                    .font(.system(size: 15))
-                    .foregroundColor(.textPrimary)
-                Spacer()
-                Text(viewModel.status.displayLabel)
-                    .font(.system(size: 15))
-                    .foregroundColor(.textSecondary)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(Color(.systemGray3))
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+        FormNavigationRow(title: "Status", action: { showStatusPicker = true }) {
+            Text(viewModel.status.displayLabel)
+                .font(.system(size: 15))
+                .foregroundColor(.textSecondary)
         }
     }
 
     // MARK: - Kind Row
 
     private var kindRow: some View {
-        HStack {
-            Text("Kind")
-                .font(.system(size: 15))
-                .foregroundColor(.textPrimary)
-            Spacer()
-            Picker("Kind", selection: $viewModel.taskKind) {
-                ForEach(TaskKind.allCases, id: \.self) { kind in
-                    Text(kind.displayLabel).tag(kind)
-                }
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 180)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        SegmentedFormRow(
+            title: "Kind",
+            options: TaskKind.allCases,
+            selected: $viewModel.taskKind,
+            label: { $0.displayLabel }
+        )
     }
 
     // MARK: - Schedule Section
@@ -236,23 +213,9 @@ struct CreateTaskModal: View {
     // MARK: - Links Row
 
     private var linksRow: some View {
-        Button(action: {
-            HapticManager.impact(.light)
-            showLinkPicker = true
-        }) {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Text("Links")
-                        .font(.system(size: 15))
-                        .foregroundColor(.textPrimary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(.systemGray3))
-                }
-
-                if !viewModel.pendingLinks.isEmpty || !viewModel.pendingUrlLinks.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
+        FormNavigationRow(title: "Links", action: { showLinkPicker = true }) {
+            if !viewModel.pendingLinks.isEmpty || !viewModel.pendingUrlLinks.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
                         ForEach(viewModel.pendingLinks) { link in
                             HStack(spacing: 6) {
                                 Image(systemName: link.linkType.iconName)
@@ -284,76 +247,27 @@ struct CreateTaskModal: View {
                                     .lineLimit(1)
                             }
                         }
-                    }
-                    .padding(.top, 6)
-                } else {
-                    Text("None")
-                        .font(.system(size: 13))
-                        .foregroundColor(.textSecondary)
-                        .padding(.top, 4)
                 }
+            } else {
+                EmptyFormSelection()
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
         }
     }
 
     // MARK: - Status Picker Sheet
 
     private var statusPickerSheet: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button(action: { HapticManager.impact(.light); showStatusPicker = false }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundColor(Color(.tertiaryLabel))
-                }
-                Spacer()
-                Text("Status")
-                    .font(.system(size: 17, weight: .semibold))
-                Spacer()
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .hidden()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-
-            Divider()
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(TaskStatus.allCases, id: \.self) { status in
-                        Button(action: {
-                            HapticManager.selection()
-                            viewModel.status = status
-                            showStatusPicker = false
-                        }) {
-                            HStack {
-                                Text(status.displayLabel)
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.textPrimary)
-                                Spacer()
-                                if viewModel.status == status {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 22))
-                                        .foregroundColor(.accent)
-                                } else {
-                                    Image(systemName: "circle")
-                                        .font(.system(size: 22))
-                                        .foregroundColor(Color(.systemGray3))
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                        }
-                        Divider().padding(.leading, 16)
-                    }
-                }
-            }
-        }
-        .background(Color(.systemBackground))
+        SingleChoiceFilterSheet(
+            title: "Status",
+            options: TaskStatus.allCases,
+            selected: viewModel.status,
+            label: { $0.displayLabel },
+            onSelect: { status in
+                viewModel.status = status
+                showStatusPicker = false
+            },
+            onDismiss: { showStatusPicker = false }
+        )
     }
 
     // MARK: - Submit

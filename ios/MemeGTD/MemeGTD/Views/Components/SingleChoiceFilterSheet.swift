@@ -11,26 +11,7 @@ struct SingleChoiceFilterSheet<Option: Hashable>: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button(action: {
-                    HapticManager.impact(.light)
-                    onDismiss()
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundColor(Color(.tertiaryLabel))
-                }
-                Spacer()
-                Text(title)
-                    .font(.system(size: 17, weight: .semibold))
-                Spacer()
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .hidden()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            ModalHeader(title: title, onDismiss: onDismiss)
 
             Divider()
 
@@ -46,9 +27,7 @@ struct SingleChoiceFilterSheet<Option: Hashable>: View {
                                     .font(.system(size: 16))
                                     .foregroundColor(.textPrimary)
                                 Spacer()
-                                Image(systemName: selected == option ? "checkmark.circle.fill" : "plus.circle")
-                                    .font(.system(size: 22))
-                                    .foregroundColor(selected == option ? .accent : Color(.systemGray3))
+                                PickerSelectionIndicator(isSelected: selected == option)
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 14)

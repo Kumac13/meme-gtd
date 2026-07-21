@@ -1,5 +1,4 @@
 import Combine
-import PhotosUI
 import SwiftUI
 
 struct MemoListView: View {
@@ -18,12 +17,7 @@ struct MemoListView: View {
     @State private var showDateRangePicker: Bool = false
     @State private var dateFrom: Date?
     @State private var dateTo: Date?
-    @State private var showImagePicker: Bool = false
-    @State private var showSizePicker: Bool = false
-    @State private var isUploadingImage: Bool = false
-    @State private var pickedImageData: Data? = nil
-    @State private var pickedMimeType: String = "image/jpeg"
-    @State private var pickedExtension: String = "jpg"
+    @StateObject private var imageAttachment = ImageAttachmentCoordinator()
     @State private var showCopyDialog: Bool = false
     @State private var conflictToastMessage: String?
     @State private var conflictToastDismissTask: Task<Void, Never>?
@@ -45,17 +39,7 @@ struct MemoListView: View {
         Settings.shared.appMode == .standalone
     }
 
-    /// LazyVStack under defaultScrollAnchor(.bottom) fails to materialize its
-    /// cells when the view is CREATED with content already present (tab
-    /// return; iOS 26 — the list stays blank until a scroll gesture forces a
-    /// layout pass). First launch works because content arrives after the
-    /// first empty layout. This flag reproduces that working order: the first
-    /// frame renders empty, then `.task` flips it and the rows come in
-    /// through the insertion path.
-    @State private var renderContent = false
-
     private var reversedMemos: [Memo] {
-        guard renderContent else { return [] }
         if viewModel.searchMode == .semantic && isSearching {
             return memoStore.memos
         }
@@ -71,14 +55,14 @@ struct MemoListView: View {
     var body: some View {
         ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: 0) {
-                        if renderContent && !memoStore.hasMore && !memoStore.memos.isEmpty {
-                        Text("No older memos")
-                            .font(.caption)
-                            .foregroundColor(Color(.systemGray))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                    }
+                    VStack(spacing: 0) {
+                        if !memoStore.hasMore && !memoStore.memos.isEmpty {
+                            Text("No older memos")
+                                .font(.caption)
+                                .foregroundColor(Color(.systemGray))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                        }
 
                     ForEach(Array(reversedMemos.enumerated()), id: \.element.id) { index, memo in
                         let previousMemo = index > 0 ? reversedMemos[index - 1] : nil
@@ -133,58 +117,25 @@ struct MemoListView: View {
             // unfiltered feed). Without this, the prior mode's pixel offset
             // bleeds into the new mode and lands the user mid-list.
             .id(viewModel.isDateFiltered ? "filtered" : "feed")
-            .refreshable {
-                await withCheckedContinuation { continuation in
-                    Task { @MainActor in
-                        HapticManager.impact(.medium)
+            .issueListRefreshable {
+                // Sync trigger: pull-to-refresh (no-op while Offline Sync is off).
+                dataSources.syncScheduler?.requestSync()
 
-                        // Sync trigger: pull-to-refresh (no-op while Offline
-                        // Sync is off). The refresh below reads the local DB
-                        // immediately; if the sync run brings changes, the
-                        // engine's notification reloads the list afterwards.
-                        dataSources.syncScheduler?.requestSync()
+                if viewModel.isDateFiltered {
+                    await viewModel.loadAllMemos()
+                    return
+                }
 
-                        let start = Date()
+                let hasMore = memoStore.hasMore
+                let response = hasMore
+                    ? await viewModel.fetchOlderMemos()
+                    : await viewModel.fetchMemos()
 
-                        if viewModel.isDateFiltered {
-                            // Schedule filter active: keep the full filtered
-                            // range loaded instead of resetting to the newest
-                            // page. loadAllMemos updates the store directly.
-                            await viewModel.loadAllMemos()
-
-                            let elapsed = Date().timeIntervalSince(start)
-                            let remaining = 0.75 - elapsed
-                            if remaining > 0 {
-                                try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
-                            }
-                            HapticManager.notification(.success)
-                            continuation.resume()
-                            return
-                        }
-
-                        let hasMore = memoStore.hasMore
-                        let response: MemoListResponse?
-                        if hasMore {
-                            response = await viewModel.fetchOlderMemos()
-                        } else {
-                            response = await viewModel.fetchMemos()
-                        }
-
-                        let elapsed = Date().timeIntervalSince(start)
-                        let remaining = 0.75 - elapsed
-                        if remaining > 0 {
-                            try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
-                        }
-
-                        if let response = response {
-                            if hasMore {
-                                viewModel.applyOlderMemos(response)
-                            } else {
-                                viewModel.applyMemos(response)
-                            }
-                        }
-                        HapticManager.notification(.success)
-                        continuation.resume()
+                if let response {
+                    if hasMore {
+                        viewModel.applyOlderMemos(response)
+                    } else {
+                        viewModel.applyMemos(response)
                     }
                 }
             }
@@ -198,7 +149,6 @@ struct MemoListView: View {
                 // relaunch). They now load concurrently after the list kicks
                 // off.
                 if memoStore.memos.isEmpty {
-                    renderContent = true
                     await viewModel.loadMemos()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         withAnimation {
@@ -206,11 +156,6 @@ struct MemoListView: View {
                         }
                     }
                 } else {
-                    // Tab return with existing content: inject the rows AFTER
-                    // the first (empty) layout pass so the LazyVStack takes
-                    // the same insertion path as first launch (see
-                    // renderContent), then re-anchor to the newest memo.
-                    renderContent = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         proxy.scrollTo("bottom", anchor: .bottom)
                     }
@@ -225,8 +170,8 @@ struct MemoListView: View {
                     placeholder: "Write a memo...",
                     disabled: viewModel.isLoading,
                     submitting: viewModel.isCreating,
-                    onAttachImage: { showImagePicker = true },
-                    isUploadingImage: isUploadingImage,
+                    onAttachImage: imageAttachment.presentImagePicker,
+                    isUploadingImage: imageAttachment.isUploading,
                     onExpand: {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                             withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
@@ -257,59 +202,51 @@ struct MemoListView: View {
                 // Standalone: semantic search is server-only, so the mode
                 // picker is hidden and search stays on its keyword default.
                 if isSearching && !isStandalone {
-                    Picker("Search Mode", selection: $viewModel.searchMode) {
-                        ForEach(SearchMode.allCases, id: \.self) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .background(.regularMaterial, in: Capsule())
-                    .padding(.horizontal, 16)
-                    .onChange(of: viewModel.searchMode) { _, _ in
+                    IssueSearchModePicker(
+                        selection: $viewModel.searchMode,
+                        verticalPadding: 0
+                    ) {
                         if viewModel.isSearching {
                             viewModel.search()
                         }
                     }
                 }
 
-                HStack(spacing: 8) {
-                FilterPill(
-                    label: labelFilterDisplayLabel,
-                    isActive: !viewModel.labelFilters.isEmpty
-                ) {
-                    selectedLabelNames = viewModel.labelFilters
-                    showLabelPicker = true
-                }
+                IssueListFilterBar {
+                    FilterPill(
+                        label: labelFilterDisplayLabel,
+                        isActive: !viewModel.labelFilters.isEmpty
+                    ) {
+                        selectedLabelNames = viewModel.labelFilters
+                        showLabelPicker = true
+                    }
 
-                FilterPill(
-                    label: projectFilterDisplayLabel,
-                    isActive: !viewModel.projectFilters.isEmpty || viewModel.includeNoProject
-                ) {
-                    selectedProjectIds = viewModel.projectFilters
-                    selectedNoProject = viewModel.includeNoProject
-                    showProjectPicker = true
-                }
+                    FilterPill(
+                        label: projectFilterDisplayLabel,
+                        isActive: !viewModel.projectFilters.isEmpty || viewModel.includeNoProject
+                    ) {
+                        selectedProjectIds = viewModel.projectFilters
+                        selectedNoProject = viewModel.includeNoProject
+                        showProjectPicker = true
+                    }
 
-                FilterPill(
-                    label: scheduleFilterDisplayLabel,
-                    isActive: viewModel.createdFrom != nil || viewModel.createdTo != nil
-                ) {
-                    dateFrom = viewModel.createdFrom
-                    dateTo = viewModel.createdTo
-                    showDateRangePicker = true
-                }
+                    FilterPill(
+                        label: scheduleFilterDisplayLabel,
+                        isActive: viewModel.createdFrom != nil || viewModel.createdTo != nil
+                    ) {
+                        dateFrom = viewModel.createdFrom
+                        dateTo = viewModel.createdTo
+                        showDateRangePicker = true
+                    }
 
-                FilterPill(
-                    label: viewModel.bookmarkFilter ? "Bookmarked" : "Bookmark",
-                    isActive: viewModel.bookmarkFilter,
-                    activeColor: .accent
-                ) {
-                    viewModel.toggleBookmarkFilter()
+                    FilterPill(
+                        label: viewModel.bookmarkFilter ? "Bookmarked" : "Bookmark",
+                        isActive: viewModel.bookmarkFilter,
+                        activeColor: .accent
+                    ) {
+                        viewModel.toggleBookmarkFilter()
+                    }
                 }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
             }
         }
         .toolbar {
@@ -321,22 +258,13 @@ struct MemoListView: View {
                 searchPlaceholder: "Search memos...",
                 onSearch: { viewModel.search() },
                 searchBarAction: {
-                    if !memoStore.memos.isEmpty && hasActiveFilters {
-                        Button(action: {
-                            HapticManager.impact(.light)
+                    IssueListExportButton(
+                        isVisible: !memoStore.memos.isEmpty && hasActiveFilters,
+                        isExporting: viewModel.isExporting,
+                        action: {
                             showCopyDialog = true
-                        }) {
-                            if viewModel.isExporting {
-                                ProgressView()
-                                    .controlSize(.mini)
-                            } else {
-                                Image(systemName: "doc.on.doc")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(Color(.systemGray))
-                            }
                         }
-                        .disabled(viewModel.isExporting)
-                    }
+                    )
                 }
             )
         }
@@ -357,25 +285,13 @@ struct MemoListView: View {
         }
         .overlay(alignment: .top) {
             if viewModel.showCopiedFeedback {
-                Text("Copied!")
-                    .font(.system(size: 13, weight: .semibold))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(.regularMaterial, in: Capsule())
-                    .padding(.top, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                FeedbackToast(message: "Copied!")
             }
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.showCopiedFeedback)
         .overlay(alignment: .top) {
             if let conflictToastMessage {
-                Text(conflictToastMessage)
-                    .font(.system(size: 13, weight: .semibold))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(.regularMaterial, in: Capsule())
-                    .padding(.top, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                FeedbackToast(message: conflictToastMessage)
             }
         }
         .animation(.easeInOut(duration: 0.2), value: conflictToastMessage)
@@ -406,11 +322,7 @@ struct MemoListView: View {
                 viewModel.reload()
             }
         }
-        .onChange(of: isSearching) { _, newValue in
-            if !newValue {
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            }
-        }
+        .issueListSearchLifecycle(isSearching: isSearching)
         .sheet(isPresented: $showLabelPicker, onDismiss: {
             viewModel.setLabelFilters(selectedLabelNames)
         }) {
@@ -449,43 +361,12 @@ struct MemoListView: View {
             )
             .presentationDetents([.medium])
         }
-        .sheet(isPresented: $showImagePicker) {
-            ImagePicker(
-                imageData: $pickedImageData,
-                imageMimeType: $pickedMimeType,
-                imageExtension: $pickedExtension
-            )
-        }
-        .onChange(of: pickedImageData) { _, newData in
-            guard newData != nil else { return }
-            showSizePicker = true
-        }
-        .sheet(isPresented: $showSizePicker) {
-            if let data = pickedImageData {
-                ImageSizePickerSheet(
-                    imageData: data,
-                    mimeType: pickedMimeType,
-                    ext: pickedExtension,
-                    onSelect: { resizedData, mime, ext in
-                        showSizePicker = false
-                        pickedImageData = nil
-                        isUploadingImage = true
-                        HapticManager.impact(.medium)
-                        Task { await uploadImageData(data: resizedData, mimeType: mime, ext: ext) }
-                    },
-                    onCancel: {
-                        showSizePicker = false
-                        pickedImageData = nil
-                    }
-                )
-                .presentationDetents([.medium])
-            }
-        }
+        .imageAttachmentPresentation(coordinator: imageAttachment, text: $viewModel.newMemoBody)
         .overlay {
-            if viewModel.isLoading && memoStore.memos.isEmpty {
-                ProgressView("Loading memos...")
-                    .foregroundColor(.textSecondary)
-            }
+            LoadingOverlay(
+                isPresented: viewModel.isLoading && memoStore.memos.isEmpty,
+                message: "Loading memos..."
+            )
         }
     }
 
@@ -509,36 +390,4 @@ struct MemoListView: View {
     }
 
 
-    // MARK: - Image upload
-
-    private func uploadImageData(data: Data, mimeType: String, ext: String) async {
-        isUploadingImage = true
-        defer { isUploadingImage = false }
-
-        let filename = "\(UUID().uuidString).\(ext)"
-        let start = Date()
-
-        do {
-            let response = try await APIClient.shared.uploadImage(
-                imageData: data, filename: filename, mimeType: mimeType
-            )
-
-            // Ensure uploading indicator is visible for at least 0.75s
-            let elapsed = Date().timeIntervalSince(start)
-            let remaining = 0.75 - elapsed
-            if remaining > 0 {
-                try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
-            }
-
-            let ref = response.markdownRef
-            if viewModel.newMemoBody.isEmpty {
-                viewModel.newMemoBody = ref
-            } else {
-                viewModel.newMemoBody += "\n\(ref)"
-            }
-            HapticManager.notification(.success)
-        } catch {
-            HapticManager.notification(.error)
-        }
-    }
 }

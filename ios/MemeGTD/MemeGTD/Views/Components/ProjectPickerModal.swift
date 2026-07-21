@@ -22,42 +22,19 @@ struct ProjectPickerModal: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button(action: { HapticManager.impact(.light); onDismiss() }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundColor(Color(.tertiaryLabel))
-                }
-                Spacer()
-                Text("Projects")
-                    .font(.system(size: 17, weight: .semibold))
-                Spacer()
-                if showClear {
-                    Button(action: {
+            ModalHeader(
+                title: "Projects",
+                onDismiss: onDismiss,
+                trailingAction: showClear
+                    ? .clear(isEnabled: hasAnySelection, action: {
                         HapticManager.impact(.light)
                         selectedIds.removeAll()
                         includeNoProject = false
-                    }) {
-                        Text("Clear")
-                            .font(.system(size: 16))
-                            .foregroundColor(hasAnySelection ? .accent : Color(.systemGray3))
-                    }
-                    .disabled(!hasAnySelection)
-                } else if let onConfirm = onConfirm {
-                    Button(action: { onConfirm(selectedIds) }) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 28))
-                            .foregroundColor(.accent)
-                    }
-                } else {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .hidden()
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+                    })
+                    : onConfirm.map { confirm in
+                        .confirm(isEnabled: true, action: { confirm(selectedIds) })
+                    } ?? .placeholder
+            )
 
             Divider()
 
@@ -98,15 +75,7 @@ struct ProjectPickerModal: View {
                 HapticManager.impact(.light)
                 includeNoProject.toggle()
             }) {
-                if includeNoProject {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundColor(.accent)
-                } else {
-                    Image(systemName: "plus.circle")
-                        .font(.system(size: 22))
-                        .foregroundColor(Color(.systemGray3))
-                }
+                PickerSelectionIndicator(isSelected: includeNoProject)
             }
         }
         .padding(.horizontal, 16)
@@ -139,15 +108,7 @@ struct ProjectPickerModal: View {
                     selectedIds.insert(project.id)
                 }
             }) {
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundColor(.accent)
-                } else {
-                    Image(systemName: "plus.circle")
-                        .font(.system(size: 22))
-                        .foregroundColor(Color(.systemGray3))
-                }
+                PickerSelectionIndicator(isSelected: isSelected)
             }
         }
         .padding(.horizontal, 16)

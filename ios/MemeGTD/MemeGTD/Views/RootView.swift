@@ -20,6 +20,37 @@ struct TemplateRoute: Hashable {
     let initialTitle: String
 }
 
+enum IssueRouteDestination: Equatable {
+    case memo(MemoRoute)
+    case task(TaskRoute)
+    case article(ArticleRoute)
+    case template(TemplateRoute)
+
+    init?(id: Int, type: String?, title: String) {
+        switch type {
+        case "memo":
+            self = .memo(MemoRoute(memoId: id, initialBody: title))
+        case "task":
+            self = .task(TaskRoute(taskId: id, initialTitle: title))
+        case "article":
+            self = .article(ArticleRoute(articleId: id, initialTitle: title))
+        case "template":
+            self = .template(TemplateRoute(templateId: id, initialTitle: title))
+        default:
+            return nil
+        }
+    }
+
+    func append(to path: inout NavigationPath) {
+        switch self {
+        case .memo(let route): path.append(route)
+        case .task(let route): path.append(route)
+        case .article(let route): path.append(route)
+        case .template(let route): path.append(route)
+        }
+    }
+}
+
 struct RootView: View {
     @State private var selectedTab: AppTab = .memos
     @State private var isMenuOpen: Bool = false
@@ -153,15 +184,7 @@ struct RootView: View {
     }
 
     private func navigateToIssue(id: Int, type: String, title: String) {
-        switch type {
-        case "task":
-            navigationPath.append(TaskRoute(taskId: id, initialTitle: title))
-        case "memo":
-            navigationPath.append(MemoRoute(memoId: id, initialBody: title))
-        case "article":
-            navigationPath.append(ArticleRoute(articleId: id, initialTitle: title))
-        default:
-            break
-        }
+        guard let destination = IssueRouteDestination(id: id, type: type, title: title) else { return }
+        destination.append(to: &navigationPath)
     }
 }

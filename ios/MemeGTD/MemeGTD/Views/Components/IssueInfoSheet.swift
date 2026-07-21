@@ -1,8 +1,11 @@
 import SwiftUI
 
-struct IssueInfoSheet<VM: IssueDetailProvider>: View {
+struct IssueInfoSheet<VM: IssueMetadataProvider>: View {
     @ObservedObject var viewModel: VM
     @Binding var showCopiedFeedback: Bool
+    var bookmarkProvider: (any IssueBookmarkProvider)?
+    var linkProvider: (any IssueLinkProvider)?
+    let copyProvider: any IssueCopyProvider
     /// Disables every write action (offline read-only cache, Phase 7).
     /// Copy and link navigation stay available. Defaults to false so
     /// existing call sites (memos) keep their behavior.
@@ -14,10 +17,6 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
     var onPromoteToTask: (() -> Void)?
     var onNavigateToIssue: ((TargetIssue) -> Void)?
     var labelCountKeyPath: KeyPath<IssueLabel, Int> = \.memoCount
-    var showBookmark: Bool = true
-    /// Templates have no links, so their detail sheet hides the section
-    /// (same opt-out pattern as `showBookmark`).
-    var showLinks: Bool = true
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
@@ -47,23 +46,23 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
             // Rows
             VStack(spacing: 0) {
                 // Bookmark
-                if showBookmark {
+                if let bookmarkProvider {
                     Button(action: {
-                        Task { await viewModel.toggleBookmark() }
+                        Task { await bookmarkProvider.toggleBookmark() }
                     }) {
                         HStack {
                             Text("Bookmark")
                                 .font(.system(size: 15))
                                 .foregroundColor(.textPrimary)
                             Spacer()
-                            Image(systemName: viewModel.isBookmarked ? "bookmark.fill" : "bookmark")
+                            Image(systemName: bookmarkProvider.isBookmarked ? "bookmark.fill" : "bookmark")
                                 .font(.system(size: 18))
-                                .foregroundColor(viewModel.isBookmarked ? .accent : .textSecondary)
+                                .foregroundColor(bookmarkProvider.isBookmarked ? .accent : .textSecondary)
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 14)
                     }
-                    .disabled(viewModel.isBookmarking || isReadOnly)
+                    .disabled(bookmarkProvider.isBookmarking || isReadOnly)
 
                     Divider().padding(.leading, 16)
                 }
@@ -220,7 +219,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                 Divider().padding(.leading, 16)
 
                 // Links
-                if showLinks {
+                if let linkProvider {
                 VStack(alignment: .leading, spacing: 0) {
                     Button(action: { showLinkPicker = true }) {
                         HStack {
@@ -235,12 +234,15 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                     }
                     .disabled(isReadOnly)
 
-                    if !viewModel.issueLinks.isEmpty || !viewModel.urlLinks.isEmpty {
+                    if !linkProvider.issueLinks.isEmpty || !linkProvider.urlLinks.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
-                            ForEach(viewModel.issueLinks) { link in
+                            ForEach(linkProvider.issueLinks) { link in
                                 Button(action: {
-                                    dismiss()
-                                    onNavigateToIssue?(link.targetIssue)
+                                    if let onNavigateToIssue {
+                                        onNavigateToIssue(link.targetIssue)
+                                    } else {
+                                        dismiss()
+                                    }
                                 }) {
                                     HStack(spacing: 6) {
                                         Image(systemName: link.linkType.iconName)
@@ -248,7 +250,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                                             .foregroundColor(.textPrimary)
                                             .frame(width: 12)
 
-                                        issueTypeBadge(link.targetIssue.type)
+                                        IssueTypeBadge(type: link.targetIssue.type)
 
                                         Text(link.targetIssue.title)
                                             .font(.system(size: 13))
@@ -258,7 +260,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
                                 }
                             }
 
-                            ForEach(viewModel.urlLinks) { urlLink in
+                            ForEach(linkProvider.urlLinks) { urlLink in
                                 Button(action: {
                                     if let url = URL(string: urlLink.url) {
                                         openURL(url)
@@ -298,7 +300,7 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
 
                 // Copy All Contents
                 Button(action: {
-                    viewModel.copyAllContents()
+                    copyProvider.copyAllContents()
                     showCopiedFeedback = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                         showCopiedFeedback = false
@@ -369,11 +371,32 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
         }
         .background(Color(.systemBackground))
         .sheet(isPresented: $showLinkPicker) {
-            LinkPickerModal(
-                viewModel: viewModel,
-                onDismiss: { showLinkPicker = false }
-            )
-            .presentationDetents([.medium, .large])
+            if let linkProvider {
+                IssueLinkPicker(
+                    issueTypeLabel: linkProvider.issueTypeLabel,
+                    selectedIssues: selectedIssues(for: linkProvider),
+                    selectedURLs: linkProvider.urlLinks.map {
+                        LinkPickerURLSelection(id: .persisted($0.id), url: $0.url, title: $0.title)
+                    },
+                    search: { query in await linkProvider.searchIssues(query: query) },
+                    addIssue: { item, type in
+                        await linkProvider.createIssueLink(targetIssueId: item.id, linkType: type)
+                    },
+                    removeIssue: { selection in
+                        guard case .persisted(let id) = selection.id else { return }
+                        await linkProvider.deleteIssueLink(id)
+                    },
+                    addURL: { url, title in
+                        await linkProvider.createUrlLink(url: url, title: title)
+                    },
+                    removeURL: { selection in
+                        guard case .persisted(let id) = selection.id else { return }
+                        await linkProvider.deleteUrlLink(id)
+                    },
+                    onDismiss: { showLinkPicker = false }
+                )
+                .presentationDetents([.medium, .large])
+            }
         }
         .sheet(isPresented: $showLabelPicker) {
             LabelPickerModal(
@@ -406,34 +429,18 @@ struct IssueInfoSheet<VM: IssueDetailProvider>: View {
         }
     }
 
-    // MARK: - Issue type badge
-
-    private static var badgeWidth: CGFloat { 56 }
-
-    @ViewBuilder
-    private func issueTypeBadge(_ type: String) -> some View {
-        let label = type.capitalized
-        let (bg, fg) = issueTypeColors(type)
-        Text(label)
-            .font(.system(size: 12, weight: .medium))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .frame(width: Self.badgeWidth)
-            .background(bg)
-            .foregroundColor(fg)
-            .clipShape(Capsule())
-    }
-
-    private func issueTypeColors(_ type: String) -> (Color, Color) {
-        switch type {
-        case "task":
-            return (Color(hex: "#1a7f37"), Color.white)
-        case "memo":
-            return (Color(hex: "#dafbe1"), Color(hex: "#1a7f37"))
-        case "article":
-            return (Color(hex: "#b4e6be"), Color(hex: "#0d5821"))
-        default:
-            return (Color.accent.opacity(0.15), Color.accentDark)
+    private func selectedIssues(
+        for provider: any IssueLinkProvider
+    ) -> [LinkPickerIssueSelection] {
+        provider.issueLinks.map { link in
+            LinkPickerIssueSelection(
+                id: .persisted(link.id),
+                targetIssueId: link.targetIssue.id,
+                title: link.targetIssue.title,
+                item: provider.linkedPickerItems.first { $0.id == link.targetIssue.id },
+                linkType: link.linkType
+            )
         }
     }
+
 }

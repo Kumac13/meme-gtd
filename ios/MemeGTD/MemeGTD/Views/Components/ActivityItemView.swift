@@ -135,33 +135,40 @@ struct ActivityItemView: View {
 
     @ViewBuilder
     private func issueLink(id: Int, title: String?, type: String?) -> some View {
-        if type == "memo" {
-            HStack(spacing: 2) {
-                NavigationLink(value: MemoRoute(memoId: id, initialBody: title ?? "")) {
-                    Text(verbatim: "#\(id)")
-                        .font(.system(size: 12))
-                        .foregroundColor(Color.accentDark)
-                }
-                if let title = title {
-                    Text(title)
-                        .font(.system(size: 12))
-                        .foregroundColor(Color(.systemGray))
-                }
+        HStack(spacing: 2) {
+            if let destination = IssueRouteDestination(id: id, type: type, title: title ?? "") {
+                destinationLink(destination, id: id)
+            } else {
+                Text(verbatim: "#\(id)")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(.systemGray))
             }
-        } else {
-            HStack(spacing: 2) {
-                NavigationLink(value: TaskRoute(taskId: id, initialTitle: title ?? "")) {
-                    Text(verbatim: "#\(id)")
-                        .font(.system(size: 12))
-                        .foregroundColor(Color.accentDark)
-                }
-                if let title = title {
-                    Text(title)
-                        .font(.system(size: 12))
-                        .foregroundColor(Color(.systemGray))
-                }
+            if let title {
+                Text(title)
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(.systemGray))
             }
         }
+    }
+
+    @ViewBuilder
+    private func destinationLink(_ destination: IssueRouteDestination, id: Int) -> some View {
+        switch destination {
+        case .memo(let route):
+            NavigationLink(value: route) { issueIdLabel(id) }
+        case .task(let route):
+            NavigationLink(value: route) { issueIdLabel(id) }
+        case .article(let route):
+            NavigationLink(value: route) { issueIdLabel(id) }
+        case .template(let route):
+            NavigationLink(value: route) { issueIdLabel(id) }
+        }
+    }
+
+    private func issueIdLabel(_ id: Int) -> some View {
+        Text(verbatim: "#\(id)")
+            .font(.system(size: 12))
+            .foregroundColor(Color.accentDark)
     }
 
     private func linkText(id: Int?, title: String?) -> String {

@@ -17,9 +17,7 @@ struct TaskListView: View {
     @State private var showDateRangePicker: Bool = false
     @State private var dateFrom: Date?
     @State private var dateTo: Date?
-    @State private var createTaskMode: CreateTaskMode? = nil
-    @State private var showTemplateChooser: Bool = false
-    @State private var chosenCreateKind: CreateTaskModeKind? = nil
+    @StateObject private var creation = CreationPresentationCoordinator<CreateTaskModeKind>()
     @State private var showCopyDialog: Bool = false
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
@@ -48,66 +46,33 @@ struct TaskListView: View {
     }
 
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(taskStore.tasks) { task in
-                    Button(action: {
-                        HapticManager.selection()
-                        navigationPath.append(
-                            TaskRoute(taskId: task.id, initialTitle: task.title)
-                        )
-                    }) {
-                        VStack(alignment: .leading, spacing: 0) {
-                            TaskCell(
-                                task: task,
-                                snippet: viewModel.searchMatchInfos[task.id],
-                                searchQuery: viewModel.searchMode == .keyword && !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil
-                            )
-                            if let score = viewModel.relevanceScores[task.id] {
-                                RelevanceBar(score: score)
-                                    .padding(.top, 4)
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                    }
-                    .buttonStyle(.plain)
-
-                    Divider()
-                        .padding(.horizontal, 16)
-                }
-
-                if taskStore.hasMore {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .onAppear {
-                            Task { await viewModel.loadOlderTasks() }
-                        }
+        StandardIssueList(
+            items: taskStore.tasks,
+            hasMore: taskStore.hasMore,
+            onSelect: { task in
+                navigationPath.append(
+                    TaskRoute(taskId: task.id, initialTitle: task.title)
+                )
+            },
+            onLoadMore: {
+                await viewModel.loadOlderTasks()
+            }
+        ) { task in
+            VStack(alignment: .leading, spacing: 0) {
+                TaskCell(
+                    task: task,
+                    snippet: viewModel.searchMatchInfos[task.id],
+                    searchQuery: viewModel.searchMode == .keyword && !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil
+                )
+                if let score = viewModel.relevanceScores[task.id] {
+                    RelevanceBar(score: score)
+                        .padding(.top, 4)
                 }
             }
         }
-        .scrollDismissesKeyboard(.immediately)
-        .scrollEdgeEffectStyle(.soft, for: .bottom)
-        .refreshable {
-            await withCheckedContinuation { continuation in
-                Task { @MainActor in
-                    HapticManager.impact(.medium)
-
-                    let start = Date()
-                    let response = await viewModel.fetchTasks()
-
-                    let elapsed = Date().timeIntervalSince(start)
-                    let remaining = 0.75 - elapsed
-                    if remaining > 0 {
-                        try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
-                    }
-
-                    if let response = response {
-                        viewModel.applyTasks(response)
-                    }
-                    HapticManager.notification(.success)
-                    continuation.resume()
-                }
+        .issueListRefreshable {
+            if let response = await viewModel.fetchTasks() {
+                viewModel.applyTasks(response)
             }
         }
         .safeAreaInset(edge: .top) {
@@ -117,92 +82,61 @@ struct TaskListView: View {
                 // Standalone: semantic search is server-only, so the mode
                 // picker is hidden and search stays on its keyword default.
                 if isSearching && !isStandalone {
-                    Picker("Search Mode", selection: $viewModel.searchMode) {
-                        ForEach(SearchMode.allCases, id: \.self) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .background(.regularMaterial, in: Capsule())
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .onChange(of: viewModel.searchMode) { _, _ in
+                    IssueSearchModePicker(selection: $viewModel.searchMode) {
                         if viewModel.isSearching {
                             viewModel.search()
                         }
                     }
                 }
 
-                HStack(spacing: 8) {
+                IssueListFilterBar {
                     FilterPill(
-                    label: viewModel.statusFilter.displayLabel,
-                    isActive: true
-                ) {
-                    showStatusPicker = true
-                }
+                        label: viewModel.statusFilter.displayLabel,
+                        isActive: true
+                    ) {
+                        showStatusPicker = true
+                    }
 
-                FilterPill(
-                    label: labelFilterDisplayLabel,
-                    isActive: !viewModel.labelFilters.isEmpty
-                ) {
-                    selectedLabelNames = viewModel.labelFilters
-                    showLabelPicker = true
-                }
+                    FilterPill(
+                        label: labelFilterDisplayLabel,
+                        isActive: !viewModel.labelFilters.isEmpty
+                    ) {
+                        selectedLabelNames = viewModel.labelFilters
+                        showLabelPicker = true
+                    }
 
-                FilterPill(
-                    label: projectFilterDisplayLabel,
-                    isActive: !viewModel.projectFilters.isEmpty || viewModel.includeNoProject
-                ) {
-                    selectedProjectIds = viewModel.projectFilters
-                    selectedNoProject = viewModel.includeNoProject
-                    showProjectPicker = true
-                }
+                    FilterPill(
+                        label: projectFilterDisplayLabel,
+                        isActive: !viewModel.projectFilters.isEmpty || viewModel.includeNoProject
+                    ) {
+                        selectedProjectIds = viewModel.projectFilters
+                        selectedNoProject = viewModel.includeNoProject
+                        showProjectPicker = true
+                    }
 
-                FilterPill(
-                    label: scheduleFilterDisplayLabel,
-                    isActive: viewModel.scheduledFrom != nil || viewModel.scheduledTo != nil
-                ) {
-                    dateFrom = viewModel.scheduledFrom
-                    dateTo = viewModel.scheduledTo
-                    showDateRangePicker = true
-                }
+                    FilterPill(
+                        label: scheduleFilterDisplayLabel,
+                        isActive: viewModel.scheduledFrom != nil || viewModel.scheduledTo != nil
+                    ) {
+                        dateFrom = viewModel.scheduledFrom
+                        dateTo = viewModel.scheduledTo
+                        showDateRangePicker = true
+                    }
 
-                FilterPill(
-                    label: viewModel.bookmarkFilter ? "Bookmarked" : "Bookmark",
-                    isActive: viewModel.bookmarkFilter,
-                    activeColor: .accent
-                ) {
-                    viewModel.toggleBookmarkFilter()
+                    FilterPill(
+                        label: viewModel.bookmarkFilter ? "Bookmarked" : "Bookmark",
+                        isActive: viewModel.bookmarkFilter,
+                        activeColor: .accent
+                    ) {
+                        viewModel.toggleBookmarkFilter()
+                    }
                 }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
             }
         }
         .safeAreaBar(edge: .bottom) {
-            HStack {
-                Spacer()
-                Button(action: {
-                    HapticManager.impact(.medium)
-                    // Pre-screen (requirement): choose Blank or a template
-                    // before entering the Create New Task form.
-                    showTemplateChooser = true
-                }) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 52, height: 52)
-                        .background(Color.accent)
-                        .clipShape(Circle())
-                }
-                .disabled(isOfflineReadOnly)
-                .opacity(isOfflineReadOnly ? 0.4 : 1)
+            IssueListCreateBar(isSearching: isSearching, disabled: isOfflineReadOnly) {
+                creation.beginChoosing()
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 10)
-            .opacity(isSearching ? 0 : 1)
-            .allowsHitTesting(!isSearching)
         }
         .toolbar {
             AppToolbar(
@@ -213,22 +147,13 @@ struct TaskListView: View {
                 searchPlaceholder: "Search tasks...",
                 onSearch: { viewModel.search() },
                 searchBarAction: {
-                    if !taskStore.tasks.isEmpty && hasActiveFilters {
-                        Button(action: {
-                            HapticManager.impact(.light)
+                    IssueListExportButton(
+                        isVisible: !taskStore.tasks.isEmpty && hasActiveFilters,
+                        isExporting: viewModel.isExporting,
+                        action: {
                             showCopyDialog = true
-                        }) {
-                            if viewModel.isExporting {
-                                ProgressView()
-                                    .controlSize(.mini)
-                            } else {
-                                Image(systemName: "doc.on.doc")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(Color(.systemGray))
-                            }
                         }
-                        .disabled(viewModel.isExporting)
-                    }
+                    )
                 }
             )
         }
@@ -249,13 +174,7 @@ struct TaskListView: View {
         }
         .overlay(alignment: .top) {
             if viewModel.showCopiedFeedback {
-                Text("Copied!")
-                    .font(.system(size: 13, weight: .semibold))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(.regularMaterial, in: Capsule())
-                    .padding(.top, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                FeedbackToast(message: "Copied!")
             }
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.showCopiedFeedback)
@@ -266,11 +185,7 @@ struct TaskListView: View {
                 Task { await viewModel.loadTasks() }
             }
         }
-        .onChange(of: isSearching) { _, newValue in
-            if !newValue {
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            }
-        }
+        .issueListSearchLifecycle(isSearching: isSearching)
         .sheet(isPresented: $showStatusPicker) {
             statusPickerSheet
                 .presentationDetents([.medium])
@@ -313,45 +228,38 @@ struct TaskListView: View {
             )
             .presentationDetents([.medium])
         }
-        .sheet(isPresented: $showTemplateChooser, onDismiss: {
-            if let kind = chosenCreateKind {
-                createTaskMode = CreateTaskMode(kind: kind)
-                chosenCreateKind = nil
-            }
-        }) {
+        .sheet(isPresented: $creation.isChooserPresented, onDismiss: creation.chooserDidDismiss) {
             TemplateChooserSheet(
                 target: "task",
                 onBlank: {
-                    chosenCreateKind = .standard
-                    showTemplateChooser = false
+                    creation.choose(.standard)
                 },
                 onTemplate: { template in
-                    chosenCreateKind = .fromTemplate(
+                    creation.choose(.fromTemplate(
                         bodyMd: template.bodyMd,
                         initialLabelNames: template.labels ?? [],
                         initialProjectIds: template.projectIds ?? []
-                    )
-                    showTemplateChooser = false
+                    ))
                 },
-                onDismiss: { showTemplateChooser = false }
+                onDismiss: creation.cancelChooser
             )
             .presentationDetents([.medium, .large])
         }
-        .sheet(item: $createTaskMode) { mode in
+        .sheet(item: $creation.activeRequest) { request in
             CreateTaskModal(
-                mode: mode.kind,
+                mode: request.payload,
                 onCreated: { _ in
                     Task { await viewModel.loadTasks() }
                 },
-                onDismiss: { createTaskMode = nil }
+                onDismiss: creation.dismissForm
             )
             .presentationDetents([.large])
         }
         .overlay {
-            if viewModel.isLoading && taskStore.tasks.isEmpty {
-                ProgressView("Loading tasks...")
-                    .foregroundColor(.textSecondary)
-            }
+            LoadingOverlay(
+                isPresented: viewModel.isLoading && taskStore.tasks.isEmpty,
+                message: "Loading tasks..."
+            )
         }
         .task {
             viewModel.store = taskStore

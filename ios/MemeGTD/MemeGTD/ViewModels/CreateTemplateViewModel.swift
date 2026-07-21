@@ -18,18 +18,6 @@ class CreateTemplateViewModel: ObservableObject {
 
     var dataSources = DataSourceProvider()
 
-    func loadData() async {
-        do {
-            async let labelsResult: [IssueLabel] = dataSources.labels.listLabels()
-            async let projectsResult: [Project] = dataSources.projects.listProjects()
-            let (labels, projects) = try await (labelsResult, projectsResult)
-            allLabels = labels
-            allProjects = projects
-        } catch {
-            // Non-critical
-        }
-    }
-
     func createTemplate() async -> Template? {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else { return nil }

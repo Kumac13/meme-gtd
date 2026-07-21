@@ -12,63 +12,30 @@ struct TemplateListView: View {
     @StateObject private var viewModel = TemplateListViewModel()
     @State private var isSearching: Bool = false
     @State private var showTargetPicker: Bool = false
-    @State private var showCreateModal: Bool = false
+    @StateObject private var creation = CreationPresentationCoordinator<Void>()
 
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(templateStore.templates) { template in
-                    Button(action: {
-                        HapticManager.selection()
-                        navigationPath.append(
-                            TemplateRoute(templateId: template.id, initialTitle: template.title ?? "")
-                        )
-                    }) {
-                        TemplateCell(template: template)
-                            .padding(.horizontal, 16)
-                    }
-                    .buttonStyle(.plain)
-
-                    Divider()
-                        .padding(.horizontal, 16)
-                }
-
-                if templateStore.hasMore {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .onAppear {
-                            Task { await viewModel.loadOlderTemplates() }
-                        }
-                }
+        StandardIssueList(
+            items: templateStore.templates,
+            hasMore: templateStore.hasMore,
+            onSelect: { template in
+                navigationPath.append(
+                    TemplateRoute(templateId: template.id, initialTitle: template.title ?? "")
+                )
+            },
+            onLoadMore: {
+                await viewModel.loadOlderTemplates()
             }
+        ) { template in
+            TemplateCell(template: template)
         }
-        .scrollDismissesKeyboard(.immediately)
-        .scrollEdgeEffectStyle(.soft, for: .bottom)
-        .refreshable {
-            await withCheckedContinuation { continuation in
-                Task { @MainActor in
-                    HapticManager.impact(.medium)
-
-                    let start = Date()
-                    let response = await viewModel.fetchTemplates()
-
-                    let elapsed = Date().timeIntervalSince(start)
-                    let remaining = 0.75 - elapsed
-                    if remaining > 0 {
-                        try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
-                    }
-
-                    if let response = response {
-                        viewModel.applyTemplates(response)
-                    }
-                    HapticManager.notification(.success)
-                    continuation.resume()
-                }
+        .issueListRefreshable {
+            if let response = await viewModel.fetchTemplates() {
+                viewModel.applyTemplates(response)
             }
         }
         .safeAreaInset(edge: .top) {
-            HStack(spacing: 8) {
+            IssueListFilterBar {
                 FilterPill(
                     label: viewModel.targetFilter.displayLabel,
                     isActive: viewModel.targetFilter != .all
@@ -76,29 +43,11 @@ struct TemplateListView: View {
                     showTargetPicker = true
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
         }
         .safeAreaBar(edge: .bottom) {
-            HStack {
-                Spacer()
-                Button(action: {
-                    HapticManager.impact(.medium)
-                    showCreateModal = true
-                }) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 52, height: 52)
-                        .background(Color.accent)
-                        .clipShape(Circle())
-                }
+            IssueListCreateBar(isSearching: isSearching) {
+                creation.present(())
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 10)
-            .opacity(isSearching ? 0 : 1)
-            .allowsHitTesting(!isSearching)
         }
         .toolbar {
             AppToolbar(
@@ -117,29 +66,25 @@ struct TemplateListView: View {
                 Task { await viewModel.loadTemplates() }
             }
         }
-        .onChange(of: isSearching) { _, newValue in
-            if !newValue {
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            }
-        }
+        .issueListSearchLifecycle(isSearching: isSearching)
         .sheet(isPresented: $showTargetPicker) {
             targetPickerSheet
                 .presentationDetents([.medium])
         }
-        .sheet(isPresented: $showCreateModal) {
+        .sheet(item: $creation.activeRequest) { _ in
             CreateTemplateModal(
                 onCreated: { _ in
                     Task { await viewModel.loadTemplates() }
                 },
-                onDismiss: { showCreateModal = false }
+                onDismiss: creation.dismissForm
             )
             .presentationDetents([.large])
         }
         .overlay {
-            if viewModel.isLoading && templateStore.templates.isEmpty {
-                ProgressView("Loading templates...")
-                    .foregroundColor(.textSecondary)
-            }
+            LoadingOverlay(
+                isPresented: viewModel.isLoading && templateStore.templates.isEmpty,
+                message: "Loading templates..."
+            )
         }
         .task {
             viewModel.store = templateStore
@@ -153,58 +98,16 @@ struct TemplateListView: View {
     // MARK: - Target Picker Sheet (issues.template_target)
 
     private var targetPickerSheet: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button(action: { HapticManager.impact(.light); showTargetPicker = false }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundColor(Color(.tertiaryLabel))
-                }
-                Spacer()
-                Text("Target")
-                    .font(.system(size: 17, weight: .semibold))
-                Spacer()
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .hidden()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-
-            Divider()
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(TemplateTargetFilter.allCases, id: \.self) { filter in
-                        Button(action: {
-                            HapticManager.selection()
-                            viewModel.setTargetFilter(filter)
-                            showTargetPicker = false
-                        }) {
-                            HStack {
-                                Text(filter.displayLabel)
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.textPrimary)
-                                Spacer()
-                                if viewModel.targetFilter == filter {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 22))
-                                        .foregroundColor(.accent)
-                                } else {
-                                    Image(systemName: "circle")
-                                        .font(.system(size: 22))
-                                        .foregroundColor(Color(.systemGray3))
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                        }
-                        Divider().padding(.leading, 16)
-                    }
-                }
-            }
-        }
-        .background(Color(.systemBackground))
+        SingleChoiceFilterSheet(
+            title: "Target",
+            options: TemplateTargetFilter.allCases,
+            selected: viewModel.targetFilter,
+            label: { $0.displayLabel },
+            onSelect: { filter in
+                viewModel.setTargetFilter(filter)
+                showTargetPicker = false
+            },
+            onDismiss: { showTargetPicker = false }
+        )
     }
 }

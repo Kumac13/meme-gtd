@@ -2,8 +2,7 @@ import Combine
 import SwiftUI
 
 @MainActor
-class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
-    var issueId: Int { memoId }
+class MemoDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkProvider, IssueBookmarkProvider, IssueCopyProvider {
     var issueTypeLabel: String { "memo" }
     var isBookmarked: Bool { memo?.isBookmarked ?? false }
     var issueLabels: [String] { memo?.labels ?? [] }
@@ -25,15 +24,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
     @Published var urlLinks: [UrlLink] = []
 
     var linkedPickerItems: [IssuePickerItem] {
-        issueLinks.map {
-            IssuePickerItem(
-                id: $0.targetIssue.id,
-                type: $0.targetIssue.type,
-                title: $0.targetIssue.title,
-                status: $0.targetIssue.status,
-                updatedAt: $0.createdAt
-            )
-        }
+        IssueRelationService.pickerItems(from: issueLinks)
     }
 
     let memoId: Int
@@ -42,6 +33,14 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
     /// Data source seam. Views overwrite this with the app-wide provider from
     /// the environment (same wiring point as `memoStore`).
     var dataSources = DataSourceProvider()
+
+    private var issueRelationService: IssueRelationService {
+        IssueRelationService(issueId: memoId, dataSource: dataSources.issueRelations)
+    }
+
+    private var issueMetadataService: IssueMetadataService {
+        IssueMetadataService(issueId: memoId, dataSources: dataSources)
+    }
 
     init(memoId: Int) {
         self.memoId = memoId
@@ -61,12 +60,11 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
             self.error = error.localizedDescription
         }
 
-        // Load projects, labels & links in parallel
-        async let projectsResult: () = loadProjects()
-        async let labelsResult: () = loadAllLabels()
+        // Load metadata & links in parallel
+        async let metadataResult: () = loadMetadataOptions()
         async let linksResult: () = loadLinks()
         async let urlLinksResult: () = loadUrlLinks()
-        _ = await (projectsResult, labelsResult, linksResult, urlLinksResult)
+        _ = await (metadataResult, linksResult, urlLinksResult)
 
         isLoading = false
     }
@@ -89,28 +87,24 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
         self.comments = comments
     }
 
-    private func loadProjects() async {
-        do {
-            associatedProjects = try await dataSources.projects.listIssueProjects(issueId: memoId)
-            allProjects = try await dataSources.projects.listProjects()
-        } catch {
-            // Non-critical, just log
-        }
+    private func loadMetadataOptions() async {
+        let options = await issueMetadataService.loadOptions()
+        if let labels = options.labels { allLabels = labels }
+        if let associated = options.associatedProjects { associatedProjects = associated }
+        if let projects = options.allProjects { allProjects = projects }
     }
 
-    private func loadAllLabels() async {
-        do {
-            allLabels = try await dataSources.labels.listLabels()
-        } catch {
-            // Non-critical
-        }
+    private func reloadProjectOptions() async {
+        let options = await issueMetadataService.loadProjectOptions()
+        if let associated = options.associated { associatedProjects = associated }
+        if let projects = options.all { allProjects = projects }
     }
 
     // MARK: - URL Links
 
     private func loadUrlLinks() async {
         do {
-            urlLinks = try await dataSources.issueRelations.listUrlLinks(issueId: memoId)
+            urlLinks = try await issueRelationService.loadUrlLinks()
         } catch {
             // Non-critical
         }
@@ -118,12 +112,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func createUrlLink(url: String, title: String?) async {
         do {
-            let request = CreateUrlLinkRequest(url: url, title: title)
-            let _: UrlLink = try await dataSources.issueRelations.createUrlLink(
-                issueId: memoId,
-                request
-            )
-            await loadUrlLinks()
+            urlLinks = try await issueRelationService.createUrlLink(url: url, title: title)
             HapticManager.notification(.success)
         } catch {
             self.error = error.localizedDescription
@@ -133,8 +122,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func deleteUrlLink(_ urlLinkId: Int) async {
         do {
-            try await dataSources.issueRelations.deleteUrlLink(urlLinkId: urlLinkId)
-            urlLinks.removeAll { $0.id == urlLinkId }
+            urlLinks = try await issueRelationService.deleteUrlLink(urlLinkId, from: urlLinks)
         } catch {
             self.error = error.localizedDescription
         }
@@ -144,7 +132,7 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     private func loadLinks() async {
         do {
-            issueLinks = try await dataSources.issueRelations.listLinks(issueId: memoId)
+            issueLinks = try await issueRelationService.loadIssueLinks()
         } catch {
             // Non-critical
         }
@@ -152,13 +140,10 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func createIssueLink(targetIssueId: Int, linkType: LinkType) async {
         do {
-            let request = CreateLinkRequest(
-                sourceIssueId: memoId,
+            issueLinks = try await issueRelationService.createIssueLink(
                 targetIssueId: targetIssueId,
                 linkType: linkType
             )
-            let _: CreateLinkResponse = try await dataSources.issueRelations.createLink(request)
-            await loadLinks()
             HapticManager.notification(.success)
         } catch {
             self.error = error.localizedDescription
@@ -168,82 +153,17 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func deleteIssueLink(_ linkId: Int) async {
         do {
-            try await dataSources.issueRelations.deleteLink(linkId: linkId)
-            issueLinks.removeAll { $0.id == linkId }
+            issueLinks = try await issueRelationService.deleteIssueLink(linkId, from: issueLinks)
         } catch {
             self.error = error.localizedDescription
         }
     }
 
     func searchIssues(query: String) async -> [IssuePickerItem] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        var results: [IssuePickerItem] = []
-
-        let dataSources = dataSources
-        await withTaskGroup(of: [IssuePickerItem].self) { group in
-            // Build query items: include search param only when non-empty
-            let searchQuery: [URLQueryItem] = trimmed.isEmpty ? [] : [
-                URLQueryItem(name: "search", value: trimmed),
-            ]
-
-            // Search tasks
-            group.addTask {
-                do {
-                    let response: SearchTasksResponse = try await dataSources.tasks.searchTasks(
-                        queryItems: searchQuery
-                    )
-                    return response.data.map {
-                        IssuePickerItem(id: $0.id, type: "task", title: $0.title, status: $0.status, updatedAt: $0.updatedAt)
-                    }
-                } catch {
-                    return []
-                }
-            }
-
-            // Search memos
-            group.addTask {
-                do {
-                    let response: MemoListResponse = try await dataSources.memos.listMemos(
-                        queryItems: searchQuery
-                    )
-                    return response.data.map {
-                        let firstLine = $0.bodyMd.components(separatedBy: "\n")
-                            .first(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }) ?? $0.bodyMd
-                        let title = String(firstLine.prefix(50))
-                        return IssuePickerItem(id: $0.id, type: "memo", title: title, status: nil, updatedAt: $0.updatedAt)
-                    }
-                } catch {
-                    return []
-                }
-            }
-
-            // Search articles
-            group.addTask {
-                do {
-                    let response: SearchArticlesResponse = try await dataSources.articles.searchArticles(
-                        queryItems: searchQuery
-                    )
-                    return response.data.map {
-                        let title = $0.title.count > 50 ? String($0.title.prefix(50)) + "..." : $0.title
-                        return IssuePickerItem(id: $0.id, type: "article", title: title, status: nil, updatedAt: $0.updatedAt)
-                    }
-                } catch {
-                    return []
-                }
-            }
-
-            for await items in group {
-                results.append(contentsOf: items)
-            }
-        }
-
-        // Exclude self, sort by updatedAt desc, limit to 10
-        return results
-            .filter { $0.id != memoId }
-            .sorted { $0.updatedAt > $1.updatedAt }
-            .prefix(10)
-            .map { $0 }
+        await IssuePickerSearchService(dataSources: dataSources).search(
+            query: query,
+            excludingIDs: [memoId]
+        )
     }
 
     // MARK: - Promote
@@ -278,9 +198,9 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     // MARK: - Comments
 
-    func addComment() async {
+    func addComment() async -> Bool {
         let body = replyBody.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !body.isEmpty else { return }
+        guard !body.isEmpty else { return false }
 
         isSubmittingReply = true
 
@@ -295,12 +215,14 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
             HapticManager.notification(.success)
             // Server may have created relates links from `#id` mentions.
             await loadLinks()
+            isSubmittingReply = false
+            return true
         } catch {
             self.error = error.localizedDescription
             HapticManager.notification(.error)
+            isSubmittingReply = false
+            return false
         }
-
-        isSubmittingReply = false
     }
 
     func updateComment(_ commentId: Int, bodyMd: String) async {
@@ -366,72 +288,38 @@ class MemoDetailViewModel: ObservableObject, IssueDetailProvider {
 
     func confirmProjects(_ selectedIds: Set<Int>) {
         let currentIds = Set(associatedProjects.map(\.id))
-        let toAdd = selectedIds.subtracting(currentIds)
-        let toRemove = currentIds.subtracting(selectedIds)
 
         Task {
-            for projectId in toAdd {
-                do {
-                    let _: ProjectItem = try await dataSources.projects.addProjectItem(
-                        projectId: projectId,
-                        AddProjectItemRequest(issueId: memoId)
-                    )
-                } catch {
-                    self.error = error.localizedDescription
-                }
+            do {
+                try await issueMetadataService.applyProjects(
+                    selectedIds: selectedIds,
+                    currentIds: currentIds
+                )
+            } catch {
+                self.error = error.localizedDescription
             }
-            for projectId in toRemove {
-                do {
-                    try await dataSources.projects.removeProjectItem(
-                        projectId: projectId,
-                        issueId: memoId
-                    )
-                } catch {
-                    self.error = error.localizedDescription
-                }
-            }
-            // Reload
-            await loadProjects()
+            await reloadProjectOptions()
         }
     }
 
     // MARK: - Labels (confirm-based: apply diff on confirm)
 
     func addNewLabel(_ label: IssueLabel) {
-        if !allLabels.contains(where: { $0.id == label.id }) {
-            allLabels.append(label)
-        }
+        allLabels = issueMetadataService.reconciling(allLabels, with: label)
     }
 
     func confirmLabels(_ selectedNames: Set<String>) {
         let currentNames = Set(memo?.labels ?? [])
-        let toAdd = selectedNames.subtracting(currentNames)
-        let toRemove = currentNames.subtracting(selectedNames)
 
         Task {
-            for name in toAdd {
-                if let label = allLabels.first(where: { $0.name == name }) {
-                    do {
-                        let _: AssignLabelResponse = try await dataSources.labels.assignLabel(
-                            issueId: memoId,
-                            AssignLabelRequest(labelId: label.id)
-                        )
-                    } catch {
-                        self.error = error.localizedDescription
-                    }
-                }
-            }
-            for name in toRemove {
-                if let label = allLabels.first(where: { $0.name == name }) {
-                    do {
-                        try await dataSources.labels.removeLabel(
-                            issueId: memoId,
-                            labelId: label.id
-                        )
-                    } catch {
-                        self.error = error.localizedDescription
-                    }
-                }
+            do {
+                try await issueMetadataService.applyLabels(
+                    selectedNames: selectedNames,
+                    currentNames: currentNames,
+                    allLabels: allLabels
+                )
+            } catch {
+                self.error = error.localizedDescription
             }
             // Reload memo to get updated labels
             do {
