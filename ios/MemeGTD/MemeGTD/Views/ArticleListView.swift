@@ -9,7 +9,7 @@ struct ArticleListView: View {
     @StateObject private var viewModel = ArticleListViewModel()
     @State private var isSearching: Bool = false
     @State private var showCopyDialog: Bool = false
-    @StateObject private var creation = CreationPresentationCoordinator<Template?>()
+    @StateObject private var creation = CreationPresentationCoordinator<IssueCreationDefaults>()
     @State private var showOriginPicker = false
     @State private var showLabelPicker = false
     @State private var selectedLabels: Set<String> = []
@@ -127,12 +127,9 @@ struct ArticleListView: View {
         }
         .sheet(isPresented: $creation.isChooserPresented, onDismiss: creation.chooserDidDismiss) {
             TemplateChooserSheet(
-                target: "article",
-                onBlank: {
-                    creation.choose(nil)
-                },
-                onTemplate: { template in
-                    creation.choose(template)
+                target: .article,
+                onSelect: { initialValues in
+                    creation.choose(initialValues)
                 },
                 onDismiss: creation.cancelChooser
             )
@@ -140,7 +137,7 @@ struct ArticleListView: View {
         }
         .sheet(item: $creation.activeRequest) { request in
             CreateArticleModal(
-                template: request.payload,
+                initialValues: request.payload,
                 initialLabels: viewModel.allLabels,
                 initialProjects: viewModel.allProjects,
                 onCreated: { article in

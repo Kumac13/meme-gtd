@@ -85,9 +85,8 @@ final class TemplateViewRenderTests: XCTestCase {
 
     func testRenderTemplateChooserSheet() throws {
         let view = TemplateChooserSheet(
-            target: "task",
-            onBlank: {},
-            onTemplate: { _ in },
+            target: .task,
+            onSelect: { _ in },
             onDismiss: {}
         )
         .environmentObject(DataSourceProvider())

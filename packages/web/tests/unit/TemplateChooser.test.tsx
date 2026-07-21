@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LabelsService } from '../../src/api/services/LabelsService';
 import { TemplatesService } from '../../src/api/services/TemplatesService';
 import TemplateChooser from '../../src/components/TemplateChooser';
+import TemplateCreationFlow from '../../src/components/TemplateCreationFlow';
 
 vi.mock('../../src/api/services/TemplatesService', () => ({
   TemplatesService: {
@@ -27,14 +28,12 @@ describe('TemplateChooser', () => {
   });
 
   it('loads templates for the requested target and supports blank creation', async () => {
-    const onBlank = vi.fn();
+    const onSelect = vi.fn();
 
     render(
       <TemplateChooser
         target="task"
-        blankLabel="Blank task"
-        onBlank={onBlank}
-        onTemplate={vi.fn()}
+        onSelect={onSelect}
       />
     );
 
@@ -42,7 +41,7 @@ describe('TemplateChooser', () => {
     expect(TemplatesService.listTemplates).toHaveBeenCalledWith(undefined, undefined, undefined, 'task');
 
     fireEvent.click(screen.getByRole('button', { name: 'Blank task' }));
-    expect(onBlank).toHaveBeenCalledOnce();
+    expect(onSelect).toHaveBeenCalledWith({ bodyMd: '', labelIds: [], projectIds: [] });
   });
 
   it('converts template labels and projects into shared form initial values', async () => {
@@ -56,25 +55,37 @@ describe('TemplateChooser', () => {
     vi.mocked(LabelsService.listLabels).mockResolvedValue([
       { id: 11, name: 'work' },
     ] as never);
-    const onTemplate = vi.fn();
+    const onSelect = vi.fn();
 
     render(
       <TemplateChooser
         target="task"
-        blankLabel="Blank task"
-        onBlank={vi.fn()}
-        onTemplate={onTemplate}
+        onSelect={onSelect}
       />
     );
 
     fireEvent.click(await screen.findByRole('button', { name: 'Daily review' }));
 
     await waitFor(() => {
-      expect(onTemplate).toHaveBeenCalledWith({
+      expect(onSelect).toHaveBeenCalledWith({
         bodyMd: 'Template body',
         labelIds: [11],
         projectIds: [3],
       });
     });
   });
+
+  it('owns the chooser-to-form transition', async () => {
+    render(
+      <TemplateCreationFlow target="article">
+        {(initialValues) => <div>Form body: {initialValues.bodyMd || 'blank'}</div>}
+      </TemplateCreationFlow>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Blank article' }));
+
+    expect(screen.getByText('Form body: blank')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Blank article' })).not.toBeInTheDocument();
+  });
+
 });

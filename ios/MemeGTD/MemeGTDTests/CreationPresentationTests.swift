@@ -23,36 +23,52 @@ final class CreationPresentationTests: XCTestCase {
             projectIds: [7]
         )
 
-        let coordinator = CreationPresentationCoordinator<Template?>()
+        let initialValues = IssueCreationDefaults(template: template)
+        let coordinator = CreationPresentationCoordinator<IssueCreationDefaults>()
 
         coordinator.beginChoosing()
-        coordinator.choose(template)
+        coordinator.choose(initialValues)
         coordinator.chooserDidDismiss()
         let first = coordinator.activeRequest
 
         coordinator.dismissForm()
         coordinator.beginChoosing()
-        coordinator.choose(template)
+        coordinator.choose(initialValues)
         coordinator.chooserDidDismiss()
         let second = coordinator.activeRequest
 
         XCTAssertNotEqual(first?.id, second?.id)
-        XCTAssertEqual(first?.payload?.id, 42)
-        XCTAssertEqual(second?.payload?.bodyMd, "## Summary")
-        XCTAssertEqual(second?.payload?.labels, ["reading"])
-        XCTAssertEqual(second?.payload?.projectIds, [7])
+        XCTAssertEqual(first?.payload.bodyMd, "## Summary")
+        XCTAssertEqual(second?.payload.labelNames, ["reading"])
+        XCTAssertEqual(second?.payload.projectIds, [7])
     }
 
-    func testBlankOptionalPayloadIsPresentedAfterChooserDismissal() {
-        let coordinator = CreationPresentationCoordinator<Template?>()
+    func testBlankPayloadIsPresentedAfterChooserDismissal() {
+        let coordinator = CreationPresentationCoordinator<IssueCreationDefaults>()
 
         coordinator.beginChoosing()
-        coordinator.choose(nil)
+        coordinator.choose(.blank)
 
         XCTAssertNil(coordinator.activeRequest)
         coordinator.chooserDidDismiss()
-        XCTAssertNotNil(coordinator.activeRequest)
-        XCTAssertNil(coordinator.activeRequest?.payload)
+        XCTAssertEqual(coordinator.activeRequest?.payload, .blank)
+    }
+
+    func testTaskListAndDetailModesUseTheSameTemplateDefaults() {
+        let defaults = IssueCreationDefaults(
+            bodyMd: "Template body",
+            labelNames: ["work"],
+            projectIds: [3]
+        )
+
+        let listViewModel = CreateTaskViewModel(mode: .standard(initialValues: defaults))
+        let detailViewModel = CreateTaskViewModel(
+            mode: .linkedTo(sourceTaskId: 42, initialValues: defaults)
+        )
+
+        XCTAssertEqual(listViewModel.bodyMd, detailViewModel.bodyMd)
+        XCTAssertEqual(listViewModel.selectedLabelNames, detailViewModel.selectedLabelNames)
+        XCTAssertEqual(listViewModel.selectedProjectIds, detailViewModel.selectedProjectIds)
     }
 
     func testCancelDoesNotPresentAFormOrLeakPreviousSelection() {

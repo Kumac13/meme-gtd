@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
 import { SearchService } from '../api/services/SearchService';
@@ -13,6 +13,7 @@ import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
 import Pagination from '../components/Pagination';
 import CopyResultsButtons from '../components/CopyResultsButtons';
+import ProjectFilterDropdown from '../components/ProjectFilterDropdown';
 import { useUrlFilters } from '../hooks/useUrlFilters';
 import {
   validateStatus,
@@ -59,7 +60,7 @@ const statusLabels: Record<string, string> = {
   canceled: 'Canceled',
 };
 
-import { PROJECT_STATUS_LABELS, sortProjectsByStatus } from '../utils/projectStatus';
+import { sortProjectsByStatus } from '../utils/projectStatus';
 
 const statusOptions = ['all', 'inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled'];
 
@@ -115,8 +116,6 @@ export default function TasksList() {
   const [searchMode, setSearchMode] = useState<SearchMode>('keyword');
   const [semanticMeta, setSemanticMeta] = useState<{ totalResults: number; searchTimeMs: number } | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -126,17 +125,6 @@ export default function TasksList() {
       const mapped = data.map(p => ({ id: p.id, name: p.name, status: p.status }));
       setProjects(sortProjectsByStatus(mapped));
     }).catch(console.error);
-  }, []);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowProjectDropdown(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -443,7 +431,6 @@ export default function TasksList() {
     params.delete('projectId');
     params.delete('page');
     setSearchParams(params);
-    setShowProjectDropdown(false);
   };
 
   const handlePageChange = useCallback((page: number) => {
@@ -502,7 +489,7 @@ export default function TasksList() {
       </div>
 
       {/* Filters row: Label, Project, Bookmark */}
-      <div className="mb-4 flex flex-wrap gap-2 items-center" ref={dropdownRef}>
+      <div className="mb-4 flex flex-wrap gap-2 items-center">
         {/* Label filter dropdown */}
         <LabelFilterDropdown
           selectedLabels={selectedLabels}
@@ -511,67 +498,15 @@ export default function TasksList() {
           countKey="taskCount"
         />
 
-        {/* Project filter dropdown */}
-        {projects.length > 0 && (
-          <div className="relative">
-            <button
-              onClick={() => setShowProjectDropdown(!showProjectDropdown)}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 ${
-                selectedProjectIds.size > 0 || selectedNoneProject
-                  ? 'bg-github-green-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {projectFilterLabel}
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {showProjectDropdown && (
-              <div className="absolute top-full left-0 mt-1 min-w-[280px] max-w-[400px] bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
-                {(selectedProjectIds.size > 0 || selectedNoneProject) && (
-                  <button
-                    onClick={handleClearProjects}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 border-b border-gray-100"
-                  >
-                    Clear
-                  </button>
-                )}
-                <button
-                  onClick={handleNoneProjectToggle}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill={selectedNoneProject ? 'currentColor' : 'none'}>
-                    {selectedNoneProject ? (
-                      <path className="text-github-green-600" fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    ) : (
-                      <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-gray-300" />
-                    )}
-                  </svg>
-                  <span className="text-gray-500 italic truncate">No Project</span>
-                </button>
-                {projects.map(project => (
-                  <button
-                    key={project.id}
-                    onClick={() => handleProjectToggle(project.id)}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill={selectedProjectIds.has(project.id) ? 'currentColor' : 'none'}>
-                      {selectedProjectIds.has(project.id) ? (
-                        <path className="text-github-green-600" fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      ) : (
-                        <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-gray-300" />
-                      )}
-                    </svg>
-                    <span className="text-gray-700 truncate">{project.name}</span>
-                    <span className="text-xs text-gray-400 ml-auto shrink-0">{PROJECT_STATUS_LABELS[project.status] || project.status}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        <ProjectFilterDropdown
+          projects={projects}
+          selectedIds={selectedProjectIds}
+          includesNoProject={selectedNoneProject}
+          label={projectFilterLabel}
+          onToggle={handleProjectToggle}
+          onToggleNoProject={handleNoneProjectToggle}
+          onClear={handleClearProjects}
+        />
 
         {/* Schedule date range filter */}
         <DateRangeFilterDropdown

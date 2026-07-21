@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.50.9 - 2026-07-21
+
+### Bug Fixes
+
+- Web / iOS の Blank／Template 選択からフォーム初期値への変換までを共通の作成フローに集約し、Task 一覧・Task Detail・Article 一覧で同じコンポーネント境界を通るよう修正。
+- Web の Task / Memo / Article に重複していたフォーム、作成・編集ページ枠、プロジェクトフィルター、サイドパネルを共通コンポーネントへ集約。Calendar の Task 専用詳細パネルを廃止し、共通 Item Detail を利用するようにした。
+
+### Tests
+
+- Blank／Template 適用と作成画面への遷移を検証するユニットテスト、および各画面が共通コンポーネント境界を維持していることを検証する構造テストを追加。
+
 ## 0.50.8 - 2026-07-21
 
 ### Bug Fixes

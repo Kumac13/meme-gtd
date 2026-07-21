@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import type { IssueType } from 'meme-gtd-shared';
 import { TasksService } from '../api/services/TasksService';
 import { CommentsService } from '../api/services/CommentsService';
 import { ProjectsService } from '../api/services/ProjectsService';
 import { LinksService } from '../api/services/LinksService';
 import MemoForm from '../components/MemoForm';
+import FormPageLayout from '../components/FormPageLayout';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import { buildMemoBodyFromTask } from '../utils/archiveTaskToMemo';
@@ -93,20 +94,11 @@ export default function MemoNew() {
   const initialBody = task ? buildMemoBodyFromTask(task, comments) : '';
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-2">
-      <div className="mb-6">
-        <Link
-          to="/memos"
-          className="text-github-green-600 hover:text-github-green-800 text-sm font-medium mb-4 inline-block"
-        >
-          ← Back to memos
-        </Link>
-        <h1 className="text-3xl font-bold text-gray-900">
-          {task ? 'Archive Task to Memo' : 'Create New Memo'}
-        </h1>
-      </div>
-
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+    <FormPageLayout
+      backTo="/memos"
+      backLabel="Back to memos"
+      title={task ? 'Archive Task to Memo' : 'Create New Memo'}
+    >
         <MemoForm
           mode="create"
           initialBodyMd={initialBody}
@@ -115,7 +107,6 @@ export default function MemoNew() {
           initialProjectIds={projects.map(p => p.id)}
           initialLinks={links}
         />
-      </div>
-    </div>
+    </FormPageLayout>
   );
 }

@@ -129,17 +129,10 @@ struct CreateTaskMode: Identifiable {
 }
 
 enum CreateTaskModeKind {
-    /// Full form, default fields
-    case standard
-    /// Full form, pre-populate a relates link to the source task
-    case linkedTo(sourceTaskId: Int)
-    /// リンク元タスクへの relates を維持したままテンプレートから作成する
-    case linkedToTemplate(
-        sourceTaskId: Int,
-        bodyMd: String,
-        initialLabelNames: [String],
-        initialProjectIds: [Int]
-    )
+    /// Full form with Blank／Template defaults.
+    case standard(initialValues: IssueCreationDefaults)
+    /// Full form with Blank／Template defaults and a relates link to the source task.
+    case linkedTo(sourceTaskId: Int, initialValues: IssueCreationDefaults)
     /// Full form, inherit parent's projects/labels/status, auto-create child link
     case quickChild(parentTask: TaskItem, parentProjects: [Project], parentLabels: [String])
     /// Promote a memo to a task. The form is the same as `.standard`; pickers are pre-seeded
@@ -150,13 +143,6 @@ enum CreateTaskModeKind {
         initialLabelNames: [String],
         initialProjectIds: [Int],
         initialLinks: [PendingLink]
-    )
-    /// Start from a template: body/labels/projects are pre-seeded from the
-    /// template (title stays empty — the user types it per task).
-    case fromTemplate(
-        bodyMd: String,
-        initialLabelNames: [String],
-        initialProjectIds: [Int]
     )
 }
 

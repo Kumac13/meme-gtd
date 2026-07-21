@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct CreateArticleModal: View {
-    let template: Template?
+    let initialValues: IssueCreationDefaults
     let onCreated: (Article) -> Void
     let onDismiss: () -> Void
 
@@ -17,18 +17,18 @@ struct CreateArticleModal: View {
     @State private var error: String?
 
     init(
-        template: Template?,
+        initialValues: IssueCreationDefaults,
         initialLabels: [IssueLabel] = [],
         initialProjects: [Project] = [],
         onCreated: @escaping (Article) -> Void,
         onDismiss: @escaping () -> Void
     ) {
-        self.template = template
+        self.initialValues = initialValues
         self.onCreated = onCreated
         self.onDismiss = onDismiss
-        self._bodyMd = State(initialValue: template?.bodyMd ?? "")
-        self._selectedLabelNames = State(initialValue: Set(template?.labels ?? []))
-        self._selectedProjectIds = State(initialValue: Set(template?.projectIds ?? []))
+        self._bodyMd = State(initialValue: initialValues.bodyMd)
+        self._selectedLabelNames = State(initialValue: Set(initialValues.labelNames))
+        self._selectedProjectIds = State(initialValue: Set(initialValues.projectIds))
         self._allLabels = State(initialValue: initialLabels)
         self._allProjects = State(initialValue: initialProjects)
     }

@@ -49,6 +49,7 @@ interface IssueFormProps {
   initialTitle?: string;
   initialBodyMd?: string;
   initialLabelIds?: number[];
+  initialLabelNames?: string[];
   initialProjectIds?: number[];
   initialLinks?: PendingLink[];
   initialProjectId?: number;
@@ -68,6 +69,9 @@ interface IssueFormProps {
   showProjects?: boolean;
   showLabels?: boolean;
   showLinks?: boolean;
+  showTitle?: boolean;
+  bodyRows?: number;
+  bodyMinHeightClass?: string;
 
   /** Extra fields rendered between the body and the projects/labels sections. */
   renderExtraFields?: (ctx: { submitting: boolean }) => ReactNode;
@@ -79,6 +83,7 @@ interface IssueFormProps {
 }
 
 const MAX_BODY = 10000;
+const EMPTY_LABEL_NAMES: string[] = [];
 
 /**
  * Shared issue-creation/edit form. Owns the concerns common to every issue
@@ -91,6 +96,7 @@ export default function IssueForm({
   initialTitle = '',
   initialBodyMd = '',
   initialLabelIds = [],
+  initialLabelNames = EMPTY_LABEL_NAMES,
   initialProjectIds,
   initialLinks = [],
   initialProjectId,
@@ -106,6 +112,9 @@ export default function IssueForm({
   showProjects = true,
   showLabels = true,
   showLinks = true,
+  showTitle = true,
+  bodyRows = 10,
+  bodyMinHeightClass = 'min-h-[200px]',
   renderExtraFields,
   validate,
   onSubmit,
@@ -150,6 +159,11 @@ export default function IssueForm({
           ]);
           setAllProjects(projects);
           setAllLabels(labels);
+          if (initialLabelNames.length > 0) {
+            setSelectedLabelIds(
+              labels.filter((label) => initialLabelNames.includes(label.name)).map((label) => label.id)
+            );
+          }
         } catch (err) {
           console.error('Failed to fetch projects/labels:', err);
         } finally {
@@ -158,7 +172,7 @@ export default function IssueForm({
       };
       fetchData();
     }
-  }, [showProjects, showLabels]);
+  }, [showProjects, showLabels, initialLabelNames]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -176,7 +190,7 @@ export default function IssueForm({
 
     const message = validate
       ? validate(values)
-      : title.trim() === ''
+      : showTitle && title.trim() === ''
         ? 'Title is required'
         : bodyMd.length > MAX_BODY
           ? 'Body is too long'
@@ -327,22 +341,24 @@ export default function IssueForm({
         </div>
       )}
 
-      <div>
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-          {titleLabel}
-        </label>
-        <input
-          type="text"
-          id="title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={handleKeyDown}
-          aria-keyshortcuts="Control+Enter"
-          className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 ${validationError ? 'border-red-300' : 'border-gray-300'}`}
-          placeholder={titlePlaceholder}
-          required
-        />
-      </div>
+      {showTitle && (
+        <div>
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+            {titleLabel}
+          </label>
+          <input
+            type="text"
+            id="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={handleKeyDown}
+            aria-keyshortcuts="Control+Enter"
+            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 ${validationError ? 'border-red-300' : 'border-gray-300'}`}
+            placeholder={titlePlaceholder}
+            required
+          />
+        </div>
+      )}
 
       <div>
         <label htmlFor="bodyMd" className="block text-sm font-medium text-gray-700 mb-2">
@@ -358,12 +374,12 @@ export default function IssueForm({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          rows={10}
+          rows={bodyRows}
           placeholder={bodyPlaceholder}
           disabled={submitting}
           isDragging={isDragging}
           isUploading={isUploading}
-          minHeightClass="min-h-[200px]"
+          minHeightClass={bodyMinHeightClass}
         />
         <p className="mt-1 text-xs text-gray-500">{bodyHint}</p>
       </div>

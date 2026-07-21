@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import { LabelsService } from '../api/services/LabelsService';
 import TaskForm from '../components/TaskForm';
-import TemplateChooser from '../components/TemplateChooser';
+import FormPageLayout from '../components/FormPageLayout';
+import TemplateCreationFlow from '../components/TemplateCreationFlow';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import type { PendingLink } from '../types/links';
@@ -19,9 +20,6 @@ export default function TaskNew() {
   const [initialLinks, setInitialLinks] = useState<PendingLink[] | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Blank / template chooser (skipped when promoting a memo).
-  const [phase, setPhase] = useState<'choose' | 'form'>(fromMemoId ? 'form' : 'choose');
 
   useEffect(() => {
     if (fromMemoId && fromMemoId !== null) {
@@ -91,55 +89,32 @@ export default function TaskNew() {
     return <ErrorState error={error} title="Error creating task" />;
   }
 
-  if (phase === 'choose') {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-2">
-        <div className="mb-6">
-          <Link to="/tasks" className="text-github-green-600 hover:text-github-green-800 text-sm font-medium mb-4 inline-block">
-            ← Back to tasks
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Create New Task</h1>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <TemplateChooser
-            target="task"
-            blankLabel="Blank task"
-            onBlank={() => setPhase('form')}
-            onTemplate={(template) => {
-              setInitialBody(template.bodyMd);
-              setInitialLabelIds(template.labelIds);
-              setInitialProjectIds(template.projectIds);
-              setPhase('form');
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-4xl mx-auto px-4 py-2">
-      <div className="mb-6">
-        <Link
-          to="/tasks"
-          className="text-github-green-600 hover:text-github-green-800 text-sm font-medium mb-4 inline-block"
-        >
-          ← Back to tasks
-        </Link>
-        <h1 className="text-3xl font-bold text-gray-900">
-          {memo ? 'Promote Memo to Task' : 'Create New Task'}
-        </h1>
-      </div>
-
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <TaskForm
-          mode="create"
-          initialBodyMd={initialBody ?? memo?.bodyMd}
-          initialLabelIds={initialLabelIds}
-          initialProjectIds={initialProjectIds}
-          initialLinks={initialLinks}
-        />
-      </div>
-    </div>
+    <FormPageLayout
+      backTo="/tasks"
+      backLabel="Back to tasks"
+      title={memo ? 'Promote Memo to Task' : 'Create New Task'}
+    >
+        {fromMemoId ? (
+          <TaskForm
+            mode="create"
+            initialBodyMd={initialBody ?? memo?.bodyMd}
+            initialLabelIds={initialLabelIds}
+            initialProjectIds={initialProjectIds}
+            initialLinks={initialLinks}
+          />
+        ) : (
+          <TemplateCreationFlow target="task">
+            {(initialValues) => (
+              <TaskForm
+                mode="create"
+                initialBodyMd={initialValues.bodyMd}
+                initialLabelIds={initialValues.labelIds}
+                initialProjectIds={initialValues.projectIds}
+              />
+            )}
+          </TemplateCreationFlow>
+        )}
+    </FormPageLayout>
   );
 }

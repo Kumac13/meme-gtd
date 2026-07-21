@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import type { TaskKind } from 'meme-gtd-shared';
 import { TasksService } from '../api/services/TasksService';
 import TaskForm from '../components/TaskForm';
+import FormPageLayout from '../components/FormPageLayout';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 
@@ -57,20 +58,7 @@ export default function TaskEdit() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-2">
-      <div className="mb-6">
-        <Link
-          to={`/tasks/${task.id}`}
-          className="text-github-green-600 hover:text-github-green-800 text-sm font-medium mb-4 inline-block"
-        >
-          ← Back to task
-        </Link>
-        <h1 className="text-3xl font-bold text-gray-900">
-          Edit {task.title}
-        </h1>
-      </div>
-
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+    <FormPageLayout backTo={`/tasks/${task.id}`} backLabel="Back to task" title={`Edit ${task.title}`}>
         <TaskForm
           mode="edit"
           taskId={task.id}
@@ -79,7 +67,6 @@ export default function TaskEdit() {
           initialStatus={task.status}
           initialTaskKind={task.taskKind}
         />
-      </div>
-    </div>
+    </FormPageLayout>
   );
 }
