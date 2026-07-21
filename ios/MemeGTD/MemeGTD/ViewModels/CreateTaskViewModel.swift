@@ -42,6 +42,10 @@ class CreateTaskViewModel: ObservableObject {
             break
         case .linkedTo:
             break
+        case .linkedToTemplate(_, let body, let labelNames, let projectIds):
+            self.bodyMd = body
+            self.selectedLabelNames = Set(labelNames)
+            self.selectedProjectIds = Set(projectIds)
         case .quickChild(let parent, let parentProjects, let parentLabels):
             if let parentStatus = TaskStatus(rawValue: parent.status) {
                 self.status = parentStatus
@@ -64,8 +68,15 @@ class CreateTaskViewModel: ObservableObject {
     // MARK: - Load Data
 
     func loadData() async {
-        // Set up initial pending link for linkedTo mode (needs title from search)
-        if case .linkedTo(let sourceTaskId) = mode {
+        // linkedTo 系モードでは検索からタイトルを取得して初期リンクを設定する
+        let linkedSourceTaskId: Int? = switch mode {
+        case .linkedTo(let sourceTaskId), .linkedToTemplate(let sourceTaskId, _, _, _):
+            sourceTaskId
+        default:
+            nil
+        }
+
+        if let sourceTaskId = linkedSourceTaskId {
             do {
                 let task: TaskItem = try await dataSources.tasks.getTask(id: sourceTaskId)
                 pendingLinks.append(PendingLink(

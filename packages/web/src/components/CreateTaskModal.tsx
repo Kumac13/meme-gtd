@@ -6,7 +6,9 @@
  * Pre-configures a 'relates' link to the source task.
  */
 
+import { useEffect, useState } from 'react';
 import TaskForm from './TaskForm';
+import TemplateChooser from './TemplateChooser';
 import type { PendingLink } from '../types/links';
 
 interface CreateTaskModalProps {
@@ -29,6 +31,20 @@ export default function CreateTaskModal({
   sourceTask,
   onTaskCreated,
 }: CreateTaskModalProps) {
+  const [phase, setPhase] = useState<'choose' | 'form'>('choose');
+  const [initialBodyMd, setInitialBodyMd] = useState<string | undefined>();
+  const [initialLabelIds, setInitialLabelIds] = useState<number[] | undefined>();
+  const [initialProjectIds, setInitialProjectIds] = useState<number[] | undefined>();
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    setPhase('choose');
+    setInitialBodyMd(undefined);
+    setInitialLabelIds(undefined);
+    setInitialProjectIds(undefined);
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   // Pre-configure a 'relates' link to the source task
@@ -91,13 +107,30 @@ export default function CreateTaskModal({
           </button>
         </div>
 
-        {/* Content - TaskForm */}
+        {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          <TaskForm
-            mode="create"
-            initialLinks={initialLinks}
-            onTaskCreated={handleTaskCreated}
-          />
+          {phase === 'choose' ? (
+            <TemplateChooser
+              target="task"
+              blankLabel="Blank task"
+              onBlank={() => setPhase('form')}
+              onTemplate={(template) => {
+                setInitialBodyMd(template.bodyMd);
+                setInitialLabelIds(template.labelIds);
+                setInitialProjectIds(template.projectIds);
+                setPhase('form');
+              }}
+            />
+          ) : (
+            <TaskForm
+              mode="create"
+              initialBodyMd={initialBodyMd}
+              initialLabelIds={initialLabelIds}
+              initialProjectIds={initialProjectIds}
+              initialLinks={initialLinks}
+              onTaskCreated={handleTaskCreated}
+            />
+          )}
         </div>
       </div>
     </>
