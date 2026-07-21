@@ -15,6 +15,7 @@ struct ArticleDetailView: View {
     @StateObject private var linkedIssueNavigation = DeferredSheetActionCoordinator<TargetIssue>()
     @State private var showCopiedFeedback: Bool = false
     @State private var editingMode: EditingMode = .none
+    @StateObject private var imageAttachment = ImageAttachmentCoordinator()
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
     /// Server mode + Offline Sync ON + offline: the article is served from
@@ -112,121 +113,43 @@ struct ArticleDetailView: View {
                         IssueSectionConnector()
 
                         // === Body Area (same card/menu structure as Task Details) ===
-                        IssueAreaCard {
-                            VStack(alignment: .leading, spacing: 0) {
-                                HStack {
-                                    HStack(spacing: 4) {
-                                        let isEdited = article.updatedAt != article.createdAt
-                                        Text(TimelineHelpers.relativeTimeString(iso: isEdited ? article.updatedAt : article.createdAt))
-                                        if isEdited {
-                                            Text("(edited)")
-                                        }
-                                    }
-                                    .font(.system(size: 11))
-                                    .foregroundColor(Color(.systemGray))
-
-                                    Spacer()
-
-                                    Menu {
-                                        Button(action: {
-                                            UIPasteboard.general.string = article.bodyMd
-                                            HapticManager.notification(.success)
-                                        }) {
-                                            Label("Copy", systemImage: "doc.on.doc")
-                                        }
-                                        if article.origin == .manual {
-                                            Button(action: {
-                                                viewModel.replyBody = article.bodyMd
-                                                editingMode = .body
-                                            }) {
-                                                Label("Edit", systemImage: "pencil")
-                                            }
-                                            .disabled(isOfflineReadOnly)
-                                        }
-                                    } label: {
-                                        Image(systemName: "ellipsis")
-                                            .font(.system(size: 13))
-                                            .foregroundColor(.textSecondary)
-                                            .frame(width: 28, height: 20)
-                                            .contentShape(Rectangle())
-                                    }
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.top, 8)
-                                .padding(.bottom, -2)
-
-                                if !article.bodyMd.isEmpty {
-                                    let displayBody = article.bodyMd.replacingOccurrences(
-                                        of: "\\{#block-\\d+\\}",
-                                        with: "",
-                                        options: .regularExpression
-                                    )
-                                    ThreadItem(
-                                        bodyMd: displayBody,
-                                        labels: nil,
-                                        showMenu: false,
-                                        onIssueTap: { id, type in
-                                            onNavigateToLinkedIssue?(id, type, "")
-                                        }
-                                    )
-                                } else {
-                                    Text("No content available.")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.textSecondary)
-                                        .italic()
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(.vertical, 10)
-                                        .padding(.horizontal, 16)
-                                }
+                        let displayBody = article.bodyMd.replacingOccurrences(
+                            of: "\\{#block-\\d+\\}",
+                            with: "",
+                            options: .regularExpression
+                        )
+                        IssueContentCard(
+                            bodyMd: displayBody,
+                            createdAt: article.createdAt,
+                            updatedAt: article.updatedAt,
+                            emptyText: "No content available.",
+                            copyText: article.bodyMd,
+                            mutationsDisabled: isOfflineReadOnly,
+                            onEdit: article.origin == .manual ? {
+                                viewModel.replyBody = article.bodyMd
+                                editingMode = .body
+                            } : nil,
+                            onIssueTap: { id, type in
+                                onNavigateToLinkedIssue?(id, type, "")
                             }
-                        }
+                        )
 
                         // === Timeline: Comments + activities interleaved ===
-                        if !viewModel.timelineEntries.isEmpty {
-                            ForEach(viewModel.timelineEntries) { entry in
-                                IssueSectionConnector()
-                                switch entry {
-                                case .activity(let activity):
-                                    ActivityItemView(activity: activity, issueId: articleId)
-                                case .comment(let comment):
-                                    IssueAreaCard {
-                                        VStack(alignment: .leading, spacing: 0) {
-                                            HStack {
-                                                Text(TimelineHelpers.relativeTimeString(iso: comment.updatedAt))
-                                                    .font(.system(size: 11))
-                                                    .foregroundColor(Color(.systemGray))
-                                                Spacer()
-                                                Menu {
-                                                    Button("Copy") { UIPasteboard.general.string = comment.bodyMd }
-                                                    Button("Edit") {
-                                                        viewModel.replyBody = comment.bodyMd
-                                                        editingMode = .comment(comment.id)
-                                                    }
-                                                    .disabled(isOfflineReadOnly)
-                                                    Button("Delete", role: .destructive) {
-                                                        Task { await viewModel.deleteComment(comment.id) }
-                                                    }
-                                                    .disabled(isOfflineReadOnly)
-                                                } label: {
-                                                    Image(systemName: "ellipsis")
-                                                        .foregroundColor(.textSecondary)
-                                                }
-                                            }
-                                            .padding(.horizontal, 16)
-                                            .padding(.top, 8)
-                                            ThreadItem(
-                                                bodyMd: comment.bodyMd,
-                                                labels: nil,
-                                                showMenu: false,
-                                                onIssueTap: { id, type in
-                                                    onNavigateToLinkedIssue?(id, type, "")
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
+                        IssueTimeline(
+                            entries: viewModel.timelineEntries,
+                            issueId: articleId,
+                            mutationsDisabled: isOfflineReadOnly,
+                            onEditComment: { comment in
+                                viewModel.replyBody = comment.bodyMd
+                                editingMode = .comment(comment.id)
+                            },
+                            onDeleteComment: { comment in
+                                Task { await viewModel.deleteComment(comment.id) }
+                            },
+                            onIssueTap: { id, type in
+                                onNavigateToLinkedIssue?(id, type, "")
                             }
-                        }
+                        )
                     }
 
                     IssueDetailBottomAnchor()
@@ -269,8 +192,8 @@ struct ArticleDetailView: View {
                         editingMode = .none
                         viewModel.replyBody = ""
                     },
-                    onAttachImage: {},
-                    isUploadingImage: false,
+                    onAttachImage: imageAttachment.presentImagePicker,
+                    isUploadingImage: imageAttachment.isUploading,
                     onExpand: {
                         scrollActions.composerDidExpand()
                     },
@@ -352,6 +275,7 @@ struct ArticleDetailView: View {
         } message: {
             Text("Are you sure you want to delete this article? This action cannot be undone.")
         }
+        .imageAttachmentPresentation(coordinator: imageAttachment, text: $viewModel.replyBody)
         .overlay {
             LoadingOverlay(
                 isPresented: viewModel.isLoading && viewModel.article == nil,

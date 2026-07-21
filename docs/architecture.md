@@ -144,6 +144,10 @@ Detailが共有UIへ公開する機能は`IssueMetadataProvider`、`IssueLinkPro
 
 Detailのscroll位置制御は`IssueDetailScrollShell`を使う。初期表示はinteraction policyとして指定し、Memoは最新位置、Task / Article / Templateは上端を正とする。composer展開とコメント投稿成功後の最下部移動は明示的なactionとしてshellへ渡し、非同期ロードやコメント件数の変化を投稿完了の代用にしない。
 
+Task / Article / Templateの本文カードとTask / Articleのコメント・activity timelineは`IssueContentCard`、`IssueItemMenu`、`IssueTimeline`を使う。本文の編集可否、TaskのTodo toggle、Articleの抽出block除去などはcallbackまたは入力値として呼び出し側に残す。Memoは日付バケットを持つ独自timelineを維持しつつ、各項目の操作menuだけを`IssueItemMenu`と共有する。
+
+画像添付のpicker、サイズ選択、upload中状態、Markdown参照の追記は`ImageAttachmentCoordinator`と`imageAttachmentPresentation`を単一の正とする。Memo一覧とMemo / Task / Article DetailはcomposerのBindingだけを渡し、同じpresentation stateとupload処理を画面ごとに複製しない。
+
 Memo は作成 sheet を表示しないため `CreationPresentationCoordinator` の対象外であり、上記の `FloatingComposer` 経路を正とする。この差はリソース名の分岐ではなく、modal form と quick capture という interaction capability の差として扱う。
 
 共通部品にリソース種別の分岐を増やして万能画面にしない。リソース固有機能は呼び出し側の View に残し、複数画面で同じ意味を持つ表示だけを共通化する。

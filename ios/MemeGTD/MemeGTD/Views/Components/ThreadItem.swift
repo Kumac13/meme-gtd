@@ -18,30 +18,7 @@ struct ThreadItem: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             if showMenu {
-                // Three-dot menu
-                Menu {
-                    if let onCopy = onCopy {
-                        Button(action: onCopy) {
-                            Label("Copy", systemImage: "doc.on.doc")
-                        }
-                    }
-                    if let onEdit = onEdit {
-                        Button(action: onEdit) {
-                            Label("Edit", systemImage: "pencil")
-                        }
-                    }
-                    if let onDelete = onDelete {
-                        Button(role: .destructive, action: onDelete) {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 13))
-                        .foregroundColor(.textSecondary)
-                        .frame(width: 28, height: 20)
-                        .contentShape(Rectangle())
-                }
+                IssueItemMenu(onCopy: onCopy, onEdit: onEdit, onDelete: onDelete)
             }
         }
         .padding(.vertical, 10)

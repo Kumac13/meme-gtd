@@ -76,63 +76,16 @@ struct TemplateDetailView: View {
                         IssueSectionConnector()
 
                         // === Body Area (glass, full width) ===
-                        IssueAreaCard {
-                            VStack(alignment: .leading, spacing: 0) {
-                                HStack {
-                                    HStack(spacing: 4) {
-                                        let isEdited = template.updatedAt != template.createdAt
-                                        Text(TimelineHelpers.relativeTimeString(iso: isEdited ? template.updatedAt : template.createdAt))
-                                        if isEdited {
-                                            Text("(edited)")
-                                        }
-                                    }
-                                    .font(.system(size: 11))
-                                    .foregroundColor(Color(.systemGray))
-
-                                    Spacer()
-
-                                    Menu {
-                                        Button(action: {
-                                            UIPasteboard.general.string = template.bodyMd
-                                            HapticManager.notification(.success)
-                                        }) {
-                                            Label("Copy", systemImage: "doc.on.doc")
-                                        }
-                                        Button(action: {
-                                            viewModel.replyBody = template.bodyMd
-                                            editingMode = .body
-                                        }) {
-                                            Label("Edit", systemImage: "pencil")
-                                        }
-                                    } label: {
-                                        Image(systemName: "ellipsis")
-                                            .font(.system(size: 13))
-                                            .foregroundColor(.textSecondary)
-                                            .frame(width: 28, height: 20)
-                                            .contentShape(Rectangle())
-                                    }
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.top, 8)
-                                .padding(.bottom, -2)
-
-                                if !template.bodyMd.isEmpty {
-                                    ThreadItem(
-                                        bodyMd: template.bodyMd,
-                                        labels: nil,
-                                        showMenu: false
-                                    )
-                                } else {
-                                    Text("No body provided.")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.textSecondary)
-                                        .italic()
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(.vertical, 10)
-                                        .padding(.horizontal, 16)
-                                }
+                        IssueContentCard(
+                            bodyMd: template.bodyMd,
+                            createdAt: template.createdAt,
+                            updatedAt: template.updatedAt,
+                            emptyText: "No body provided.",
+                            onEdit: {
+                                viewModel.replyBody = template.bodyMd
+                                editingMode = .body
                             }
-                        }
+                        )
                     }
 
                     IssueDetailBottomAnchor()

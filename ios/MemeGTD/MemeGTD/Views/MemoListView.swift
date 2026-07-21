@@ -1,5 +1,4 @@
 import Combine
-import PhotosUI
 import SwiftUI
 
 struct MemoListView: View {
@@ -18,12 +17,7 @@ struct MemoListView: View {
     @State private var showDateRangePicker: Bool = false
     @State private var dateFrom: Date?
     @State private var dateTo: Date?
-    @State private var showImagePicker: Bool = false
-    @State private var showSizePicker: Bool = false
-    @State private var isUploadingImage: Bool = false
-    @State private var pickedImageData: Data? = nil
-    @State private var pickedMimeType: String = "image/jpeg"
-    @State private var pickedExtension: String = "jpg"
+    @StateObject private var imageAttachment = ImageAttachmentCoordinator()
     @State private var showCopyDialog: Bool = false
     @State private var conflictToastMessage: String?
     @State private var conflictToastDismissTask: Task<Void, Never>?
@@ -176,8 +170,8 @@ struct MemoListView: View {
                     placeholder: "Write a memo...",
                     disabled: viewModel.isLoading,
                     submitting: viewModel.isCreating,
-                    onAttachImage: { showImagePicker = true },
-                    isUploadingImage: isUploadingImage,
+                    onAttachImage: imageAttachment.presentImagePicker,
+                    isUploadingImage: imageAttachment.isUploading,
                     onExpand: {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                             withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
@@ -367,38 +361,7 @@ struct MemoListView: View {
             )
             .presentationDetents([.medium])
         }
-        .sheet(isPresented: $showImagePicker) {
-            ImagePicker(
-                imageData: $pickedImageData,
-                imageMimeType: $pickedMimeType,
-                imageExtension: $pickedExtension
-            )
-        }
-        .onChange(of: pickedImageData) { _, newData in
-            guard newData != nil else { return }
-            showSizePicker = true
-        }
-        .sheet(isPresented: $showSizePicker) {
-            if let data = pickedImageData {
-                ImageSizePickerSheet(
-                    imageData: data,
-                    mimeType: pickedMimeType,
-                    ext: pickedExtension,
-                    onSelect: { resizedData, mime, ext in
-                        showSizePicker = false
-                        pickedImageData = nil
-                        isUploadingImage = true
-                        HapticManager.impact(.medium)
-                        Task { await uploadImageData(data: resizedData, mimeType: mime, ext: ext) }
-                    },
-                    onCancel: {
-                        showSizePicker = false
-                        pickedImageData = nil
-                    }
-                )
-                .presentationDetents([.medium])
-            }
-        }
+        .imageAttachmentPresentation(coordinator: imageAttachment, text: $viewModel.newMemoBody)
         .overlay {
             LoadingOverlay(
                 isPresented: viewModel.isLoading && memoStore.memos.isEmpty,
@@ -427,36 +390,4 @@ struct MemoListView: View {
     }
 
 
-    // MARK: - Image upload
-
-    private func uploadImageData(data: Data, mimeType: String, ext: String) async {
-        isUploadingImage = true
-        defer { isUploadingImage = false }
-
-        let filename = "\(UUID().uuidString).\(ext)"
-        let start = Date()
-
-        do {
-            let response = try await APIClient.shared.uploadImage(
-                imageData: data, filename: filename, mimeType: mimeType
-            )
-
-            // Ensure uploading indicator is visible for at least 0.75s
-            let elapsed = Date().timeIntervalSince(start)
-            let remaining = 0.75 - elapsed
-            if remaining > 0 {
-                try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
-            }
-
-            let ref = response.markdownRef
-            if viewModel.newMemoBody.isEmpty {
-                viewModel.newMemoBody = ref
-            } else {
-                viewModel.newMemoBody += "\n\(ref)"
-            }
-            HapticManager.notification(.success)
-        } catch {
-            HapticManager.notification(.error)
-        }
-    }
 }
