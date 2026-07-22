@@ -36,6 +36,8 @@ import {
 } from '../utils/memoTimeline';
 import { extractSnippet, highlightKeyword } from '../utils/searchHighlight';
 import { useSearchHighlight } from '../hooks/useSearchHighlight';
+import { ListPageLayout } from '../components/ListPageLayout';
+import { ToggleFilterButton } from '../components/FilterControls';
 
 interface Memo {
   id: number;
@@ -626,16 +628,7 @@ export default function MemosList() {
               onClear={handleDateRangeClear}
             />
 
-            <button
-              onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                bookmarkFilter
-                  ? 'bg-github-green-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Bookmarked
-            </button>
+            <ToggleFilterButton active={bookmarkFilter} onToggle={() => handleBookmarkFilterChange(!bookmarkFilter)}>Bookmarked</ToggleFilterButton>
           </div>
 
           <div className="text-sm text-gray-500 mb-2">
@@ -746,9 +739,9 @@ export default function MemosList() {
         />
       </div>
 
-      <div className="hidden sm:block max-w-4xl mx-auto bg-transparent px-4 py-2">
-        <div className="flex items-center gap-2 mb-4">
-          <SearchInput
+      <ListPageLayout
+        className="hidden sm:block bg-transparent"
+        search={<SearchInput
             value={filters.searchQuery}
             onChange={(value) => {
               const params = updateSearchParam(searchParams, value);
@@ -758,16 +751,10 @@ export default function MemosList() {
             placeholder="Search memos"
             searchMode={searchMode}
             onSearchModeChange={setSearchMode}
-          />
-          <Link
-            to="/memos/new"
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 whitespace-nowrap"
-          >
-            New Memo
-          </Link>
-        </div>
-
-        <div className="mb-4 flex flex-wrap gap-2 items-center">
+          />}
+        createTo="/memos/new"
+        createLabel="New Memo"
+        filters={<>
           <LabelFilterDropdown
             selectedLabels={selectedLabels}
             onToggle={handleLabelToggle}
@@ -792,19 +779,9 @@ export default function MemosList() {
             onClear={handleDateRangeClear}
           />
 
-          <button
-            onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}
-            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-              bookmarkFilter
-                ? 'bg-github-green-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Bookmarked
-          </button>
-        </div>
-
-        <div className="text-sm text-gray-500 mb-2">
+          <ToggleFilterButton active={bookmarkFilter} onToggle={() => handleBookmarkFilterChange(!bookmarkFilter)}>Bookmarked</ToggleFilterButton>
+        </>}
+        summary={<>
           {total} {total === 1 ? 'memo' : 'memos'}
           {semanticMeta && (
             <span className="ml-2 text-gray-400">
@@ -820,14 +797,13 @@ export default function MemosList() {
               matchedScores={relevanceScores}
             />
           )}
-        </div>
-
-        {filteredMemos.length === 0 ? (
-          <EmptyState
+        </>}
+        empty={filteredMemos.length === 0}
+        emptyState={<EmptyState
             message={bookmarkFilter ? 'No bookmarked memos' : 'No memos yet'}
             submessage={!bookmarkFilter ? 'Create your first memo to get started' : undefined}
-          />
-        ) : (
+          />}
+      >
           <>
             <ItemList items={filteredMemos} itemType="memo" basePath="/memos" currentFilters={searchParams} onDelete={handleDelete} matchSnippets={matchSnippets} searchQuery={searchMode === 'keyword' ? filters.parsedQuery.freeText : undefined} relevanceScores={relevanceScores} />
             <Pagination
@@ -836,8 +812,7 @@ export default function MemosList() {
               onPageChange={handlePageChange}
             />
           </>
-        )}
-      </div>
+      </ListPageLayout>
     </div>
   );
 }

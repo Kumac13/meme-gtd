@@ -15,7 +15,7 @@ async function writeToClipboard(text: string): Promise<void> {
   await navigator.clipboard.writeText(text);
 }
 
-interface CopyContentOptions {
+export interface CopyContentOptions {
   title: string | null;
   body: string;
   comments?: Comment[];

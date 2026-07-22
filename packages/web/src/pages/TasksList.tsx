@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
 import { SearchService } from '../api/services/SearchService';
 import { ProjectsService } from '../api/services/ProjectsService';
@@ -14,6 +14,8 @@ import EmptyState from '../components/EmptyState';
 import Pagination from '../components/Pagination';
 import CopyResultsButtons from '../components/CopyResultsButtons';
 import ProjectFilterDropdown from '../components/ProjectFilterDropdown';
+import { ListPageLayout } from '../components/ListPageLayout';
+import { ToggleFilterButton } from '../components/FilterControls';
 import { useUrlFilters } from '../hooks/useUrlFilters';
 import {
   validateStatus,
@@ -466,9 +468,8 @@ export default function TasksList() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-2">
-      <div className="flex items-center gap-2 mb-4">
-        <SearchInput
+    <ListPageLayout
+      search={<SearchInput
           value={filters.searchQuery}
           onChange={(value) => {
             // Update search query and reset page number in one atomic operation
@@ -479,17 +480,10 @@ export default function TasksList() {
           placeholder="Search tasks"
           searchMode={searchMode}
           onSearchModeChange={setSearchMode}
-        />
-        <Link
-          to="/tasks/new"
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 whitespace-nowrap"
-        >
-          New Task
-        </Link>
-      </div>
-
-      {/* Filters row: Label, Project, Bookmark */}
-      <div className="mb-4 flex flex-wrap gap-2 items-center">
+        />}
+      createTo="/tasks/new"
+      createLabel="New Task"
+      filters={<>
         {/* Label filter dropdown */}
         <LabelFilterDropdown
           selectedLabels={selectedLabels}
@@ -517,37 +511,26 @@ export default function TasksList() {
         />
 
         {/* Bookmark filter */}
-        <button
-          onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}
-          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-            bookmarkFilter
-              ? 'bg-github-green-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          Bookmarked
-        </button>
-      </div>
-
-      {/* Status filter row */}
-      <div className="mb-4 flex flex-wrap gap-2">
+        <ToggleFilterButton active={bookmarkFilter} onToggle={() => handleBookmarkFilterChange(!bookmarkFilter)}>Bookmarked</ToggleFilterButton>
+      </>}
+      secondaryFilters={<div className="mb-4 flex flex-wrap gap-2">
         {statusOptions.map((status) => (
-          <button
+          <ToggleFilterButton
             key={status}
-            onClick={() => handleStatusFilterChange(status)}
-            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-              statusFilter === status
-                ? 'bg-github-green-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            onToggle={() => handleStatusFilterChange(status)}
+            active={statusFilter === status}
           >
             {statusLabels[status] || status}
-          </button>
+          </ToggleFilterButton>
         ))}
-      </div>
-
-      {filteredTasks.length === 0 ? (
-        <EmptyState
+      </div>}
+      summary={filteredTasks.length > 0 ? <>
+        {total} {total === 1 ? 'task' : 'tasks'}
+        {semanticMeta && <span className="ml-2 text-gray-400">({semanticMeta.searchTimeMs}ms)</span>}
+        {hasActiveFilters && copyExportItemIds.length > 0 && <CopyResultsButtons type="tasks" filters={copyExportFilters} itemIds={copyExportItemIds} matchedComments={matchSnippets} matchedScores={relevanceScores} />}
+      </> : undefined}
+      empty={filteredTasks.length === 0}
+      emptyState={<EmptyState
           message={
             statusFilter === 'all' && !bookmarkFilter
               ? 'No tasks yet'
@@ -558,26 +541,9 @@ export default function TasksList() {
               : `No ${statusLabels[statusFilter] || statusFilter} tasks`
           }
           submessage={statusFilter === 'all' && !bookmarkFilter ? 'Create your first task to get started' : undefined}
-        />
-      ) : (
+        />}
+    >
         <>
-          <div className="text-sm text-gray-500 mb-2">
-            {total} {total === 1 ? 'task' : 'tasks'}
-            {semanticMeta && (
-              <span className="ml-2 text-gray-400">
-                ({semanticMeta.searchTimeMs}ms)
-              </span>
-            )}
-            {hasActiveFilters && copyExportItemIds.length > 0 && (
-              <CopyResultsButtons
-                type="tasks"
-                filters={copyExportFilters}
-                itemIds={copyExportItemIds}
-                matchedComments={matchSnippets}
-                matchedScores={relevanceScores}
-              />
-            )}
-          </div>
           <ItemList items={filteredTasks} itemType="task" basePath="/tasks" currentFilters={searchParams} onDelete={handleDelete} matchSnippets={matchSnippets} searchQuery={searchMode === 'keyword' ? filters.parsedQuery.freeText : undefined} relevanceScores={relevanceScores} />
           <Pagination
             currentPage={currentPage}
@@ -585,7 +551,6 @@ export default function TasksList() {
             onPageChange={handlePageChange}
           />
         </>
-      )}
-    </div>
+    </ListPageLayout>
   );
 }

@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { EditableSectionCard } from './EditableSectionCard';
 
 interface ProjectScheduleSectionProps {
     startDate: string | null;
@@ -13,7 +14,6 @@ export function ProjectScheduleSection({ startDate, endDate, onScheduleChange }:
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
 
     // Local state for form inputs
     const [formStartDate, setFormStartDate] = useState(startDate || '');
@@ -24,23 +24,6 @@ export function ProjectScheduleSection({ startDate, endDate, onScheduleChange }:
         setFormStartDate(startDate || '');
         setFormEndDate(endDate || '');
     }, [startDate, endDate]);
-
-    // Close when clicking outside
-    useEffect(() => {
-        if (!isEditing) return;
-
-        const handleClickOutside = (event: MouseEvent) => {
-            if (
-                containerRef.current &&
-                !containerRef.current.contains(event.target as Node)
-            ) {
-                setIsEditing(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isEditing]);
 
     const handleSave = async () => {
         try {
@@ -87,16 +70,13 @@ export function ProjectScheduleSection({ startDate, endDate, onScheduleChange }:
     };
 
     return (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4" ref={containerRef}>
-            <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-900">Schedule</h3>
-                {loading && <span className="text-xs text-gray-500">Saving...</span>}
-            </div>
-
-            {error && (
-                <div className="text-red-600 text-xs mb-2">{error}</div>
-            )}
-
+        <EditableSectionCard
+            title="Schedule"
+            isEditing={isEditing}
+            onEditingChange={setIsEditing}
+            loading={loading}
+            error={error}
+        >
             {isEditing ? (
                 <div className="flex flex-col gap-3">
                     <div className="grid grid-cols-2 gap-2">
@@ -164,6 +144,6 @@ export function ProjectScheduleSection({ startDate, endDate, onScheduleChange }:
                     <span>{formatDisplay()}</span>
                 </div>
             )}
-        </div>
+        </EditableSectionCard>
     );
 }

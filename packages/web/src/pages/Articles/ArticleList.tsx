@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { ArticlesService } from "../../api/services/ArticlesService";
 import { SearchService } from "../../api/services/SearchService";
 import { ProjectsService } from "../../api/services/ProjectsService";
@@ -13,6 +13,8 @@ import EmptyState from "../../components/EmptyState";
 import Pagination from "../../components/Pagination";
 import CopyResultsButtons from "../../components/CopyResultsButtons";
 import ProjectFilterDropdown from "../../components/ProjectFilterDropdown";
+import { ListPageLayout } from "../../components/ListPageLayout";
+import { ToggleFilterButton } from "../../components/FilterControls";
 import {
   validateBookmarked,
   updateBookmarkedParam,
@@ -299,19 +301,11 @@ export const ArticleList: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-2">
-      <div className="flex items-center gap-2 mb-4">
-        <SearchInput value={searchQuery} onChange={handleSearchChange} placeholder="Search articles" />
-        <Link
-          to="/articles/new"
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 whitespace-nowrap"
-        >
-          New Article
-        </Link>
-      </div>
-
-      {/* Filters row: Label, Project, Bookmark (same as tasks) */}
-      <div className="mb-4 flex flex-wrap gap-2 items-center">
+    <ListPageLayout
+      search={<SearchInput value={searchQuery} onChange={handleSearchChange} placeholder="Search articles" />}
+      createTo="/articles/new"
+      createLabel="New Article"
+      filters={<>
         <LabelFilterDropdown
           selectedLabels={selectedLabels}
           onToggle={handleLabelToggle}
@@ -329,43 +323,28 @@ export const ArticleList: React.FC = () => {
           onClear={handleClearProjects}
         />
 
-        <button
-          onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}
-          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-            bookmarkFilter ? "bg-github-green-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-          }`}
-        >
-          Bookmarked
-        </button>
-      </div>
-
-      {/* Origin filter row (issues.origin): All / Web / Manual */}
-      <FilterBar
+        <ToggleFilterButton active={bookmarkFilter} onToggle={() => handleBookmarkFilterChange(!bookmarkFilter)}>Bookmarked</ToggleFilterButton>
+      </>}
+      secondaryFilters={<FilterBar
         showStatusFilter
         statusFilter={originFilter}
         onStatusFilterChange={handleOriginChange}
         statusOptions={["all", "web", "manual"]}
         statusLabels={{ web: "Web", manual: "Manual" }}
         showBookmarkFilter={false}
-      />
-
-      {articles.length === 0 ? (
-        <EmptyState
+      />}
+      summary={articles.length > 0 ? <>{total} {total === 1 ? "article" : "articles"}{hasActiveFilters && copyExportItemIds.length > 0 && <CopyResultsButtons type="articles" filters={copyExportFilters} itemIds={copyExportItemIds} />}</> : undefined}
+      empty={articles.length === 0}
+      emptyState={<EmptyState
           message={hasActiveFilters ? "No articles match your filters" : "No articles yet"}
           submessage={
             hasActiveFilters
               ? "Try different filters"
               : "Save web pages with the browser extension, or create one with New Article"
           }
-        />
-      ) : (
+        />}
+    >
         <>
-          <div className="text-sm text-gray-500 mb-2">
-            {total} {total === 1 ? "article" : "articles"}
-            {hasActiveFilters && copyExportItemIds.length > 0 && (
-              <CopyResultsButtons type="articles" filters={copyExportFilters} itemIds={copyExportItemIds} />
-            )}
-          </div>
           <ItemList
             items={articles}
             itemType="article"
@@ -377,7 +356,6 @@ export const ArticleList: React.FC = () => {
           />
           <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
         </>
-      )}
-    </div>
+    </ListPageLayout>
   );
 };

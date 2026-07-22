@@ -8,7 +8,7 @@ import LoadingState from './LoadingState';
 import ErrorState from './ErrorState';
 import SidePanel from './SidePanel';
 import type { IssueType } from 'meme-gtd-shared';
-import { copyItemContent } from '../utils/copyContent';
+import { useCopyItemContent } from '../hooks/useCopyItemContent';
 
 interface BaseItem {
   id: number;
@@ -43,7 +43,7 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [isCopied, setIsCopied] = useState(false);
+  const { copied: isCopied, copy: copyItemContent } = useCopyItemContent();
 
   useEffect(() => {
     if (!itemId || !itemType) {
@@ -142,8 +142,6 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
       comments,
       includeTitle: itemType !== 'memo',
     });
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
   };
 
   const handleStatusChange = async (status: string) => {

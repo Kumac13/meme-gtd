@@ -1,13 +1,13 @@
-import { useCallback, useState, useRef, DragEvent, ClipboardEvent } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import type { IssueType } from 'meme-gtd-shared';
 import { formatRelativeTime } from '../utils/dates';
 import { MarkdownRenderer } from '../utils/markdown';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
-import { useImageUpload } from '../hooks/useImageUpload';
 import { useTodoMutation } from '../hooks/useTodoMutation';
 import { MarkdownTextarea } from './MarkdownTextarea';
+import { ActionMenu } from './ActionMenu';
 
 interface EditableContentProps {
   content: string;
@@ -46,10 +46,7 @@ export default function EditableContent({
   const [editingContent, setEditingContent] = useState(content);
   const [editingTitle, setEditingTitle] = useState(title || '');
   const [saving, setSaving] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   const { copied, copy } = useCopyToClipboard();
-  const { isUploading, uploadImage } = useImageUpload();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleCopy = async () => {
@@ -114,76 +111,6 @@ export default function EditableContent({
     disabled: isSaveDisabled,
   });
 
-  const insertMarkdownRef = (markdownRef: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      setEditingContent(prev => prev + '\n' + markdownRef);
-      return;
-    }
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const before = editingContent.slice(0, start);
-    const after = editingContent.slice(end);
-
-    const newValue = before + (before.endsWith('\n') || before === '' ? '' : '\n') + markdownRef + '\n' + after;
-    setEditingContent(newValue);
-
-    setTimeout(() => {
-      textarea.focus();
-      const newCursorPos = before.length + (before.endsWith('\n') || before === '' ? 0 : 1) + markdownRef.length + 1;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
-  };
-
-  const handleImageFile = async (file: File) => {
-    if (isUploading) return;
-    const result = await uploadImage(file);
-    if (result.success && result.markdownRef) {
-      insertMarkdownRef(result.markdownRef);
-    }
-  };
-
-  // Handle paste (Ctrl+V / Cmd+V) for images
-  const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-
-    for (const item of items) {
-      if (item.type.startsWith('image/')) {
-        e.preventDefault();
-        const file = item.getAsFile();
-        if (file) {
-          handleImageFile(file);
-        }
-        return;
-      }
-    }
-  };
-
-  // Handle drag & drop on textarea
-  const handleDragOver = (e: DragEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    if (e.dataTransfer.types.includes('Files')) {
-      setIsDragging(true);
-    }
-  };
-
-  const handleDragLeave = (e: DragEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: DragEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    const files = e.dataTransfer.files;
-    if (files.length > 0 && files[0].type.startsWith('image/')) {
-      handleImageFile(files[0]);
-    }
-  };
-
   return (
     <div className="bg-white border border-gray-200 rounded-lg py-1 px-4">
       <div className="flex items-center justify-between py-1 border-b border-gray-200">
@@ -192,53 +119,13 @@ export default function EditableContent({
           {updatedAt !== createdAt && <span className="ml-2 text-gray-500">(edited)</span>}
         </div>
         {!isEditing && (
-          <div className="relative">
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
-              aria-label="More options"
-            >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M8 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"></path>
-              </svg>
-            </button>
-            {isMenuOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setIsMenuOpen(false)} />
-                <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-20">
-                  {!readOnly && (
-                    <button
-                      onClick={() => {
-                        handleStartEdit();
-                        setIsMenuOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Edit
-                    </button>
-                  )}
-                  <button
-                    onClick={async () => {
-                      await handleCopy();
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                  >
-                    {copied ? 'Copied!' : 'Copy'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleDelete();
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          <ActionMenu
+            items={[
+              ...(!readOnly ? [{ label: 'Edit', onSelect: handleStartEdit }] : []),
+              { label: copied ? 'Copied!' : 'Copy', onSelect: handleCopy },
+              { label: 'Delete', onSelect: handleDelete, destructive: true },
+            ]}
+          />
         )}
       </div>
 
@@ -265,14 +152,8 @@ export default function EditableContent({
             value={editingContent}
             onChange={setEditingContent}
             onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
             rows={6}
             disabled={false}
-            isDragging={isDragging}
-            isUploading={isUploading}
             minHeightClass="min-h-[100px]"
           />
           <div className="mt-2 flex justify-end space-x-2">

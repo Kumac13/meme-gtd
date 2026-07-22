@@ -5,6 +5,7 @@
 
 import { useRef, useState, type RefObject, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react';
 import { useAutoGrow } from '../hooks/useAutoGrow';
+import { useImageUpload } from '../hooks/useImageUpload';
 import { MarkdownRenderer } from '../utils/markdown';
 
 interface MarkdownTextareaProps {
@@ -95,8 +96,65 @@ export function MarkdownTextarea({
   const internalRef = useRef<HTMLTextAreaElement>(null);
   const resolvedRef = textareaRef ?? internalRef;
   const [mode, setMode] = useState<TabMode>('write');
+  const [isImageDragging, setIsImageDragging] = useState(false);
+  const imageUpload = useImageUpload();
 
   useAutoGrow(resolvedRef, value, mode);
+
+  const insertMarkdownRef = (markdownRef: string) => {
+    const textarea = resolvedRef.current;
+    if (!textarea) {
+      onChange(`${value}${value.endsWith('\n') || value === '' ? '' : '\n'}${markdownRef}\n`);
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const before = value.slice(0, start);
+    const separator = before.endsWith('\n') || before === '' ? '' : '\n';
+    const nextCursor = before.length + separator.length + markdownRef.length + 1;
+    onChange(`${before}${separator}${markdownRef}\n${value.slice(textarea.selectionEnd)}`);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(nextCursor, nextCursor);
+    }, 0);
+  };
+
+  const uploadImage = async (file: File) => {
+    if (imageUpload.isUploading) return;
+    const result = await imageUpload.uploadImage(file);
+    if (result.success && result.markdownRef) insertMarkdownRef(result.markdownRef);
+  };
+
+  const handleImagePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    for (const item of event.clipboardData?.items ?? []) {
+      if (!item.type.startsWith('image/')) continue;
+      const file = item.getAsFile();
+      if (!file) return;
+      event.preventDefault();
+      void uploadImage(file);
+      return;
+    }
+  };
+
+  const handleImageDragOver = (event: DragEvent<HTMLTextAreaElement>) => {
+    event.preventDefault();
+    if (event.dataTransfer.types.includes('Files')) setIsImageDragging(true);
+  };
+
+  const handleImageDragLeave = (event: DragEvent<HTMLTextAreaElement>) => {
+    event.preventDefault();
+    setIsImageDragging(false);
+  };
+
+  const handleImageDrop = (event: DragEvent<HTMLTextAreaElement>) => {
+    event.preventDefault();
+    setIsImageDragging(false);
+    const file = event.dataTransfer.files[0];
+    if (file?.type.startsWith('image/')) void uploadImage(file);
+  };
+
+  const uploading = isUploading || imageUpload.isUploading;
+  const dragging = isDragging || isImageDragging;
 
   return (
     <div className="border border-gray-300 rounded-md overflow-hidden">
@@ -134,17 +192,17 @@ export function MarkdownTextarea({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKeyDown}
-          onPaste={onPaste}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onDrop={onDrop}
+          onPaste={onPaste ?? handleImagePaste}
+          onDragOver={onDragOver ?? handleImageDragOver}
+          onDragLeave={onDragLeave ?? handleImageDragLeave}
+          onDrop={onDrop ?? handleImageDrop}
           aria-keyshortcuts="Control+Enter"
           rows={rows}
           className={`w-full px-3 py-2 border-0 focus:outline-none focus:ring-0 font-mono text-sm resize-none md:resize-y max-h-[60vh] ${minHeightClass} ${
-            isDragging ? 'bg-github-green-50' : ''
-          } ${isUploading ? 'opacity-50' : ''}`}
+            dragging ? 'bg-github-green-50' : ''
+          } ${uploading ? 'opacity-50' : ''}`}
           placeholder={placeholder}
-          disabled={disabled || isUploading}
+          disabled={disabled || uploading}
         />
       ) : (
         <div className={`px-3 py-2 ${minHeightClass} overflow-auto bg-white`}>
@@ -157,7 +215,7 @@ export function MarkdownTextarea({
       )}
 
       {/* Upload indicator */}
-      {isUploading && (
+      {uploading && (
         <div className="px-3 py-1 text-xs text-gray-500 bg-gray-50 border-t border-gray-200">
           Uploading image...
         </div>

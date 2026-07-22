@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { TemplatesService } from '../../api/services/TemplatesService';
 import SearchInput from '../../components/SearchInput';
 import FilterBar from '../../components/FilterBar';
@@ -8,6 +8,7 @@ import LoadingState from '../../components/LoadingState';
 import ErrorState from '../../components/ErrorState';
 import EmptyState from '../../components/EmptyState';
 import Pagination from '../../components/Pagination';
+import { ListPageLayout } from '../../components/ListPageLayout';
 
 interface TemplateItem {
   id: number;
@@ -104,42 +105,29 @@ export default function TemplatesList() {
   if (error) return <ErrorState error={error} title="Error loading templates" />;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-2">
-      <div className="mb-4">
-        <SearchInput value={searchQuery} onChange={handleSearchChange} placeholder="Search templates" />
-      </div>
-
-      <FilterBar
+    <ListPageLayout
+      search={<SearchInput value={searchQuery} onChange={handleSearchChange} placeholder="Search templates" />}
+      createTo="/templates/new"
+      createLabel="New Template"
+      secondaryFilters={<FilterBar
         showStatusFilter
         statusFilter={targetFilter}
         onStatusFilterChange={handleTargetChange}
         statusOptions={['all', 'task', 'article']}
         statusLabels={{ task: 'Task', article: 'Article' }}
         showBookmarkFilter={false}
-      />
-
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-sm text-gray-500">
-          {total} {total === 1 ? 'template' : 'templates'}
-        </div>
-        <Link
-          to="/templates/new"
-          className="px-3 py-2 bg-github-green-600 text-white rounded-md text-sm font-medium hover:bg-github-green-700"
-        >
-          New Template
-        </Link>
-      </div>
-
-      {items.length === 0 ? (
-        <EmptyState
+      />}
+      summary={<>{total} {total === 1 ? 'template' : 'templates'}</>}
+      empty={items.length === 0}
+      emptyState={<EmptyState
           message={searchQuery ? 'No templates match your search' : 'No templates yet'}
           submessage={
             searchQuery
               ? 'Try a different keyword'
               : 'Create a template to reuse a body, labels and projects when making tasks or articles'
           }
-        />
-      ) : (
+        />}
+    >
         <>
           <ItemList
             items={items}
@@ -150,7 +138,6 @@ export default function TemplatesList() {
           />
           <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
         </>
-      )}
-    </div>
+    </ListPageLayout>
   );
 }

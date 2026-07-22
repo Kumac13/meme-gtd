@@ -4,7 +4,7 @@ import type { IssueType } from 'meme-gtd-shared';
 import { MemosService } from '../api/services/MemosService';
 import { CommentsService } from '../api/services/CommentsService';
 import ItemDetail, { type Item, type Comment } from '../components/ItemDetail';
-import { copyItemContent } from '../utils/copyContent';
+import { useCopyItemContent } from '../hooks/useCopyItemContent';
 import { ItemDetailPanel } from '../components/ItemDetailPanel';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
@@ -17,6 +17,7 @@ import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
 import { useAutoGrow } from '../hooks/useAutoGrow';
 import { ProjectsSection } from '../components/ProjectsSection';
 import { LabelsSection } from '../components/LabelsSection';
+import { ActionMenu } from '../components/ActionMenu';
 
 interface Memo {
   id: number;
@@ -58,7 +59,6 @@ function MobileThreadItem({
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(content);
   const [saving, setSaving] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { copied, copy } = useCopyToClipboard();
 
@@ -84,7 +84,6 @@ function MobileThreadItem({
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this?')) return;
     await onDelete();
-    setMenuOpen(false);
   };
 
   return (
@@ -94,54 +93,16 @@ function MobileThreadItem({
       )}
 
       {!isEditing && showMenu && (
-        <div className="relative">
-          <div className="absolute right-0 top-0">
-            <button
-              type="button"
-              onClick={() => setMenuOpen((prev) => !prev)}
-              aria-label="More options"
-              className="rounded p-1 text-gray-500"
-            >
-              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M8 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
-              </svg>
-            </button>
-          </div>
-          {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-6 z-20 mt-1 w-32 rounded-md border border-gray-200 bg-white shadow-lg">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditing(true);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await copy(content);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  {copied ? 'Copied!' : 'Copy'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDelete()}
-                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100"
-                >
-                  Delete
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        <ActionMenu
+          wrapperClassName="absolute right-0 top-0"
+          buttonClassName="rounded p-1 text-gray-500"
+          menuClassName="absolute right-0 top-6 z-20 mt-1 w-32 rounded-md border border-gray-200 bg-white shadow-lg"
+          items={[
+            { label: 'Edit', onSelect: () => setIsEditing(true) },
+            { label: copied ? 'Copied!' : 'Copy', onSelect: () => copy(content) },
+            { label: 'Delete', onSelect: handleDelete, destructive: true },
+          ]}
+        />
       )}
 
       {isEditing ? (
@@ -202,7 +163,7 @@ export default function MemoDetail() {
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{ id: number; type: IssueType } | null>(null);
-  const [isCopied, setIsCopied] = useState(false);
+  const { copied: isCopied, copy: copyItemContent } = useCopyItemContent();
   const [threadComments, setThreadComments] = useState<MemoComment[]>([]);
   const [replyBody, setReplyBody] = useState('');
   const [replySubmitting, setReplySubmitting] = useState(false);
@@ -289,8 +250,6 @@ export default function MemoDetail() {
       comments: threadComments,
       includeTitle: false,
     });
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
   };
 
   const handleMemoUpdate = useCallback(async (bodyMd: string) => {

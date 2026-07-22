@@ -1,5 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import type { TaskKind } from 'meme-gtd-shared';
+import { EditableSectionCard } from './EditableSectionCard';
+import {
+    ScheduleDateTimeFields,
+    fromDatetimeLocal,
+    toAllDayBoundary,
+    toDatetimeLocal,
+} from './ScheduleFields';
 
 interface ScheduleSectionProps {
     // Task Kind (event or action)
@@ -33,32 +40,6 @@ interface ScheduleSectionProps {
     }) => Promise<void>;
 }
 
-// Helper: Convert ISO datetime to datetime-local input value
-function toDatetimeLocal(isoDatetime: string | null): string {
-    if (!isoDatetime) return '';
-    // ISO datetime is YYYY-MM-DDTHH:MM:SS, datetime-local wants YYYY-MM-DDTHH:MM
-    return isoDatetime.slice(0, 16);
-}
-
-// Helper: Convert datetime-local input to ISO datetime
-function fromDatetimeLocal(datetimeLocal: string): string {
-    if (!datetimeLocal) return '';
-    // datetime-local is YYYY-MM-DDTHH:MM, we need YYYY-MM-DDTHH:MM:SS
-    return datetimeLocal + ':00';
-}
-
-// Helper: Convert date input to ISO datetime (all-day start)
-function fromDateToStartDatetime(date: string): string {
-    if (!date) return '';
-    return date + 'T00:00:00';
-}
-
-// Helper: Convert date input to ISO datetime (all-day end)
-function fromDateToEndDatetime(date: string): string {
-    if (!date) return '';
-    return date + 'T23:59:59';
-}
-
 export function ScheduleSection({
     taskKind,
     onTaskKindChange,
@@ -80,7 +61,6 @@ export function ScheduleSection({
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
 
     // Local state for form inputs
     const [formTaskKind, setFormTaskKind] = useState<TaskKind>(taskKind);
@@ -101,23 +81,6 @@ export function ScheduleSection({
         setFormActualEnd(toDatetimeLocal(actualEnd));
     }, [taskKind, scheduledStart, scheduledEnd, isAllDay, actualStart, actualEnd]);
 
-    // Close when clicking outside
-    useEffect(() => {
-        if (!isEditing) return;
-
-        const handleClickOutside = (event: MouseEvent) => {
-            if (
-                containerRef.current &&
-                !containerRef.current.contains(event.target as Node)
-            ) {
-                setIsEditing(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isEditing]);
-
     const handleSave = async () => {
         try {
             setLoading(true);
@@ -133,25 +96,19 @@ export function ScheduleSection({
 
             if (formStartDatetime) {
                 if (formAllDay) {
-                    // All-day: normalize to day boundaries
-                    const startDate = formStartDatetime.split('T')[0];
-                    newScheduledStart = fromDateToStartDatetime(startDate);
+                    newScheduledStart = toAllDayBoundary(formStartDatetime, false);
                 } else {
                     newScheduledStart = fromDatetimeLocal(formStartDatetime);
                 }
             }
             if (formEndDatetime) {
                 if (formAllDay) {
-                    // All-day: normalize to day boundaries
-                    const endDate = formEndDatetime.split('T')[0];
-                    newScheduledEnd = fromDateToEndDatetime(endDate);
+                    newScheduledEnd = toAllDayBoundary(formEndDatetime, true);
                 } else {
                     newScheduledEnd = fromDatetimeLocal(formEndDatetime);
                 }
             } else if (formAllDay && formStartDatetime) {
-                // All-day with no end: use start date
-                const startDate = formStartDatetime.split('T')[0];
-                newScheduledEnd = fromDateToEndDatetime(startDate);
+                newScheduledEnd = toAllDayBoundary(formStartDatetime, true);
             }
 
             const updates: Parameters<typeof onScheduleChange>[0] = {
@@ -249,16 +206,13 @@ export function ScheduleSection({
     };
 
     return (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4" ref={containerRef}>
-            <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-900">Schedule</h3>
-                {loading && <span className="text-xs text-gray-500">Saving...</span>}
-            </div>
-
-            {error && (
-                <div className="text-red-600 text-xs mb-2">{error}</div>
-            )}
-
+        <EditableSectionCard
+            title="Schedule"
+            isEditing={isEditing}
+            onEditingChange={setIsEditing}
+            loading={loading}
+            error={error}
+        >
             {isEditing ? (
                 <div className="flex flex-col space-y-3">
                     {/* Kind Toggle */}
@@ -290,49 +244,15 @@ export function ScheduleSection({
                         </div>
                     </div>
 
-                    {/* All Day Toggle */}
-                    <div className="flex items-center">
-                        <input
-                            type="checkbox"
-                            id="all-day-toggle"
-                            checked={formAllDay}
-                            onChange={(e) => setFormAllDay(e.target.checked)}
-                            className="h-4 w-4 text-github-green-600 focus:ring-github-green-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor="all-day-toggle" className="ml-2 text-sm text-gray-700">
-                            All day
-                        </label>
-                    </div>
-
-                    {/* Scheduled times - always datetime-local */}
-                    <div className="grid grid-cols-1 gap-2">
-                        <div className="min-w-0">
-                            <label className="block text-xs text-gray-500 mb-1">Start</label>
-                            <input
-                                type="datetime-local"
-                                name="schedule-section-start-dt"
-                                value={formStartDatetime}
-                                onChange={(e) => setFormStartDatetime(e.target.value)}
-                                autoComplete="off"
-                                data-form-type="other"
-                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
-                                style={{ WebkitAppearance: 'none', appearance: 'none' }}
-                            />
-                        </div>
-                        <div className="min-w-0">
-                            <label className="block text-xs text-gray-500 mb-1">End</label>
-                            <input
-                                type="datetime-local"
-                                name="schedule-section-end-dt"
-                                value={formEndDatetime}
-                                onChange={(e) => setFormEndDatetime(e.target.value)}
-                                autoComplete="off"
-                                data-form-type="other"
-                                className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 box-border overflow-hidden"
-                                style={{ WebkitAppearance: 'none', appearance: 'none' }}
-                            />
-                        </div>
-                    </div>
+                    <ScheduleDateTimeFields
+                        idPrefix="schedule-section"
+                        allDay={formAllDay}
+                        onAllDayChange={setFormAllDay}
+                        start={formStartDatetime}
+                        onStartChange={setFormStartDatetime}
+                        end={formEndDatetime}
+                        onEndChange={setFormEndDatetime}
+                    />
 
                     {/* Actual Times Section - always visible */}
                     <div className="border-t border-gray-200 pt-3">
@@ -422,6 +342,6 @@ export function ScheduleSection({
                     )}
                 </div>
             )}
-        </div>
+        </EditableSectionCard>
     );
 }

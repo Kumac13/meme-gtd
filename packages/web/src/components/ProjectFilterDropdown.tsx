@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
 import { PROJECT_STATUS_LABELS } from '../utils/projectStatus';
+import { FilterDropdown } from './FilterControls';
 
 interface ProjectFilterItem {
   id: number;
@@ -27,19 +27,7 @@ export default function ProjectFilterDropdown({
   onToggleNoProject,
   onClear,
 }: ProjectFilterDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
   const isActive = selectedIds.size > 0 || includesNoProject;
-
-  useEffect(() => {
-    const closeOnOutsideClick = (event: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', closeOnOutsideClick);
-    return () => document.removeEventListener('mousedown', closeOnOutsideClick);
-  }, []);
 
   if (projects.length === 0) return null;
 
@@ -54,27 +42,7 @@ export default function ProjectFilterDropdown({
   );
 
   return (
-    <div className="relative" ref={rootRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen((open) => !open)}
-        className={`px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 ${
-          isActive ? 'bg-github-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        }`}
-      >
-        {label}
-        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-1 min-w-[280px] max-w-[400px] bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
-          {isActive && (
-            <button type="button" onClick={() => { onClear(); setIsOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 border-b border-gray-100">
-              Clear
-            </button>
-          )}
+    <FilterDropdown label={label} active={isActive} onClear={onClear} panelClassName="min-w-[280px] max-w-[400px] max-h-64 overflow-y-auto">
           <button type="button" onClick={onToggleNoProject} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
             {selectionIcon(includesNoProject)}
             <span className="text-gray-500 italic truncate">No Project</span>
@@ -86,8 +54,6 @@ export default function ProjectFilterDropdown({
               <span className="text-xs text-gray-400 ml-auto shrink-0">{PROJECT_STATUS_LABELS[project.status] || project.status}</span>
             </button>
           ))}
-        </div>
-      )}
-    </div>
+    </FilterDropdown>
   );
 }

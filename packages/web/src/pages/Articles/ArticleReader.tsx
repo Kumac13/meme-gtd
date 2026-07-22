@@ -7,6 +7,7 @@ import LoadingState from "../../components/LoadingState";
 import ErrorState from "../../components/ErrorState";
 import type { Article } from "meme-gtd-shared";
 import { stripArticleBlockIds } from "../../utils/markdown";
+import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 
 export const ArticleReader: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +17,7 @@ export const ArticleReader: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
+  const { copy } = useCopyToClipboard();
   // Support clicking on linked items within the reader
   const [selectedItem, setSelectedItem] = useState<{ id: number; type: "memo" | "task" | "article" } | null>(null);
 
@@ -111,7 +113,7 @@ export const ArticleReader: React.FC = () => {
   // Handle copy all contents
   const handleCopyAll = () => {
     const content = `${article.title}\n\n${article.meta?.originalUrl || ''}\n\n${article.bodyMd}`;
-    navigator.clipboard.writeText(content);
+    void copy(content);
   };
 
   // Build article actions for sidebar (same style as Task's Copy All Contents / Archive to Memo)

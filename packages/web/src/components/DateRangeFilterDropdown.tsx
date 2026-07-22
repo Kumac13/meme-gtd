@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useMemo } from 'react';
+import { FilterDropdown } from './FilterControls';
 
 interface DateRangeFilterDropdownProps {
   dateFrom: string;
@@ -107,60 +108,15 @@ export default function DateRangeFilterDropdown({
   onChange,
   onClear,
 }: DateRangeFilterDropdownProps) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
   const presets = useMemo(() => getPresets(), []);
   const isActive = !!(dateFrom || dateTo);
   const buttonLabel = formatButtonLabel(dateFrom, dateTo, presets);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handlePreset = (preset: Preset) => {
-    onChange(preset.from, preset.to);
-    setOpen(false);
-  };
-
   const activePreset = presets.find(p => p.from === dateFrom && p.to === dateTo);
 
   return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        className={`px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 ${
-          isActive
-            ? 'bg-github-green-600 text-white'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        }`}
-      >
-        {buttonLabel}
-        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {open && (
-        <div className="absolute top-full left-0 mt-1 min-w-[280px] bg-white border border-gray-200 rounded-md shadow-lg z-10">
-          {isActive && (
-            <button
-              onClick={() => {
-                onClear();
-                setOpen(false);
-              }}
-              className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 border-b border-gray-100"
-            >
-              Clear
-            </button>
-          )}
-
+    <FilterDropdown label={buttonLabel} active={isActive} onClear={onClear}>
+      {(close) => <>
           {/* Presets */}
           <div className="p-2 border-b border-gray-100">
             <div className="text-xs text-gray-400 px-1 mb-1">Presets</div>
@@ -168,7 +124,7 @@ export default function DateRangeFilterDropdown({
               {presets.map((preset) => (
                 <button
                   key={preset.label}
-                  onClick={() => handlePreset(preset)}
+                  onClick={() => { onChange(preset.from, preset.to); close(); }}
                   className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                     activePreset?.label === preset.label
                       ? 'bg-github-green-600 text-white'
@@ -200,8 +156,7 @@ export default function DateRangeFilterDropdown({
               />
             </div>
           </div>
-        </div>
-      )}
-    </div>
+      </>}
+    </FilterDropdown>
   );
 }

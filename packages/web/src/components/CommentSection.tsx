@@ -1,9 +1,8 @@
-import { useState, useRef, useMemo, DragEvent, ClipboardEvent } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import type { IssueType } from 'meme-gtd-shared';
 import EditableContent from './EditableContent';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { getShortcutHint } from '../utils/keyboard';
-import { useImageUpload } from '../hooks/useImageUpload';
 import { MarkdownTextarea } from './MarkdownTextarea';
 import { ActivityTimelineItem, getActivityIcon } from './ActivityTimelineItem';
 import { type ActivityLogEntry } from '../utils/activityLogHelpers';
@@ -46,9 +45,7 @@ export default function CommentSection({
 }: CommentSectionProps) {
   const [newCommentBody, setNewCommentBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { isUploading, uploadImage } = useImageUpload();
 
   const handleSubmitNewComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,75 +69,6 @@ export default function CommentSection({
       form.requestSubmit();
     }
   }, { disabled: submitting || !newCommentBody.trim() });
-
-  // Image upload handlers for new comment textarea
-  const insertMarkdownRef = (markdownRef: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      setNewCommentBody(prev => prev + '\n' + markdownRef);
-      return;
-    }
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const before = newCommentBody.slice(0, start);
-    const after = newCommentBody.slice(end);
-
-    const newValue = before + (before.endsWith('\n') || before === '' ? '' : '\n') + markdownRef + '\n' + after;
-    setNewCommentBody(newValue);
-
-    setTimeout(() => {
-      textarea.focus();
-      const newCursorPos = before.length + (before.endsWith('\n') || before === '' ? 0 : 1) + markdownRef.length + 1;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
-  };
-
-  const handleImageFile = async (file: File) => {
-    if (isUploading) return;
-    const result = await uploadImage(file);
-    if (result.success && result.markdownRef) {
-      insertMarkdownRef(result.markdownRef);
-    }
-  };
-
-  const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-
-    for (const item of items) {
-      if (item.type.startsWith('image/')) {
-        e.preventDefault();
-        const file = item.getAsFile();
-        if (file) {
-          handleImageFile(file);
-        }
-        return;
-      }
-    }
-  };
-
-  const handleDragOver = (e: DragEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    if (e.dataTransfer.types.includes('Files')) {
-      setIsDragging(true);
-    }
-  };
-
-  const handleDragLeave = (e: DragEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: DragEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    const files = e.dataTransfer.files;
-    if (files.length > 0 && files[0].type.startsWith('image/')) {
-      handleImageFile(files[0]);
-    }
-  };
 
   const timelineEntries = useMemo<TimelineEntry[]>(() => {
     const commentEntries: TimelineEntry[] = comments.map((c) => ({ type: 'comment', comment: c }));
@@ -206,15 +134,9 @@ export default function CommentSection({
           value={newCommentBody}
           onChange={setNewCommentBody}
           onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
           rows={4}
           placeholder="Write a comment..."
           disabled={submitting}
-          isDragging={isDragging}
-          isUploading={isUploading}
           minHeightClass="min-h-[100px]"
         />
         <div className="mt-2 flex justify-end">
