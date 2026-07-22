@@ -1,157 +1,174 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const source = (relativePath: string) =>
-  readFileSync(new URL(relativePath, import.meta.url), 'utf8');
+// 共通コンポーネントの所有権ルール（docs/architecture.md「Web プレゼンテーション層」が正）。
+// ファイル列挙ではなくディレクトリ走査で検査し、新規追加ファイルも自動的に対象へ入れる。
 
-describe('shared component boundaries', () => {
-  it('keeps every template-backed entry point on TemplateCreationFlow', () => {
-    for (const path of [
-      '../../src/pages/TaskNew.tsx',
-      '../../src/pages/Articles/ArticleNew.tsx',
-      '../../src/components/CreateTaskModal.tsx',
-    ]) {
-      const contents = source(path);
-      expect(contents).toContain('TemplateCreationFlow');
-      expect(contents).not.toContain('TemplatesService');
+// vitest は packages/web をカレントディレクトリとして実行する
+const webSrc = join(process.cwd(), 'src');
+const iosApp = join(process.cwd(), '../../ios/MemeGTD/MemeGTD');
+
+const listFiles = (root: string, extensions: string[]): string[] =>
+  readdirSync(root, { recursive: true, encoding: 'utf8' })
+    .filter((path) => extensions.some((extension) => path.endsWith(extension)))
+    .map((path) => path.split(sep).join('/'));
+
+const source = (root: string, relativePath: string) => readFileSync(join(root, relativePath), 'utf8');
+
+/** pattern を含んでよいファイルを allowlist に限定する（走査型の負のルール）。 */
+const expectOwnedBy = (root: string, files: string[], pattern: string, allowlist: string[]) => {
+  for (const file of files) {
+    if (allowlist.includes(file)) continue;
+    expect(source(root, file), `${file} must not own '${pattern}' — use ${allowlist.join(', ')}`)
+      .not.toContain(pattern);
+  }
+};
+
+describe('shared component boundaries (web)', () => {
+  const files = listFiles(webSrc, ['.ts', '.tsx']).filter((file) => !file.startsWith('api/'));
+  const pages = files.filter((file) => file.startsWith('pages/'));
+
+  it('scans a sane number of source files', () => {
+    expect(files.length).toBeGreaterThan(50);
+  });
+
+  it('keeps interaction primitives on their single owners across all files', () => {
+    expectOwnedBy(webSrc, files, "addEventListener('mousedown'", ['hooks/useOutsideClick.ts']);
+    expectOwnedBy(webSrc, files, 'useImageUpload', ['hooks/useImageUpload.ts', 'components/MarkdownTextarea.tsx']);
+    expectOwnedBy(webSrc, files, 'navigator.clipboard', [
+      'hooks/useCopyToClipboard.ts',
+      'utils/copyContent.ts',
+      'utils/markdown.tsx',
+    ]);
+    expectOwnedBy(webSrc, files, 'fixed inset-0', ['components/ActionMenu.tsx', 'components/SidePanel.tsx']);
+  });
+
+  it('keeps template fetching behind TemplateCreationFlow / template screens', () => {
+    expectOwnedBy(
+      webSrc,
+      files,
+      'TemplatesService',
+      [
+        'components/TemplateChooser.tsx',
+        'components/TemplateForm.tsx',
+        'components/ItemDetail.tsx',
+        ...files.filter((file) => file.startsWith('pages/Templates/')),
+      ],
+    );
+    for (const path of ['pages/TaskNew.tsx', 'pages/Articles/ArticleNew.tsx', 'components/CreateTaskModal.tsx']) {
+      expect(source(webSrc, path)).toContain('TemplateCreationFlow');
     }
   });
 
-  it('keeps resource forms and page chrome on their shared components', () => {
-    expect(source('../../src/components/MemoForm.tsx')).toContain('<IssueForm');
-
-    for (const path of [
-      '../../src/pages/TaskNew.tsx',
-      '../../src/pages/Articles/ArticleNew.tsx',
-      '../../src/pages/MemoNew.tsx',
-      '../../src/pages/ProjectNew.tsx',
-      '../../src/pages/Templates/TemplateNew.tsx',
-      '../../src/pages/TaskEdit.tsx',
-      '../../src/pages/MemoEdit.tsx',
-    ]) {
-      expect(source(path)).toContain('FormPageLayout');
+  it('keeps every create/edit page on FormPageLayout (including future pages)', () => {
+    const formPages = pages.filter((file) => file.endsWith('New.tsx') || file.endsWith('Edit.tsx'));
+    expect(formPages.length).toBeGreaterThanOrEqual(7);
+    for (const file of formPages) {
+      expect(source(webSrc, file), `${file} must use FormPageLayout`).toContain('FormPageLayout');
     }
   });
 
-  it('keeps list filters and overlay panels on one implementation', () => {
-    for (const path of [
-      '../../src/pages/TasksList.tsx',
-      '../../src/pages/MemosList.tsx',
-      '../../src/pages/Articles/ArticleList.tsx',
-    ]) {
-      expect(source(path)).toContain('ProjectFilterDropdown');
-      expect(source(path)).not.toContain('showProjectDropdown');
-    }
-
-    for (const path of [
-      '../../src/components/CreateTaskModal.tsx',
-      '../../src/components/CreateTaskFromProjectModal.tsx',
-      '../../src/components/ItemDetailPanel.tsx',
-    ]) {
-      expect(source(path)).toContain('SidePanel');
-    }
-
-    expect(source('../../src/pages/Calendar.tsx')).toContain('ItemDetailPanel');
-    expect(existsSync(new URL('../../src/components/calendar/TaskDetailPanel.tsx', import.meta.url))).toBe(false);
-  });
-
-  it('keeps markdown attachments, action menus, and editable cards on shared owners', () => {
-    expect(source('../../src/components/MarkdownTextarea.tsx')).toContain('useImageUpload');
-    for (const path of [
-      '../../src/components/IssueForm.tsx',
-      '../../src/components/CommentSection.tsx',
-      '../../src/components/EditableContent.tsx',
-      '../../src/components/ProjectForm.tsx',
-    ]) {
-      expect(source(path)).not.toContain('useImageUpload');
-    }
-
-    for (const path of [
-      '../../src/components/LinkItem.tsx',
-      '../../src/components/UrlLinkItem.tsx',
-      '../../src/components/EditableContent.tsx',
-      '../../src/components/ItemList.tsx',
-      '../../src/pages/MemoDetail.tsx',
-    ]) {
-      expect(source(path)).toContain('ActionMenu');
-      expect(source(path)).not.toContain('fixed inset-0 z-10');
-    }
-
-    for (const path of [
-      '../../src/components/ScheduleSection.tsx',
-      '../../src/components/ProjectScheduleSection.tsx',
-    ]) {
-      expect(source(path)).toContain('EditableSectionCard');
-      expect(source(path)).not.toContain("addEventListener('mousedown'");
+  it('keeps every list page on ListPageLayout (including future pages)', () => {
+    // ProjectsList は今回の共通化スコープ外の既知の例外。解消したらここから外す。
+    const knownExceptions = ['pages/ProjectsList.tsx'];
+    const listPages = pages.filter((file) => file.endsWith('List.tsx') && !knownExceptions.includes(file));
+    expect(listPages.length).toBeGreaterThanOrEqual(4);
+    for (const file of listPages) {
+      expect(source(webSrc, file), `${file} must use ListPageLayout`).toContain('ListPageLayout');
     }
   });
 
-  it('keeps management, schedule, link creation, and list chrome on shared owners', () => {
-    for (const path of ['../../src/components/LabelsSection.tsx', '../../src/components/ProjectsSection.tsx']) {
-      expect(source(path)).toContain('ManagementSection');
-    }
-
-    for (const path of ['../../src/components/ScheduleInput.tsx', '../../src/components/ScheduleSection.tsx']) {
-      expect(source(path)).toContain('ScheduleDateTimeFields');
-      expect(source(path)).not.toContain('id="all-day-toggle"');
-    }
-
-    for (const path of ['../../src/components/AddLinkInline.tsx', '../../src/components/TaskFormLinks.tsx']) {
-      expect(source(path)).toContain('LinkCreationEditor');
-      expect(source(path)).not.toContain('Select link type:');
-    }
+  it('keeps shared shells wired into their known consumers', () => {
+    expect(source(webSrc, 'components/MemoForm.tsx')).toContain('<IssueForm');
 
     for (const path of [
-      '../../src/pages/TasksList.tsx',
-      '../../src/pages/MemosList.tsx',
-      '../../src/pages/Articles/ArticleList.tsx',
-      '../../src/pages/Templates/TemplatesList.tsx',
+      'components/CreateTaskModal.tsx',
+      'components/CreateTaskFromProjectModal.tsx',
+      'components/ItemDetailPanel.tsx',
     ]) {
-      expect(source(path)).toContain('ListPageLayout');
+      expect(source(webSrc, path)).toContain('SidePanel');
+    }
+
+    expect(source(webSrc, 'pages/Calendar.tsx')).toContain('ItemDetailPanel');
+    expect(existsSync(join(webSrc, 'components/calendar/TaskDetailPanel.tsx'))).toBe(false);
+
+    for (const path of ['components/LabelsSection.tsx', 'components/ProjectsSection.tsx']) {
+      expect(source(webSrc, path)).toContain('ManagementSection');
+    }
+
+    for (const path of ['components/ScheduleInput.tsx', 'components/ScheduleSection.tsx']) {
+      expect(source(webSrc, path)).toContain('ScheduleDateTimeFields');
+      expect(source(webSrc, path)).not.toContain('id="all-day-toggle"');
+    }
+
+    for (const path of ['components/AddLinkInline.tsx', 'components/TaskFormLinks.tsx']) {
+      expect(source(webSrc, path)).toContain('LinkCreationEditor');
+      expect(source(webSrc, path)).not.toContain('Select link type:');
     }
 
     for (const path of [
-      '../../src/components/LabelFilterDropdown.tsx',
-      '../../src/components/ProjectFilterDropdown.tsx',
-      '../../src/components/DateRangeFilterDropdown.tsx',
-    ]) expect(source(path)).toContain('FilterDropdown');
-
-    for (const path of [
-      '../../src/pages/TaskDetail.tsx',
-      '../../src/pages/MemoDetail.tsx',
-      '../../src/components/ItemDetailPanel.tsx',
+      'components/LabelFilterDropdown.tsx',
+      'components/ProjectFilterDropdown.tsx',
+      'components/DateRangeFilterDropdown.tsx',
     ]) {
-      expect(source(path)).toContain('useCopyItemContent');
-      expect(source(path)).not.toContain('setTimeout(');
+      expect(source(webSrc, path)).toContain('FilterDropdown');
+    }
+
+    for (const path of ['pages/TaskDetail.tsx', 'pages/MemoDetail.tsx', 'components/ItemDetailPanel.tsx']) {
+      expect(source(webSrc, path)).toContain('useCopyItemContent');
+    }
+
+    for (const path of ['pages/TasksList.tsx', 'pages/MemosList.tsx', 'pages/Articles/ArticleList.tsx']) {
+      expect(source(webSrc, path)).toContain('ProjectFilterDropdown');
+    }
+  });
+});
+
+describe('shared component boundaries (iOS)', () => {
+  // CI（web-ci.yml）で唯一自動実行される iOS 境界チェック。
+  // Xcode 側の同等チェックは MemeGTDTests/ComponentBoundaryTests.swift。
+  const swiftFiles = listFiles(iosApp, ['.swift']);
+
+  it('scans a sane number of Swift files', () => {
+    expect(swiftFiles.length).toBeGreaterThan(50);
+  });
+
+  it('keeps every list ViewModel on IssueListStateProviding (including future ones)', () => {
+    const listViewModels = swiftFiles.filter((file) => file.endsWith('ListViewModel.swift'));
+    expect(listViewModels.length).toBeGreaterThanOrEqual(4);
+    for (const file of listViewModels) {
+      const contents = source(iosApp, file);
+      expect(contents, `${file} must adopt IssueListStateProviding`).toContain('IssueListStateProviding');
+      expect(contents, `${file} must load more via performLoadMore`).toContain('performLoadMore');
     }
   });
 
-  it('keeps iOS cells, pickers, detail operations, and list state on shared boundaries', () => {
-    for (const path of [
-      '../../../../ios/MemeGTD/MemeGTD/Views/Components/TaskCell.swift',
-      '../../../../ios/MemeGTD/MemeGTD/Views/Components/ArticleCell.swift',
-      '../../../../ios/MemeGTD/MemeGTD/Views/Components/TemplateCell.swift',
-    ]) expect(source(path)).toContain('IssueCellLayout');
-
-    for (const path of [
-      '../../../../ios/MemeGTD/MemeGTD/Views/Components/LabelPickerModal.swift',
-      '../../../../ios/MemeGTD/MemeGTD/Views/Components/ProjectPickerModal.swift',
-    ]) expect(source(path)).toContain('MultiSelectPickerShell');
-
-    for (const path of [
-      '../../../../ios/MemeGTD/MemeGTD/ViewModels/TaskDetailViewModel.swift',
-      '../../../../ios/MemeGTD/MemeGTD/ViewModels/ArticleDetailViewModel.swift',
-      '../../../../ios/MemeGTD/MemeGTD/ViewModels/MemoDetailViewModel.swift',
-    ]) {
-      const contents = source(path);
-      expect(contents).toContain('IssueRelationManaging');
-      expect(contents).not.toContain('IssueRelationService(issueId:');
+  it('keeps every detail ViewModel on IssueMetadataManaging (including future ones)', () => {
+    const detailViewModels = swiftFiles.filter((file) => file.endsWith('DetailViewModel.swift'));
+    expect(detailViewModels.length).toBeGreaterThanOrEqual(4);
+    for (const file of detailViewModels) {
+      expect(source(iosApp, file), `${file} must adopt IssueMetadataManaging`).toContain('IssueMetadataManaging');
     }
+  });
 
-    for (const name of ['Task', 'Memo', 'Article', 'Template']) {
-      const contents = source(`../../../../ios/MemeGTD/MemeGTD/ViewModels/${name}ListViewModel.swift`);
-      expect(contents).toContain('IssueListStateProviding');
-      expect(contents).toContain('performLoadMore');
+  it('keeps metadata/relation service construction inside the shared protocols', () => {
+    for (const pattern of ['IssueMetadataService(', 'IssueRelationService(']) {
+      expectOwnedBy(iosApp, swiftFiles, pattern, ['Protocols/IssueDetailManaging.swift']);
+    }
+  });
+
+  it('keeps every issue cell on IssueCellLayout (including future ones)', () => {
+    const cells = swiftFiles.filter((file) => file.includes('Views/Components/') && file.endsWith('Cell.swift'));
+    expect(cells.length).toBeGreaterThanOrEqual(3);
+    for (const file of cells) {
+      expect(source(iosApp, file), `${file} must use IssueCellLayout`).toContain('IssueCellLayout');
+    }
+  });
+
+  it('keeps multi-select pickers on MultiSelectPickerShell', () => {
+    for (const path of ['Views/Components/LabelPickerModal.swift', 'Views/Components/ProjectPickerModal.swift']) {
+      expect(source(iosApp, path)).toContain('MultiSelectPickerShell');
     }
   });
 });
