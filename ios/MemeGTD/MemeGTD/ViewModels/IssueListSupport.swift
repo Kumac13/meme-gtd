@@ -1,4 +1,7 @@
 import SwiftUI
+import os
+
+private let logger = Logger(subsystem: "name.kumac.MemeGTD", category: "IssueList")
 
 @MainActor
 protocol IssueListStateProviding: ObservableObject {
@@ -15,8 +18,11 @@ extension IssueListStateProviding {
         isLoadingMore = true
         defer { isLoadingMore = false }
         do { try await operation() }
-        catch is CancellationError {}
-        catch { self.error = error.localizedDescription }
+        catch is CancellationError { logger.info("performLoadMore cancelled: \(String(describing: Self.self))") }
+        catch {
+            self.error = error.localizedDescription
+            logger.error("performLoadMore error (\(String(describing: Self.self))): \(error.localizedDescription)")
+        }
     }
 
     func performSearchExport(_ request: SearchExportRequest) async {
