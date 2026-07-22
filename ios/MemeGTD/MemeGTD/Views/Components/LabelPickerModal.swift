@@ -24,25 +24,19 @@ struct LabelPickerModal: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ModalHeader(
-                title: "Labels",
-                onDismiss: onDismiss,
-                trailingAction: showClear
+        MultiSelectPickerShell(
+            title: "Labels",
+            onDismiss: onDismiss,
+            trailingAction: showClear
                     ? .clear(isEnabled: !selectedNames.isEmpty, action: {
                         HapticManager.impact(.light)
                         selectedNames.removeAll()
                     })
                     : onConfirm.map { confirm in
                         .confirm(isEnabled: true, action: { confirm(selectedNames) })
-                    } ?? .placeholder
-            )
-
-            Divider()
-
-            ZStack(alignment: .bottom) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
+                    } ?? .placeholder,
+            searchText: $searchText
+        ) {
                         Button(action: {
                             HapticManager.impact(.light)
                             newLabelName = trimmedSearchText
@@ -97,14 +91,7 @@ struct LabelPickerModal: View {
                             Divider().padding(.leading, 16)
                         }
 
-                        Color.clear.frame(height: 70)
-                    }
-                }
-
-                PickerSearchBar(text: $searchText, placeholder: "Search")
-            }
         }
-        .background(Color(.systemBackground))
         .sheet(isPresented: $showCreateSheet) {
             CreateLabelSheet(initialName: newLabelName) { newLabel in
                 onLabelCreated?(newLabel)
