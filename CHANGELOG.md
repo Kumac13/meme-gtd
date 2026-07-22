@@ -1,15 +1,17 @@
 # Changelog
 
-## 0.50.9 - 2026-07-21
+## 0.50.9 - 2026-07-22
 
 ### Bug Fixes
 
 - Web / iOS の Blank／Template 選択からフォーム初期値への変換までを共通の作成フローに集約し、Task 一覧・Task Detail・Article 一覧で同じコンポーネント境界を通るよう修正。
-- Web の Task / Memo / Article に重複していたフォーム、作成・編集ページ枠、プロジェクトフィルター、サイドパネルを共通コンポーネントへ集約。Calendar の Task 専用詳細パネルを廃止し、共通 Item Detail を利用するようにした。
+- Web の Task / Memo / Article / Template に重複していた一覧ページ枠、作成・編集ページ枠、フィルター、アクションメニュー、スケジュール入力、Label / Project 管理欄、リンク追加、コピー操作、サイドパネルを共通コンポーネントへ集約。Calendar の Task 専用詳細パネルを廃止し、共通 Item Detail パネルを利用するようにした（Calendar からも Copy All / Archive to Memo / コメント表示が使えるようになる）。
+- iOS の Task / Memo / Article / Template に重複していた一覧セル、複数選択 picker、詳細画面の Label / Project / リンク操作、一覧の追加読込・エクスポートを共通実装へ集約。Memo 詳細で Project を変更しても memo 一覧に反映されない問題を修正（挙動を他リソースと統一）。
 
 ### Tests
 
-- Blank／Template 適用と作成画面への遷移を検証するユニットテスト、および各画面が共通コンポーネント境界を維持していることを検証する構造テストを追加。
+- Blank／Template 適用と作成画面への遷移を検証するユニットテストを追加。
+- 共通コンポーネント境界の構造テストをディレクトリ走査型で追加（Web・iOS 両対象、新規追加ファイルも自動検査）。Xcode 側にも同等の構造テスト（ComponentBoundaryTests）を追加し、新設の Web CI で境界チェックを自動実行するようにした。
 
 ## 0.50.8 - 2026-07-21
 
