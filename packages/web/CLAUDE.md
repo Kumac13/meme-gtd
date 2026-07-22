@@ -45,9 +45,31 @@ await fetch(`/api/tasks/${id}`, { method: 'PATCH', ... });
 - UI文言は英語（ルートCLAUDE.md参照）
 - 検索クエリは free-text のみ。ラベル・ステータスのフィルタは検索ボックスではなく専用 dropdown UI で扱う（`utils/queryParser.ts` 参照）
 
+## 共通UIコンポーネント（新規UI実装前に必ず確認）
+
+新しい画面・UIを作るとき、以下に該当するものは対応する共通コンポーネントを必ず使う。自前実装・既存画面からのコピーは禁止。境界は `tests/unit/ComponentBoundaries.test.ts` が検査し（Web CI で自動実行、新規ファイルも走査対象）、所有権ルールの正は `docs/architecture.md`「Web プレゼンテーション層」。
+
+| 作るもの | 使う共通コンポーネント |
+|---|---|
+| 一覧ページの外枠（検索・作成導線・filter・件数・empty） | `ListPageLayout` |
+| 作成・編集ページの外枠 | `FormPageLayout` |
+| Issue系の作成・編集フォーム本体 | `IssueForm`（リソース固有フィールドはslot/callbackで渡す） |
+| Template選択からの作成フロー | `TemplateCreationFlow`（`TemplatesService` を画面から直接呼ばない） |
+| 右側オーバーレイパネル | `SidePanel` |
+| Issue詳細の右パネル | `ItemDetailPanel`（リソース別Detail panelを増やさない） |
+| 一覧filterのtrigger・popover・Clear | `FilterDropdown` / `ToggleFilterButton` |
+| 行の「…」メニュー・インライン削除確認 | `ActionMenu` / `InlineDeleteConfirmation` |
+| 外側クリックで閉じる挙動 | `useOutsideClick`（`document.addEventListener` を直接書かない） |
+| Markdown本文入力（画像paste/drop/upload含む） | `MarkdownTextarea` |
+| コンテンツ全文コピーとフィードバック | `useCopyItemContent` |
+| Label / Project の管理欄 | `ManagementSection` |
+| 編集可能な日付カード | `EditableSectionCard` |
+| 日時・終日入力 | `ScheduleDateTimeFields` |
+| Issue / URL リンク追加エディタ | `LinkCreationEditor` |
+
 ## 大型ファイルの注意
 
-`TaskForm.tsx`、`MemosList.tsx`、`MemoForm.tsx`、`utils/activityLogHelpers.ts` は特に大きく（数百行〜1,000行近く）複数の関心事を含む。変更時は影響範囲を慎重に確認すること。
+`MemosList.tsx`、`utils/activityLogHelpers.ts`、`IssueForm.tsx` は特に大きく（数百行規模）複数の関心事を含む。変更時は影響範囲を慎重に確認すること。
 
 ## テスト・検証
 

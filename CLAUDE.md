@@ -54,8 +54,10 @@ pnpmモノレポ（CLI / REST API / Web UI / Chrome拡張）+ iOSアプリ。単
 git push する前にCIと同じチェックをローカルで通すこと:
 
 ```bash
-pnpm --filter meme-gtd-api lint && pnpm --filter meme-gtd-api openapi:validate && pnpm --filter meme-gtd-api test && pnpm build && pnpm knip
+pnpm --filter meme-gtd-api lint && pnpm --filter meme-gtd-api openapi:validate && pnpm --filter meme-gtd-api test && pnpm --filter meme-gtd-web test && pnpm build && pnpm knip
 ```
+
+Web テストには共通コンポーネントの境界チェック（`ComponentBoundaries.test.ts`、iOS ソース走査を含む）が含まれる。iOS のみの変更でも Web テストは実行すること。
 
 ## 言語と対話
 
