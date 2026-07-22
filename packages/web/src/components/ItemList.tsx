@@ -7,6 +7,7 @@ import { LabelBadge } from "./LabelBadge";
 import RelevanceIndicator from "./RelevanceIndicator";
 import { createItemDetailUrl } from "../utils/navigationHelpers";
 import type { Article, IssueType } from "meme-gtd-shared";
+import { ActionMenu } from "./ActionMenu";
 
 // Status badge labels and colors
 const statusLabels: Record<string, string> = {
@@ -104,20 +105,15 @@ export default function ItemList({
   searchQuery,
   relevanceScores,
 }: ItemListProps) {
-  const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
 
-  const handleDelete = async (e: React.MouseEvent, id: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-
+  const handleDelete = async (id: number) => {
     if (!onDelete) return;
     if (!window.confirm("Are you sure you want to delete this item?")) return;
 
     try {
       setDeleting(id);
       await onDelete(id);
-      setMenuOpenId(null);
     } catch (error) {
       console.error("Error deleting item:", error);
       alert("Failed to delete item");
@@ -370,39 +366,15 @@ export default function ItemList({
                     </>
                   )}
                   {onDelete && (
-                    <div className="relative">
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setMenuOpenId(menuOpenId === item.id ? null : item.id);
-                        }}
-                        className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
-                        aria-label="More options"
-                        disabled={deleting === item.id}
-                      >
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                          <path d="M8 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"></path>
-                        </svg>
-                      </button>
-                      {menuOpenId === item.id && (
-                        <>
-                          <div
-                            className="fixed inset-0 z-10"
-                            onClick={() => setMenuOpenId(null)}
-                          />
-                          <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-20">
-                            <button
-                              onClick={(e) => handleDelete(e, item.id)}
-                              disabled={deleting === item.id}
-                              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {deleting === item.id ? "Deleting..." : "Delete"}
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
+                    <ActionMenu
+                      disabled={deleting === item.id}
+                      items={[{
+                        label: deleting === item.id ? "Deleting..." : "Delete",
+                        onSelect: () => handleDelete(item.id),
+                        destructive: true,
+                        disabled: deleting === item.id,
+                      }]}
+                    />
                   )}
                 </div>
               </div>

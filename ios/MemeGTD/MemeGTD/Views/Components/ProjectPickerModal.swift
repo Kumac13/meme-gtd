@@ -21,11 +21,10 @@ struct ProjectPickerModal: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ModalHeader(
-                title: "Projects",
-                onDismiss: onDismiss,
-                trailingAction: showClear
+        MultiSelectPickerShell(
+            title: "Projects",
+            onDismiss: onDismiss,
+            trailingAction: showClear
                     ? .clear(isEnabled: hasAnySelection, action: {
                         HapticManager.impact(.light)
                         selectedIds.removeAll()
@@ -33,14 +32,9 @@ struct ProjectPickerModal: View {
                     })
                     : onConfirm.map { confirm in
                         .confirm(isEnabled: true, action: { confirm(selectedIds) })
-                    } ?? .placeholder
-            )
-
-            Divider()
-
-            ZStack(alignment: .bottom) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
+                    } ?? .placeholder,
+            searchText: $searchText
+        ) {
                         if showClear {
                             noProjectRow
                             Divider().padding(.leading, 16)
@@ -52,14 +46,7 @@ struct ProjectPickerModal: View {
                             Divider().padding(.leading, 16)
                         }
 
-                        Color.clear.frame(height: 70)
-                    }
-                }
-
-                PickerSearchBar(text: $searchText, placeholder: "Search")
-            }
         }
-        .background(Color(.systemBackground))
     }
 
     private var noProjectRow: some View {

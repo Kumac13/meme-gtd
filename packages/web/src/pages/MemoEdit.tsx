@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { MemosService } from '../api/services/MemosService';
 import MemoForm from '../components/MemoForm';
+import FormPageLayout from '../components/FormPageLayout';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 
@@ -52,22 +53,12 @@ export default function MemoEdit() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-2">
-      <div className="mb-6">
-        <Link
-          to={`/memos/${memo.id}`}
-          className="text-github-green-600 hover:text-github-green-800 text-sm font-medium mb-4 inline-block"
-        >
-          ← Back to memo
-        </Link>
-        <h1 className="text-3xl font-bold text-gray-900">
-          Edit {memo.title || `Memo #${memo.id}`}
-        </h1>
-      </div>
-
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <MemoForm mode="edit" memoId={memo.id} initialBodyMd={memo.bodyMd} />
-      </div>
-    </div>
+    <FormPageLayout
+      backTo={`/memos/${memo.id}`}
+      backLabel="Back to memo"
+      title={`Edit ${memo.title || `Memo #${memo.id}`}`}
+    >
+      <MemoForm mode="edit" memoId={memo.id} initialBodyMd={memo.bodyMd} />
+    </FormPageLayout>
   );
 }

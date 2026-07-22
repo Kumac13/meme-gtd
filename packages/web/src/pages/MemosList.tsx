@@ -13,6 +13,7 @@ import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
 import Pagination from '../components/Pagination';
 import CopyResultsButtons from '../components/CopyResultsButtons';
+import ProjectFilterDropdown from '../components/ProjectFilterDropdown';
 import { useUrlFilters } from '../hooks/useUrlFilters';
 import {
   validateBookmarked,
@@ -35,6 +36,8 @@ import {
 } from '../utils/memoTimeline';
 import { extractSnippet, highlightKeyword } from '../utils/searchHighlight';
 import { useSearchHighlight } from '../hooks/useSearchHighlight';
+import { ListPageLayout } from '../components/ListPageLayout';
+import { ToggleFilterButton } from '../components/FilterControls';
 
 interface Memo {
   id: number;
@@ -48,7 +51,7 @@ interface Memo {
   updatedAt: string;
 }
 
-import { PROJECT_STATUS_LABELS, sortProjectsByStatus } from '../utils/projectStatus';
+import { sortProjectsByStatus } from '../utils/projectStatus';
 
 interface Project {
   id: number;
@@ -119,10 +122,8 @@ export default function MemosList() {
   const [creatingMemo, setCreatingMemo] = useState(false);
   const [initialScrollDone, setInitialScrollDone] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
 
   // Refs
-  const dropdownRef = useRef<HTMLDivElement>(null);
   // Mobile scroll management refs
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const timelineContainerRef = useRef<HTMLDivElement>(null);
@@ -138,17 +139,6 @@ export default function MemosList() {
       const mapped = data.map(p => ({ id: p.id, name: p.name, status: p.status }));
       setProjects(sortProjectsByStatus(mapped));
     }).catch(console.error);
-  }, []);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowProjectDropdown(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -426,7 +416,6 @@ export default function MemosList() {
     params.delete('projectId');
     params.delete('page');
     setSearchParams(params);
-    setShowProjectDropdown(false);
   };
 
   const projectFilterLabel = useMemo(() => {
@@ -614,7 +603,7 @@ export default function MemosList() {
             />
           </div>
 
-          <div className="mb-4 flex flex-wrap gap-2 items-center" ref={dropdownRef}>
+          <div className="mb-4 flex flex-wrap gap-2 items-center">
             <LabelFilterDropdown
               selectedLabels={selectedLabels}
               onToggle={handleLabelToggle}
@@ -622,67 +611,15 @@ export default function MemosList() {
               countKey="memoCount"
             />
 
-            {/* Project filter dropdown */}
-            {projects.length > 0 && (
-              <div className="relative">
-                <button
-                  onClick={() => setShowProjectDropdown(!showProjectDropdown)}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 ${
-                    selectedProjectIds.size > 0 || selectedNoneProject
-                      ? 'bg-github-green-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {projectFilterLabel}
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {showProjectDropdown && (
-                  <div className="absolute top-full left-0 mt-1 min-w-[280px] max-w-[400px] bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
-                    {(selectedProjectIds.size > 0 || selectedNoneProject) && (
-                      <button
-                        onClick={handleClearProjects}
-                        className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 border-b border-gray-100"
-                      >
-                        Clear
-                      </button>
-                    )}
-                    <button
-                      onClick={handleNoneProjectToggle}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill={selectedNoneProject ? 'currentColor' : 'none'}>
-                        {selectedNoneProject ? (
-                          <path className="text-github-green-600" fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        ) : (
-                          <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-gray-300" />
-                        )}
-                      </svg>
-                      <span className="text-gray-500 italic truncate">No Project</span>
-                    </button>
-                    {projects.map(project => (
-                      <button
-                        key={project.id}
-                        onClick={() => handleProjectToggle(project.id)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill={selectedProjectIds.has(project.id) ? 'currentColor' : 'none'}>
-                          {selectedProjectIds.has(project.id) ? (
-                            <path className="text-github-green-600" fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          ) : (
-                            <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-gray-300" />
-                          )}
-                        </svg>
-                        <span className="text-gray-700 truncate">{project.name}</span>
-                        <span className="text-xs text-gray-400 ml-auto shrink-0">{PROJECT_STATUS_LABELS[project.status] || project.status}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            <ProjectFilterDropdown
+              projects={projects}
+              selectedIds={selectedProjectIds}
+              includesNoProject={selectedNoneProject}
+              label={projectFilterLabel}
+              onToggle={handleProjectToggle}
+              onToggleNoProject={handleNoneProjectToggle}
+              onClear={handleClearProjects}
+            />
 
             <DateRangeFilterDropdown
               dateFrom={createdFrom}
@@ -691,16 +628,7 @@ export default function MemosList() {
               onClear={handleDateRangeClear}
             />
 
-            <button
-              onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                bookmarkFilter
-                  ? 'bg-github-green-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Bookmarked
-            </button>
+            <ToggleFilterButton active={bookmarkFilter} onToggle={() => handleBookmarkFilterChange(!bookmarkFilter)}>Bookmarked</ToggleFilterButton>
           </div>
 
           <div className="text-sm text-gray-500 mb-2">
@@ -811,9 +739,9 @@ export default function MemosList() {
         />
       </div>
 
-      <div className="hidden sm:block max-w-4xl mx-auto bg-transparent px-4 py-2">
-        <div className="flex items-center gap-2 mb-4">
-          <SearchInput
+      <ListPageLayout
+        className="hidden sm:block bg-transparent"
+        search={<SearchInput
             value={filters.searchQuery}
             onChange={(value) => {
               const params = updateSearchParam(searchParams, value);
@@ -823,16 +751,10 @@ export default function MemosList() {
             placeholder="Search memos"
             searchMode={searchMode}
             onSearchModeChange={setSearchMode}
-          />
-          <Link
-            to="/memos/new"
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 whitespace-nowrap"
-          >
-            New Memo
-          </Link>
-        </div>
-
-        <div className="mb-4 flex flex-wrap gap-2 items-center">
+          />}
+        createTo="/memos/new"
+        createLabel="New Memo"
+        filters={<>
           <LabelFilterDropdown
             selectedLabels={selectedLabels}
             onToggle={handleLabelToggle}
@@ -840,67 +762,15 @@ export default function MemosList() {
             countKey="memoCount"
           />
 
-          {/* Project filter dropdown (desktop) */}
-          {projects.length > 0 && (
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setShowProjectDropdown(!showProjectDropdown)}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 ${
-                  selectedProjectIds.size > 0 || selectedNoneProject
-                    ? 'bg-github-green-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {projectFilterLabel}
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {showProjectDropdown && (
-                <div className="absolute top-full left-0 mt-1 min-w-[280px] max-w-[400px] bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
-                  {(selectedProjectIds.size > 0 || selectedNoneProject) && (
-                    <button
-                      onClick={handleClearProjects}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 border-b border-gray-100"
-                    >
-                      Clear
-                    </button>
-                  )}
-                  <button
-                    onClick={handleNoneProjectToggle}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill={selectedNoneProject ? 'currentColor' : 'none'}>
-                      {selectedNoneProject ? (
-                        <path className="text-github-green-600" fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      ) : (
-                        <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-gray-300" />
-                      )}
-                    </svg>
-                    <span className="text-gray-500 italic truncate">No Project</span>
-                  </button>
-                  {projects.map(project => (
-                    <button
-                      key={project.id}
-                      onClick={() => handleProjectToggle(project.id)}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill={selectedProjectIds.has(project.id) ? 'currentColor' : 'none'}>
-                        {selectedProjectIds.has(project.id) ? (
-                          <path className="text-github-green-600" fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        ) : (
-                          <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-gray-300" />
-                        )}
-                      </svg>
-                      <span className="text-gray-700 truncate">{project.name}</span>
-                      <span className="text-xs text-gray-400 ml-auto shrink-0">{PROJECT_STATUS_LABELS[project.status] || project.status}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          <ProjectFilterDropdown
+            projects={projects}
+            selectedIds={selectedProjectIds}
+            includesNoProject={selectedNoneProject}
+            label={projectFilterLabel}
+            onToggle={handleProjectToggle}
+            onToggleNoProject={handleNoneProjectToggle}
+            onClear={handleClearProjects}
+          />
 
           <DateRangeFilterDropdown
             dateFrom={createdFrom}
@@ -909,19 +779,9 @@ export default function MemosList() {
             onClear={handleDateRangeClear}
           />
 
-          <button
-            onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}
-            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-              bookmarkFilter
-                ? 'bg-github-green-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Bookmarked
-          </button>
-        </div>
-
-        <div className="text-sm text-gray-500 mb-2">
+          <ToggleFilterButton active={bookmarkFilter} onToggle={() => handleBookmarkFilterChange(!bookmarkFilter)}>Bookmarked</ToggleFilterButton>
+        </>}
+        summary={<>
           {total} {total === 1 ? 'memo' : 'memos'}
           {semanticMeta && (
             <span className="ml-2 text-gray-400">
@@ -937,14 +797,13 @@ export default function MemosList() {
               matchedScores={relevanceScores}
             />
           )}
-        </div>
-
-        {filteredMemos.length === 0 ? (
-          <EmptyState
+        </>}
+        empty={filteredMemos.length === 0}
+        emptyState={<EmptyState
             message={bookmarkFilter ? 'No bookmarked memos' : 'No memos yet'}
             submessage={!bookmarkFilter ? 'Create your first memo to get started' : undefined}
-          />
-        ) : (
+          />}
+      >
           <>
             <ItemList items={filteredMemos} itemType="memo" basePath="/memos" currentFilters={searchParams} onDelete={handleDelete} matchSnippets={matchSnippets} searchQuery={searchMode === 'keyword' ? filters.parsedQuery.freeText : undefined} relevanceScores={relevanceScores} />
             <Pagination
@@ -953,8 +812,7 @@ export default function MemosList() {
               onPageChange={handlePageChange}
             />
           </>
-        )}
-      </div>
+      </ListPageLayout>
     </div>
   );
 }

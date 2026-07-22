@@ -4,19 +4,13 @@ import SwiftUI
 /// blank or from a template of the given target. Same sheet anatomy as the
 /// status/target picker sheets (header + divider + row list).
 struct TemplateChooserSheet: View {
-    /// issues.template_target value to list ("task" / "article").
-    let target: String
-    let onBlank: () -> Void
-    let onTemplate: (Template) -> Void
+    let target: TemplateCreationTarget
+    let onSelect: (IssueCreationDefaults) -> Void
     let onDismiss: () -> Void
 
     @EnvironmentObject var dataSources: DataSourceProvider
     @State private var templates: [Template] = []
     @State private var isLoading = true
-
-    private var blankLabel: String {
-        target == "article" ? "Blank article" : "Blank task"
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,10 +22,10 @@ struct TemplateChooserSheet: View {
                 VStack(alignment: .leading, spacing: 0) {
                     Button(action: {
                         HapticManager.selection()
-                        onBlank()
+                        onSelect(.blank)
                     }) {
                         HStack {
-                            Text(blankLabel)
+                            Text(target.blankLabel)
                                 .font(.system(size: 16))
                                 .foregroundColor(.textPrimary)
                             Spacer()
@@ -49,7 +43,7 @@ struct TemplateChooserSheet: View {
                         ForEach(templates) { template in
                             Button(action: {
                                 HapticManager.selection()
-                                onTemplate(template)
+                                onSelect(IssueCreationDefaults(template: template))
                             }) {
                                 HStack {
                                     Text(template.title ?? "Template #\(template.id)")
@@ -71,7 +65,7 @@ struct TemplateChooserSheet: View {
         .task {
             do {
                 let response = try await dataSources.templates.listTemplates(queryItems: [
-                    URLQueryItem(name: "target", value: target)
+                    URLQueryItem(name: "target", value: target.rawValue)
                 ])
                 templates = response.data
             } catch {

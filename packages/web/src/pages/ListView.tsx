@@ -8,6 +8,7 @@ import LoadingState from '../components/LoadingState';
 import { TasksService } from '../api/services/TasksService';
 import { MemosService } from '../api/services/MemosService';
 import { ItemDetailPanel } from '../components/ItemDetailPanel';
+import FilterBar from '../components/FilterBar';
 
 interface OutletContext {
   project: ProjectDetail;
@@ -202,36 +203,15 @@ export default function ListView() {
 
   return (
     <>
-      {/* Filters row: Bookmark */}
-      <div className="mb-4 flex flex-wrap gap-2 items-center">
-        <button
-          onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}
-          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-            bookmarkFilter
-              ? 'bg-github-green-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          Bookmarked
-        </button>
-      </div>
-
-      {/* Status filter row */}
-      <div className="mb-4 flex flex-wrap gap-2">
-        {statusOptions.map((status) => (
-          <button
-            key={status}
-            onClick={() => handleStatusFilterChange(status)}
-            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-              statusFilter === status
-                ? 'bg-github-green-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            {statusLabels[status] || status}
-          </button>
-        ))}
-      </div>
+      <FilterBar
+        bookmarkFilter={bookmarkFilter}
+        onBookmarkFilterChange={handleBookmarkFilterChange}
+        showStatusFilter
+        statusFilter={statusFilter}
+        onStatusFilterChange={handleStatusFilterChange}
+        statusOptions={statusOptions}
+        statusLabels={statusLabels}
+      />
       {filteredAndSortedItems.length === 0 ? (
         <EmptyState
           message={

@@ -6,8 +6,9 @@ import { ArticlesService } from '../api/services/ArticlesService';
 import ItemDetail, { type Item, type Comment } from './ItemDetail';
 import LoadingState from './LoadingState';
 import ErrorState from './ErrorState';
+import SidePanel from './SidePanel';
 import type { IssueType } from 'meme-gtd-shared';
-import { copyItemContent } from '../utils/copyContent';
+import { useCopyItemContent } from '../hooks/useCopyItemContent';
 
 interface BaseItem {
   id: number;
@@ -42,7 +43,7 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [isCopied, setIsCopied] = useState(false);
+  const { copied: isCopied, copy: copyItemContent } = useCopyItemContent();
 
   useEffect(() => {
     if (!itemId || !itemType) {
@@ -141,8 +142,6 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
       comments,
       includeTitle: itemType !== 'memo',
     });
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
   };
 
   const handleStatusChange = async (status: string) => {
@@ -211,18 +210,10 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
   ) : null;
 
   return (
-    <>
-      {/* Backdrop: semi-transparent on mobile, invisible on desktop */}
-      <div
-        className="fixed inset-0 z-40 bg-black/20 sm:bg-transparent"
-        onClick={onClose}
-      />
-
-      {/* Panel: full width on mobile, right half on desktop */}
-      <div className="fixed top-0 right-0 bottom-0 w-full sm:w-1/2 bg-white shadow-xl border-l border-gray-200 z-50 flex flex-col overflow-hidden rounded-t-xl sm:rounded-none">
-        {/* Header with title, #ID link and close button */}
-        <div className="flex items-center justify-between p-3 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+    <SidePanel
+      onClose={onClose}
+      header={
+        <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold text-gray-900 truncate">
               {loading ? 'Loading...' : displayTitle}
             </h2>
@@ -235,54 +226,31 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
             >
               #{itemId}
             </button>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0 ml-2"
-            aria-label="Close"
-          >
-            <svg
-              className="w-5 h-5 text-gray-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
         </div>
+      }
+    >
+      {loading && <LoadingState message={`Loading ${itemType}...`} />}
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
-          {loading && <LoadingState message={`Loading ${itemType}...`} />}
+      {error && !loading && (
+        <ErrorState error={error} title={`Error loading ${itemType}`} />
+      )}
 
-          {error && !loading && (
-            <ErrorState error={error} title={`Error loading ${itemType}`} />
-          )}
-
-          {!loading && !error && item && (
-            <ItemDetail
-              item={item as Item}
-              itemType={itemType}
-              onDelete={handleDelete}
-              onBookmarkToggle={itemType !== 'article' ? handleBookmarkToggle : undefined}
-              onUpdate={handleUpdate}
-              onStatusChange={itemType === 'task' ? handleStatusChange : undefined}
-              deleting={deleting}
-              bookmarking={itemType !== 'article' ? bookmarking : undefined}
-              mode="panel"
-              onBeforeNavigate={onClose}
-              sidebarActions={sidebarActions}
-              onCommentsLoaded={handleCommentsLoaded}
-            />
-          )}
-        </div>
-      </div>
-    </>
+      {!loading && !error && item && (
+        <ItemDetail
+          item={item as Item}
+          itemType={itemType}
+          onDelete={handleDelete}
+          onBookmarkToggle={itemType !== 'article' ? handleBookmarkToggle : undefined}
+          onUpdate={handleUpdate}
+          onStatusChange={itemType === 'task' ? handleStatusChange : undefined}
+          deleting={deleting}
+          bookmarking={itemType !== 'article' ? bookmarking : undefined}
+          mode="panel"
+          onBeforeNavigate={onClose}
+          sidebarActions={sidebarActions}
+          onCommentsLoaded={handleCommentsLoaded}
+        />
+      )}
+    </SidePanel>
   );
 }

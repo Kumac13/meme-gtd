@@ -14,10 +14,21 @@ xcodebuild test -project MemeGTD.xcodeproj -scheme MemeGTD -destination 'platfor
 ## ファイル追加とターゲット所属
 
 - Xcodeプロジェクトは synchronized folders 方式。フォルダに .swift を置くだけで対応ターゲットに入る（pbxproj の手編集・Xcode GUI での追加は不要）
+- 同じ理由で、synchronized folder 配下（`MemeGTD/` `Shared/` `ShareExtension/`）に置いた .md 等の非ソースファイルはリソースとしてアプリバンドルに混入する。CLAUDE.md 類のドキュメントはアプリフォルダ内に置かず、この `ios/CLAUDE.md` に集約する
 - 所属はフォルダで決まる: `MemeGTD/` = アプリのみ、`Shared/` = アプリ + ShareExtension 両方、`ShareExtension/` = 拡張のみ、`MemeGTDTests/` = テストのみ
 - `Shared/` に置いたファイルは ShareExtension でも必ずコンパイルされる。アプリ専用の型（View / ViewModel / ConnectivityMonitor 等）を参照するコードは `Shared/` に置けない。逆に ShareExtension も使う型（AppDatabase / Settings / LocalArticleStore の書き込み側）は `Shared/` に置く（`LocalArticleStore` が Shared の insert 側と `MemeGTD/DataSources/LocalArticleStore+App.swift` の読み取り側に分割されているのはこのため）
 - MainActor のデフォルト分離はアプリターゲットだけの設定。ShareExtension と MemeGTDTests は nonisolated が既定なので、`Shared/` とDB・同期層の型は明示的に `nonisolated` か actor で宣言する
 - テストターゲットは既定 nonisolated。アプリの `@MainActor` 型（ViewModel / ConnectivityMonitor）に触るテストはメソッド/クラスに `@MainActor` を付ける
+
+## 共通コンポーネント境界（新規画面・ViewModel実装前に必ず確認）
+
+新しい画面・ViewModel を作るとき、以下は共通実装を必ず使う。既存リソースからのコピーは禁止。所有権ルールの正は `docs/architecture.md`、構造チェックは `MemeGTDTests/ComponentBoundaryTests.swift`（Xcodeテスト）と Web側 `ComponentBoundaries.test.ts`（Web CI）が実行する:
+
+- 一覧セル（title・検索highlight・snippet・metadata行の配置）: `IssueCellLayout`
+- Label / Project の複数選択modal: `MultiSelectPickerShell`
+- 一覧VMの追加読込・export feedback: `IssueListStateProviding` に準拠し `performLoadMore` / `performSearchExport` を使う
+- 詳細VMのLabel/Project操作: `IssueMetadataManaging`、Issue Link/URL操作: `IssueRelationManaging` の default implementation を使う（`IssueMetadataService` / `IssueRelationService` の直接構築は `Protocols/IssueDetailManaging.swift` のみ）
+- `*ListViewModel.swift` / `*DetailViewModel.swift` / `*Cell.swift` の命名は走査型チェックの対象になる前提で付ける
 
 ## DataSource層
 

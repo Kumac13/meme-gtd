@@ -8,7 +8,7 @@ import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import CreateTaskModal from '../components/CreateTaskModal';
 import { useDocumentTitle, truncateForTitle } from '../hooks/useDocumentTitle';
-import { copyItemContent } from '../utils/copyContent';
+import { useCopyItemContent } from '../hooks/useCopyItemContent';
 
 interface Task {
   id: number;
@@ -34,7 +34,7 @@ export default function TaskDetail() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{ id: number; type: IssueType } | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [isCopied, setIsCopied] = useState(false);
+  const { copied: isCopied, copy: copyItemContent } = useCopyItemContent();
 
   // Set document title based on task title or body preview
   const titleText = task?.title || (task?.bodyMd ? truncateForTitle(task.bodyMd) : null);
@@ -148,8 +148,6 @@ export default function TaskDetail() {
       body: task?.bodyMd || '',
       comments,
     });
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
   };
 
   // Custom action button for creating new task (in header)

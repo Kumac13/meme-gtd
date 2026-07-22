@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect, useRef, DragEvent, ClipboardEvent, ReactNode } from 'react';
+import { useState, FormEvent, useEffect, useRef, ReactNode } from 'react';
 import { ProjectsService } from '../api/services/ProjectsService';
 import { LabelsService } from '../api/services/LabelsService';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
@@ -7,7 +7,6 @@ import { useRecentProjects } from '../hooks/useRecentProjects';
 import { useRecentLabels } from '../hooks/useRecentLabels';
 import { LabelBadge } from './LabelBadge';
 import TaskFormLinks from './TaskFormLinks';
-import { useImageUpload } from '../hooks/useImageUpload';
 import type { PendingLink } from '../types/links';
 import { MarkdownTextarea } from './MarkdownTextarea';
 
@@ -49,6 +48,7 @@ interface IssueFormProps {
   initialTitle?: string;
   initialBodyMd?: string;
   initialLabelIds?: number[];
+  initialLabelNames?: string[];
   initialProjectIds?: number[];
   initialLinks?: PendingLink[];
   initialProjectId?: number;
@@ -68,9 +68,16 @@ interface IssueFormProps {
   showProjects?: boolean;
   showLabels?: boolean;
   showLinks?: boolean;
+  showTitle?: boolean;
+  bodyRows?: number;
+  bodyMinHeightClass?: string;
 
   /** Extra fields rendered between the body and the projects/labels sections. */
   renderExtraFields?: (ctx: { submitting: boolean }) => ReactNode;
+  /** Extra fields rendered after the projects/labels/links sections. */
+  renderTrailingFields?: (ctx: { submitting: boolean }) => ReactNode;
+  /** Where to show validation errors: under the body ('body') or above the actions ('footer'). */
+  validationErrorPlacement?: 'body' | 'footer';
   /** Validate the collected values; return an error message or null. */
   validate?: (values: IssueFormValues) => string | null;
   /** Persist the entity (create/update + any assignments). */
@@ -79,6 +86,7 @@ interface IssueFormProps {
 }
 
 const MAX_BODY = 10000;
+const EMPTY_LABEL_NAMES: string[] = [];
 
 /**
  * Shared issue-creation/edit form. Owns the concerns common to every issue
@@ -91,6 +99,7 @@ export default function IssueForm({
   initialTitle = '',
   initialBodyMd = '',
   initialLabelIds = [],
+  initialLabelNames = EMPTY_LABEL_NAMES,
   initialProjectIds,
   initialLinks = [],
   initialProjectId,
@@ -106,7 +115,12 @@ export default function IssueForm({
   showProjects = true,
   showLabels = true,
   showLinks = true,
+  showTitle = true,
+  bodyRows = 10,
+  bodyMinHeightClass = 'min-h-[200px]',
   renderExtraFields,
+  renderTrailingFields,
+  validationErrorPlacement = 'footer',
   validate,
   onSubmit,
   onCancel,
@@ -116,9 +130,7 @@ export default function IssueForm({
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { isUploading, uploadImage } = useImageUpload();
 
   const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>(
     initialProjectIds ?? (initialProjectId ? [initialProjectId] : [])
@@ -150,6 +162,11 @@ export default function IssueForm({
           ]);
           setAllProjects(projects);
           setAllLabels(labels);
+          if (initialLabelNames.length > 0) {
+            setSelectedLabelIds(
+              labels.filter((label) => initialLabelNames.includes(label.name)).map((label) => label.id)
+            );
+          }
         } catch (err) {
           console.error('Failed to fetch projects/labels:', err);
         } finally {
@@ -158,7 +175,7 @@ export default function IssueForm({
       };
       fetchData();
     }
-  }, [showProjects, showLabels]);
+  }, [showProjects, showLabels, initialLabelNames]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -176,7 +193,7 @@ export default function IssueForm({
 
     const message = validate
       ? validate(values)
-      : title.trim() === ''
+      : showTitle && title.trim() === ''
         ? 'Title is required'
         : bodyMd.length > MAX_BODY
           ? 'Body is too long'
@@ -203,59 +220,6 @@ export default function IssueForm({
     const form = (e.target as HTMLElement).closest('form');
     if (form) form.requestSubmit();
   }, { disabled: submitting });
-
-  const insertMarkdownRef = (markdownRef: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      setBodyMd((prev) => prev + '\n' + markdownRef);
-      return;
-    }
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const before = bodyMd.slice(0, start);
-    const after = bodyMd.slice(end);
-    const newValue = before + (before.endsWith('\n') || before === '' ? '' : '\n') + markdownRef + '\n' + after;
-    setBodyMd(newValue);
-    setTimeout(() => {
-      textarea.focus();
-      const newCursorPos = before.length + (before.endsWith('\n') || before === '' ? 0 : 1) + markdownRef.length + 1;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
-  };
-
-  const handleImageFile = async (file: File) => {
-    if (isUploading) return;
-    const result = await uploadImage(file);
-    if (result.success && result.markdownRef) insertMarkdownRef(result.markdownRef);
-  };
-
-  const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    for (const item of items) {
-      if (item.type.startsWith('image/')) {
-        e.preventDefault();
-        const file = item.getAsFile();
-        if (file) handleImageFile(file);
-        return;
-      }
-    }
-  };
-
-  const handleDragOver = (e: DragEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    if (e.dataTransfer.types.includes('Files')) setIsDragging(true);
-  };
-  const handleDragLeave = (e: DragEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-  const handleDrop = (e: DragEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = e.dataTransfer.files;
-    if (files.length > 0 && files[0].type.startsWith('image/')) handleImageFile(files[0]);
-  };
 
   const handleToggleProject = (projectId: number) => {
     if (lockedProjectId && projectId === lockedProjectId && selectedProjectIds.includes(projectId)) return;
@@ -327,22 +291,24 @@ export default function IssueForm({
         </div>
       )}
 
-      <div>
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-          {titleLabel}
-        </label>
-        <input
-          type="text"
-          id="title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={handleKeyDown}
-          aria-keyshortcuts="Control+Enter"
-          className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 ${validationError ? 'border-red-300' : 'border-gray-300'}`}
-          placeholder={titlePlaceholder}
-          required
-        />
-      </div>
+      {showTitle && (
+        <div>
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+            {titleLabel}
+          </label>
+          <input
+            type="text"
+            id="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={handleKeyDown}
+            aria-keyshortcuts="Control+Enter"
+            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-github-green-500 focus:border-github-green-500 ${validationError ? 'border-red-300' : 'border-gray-300'}`}
+            placeholder={titlePlaceholder}
+            required
+          />
+        </div>
+      )}
 
       <div>
         <label htmlFor="bodyMd" className="block text-sm font-medium text-gray-700 mb-2">
@@ -354,17 +320,12 @@ export default function IssueForm({
           value={bodyMd}
           onChange={setBodyMd}
           onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          rows={10}
+          rows={bodyRows}
           placeholder={bodyPlaceholder}
           disabled={submitting}
-          isDragging={isDragging}
-          isUploading={isUploading}
-          minHeightClass="min-h-[200px]"
+          minHeightClass={bodyMinHeightClass}
         />
+        {validationErrorPlacement === 'body' && validationError && <p className="mt-1 text-sm text-red-600">{validationError}</p>}
         <p className="mt-1 text-xs text-gray-500">{bodyHint}</p>
       </div>
 
@@ -619,7 +580,9 @@ export default function IssueForm({
         </div>
       )}
 
-      {validationError && <p className="text-sm text-red-600">{validationError}</p>}
+      {renderTrailingFields?.({ submitting })}
+
+      {validationErrorPlacement === 'footer' && validationError && <p className="text-sm text-red-600">{validationError}</p>}
 
       <div className="flex items-center justify-end space-x-3">
         <button type="button" onClick={onCancel} className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500" disabled={submitting}>

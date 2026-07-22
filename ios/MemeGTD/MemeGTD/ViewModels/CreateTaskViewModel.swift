@@ -38,14 +38,10 @@ class CreateTaskViewModel: ObservableObject {
     init(mode: CreateTaskModeKind) {
         self.mode = mode
         switch mode {
-        case .standard:
-            break
-        case .linkedTo:
-            break
-        case .linkedToTemplate(_, let body, let labelNames, let projectIds):
-            self.bodyMd = body
-            self.selectedLabelNames = Set(labelNames)
-            self.selectedProjectIds = Set(projectIds)
+        case .standard(let initialValues), .linkedTo(_, let initialValues):
+            self.bodyMd = initialValues.bodyMd
+            self.selectedLabelNames = Set(initialValues.labelNames)
+            self.selectedProjectIds = Set(initialValues.projectIds)
         case .quickChild(let parent, let parentProjects, let parentLabels):
             if let parentStatus = TaskStatus(rawValue: parent.status) {
                 self.status = parentStatus
@@ -58,10 +54,6 @@ class CreateTaskViewModel: ObservableObject {
             self.selectedLabelNames = Set(labelNames)
             self.selectedProjectIds = Set(projectIds)
             self.pendingLinks = links
-        case .fromTemplate(let body, let labelNames, let projectIds):
-            self.bodyMd = body
-            self.selectedLabelNames = Set(labelNames)
-            self.selectedProjectIds = Set(projectIds)
         }
     }
 
@@ -70,7 +62,7 @@ class CreateTaskViewModel: ObservableObject {
     func loadData() async {
         // linkedTo 系モードでは検索からタイトルを取得して初期リンクを設定する
         let linkedSourceTaskId: Int? = switch mode {
-        case .linkedTo(let sourceTaskId), .linkedToTemplate(let sourceTaskId, _, _, _):
+        case .linkedTo(let sourceTaskId, _):
             sourceTaskId
         default:
             nil

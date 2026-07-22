@@ -1,3 +1,5 @@
+import { ToggleFilterButton } from './FilterControls';
+
 interface FilterBarProps {
   showStatusFilter?: boolean;
   statusFilter?: string;
@@ -36,33 +38,20 @@ export default function FilterBar({
     <div className="mb-6 flex flex-wrap gap-2">
       {/* Bookmark filter */}
       {showBookmarkFilter && onBookmarkFilterChange && (
-        <button
-          onClick={() => onBookmarkFilterChange(!bookmarkFilter)}
-          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-            bookmarkFilter
-              ? 'bg-github-green-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          Bookmarked
-        </button>
+        <ToggleFilterButton active={bookmarkFilter} onToggle={() => onBookmarkFilterChange(!bookmarkFilter)}>Bookmarked</ToggleFilterButton>
       )}
 
       {/* Status filter */}
       {showStatusFilter && onStatusFilterChange && (
         <>
           {statusOptions.map((status) => (
-            <button
+            <ToggleFilterButton
               key={status}
-              onClick={() => onStatusFilterChange(status)}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                statusFilter === status
-                  ? 'bg-github-green-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              onToggle={() => onStatusFilterChange(status)}
+              active={statusFilter === status}
             >
               {status === 'all' ? 'All' : statusLabels[status] || status}
-            </button>
+            </ToggleFilterButton>
           ))}
         </>
       )}

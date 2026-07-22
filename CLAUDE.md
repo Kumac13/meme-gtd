@@ -14,6 +14,7 @@ pnpmモノレポ（CLI / REST API / Web UI / Chrome拡張）+ iOSアプリ。単
 | REST APIのフィルタ・検索仕様 | `docs/api-filtering.md`（契約の正は `packages/api/docs/api/openapi.yaml`） |
 | バージョニングポリシー | `docs/versioning.md` |
 | ドキュメント自体を追加・変更する | `docs/CLAUDE.md`（カタログ・ガバナンス・書き方） |
+| エージェント共通の行動規範（コミット規律等） | `AGENTS.md` |
 | パッケージ固有のルール | 各ディレクトリの `CLAUDE.md`（自動ロードされる） |
 
 ## 定型作業スキル
@@ -44,7 +45,7 @@ pnpmモノレポ（CLI / REST API / Web UI / Chrome拡張）+ iOSアプリ。単
 - バックエンド（API/DB）の変更・追加には必ず対応するテストを書く（テストなしのバックエンド変更は禁止）
 - 実装前に `docs/architecture.md` で変更の波及範囲を確認する（同期チェーンの更新漏れを防ぐため）
 - ユーザーに報告・確認を求める前に、自分でビルド・動作確認を済ませる（エラーをユーザーに発見させない）
-- 実装中は論理的な区切りごとにコミットする
+- 実装中は論理的な区切りごとにコミットする（コミット順・バンプ位置・typeの規範: `AGENTS.md`「Release and commit discipline」）
 - 指示にない範囲へ作業を広げる判断が必要な場合は、事前にユーザーへ確認する
 - コマンド・ファイル内容は `...` 等で省略せず全文を提示する
 - 実装完了後は release スキルでバージョンバンプする（ドキュメントのみ・テストのみの変更は不要）
@@ -54,8 +55,10 @@ pnpmモノレポ（CLI / REST API / Web UI / Chrome拡張）+ iOSアプリ。単
 git push する前にCIと同じチェックをローカルで通すこと:
 
 ```bash
-pnpm --filter meme-gtd-api lint && pnpm --filter meme-gtd-api openapi:validate && pnpm --filter meme-gtd-api test && pnpm build && pnpm knip
+pnpm --filter meme-gtd-api lint && pnpm --filter meme-gtd-api openapi:validate && pnpm --filter meme-gtd-api test && pnpm --filter meme-gtd-web test && pnpm build && pnpm knip
 ```
+
+Web テストには共通コンポーネントの境界チェック（`ComponentBoundaries.test.ts`、iOS ソース走査を含む）が含まれる。iOS のみの変更でも Web テストは実行すること。
 
 ## 言語と対話
 

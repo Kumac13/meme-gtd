@@ -1,0 +1,45 @@
+name: Web CI
+
+# Web UI のユニットテストには共通コンポーネントの境界チェック
+# （tests/unit/ComponentBoundaries.test.ts、iOS ソースの走査を含む）があるため、
+# packages/web/ だけでなく ios/ の変更でも実行する。
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/web/**'
+      - 'ios/**'
+      - '.github/workflows/web-ci.yml'
+  pull_request:
+    paths:
+      - 'packages/web/**'
+      - 'ios/**'
+      - '.github/workflows/web-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: pnpm --filter meme-gtd-web^... build
+
+      - name: Run tests (includes component boundary checks)
+        run: pnpm --filter meme-gtd-web test
+
+      - name: Build web (type check)
+        run: pnpm --filter meme-gtd-web build

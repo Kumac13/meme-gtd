@@ -5,7 +5,7 @@ import SwiftUI
 private let logger = Logger(subsystem: "name.kumac.MemeGTD", category: "MemoList")
 
 @MainActor
-class MemoListViewModel: ObservableObject {
+class MemoListViewModel: ObservableObject, IssueListStateProviding {
     @Published var isLoading: Bool = false
     @Published var isLoadingMore: Bool = false
     @Published var error: String?
@@ -22,12 +22,13 @@ class MemoListViewModel: ObservableObject {
     @Published var allLabels: [IssueLabel] = []
     @Published var allProjects: [Project] = []
 
-    // Search match info (issueId -> match label + snippet)
     @Published var searchMatchInfos: [Int: String] = [:]
-
-    // Semantic search relevance scores (issueId -> score 0-1)
     @Published var relevanceScores: [Int: Double] = [:]
     @Published var semanticSearchTimeMs: Double?
+    @Published var isExporting: Bool = false
+    @Published var showCopiedFeedback: Bool = false
+
+    // Search match info (issueId -> match label + snippet)
 
     var store: MemoStore?
 
@@ -385,13 +386,11 @@ class MemoListViewModel: ObservableObject {
     func loadOlderMemos() async {
         guard let store else { return }
         logger.info("loadOlderMemos: hasMore=\(store.hasMore), isLoadingMore=\(self.isLoadingMore), count=\(store.memos.count), total=\(store.total)")
-        guard store.hasMore, !isLoadingMore else {
+        guard store.hasMore else {
             logger.info("loadOlderMemos skipped")
             return
         }
-        isLoadingMore = true
-
-        do {
+        await performLoadMore {
             let response: MemoListResponse
             if isSearching {
                 response = try await fetchKeywordSearch(offset: store.memos.count)
@@ -402,14 +401,7 @@ class MemoListViewModel: ObservableObject {
             }
             store.appendItems(response.data, total: response.total)
             logger.info("loadOlderMemos done: count=\(store.memos.count), total=\(store.total)")
-        } catch is CancellationError {
-            logger.info("loadOlderMemos cancelled")
-        } catch {
-            self.error = error.localizedDescription
-            logger.error("loadOlderMemos error: \(error.localizedDescription)")
         }
-
-        isLoadingMore = false
     }
 
     func createMemo() async {
@@ -508,18 +500,12 @@ class MemoListViewModel: ObservableObject {
 
     // MARK: - Copy / export search results
 
-    @Published var isExporting: Bool = false
-    @Published var showCopiedFeedback: Bool = false
-
     /// Calls `POST /api/search/export` with the currently loaded item IDs and
     /// filter snapshot, then writes the server's JSON response to the
     /// pasteboard. This also records a `search.exported` entry in the
     /// backend's activity_log so the search itself is persisted as data.
     func exportAndCopy(includeComments: Bool) async {
         guard let store, !store.memos.isEmpty else { return }
-        isExporting = true
-        defer { isExporting = false }
-
         let parsed = parseSearchQuery(searchQuery)
         var allLabelFilters = Array(labelFilters)
         allLabelFilters.append(contentsOf: parsed.labels)
@@ -557,18 +543,6 @@ class MemoListViewModel: ObservableObject {
             includeComments: includeComments
         )
 
-        do {
-            let json = try await dataSources.search.exportSearchResults(request)
-            UIPasteboard.general.string = json
-            HapticManager.notification(.success)
-            showCopiedFeedback = true
-            Task {
-                try? await Task.sleep(nanoseconds: 1_500_000_000)
-                await MainActor.run { self.showCopiedFeedback = false }
-            }
-        } catch {
-            self.error = error.localizedDescription
-            HapticManager.notification(.error)
-        }
+        await performSearchExport(request)
     }
 }

@@ -47,8 +47,10 @@ description: Version bump and release procedure for meme-gtd. Use after completi
 
 ## 3. コミット構成（必ず2コミットに分ける）
 
-1. **実装コミット**: `feat: 機能の説明` または `fix: 修正内容`（CHANGELOG.md のエントリを含む）
+1. **実装コミット**: `feat: 機能の説明` / `fix: 修正内容` など、変更内容に一致する type を使う（リファクタは `refactor:`、テストのみは `test:`。CHANGELOG.md のエントリを実装コミットに含める）
 2. **バージョンコミット**: `chore: bump version to vX.Y.Z`
+
+バージョンコミットは**常にブランチ（リリース対象）の最後のコミット**にする。バンプ後に実装コミットを追加した場合は、(1) CHANGELOG.md をリリース全体を網羅する内容に更新し、(2) バンプコミットをブランチ末尾に積み直し、(3) タグを付け直す（付け直しは未 push のタグに限る。push 済みタグは動かさず、次のバージョンとしてリリースする）。バンプコミットがブランチ中間に残ったままにしない（タグがリリース内容の一部しか指さなくなるため）。
 
 ## 4. バージョン更新コマンド
 
@@ -71,11 +73,7 @@ git tag vX.Y.Z
 
 ## 5. Push（明示的な指示がある場合のみ）
 
-Push前に必ずローカル検証を通すこと（CLAUDE.md「Push前のローカル検証」参照）:
-
-```bash
-pnpm --filter meme-gtd-api lint && pnpm --filter meme-gtd-api openapi:validate && pnpm --filter meme-gtd-api test && pnpm build && pnpm knip
-```
+Push前に必ずローカル検証を通すこと。検証コマンドの正はルート CLAUDE.md「Push前のローカル検証」（ここに複製しない — 複製はチェック追加時にズレるため）。
 
 ```bash
 git push && git push --tags

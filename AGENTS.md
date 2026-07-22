@@ -21,4 +21,10 @@
 * Repeatable workflows belong in skills.
 * Memory must not override an explicitly invoked skill.
 * Routing for repo knowledge starts at the root `CLAUDE.md` document-routing table; the document catalog and update rules live in `docs/CLAUDE.md`.
+* Preventive rules go where the mistake happens: the auto-loaded context of the directory being edited (nested `CLAUDE.md`) or the always-loaded root rules. A rule that is only read at a late stage (e.g. release time) does not prevent anything.
+
+## Release and commit discipline
+
+* Never stack implementation commits after the version bump commit; the bump commit is always the branch tip. If more commits are needed after the bump, update the CHANGELOG, re-stack the bump at the tip, and re-point the unpushed tag (procedure: release skill).
+* Use the commit type that matches the change (`refactor:`, `test:`, `ci:`, `docs:`) — do not label a refactor as `fix:`.
 

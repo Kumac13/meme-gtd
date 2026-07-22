@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ArticlesService } from "../../api/services/ArticlesService";
 import { SearchService } from "../../api/services/SearchService";
 import { ProjectsService } from "../../api/services/ProjectsService";
@@ -12,6 +12,9 @@ import ErrorState from "../../components/ErrorState";
 import EmptyState from "../../components/EmptyState";
 import Pagination from "../../components/Pagination";
 import CopyResultsButtons from "../../components/CopyResultsButtons";
+import ProjectFilterDropdown from "../../components/ProjectFilterDropdown";
+import { ListPageLayout } from "../../components/ListPageLayout";
+import { ToggleFilterButton } from "../../components/FilterControls";
 import {
   validateBookmarked,
   updateBookmarkedParam,
@@ -19,7 +22,7 @@ import {
   parseLabelParam,
   updateLabelParam,
 } from "../../utils/urlFilterHelpers";
-import { PROJECT_STATUS_LABELS, sortProjectsByStatus } from "../../utils/projectStatus";
+import { sortProjectsByStatus } from "../../utils/projectStatus";
 import type { Article } from "meme-gtd-shared";
 
 interface Project {
@@ -38,8 +41,6 @@ export const ArticleList: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [matchSnippets, setMatchSnippets] = useState<Record<number, string>>({});
   const [projects, setProjects] = useState<Project[]>([]);
-  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Filters from URL (same parameter names as tasks)
   const searchQuery = searchParams.get("q") || "";
@@ -76,17 +77,6 @@ export const ArticleList: React.FC = () => {
         setProjects(sortProjectsByStatus(mapped));
       })
       .catch(console.error);
-  }, []);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowProjectDropdown(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -251,7 +241,6 @@ export const ArticleList: React.FC = () => {
     params.delete("projectId");
     params.delete("page");
     setSearchParams(params);
-    setShowProjectDropdown(false);
   };
 
   const handlePageChange = useCallback(
@@ -312,19 +301,11 @@ export const ArticleList: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-2">
-      <div className="flex items-center gap-2 mb-4">
-        <SearchInput value={searchQuery} onChange={handleSearchChange} placeholder="Search articles" />
-        <Link
-          to="/articles/new"
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-github-green-600 hover:bg-github-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 whitespace-nowrap"
-        >
-          New Article
-        </Link>
-      </div>
-
-      {/* Filters row: Label, Project, Bookmark (same as tasks) */}
-      <div className="mb-4 flex flex-wrap gap-2 items-center" ref={dropdownRef}>
+    <ListPageLayout
+      search={<SearchInput value={searchQuery} onChange={handleSearchChange} placeholder="Search articles" />}
+      createTo="/articles/new"
+      createLabel="New Article"
+      filters={<>
         <LabelFilterDropdown
           selectedLabels={selectedLabels}
           onToggle={handleLabelToggle}
@@ -332,104 +313,38 @@ export const ArticleList: React.FC = () => {
           countKey="articleCount"
         />
 
-        {projects.length > 0 && (
-          <div className="relative">
-            <button
-              onClick={() => setShowProjectDropdown(!showProjectDropdown)}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 ${
-                selectedProjectIds.size > 0 || selectedNoneProject
-                  ? "bg-github-green-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              {projectFilterLabel}
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
+        <ProjectFilterDropdown
+          projects={projects}
+          selectedIds={selectedProjectIds}
+          includesNoProject={selectedNoneProject}
+          label={projectFilterLabel}
+          onToggle={handleProjectToggle}
+          onToggleNoProject={handleNoneProjectToggle}
+          onClear={handleClearProjects}
+        />
 
-            {showProjectDropdown && (
-              <div className="absolute top-full left-0 mt-1 min-w-[280px] max-w-[400px] bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
-                {(selectedProjectIds.size > 0 || selectedNoneProject) && (
-                  <button
-                    onClick={handleClearProjects}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 border-b border-gray-100"
-                  >
-                    Clear
-                  </button>
-                )}
-                <button
-                  onClick={handleNoneProjectToggle}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill={selectedNoneProject ? "currentColor" : "none"}>
-                    {selectedNoneProject ? (
-                      <path className="text-github-green-600" fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    ) : (
-                      <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-gray-300" />
-                    )}
-                  </svg>
-                  <span className="text-gray-500 italic truncate">No Project</span>
-                </button>
-                {projects.map((project) => (
-                  <button
-                    key={project.id}
-                    onClick={() => handleProjectToggle(project.id)}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill={selectedProjectIds.has(project.id) ? "currentColor" : "none"}>
-                      {selectedProjectIds.has(project.id) ? (
-                        <path className="text-github-green-600" fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      ) : (
-                        <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-gray-300" />
-                      )}
-                    </svg>
-                    <span className="text-gray-700 truncate">{project.name}</span>
-                    <span className="text-xs text-gray-400 ml-auto shrink-0">{PROJECT_STATUS_LABELS[project.status] || project.status}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        <button
-          onClick={() => handleBookmarkFilterChange(!bookmarkFilter)}
-          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-            bookmarkFilter ? "bg-github-green-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-          }`}
-        >
-          Bookmarked
-        </button>
-      </div>
-
-      {/* Origin filter row (issues.origin): All / Web / Manual */}
-      <FilterBar
+        <ToggleFilterButton active={bookmarkFilter} onToggle={() => handleBookmarkFilterChange(!bookmarkFilter)}>Bookmarked</ToggleFilterButton>
+      </>}
+      secondaryFilters={<FilterBar
         showStatusFilter
         statusFilter={originFilter}
         onStatusFilterChange={handleOriginChange}
         statusOptions={["all", "web", "manual"]}
         statusLabels={{ web: "Web", manual: "Manual" }}
         showBookmarkFilter={false}
-      />
-
-      {articles.length === 0 ? (
-        <EmptyState
+      />}
+      summary={articles.length > 0 ? <>{total} {total === 1 ? "article" : "articles"}{hasActiveFilters && copyExportItemIds.length > 0 && <CopyResultsButtons type="articles" filters={copyExportFilters} itemIds={copyExportItemIds} />}</> : undefined}
+      empty={articles.length === 0}
+      emptyState={<EmptyState
           message={hasActiveFilters ? "No articles match your filters" : "No articles yet"}
           submessage={
             hasActiveFilters
               ? "Try different filters"
               : "Save web pages with the browser extension, or create one with New Article"
           }
-        />
-      ) : (
+        />}
+    >
         <>
-          <div className="text-sm text-gray-500 mb-2">
-            {total} {total === 1 ? "article" : "articles"}
-            {hasActiveFilters && copyExportItemIds.length > 0 && (
-              <CopyResultsButtons type="articles" filters={copyExportFilters} itemIds={copyExportItemIds} />
-            )}
-          </div>
           <ItemList
             items={articles}
             itemType="article"
@@ -441,7 +356,6 @@ export const ArticleList: React.FC = () => {
           />
           <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
         </>
-      )}
-    </div>
+    </ListPageLayout>
   );
 };

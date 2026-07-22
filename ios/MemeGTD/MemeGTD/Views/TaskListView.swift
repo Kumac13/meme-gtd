@@ -230,16 +230,9 @@ struct TaskListView: View {
         }
         .sheet(isPresented: $creation.isChooserPresented, onDismiss: creation.chooserDidDismiss) {
             TemplateChooserSheet(
-                target: "task",
-                onBlank: {
-                    creation.choose(.standard)
-                },
-                onTemplate: { template in
-                    creation.choose(.fromTemplate(
-                        bodyMd: template.bodyMd,
-                        initialLabelNames: template.labels ?? [],
-                        initialProjectIds: template.projectIds ?? []
-                    ))
+                target: .task,
+                onSelect: { initialValues in
+                    creation.choose(.standard(initialValues: initialValues))
                 },
                 onDismiss: creation.cancelChooser
             )

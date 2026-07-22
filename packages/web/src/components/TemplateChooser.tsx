@@ -9,7 +9,7 @@ interface TemplateListItem {
   title: string | null;
 }
 
-interface AppliedTemplate {
+export interface AppliedTemplate {
   bodyMd: string;
   labelIds: number[];
   projectIds: number[];
@@ -17,17 +17,13 @@ interface AppliedTemplate {
 
 interface TemplateChooserProps {
   target: TemplateTarget;
-  blankLabel: string;
-  onBlank: () => void;
-  onTemplate: (template: AppliedTemplate) => void;
+  onSelect: (template: AppliedTemplate) => void;
 }
 
 /** Blank／Template 選択と、フォーム初期値への変換を一元管理する。 */
 export default function TemplateChooser({
   target,
-  blankLabel,
-  onBlank,
-  onTemplate,
+  onSelect,
 }: TemplateChooserProps) {
   const [templates, setTemplates] = useState<TemplateListItem[]>([]);
   const [filter, setFilter] = useState('');
@@ -70,7 +66,7 @@ export default function TemplateChooser({
         (allLabels as Array<{ id: number; name: string }>).map((label) => [label.name, label.id])
       );
 
-      onTemplate({
+      onSelect({
         bodyMd: template.bodyMd,
         labelIds: (template.labels ?? [])
           .map((name: string) => labelNameToId.get(name))
@@ -88,11 +84,11 @@ export default function TemplateChooser({
     <div className="space-y-6">
       <button
         type="button"
-        onClick={onBlank}
+        onClick={() => onSelect({ bodyMd: '', labelIds: [], projectIds: [] })}
         disabled={isApplying}
         className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500 text-left disabled:opacity-50"
       >
-        {blankLabel}
+        {target === 'article' ? 'Blank article' : 'Blank task'}
       </button>
 
       <div>

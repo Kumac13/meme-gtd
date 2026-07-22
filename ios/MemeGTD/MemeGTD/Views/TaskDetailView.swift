@@ -263,16 +263,11 @@ struct TaskDetailView: View {
             onDismiss: newTaskCreation.chooserDidDismiss
         ) {
             TemplateChooserSheet(
-                target: "task",
-                onBlank: {
-                    newTaskCreation.choose(.linkedTo(sourceTaskId: taskId))
-                },
-                onTemplate: { template in
-                    newTaskCreation.choose(.linkedToTemplate(
+                target: .task,
+                onSelect: { initialValues in
+                    newTaskCreation.choose(.linkedTo(
                         sourceTaskId: taskId,
-                        bodyMd: template.bodyMd,
-                        initialLabelNames: template.labels ?? [],
-                        initialProjectIds: template.projectIds ?? []
+                        initialValues: initialValues
                     ))
                 },
                 onDismiss: newTaskCreation.cancelChooser
