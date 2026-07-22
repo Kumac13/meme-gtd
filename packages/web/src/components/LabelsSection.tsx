@@ -158,11 +158,11 @@ export function LabelsSection({
           {newName.trim() && <div className="mb-2"><LabelBadge name={newName.trim()} /></div>}
           <div className="flex gap-2">
             <button type="button" onClick={() => void createLabel()} disabled={saving || !newName.trim()} className="flex-1 px-3 py-1 bg-github-green-600 text-white rounded text-sm disabled:opacity-50">Create</button>
-            <button type="button" onClick={() => setIsCreating(false)} disabled={saving} className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm">Cancel</button>
+            <button type="button" onClick={() => { setIsCreating(false); setNewName(''); setNewDescription(''); setError(null); }} disabled={saving} className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm">Cancel</button>
           </div>
         </div>
       ) : (
-        <button type="button" onClick={() => setIsCreating(true)} className="w-full mb-3 px-2 py-1.5 text-sm text-github-green-600 hover:bg-gray-50 rounded text-left">＋ Create new label</button>
+        <button type="button" onClick={() => setIsCreating(true)} className="w-full mb-3 px-2 py-1.5 text-sm text-github-green-600 hover:bg-gray-50 rounded text-left">+ Create new label</button>
       )}
 
       {recentLabels.length > 0 && (

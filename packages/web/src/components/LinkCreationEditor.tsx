@@ -94,7 +94,7 @@ export function LinkCreationEditor({
       </div>}
 
       {selectedType && !urlMode && <div>
-        <div className="text-xs font-medium text-gray-700 mb-2">Adding {selectedType} link:</div>
+        <div className="text-xs font-medium text-gray-700 mb-2">Adding {(baseLinkTypes.find((type) => type.value === selectedType)?.label ?? selectedType).toLowerCase()} link:</div>
         {error && <div className="mb-2 text-xs text-red-600">{error}</div>}
         {submitting ? <div className="p-4 text-center text-sm text-gray-500">Adding link...</div> : <IssuePicker excludeId={excludeId} onSelect={(issue) => onIssueSelect(issue, selectedType)} onCancel={cancel} />}
       </div>}

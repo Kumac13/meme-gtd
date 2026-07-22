@@ -54,6 +54,7 @@ export function ManagementSection({
             </svg>
           </button>
         </div>
+        {error && <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-red-600 text-sm">Error: {error}</div>}
         <div className="space-y-2">{summary}</div>
       </div>
 

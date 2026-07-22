@@ -162,13 +162,14 @@ export default function MemoForm({
       showProjects={mode === 'create'}
       showLabels={mode === 'create'}
       showLinks={false}
+      validationErrorPlacement="body"
       validate={(values) => {
         const validation = validateMemoBody(values.bodyMd);
         return validation.isValid ? null : validation.error || 'Invalid memo body';
       }}
       onSubmit={handleSubmit}
       onCancel={() => navigate(mode === 'edit' && memoId ? `/memos/${memoId}` : '/memos')}
-      renderExtraFields={() => (
+      renderTrailingFields={() => (
         mode === 'create' && fromTaskId ? (
           <InheritedLinks
             links={inheritedLinks}

@@ -74,6 +74,10 @@ interface IssueFormProps {
 
   /** Extra fields rendered between the body and the projects/labels sections. */
   renderExtraFields?: (ctx: { submitting: boolean }) => ReactNode;
+  /** Extra fields rendered after the projects/labels/links sections. */
+  renderTrailingFields?: (ctx: { submitting: boolean }) => ReactNode;
+  /** Where to show validation errors: under the body ('body') or above the actions ('footer'). */
+  validationErrorPlacement?: 'body' | 'footer';
   /** Validate the collected values; return an error message or null. */
   validate?: (values: IssueFormValues) => string | null;
   /** Persist the entity (create/update + any assignments). */
@@ -115,6 +119,8 @@ export default function IssueForm({
   bodyRows = 10,
   bodyMinHeightClass = 'min-h-[200px]',
   renderExtraFields,
+  renderTrailingFields,
+  validationErrorPlacement = 'footer',
   validate,
   onSubmit,
   onCancel,
@@ -319,6 +325,7 @@ export default function IssueForm({
           disabled={submitting}
           minHeightClass={bodyMinHeightClass}
         />
+        {validationErrorPlacement === 'body' && validationError && <p className="mt-1 text-sm text-red-600">{validationError}</p>}
         <p className="mt-1 text-xs text-gray-500">{bodyHint}</p>
       </div>
 
@@ -573,7 +580,9 @@ export default function IssueForm({
         </div>
       )}
 
-      {validationError && <p className="text-sm text-red-600">{validationError}</p>}
+      {renderTrailingFields?.({ submitting })}
+
+      {validationErrorPlacement === 'footer' && validationError && <p className="text-sm text-red-600">{validationError}</p>}
 
       <div className="flex items-center justify-end space-x-3">
         <button type="button" onClick={onCancel} className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-github-green-500" disabled={submitting}>

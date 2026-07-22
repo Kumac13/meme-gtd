@@ -58,7 +58,7 @@ export default function TaskEdit() {
   }
 
   return (
-    <FormPageLayout backTo={`/tasks/${task.id}`} backLabel="Back to task" title={`Edit ${task.title}`}>
+    <FormPageLayout backTo={`/tasks/${task.id}`} backLabel="Back to task" title={task.title ? `Edit ${task.title}` : 'Edit'}>
         <TaskForm
           mode="edit"
           taskId={task.id}
