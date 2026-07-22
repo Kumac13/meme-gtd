@@ -20,14 +20,15 @@ enum TemplateTargetFilter: String, CaseIterable {
 }
 
 @MainActor
-class TemplateListViewModel: ObservableObject {
+class TemplateListViewModel: ObservableObject, IssueListStateProviding {
     @Published var isLoading: Bool = false
     @Published var isLoadingMore: Bool = false
     @Published var error: String?
 
     // Search (server-side ?search= on /api/templates)
     @Published var searchQuery: String = ""
-
+    @Published var isExporting: Bool = false
+    @Published var showCopiedFeedback: Bool = false
     // Target filter (?target=)
     @Published var targetFilter: TemplateTargetFilter = .all
 
@@ -95,22 +96,13 @@ class TemplateListViewModel: ObservableObject {
 
     func loadOlderTemplates() async {
         guard let store else { return }
-        guard store.hasMore, !isLoadingMore else { return }
-        isLoadingMore = true
-
-        do {
+        guard store.hasMore else { return }
+        await performLoadMore {
             let response = try await dataSources.templates.listTemplates(
                 queryItems: buildListQueryItems(offset: store.templates.count)
             )
             store.appendItems(response.data, total: response.total)
-        } catch is CancellationError {
-            logger.info("loadOlderTemplates cancelled")
-        } catch {
-            self.error = error.localizedDescription
-            logger.error("loadOlderTemplates error: \(error.localizedDescription)")
         }
-
-        isLoadingMore = false
     }
 
     // MARK: - Search / filter

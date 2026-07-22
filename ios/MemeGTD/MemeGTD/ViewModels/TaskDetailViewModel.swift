@@ -2,7 +2,7 @@ import Combine
 import SwiftUI
 
 @MainActor
-class TaskDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkProvider, IssueBookmarkProvider, IssueCopyProvider {
+class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelationManaging, IssueBookmarkProvider, IssueCopyProvider {
     @Published var task: TaskItem?
     @Published var comments: [Comment] = []
     @Published var isLoading: Bool = false
@@ -38,29 +38,19 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
     @Published var issueLinks: [IssueLink] = []
     @Published var urlLinks: [UrlLink] = []
 
-    var linkedPickerItems: [IssuePickerItem] {
-        IssueRelationService.pickerItems(from: issueLinks)
-    }
-
     // Shared detail capabilities
     var issueTypeLabel: String { "task" }
     var isBookmarked: Bool { task?.isBookmarked ?? false }
     var issueLabels: [String] { task?.labels ?? [] }
 
     let taskId: Int
+    var metadataIssueId: Int { taskId }
+    var relationIssueId: Int { taskId }
     var taskStore: TaskStore?
 
     /// Data source seam. Views overwrite this with the app-wide provider from
     /// the environment (same wiring point as `taskStore`).
     var dataSources = DataSourceProvider()
-
-    private var issueRelationService: IssueRelationService {
-        IssueRelationService(issueId: taskId, dataSource: dataSources.issueRelations)
-    }
-
-    private var issueMetadataService: IssueMetadataService {
-        IssueMetadataService(issueId: taskId, dataSources: dataSources)
-    }
 
     init(taskId: Int) {
         self.taskId = taskId
@@ -82,7 +72,7 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
 
         // Load metadata, links & activity in parallel
         async let metadataResult: () = loadMetadataOptions()
-        async let linksResult: () = loadLinks()
+        async let linksResult: () = loadIssueLinks()
         async let urlLinksResult: () = loadUrlLinks()
         async let activityResult: () = loadActivityLog()
         _ = await (metadataResult, linksResult, urlLinksResult, activityResult)
@@ -112,19 +102,6 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
         self.activityLogs = activities
     }
 
-    private func loadMetadataOptions() async {
-        let options = await issueMetadataService.loadOptions()
-        if let labels = options.labels { allLabels = labels }
-        if let associated = options.associatedProjects { associatedProjects = associated }
-        if let projects = options.allProjects { allProjects = projects }
-    }
-
-    private func reloadProjectOptions() async {
-        let options = await issueMetadataService.loadProjectOptions()
-        if let associated = options.associated { associatedProjects = associated }
-        if let projects = options.all { allProjects = projects }
-    }
-
     // MARK: - Activity Log
 
     private func loadActivityLog() async {
@@ -135,73 +112,7 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
         }
     }
 
-    // MARK: - URL Links
-
-    private func loadUrlLinks() async {
-        do {
-            urlLinks = try await issueRelationService.loadUrlLinks()
-        } catch {
-            // Non-critical
-        }
-    }
-
-    func createUrlLink(url: String, title: String?) async {
-        do {
-            urlLinks = try await issueRelationService.createUrlLink(url: url, title: title)
-            HapticManager.notification(.success)
-        } catch {
-            self.error = error.localizedDescription
-            HapticManager.notification(.error)
-        }
-    }
-
-    func deleteUrlLink(_ urlLinkId: Int) async {
-        do {
-            urlLinks = try await issueRelationService.deleteUrlLink(urlLinkId, from: urlLinks)
-        } catch {
-            self.error = error.localizedDescription
-        }
-    }
-
-    // MARK: - Links
-
-    private func loadLinks() async {
-        do {
-            issueLinks = try await issueRelationService.loadIssueLinks()
-        } catch {
-            // Non-critical
-        }
-    }
-
-    func createIssueLink(targetIssueId: Int, linkType: LinkType) async {
-        do {
-            issueLinks = try await issueRelationService.createIssueLink(
-                targetIssueId: targetIssueId,
-                linkType: linkType
-            )
-            await loadActivityLog()
-            HapticManager.notification(.success)
-        } catch {
-            self.error = error.localizedDescription
-            HapticManager.notification(.error)
-        }
-    }
-
-    func deleteIssueLink(_ linkId: Int) async {
-        do {
-            issueLinks = try await issueRelationService.deleteIssueLink(linkId, from: issueLinks)
-            await loadActivityLog()
-        } catch {
-            self.error = error.localizedDescription
-        }
-    }
-
-    func searchIssues(query: String) async -> [IssuePickerItem] {
-        await IssuePickerSearchService(dataSources: dataSources).search(
-            query: query,
-            excludingIDs: [taskId]
-        )
-    }
+    func relationDidChange() async { await loadActivityLog() }
 
     // MARK: - Bookmark
 
@@ -243,7 +154,7 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
             }
             await loadActivityLog()
             if bodyMd != nil {
-                await loadLinks()
+                await loadIssueLinks()
             }
             HapticManager.notification(.success)
         } catch {
@@ -270,7 +181,7 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
             comments.append(comment)
             replyBody = ""
             HapticManager.notification(.success)
-            await loadLinks()
+            await loadIssueLinks()
             return true
         } catch {
             self.error = error.localizedDescription
@@ -290,7 +201,7 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
             if let index = comments.firstIndex(where: { $0.id == commentId }) {
                 comments[index] = updated
             }
-            await loadLinks()
+            await loadIssueLinks()
         } catch {
             self.error = error.localizedDescription
         }
@@ -376,56 +287,17 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataProvider, IssueLinkPro
         }
     }
 
-    // MARK: - Projects
-
-    func confirmProjects(_ selectedIds: Set<Int>) {
-        let currentIds = Set(associatedProjects.map(\.id))
-
-        Task {
-            do {
-                try await issueMetadataService.applyProjects(
-                    selectedIds: selectedIds,
-                    currentIds: currentIds
-                )
-            } catch {
-                self.error = error.localizedDescription
-            }
-            await reloadProjectOptions()
-            await self.loadActivityLog()
-            taskStore?.needsReload = true
-        }
+    func reloadMetadataIssue() async {
+        do {
+            let updated: TaskItem = try await dataSources.tasks.getTask(id: taskId)
+            task = updated
+            taskStore?.updateItem(updated)
+        } catch { self.error = error.localizedDescription }
     }
 
-    // MARK: - Labels
-
-    func addNewLabel(_ label: IssueLabel) {
-        allLabels = issueMetadataService.reconciling(allLabels, with: label)
-    }
-
-    func confirmLabels(_ selectedNames: Set<String>) {
-        let currentNames = Set(task?.labels ?? [])
-
-        Task {
-            do {
-                try await issueMetadataService.applyLabels(
-                    selectedNames: selectedNames,
-                    currentNames: currentNames,
-                    allLabels: allLabels
-                )
-            } catch {
-                self.error = error.localizedDescription
-            }
-            // Reload task to get updated labels
-            do {
-                let updated: TaskItem = try await dataSources.tasks.getTask(id: taskId)
-                task = updated
-                taskStore?.updateItem(updated)
-                taskStore?.needsReload = true
-            } catch {
-                self.error = error.localizedDescription
-            }
-            await self.loadActivityLog()
-        }
+    func metadataDidChange() async {
+        await loadActivityLog()
+        taskStore?.needsReload = true
     }
 
     // MARK: - Copy All Contents

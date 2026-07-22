@@ -3,8 +3,9 @@ import SwiftUI
 
 /// Template detail exposes only the metadata and copy capabilities it supports.
 @MainActor
-class TemplateDetailViewModel: ObservableObject, IssueMetadataProvider, IssueCopyProvider {
+class TemplateDetailViewModel: ObservableObject, IssueMetadataManaging, IssueCopyProvider {
     let templateId: Int
+    var metadataIssueId: Int { templateId }
 
     @Published var template: Template?
     @Published var isLoading: Bool = false
@@ -19,10 +20,6 @@ class TemplateDetailViewModel: ObservableObject, IssueMetadataProvider, IssueCop
     var templateStore: TemplateStore?
     var dataSources = DataSourceProvider()
 
-    private var issueMetadataService: IssueMetadataService {
-        IssueMetadataService(issueId: templateId, dataSources: dataSources)
-    }
-
     init(templateId: Int) {
         self.templateId = templateId
     }
@@ -31,50 +28,15 @@ class TemplateDetailViewModel: ObservableObject, IssueMetadataProvider, IssueCop
 
     var issueLabels: [String] { template?.labels ?? [] }
 
-    func addNewLabel(_ label: IssueLabel) {
-        allLabels = issueMetadataService.reconciling(allLabels, with: label)
+    func reloadMetadataIssue() async {
+        do {
+            let updated: Template = try await dataSources.templates.getTemplate(id: templateId)
+            template = updated
+            templateStore?.updateItem(updated)
+        } catch { self.error = error.localizedDescription }
     }
 
-    func confirmLabels(_ selectedNames: Set<String>) {
-        let currentNames = Set(template?.labels ?? [])
-
-        Task {
-            do {
-                try await issueMetadataService.applyLabels(
-                    selectedNames: selectedNames,
-                    currentNames: currentNames,
-                    allLabels: allLabels
-                )
-            } catch {
-                self.error = error.localizedDescription
-            }
-            do {
-                let updated: Template = try await dataSources.templates.getTemplate(id: templateId)
-                template = updated
-                templateStore?.updateItem(updated)
-                templateStore?.needsReload = true
-            } catch {
-                self.error = error.localizedDescription
-            }
-        }
-    }
-
-    func confirmProjects(_ selectedIds: Set<Int>) {
-        let currentIds = Set(associatedProjects.map(\.id))
-
-        Task {
-            do {
-                try await issueMetadataService.applyProjects(
-                    selectedIds: selectedIds,
-                    currentIds: currentIds
-                )
-            } catch {
-                self.error = error.localizedDescription
-            }
-            await reloadProjectOptions()
-            templateStore?.needsReload = true
-        }
-    }
+    func metadataDidChange() async { templateStore?.needsReload = true }
 
     func copyAllContents() {
         guard let template else { return }
@@ -114,19 +76,6 @@ class TemplateDetailViewModel: ObservableObject, IssueMetadataProvider, IssueCop
     func applyTemplate(_ fetched: Template) {
         template = fetched
         templateStore?.updateItem(fetched)
-    }
-
-    private func loadMetadataOptions() async {
-        let options = await issueMetadataService.loadOptions()
-        if let labels = options.labels { allLabels = labels }
-        if let associated = options.associatedProjects { associatedProjects = associated }
-        if let projects = options.allProjects { allProjects = projects }
-    }
-
-    private func reloadProjectOptions() async {
-        let options = await issueMetadataService.loadProjectOptions()
-        if let associated = options.associated { associatedProjects = associated }
-        if let projects = options.all { allProjects = projects }
     }
 
     // MARK: - Update / Delete

@@ -5,7 +5,7 @@ import SwiftUI
 private let logger = Logger(subsystem: "name.kumac.MemeGTD", category: "ArticleList")
 
 @MainActor
-class ArticleListViewModel: ObservableObject {
+class ArticleListViewModel: ObservableObject, IssueListStateProviding {
     @Published var isLoading: Bool = false
     @Published var isLoadingMore: Bool = false
     @Published var error: String?
@@ -20,8 +20,11 @@ class ArticleListViewModel: ObservableObject {
     @Published var allLabels: [IssueLabel] = []
     @Published var allProjects: [Project] = []
 
-    // Search match info (issueId -> match label + snippet)
     @Published var searchMatchInfos: [Int: String] = [:]
+    @Published var isExporting: Bool = false
+    @Published var showCopiedFeedback: Bool = false
+
+    // Search match info (issueId -> match label + snippet)
 
     var store: ArticleStore?
 
@@ -128,13 +131,11 @@ class ArticleListViewModel: ObservableObject {
     func loadOlderArticles() async {
         guard let store else { return }
         logger.info("loadOlderArticles: hasMore=\(store.hasMore), isLoadingMore=\(self.isLoadingMore), count=\(store.articles.count), total=\(store.total)")
-        guard store.hasMore, !isLoadingMore else {
+        guard store.hasMore else {
             logger.info("loadOlderArticles skipped")
             return
         }
-        isLoadingMore = true
-
-        do {
+        await performLoadMore {
             let response: ArticleListResponse
             if isSearching {
                 response = try await fetchKeywordSearch(offset: store.articles.count)
@@ -145,14 +146,7 @@ class ArticleListViewModel: ObservableObject {
             }
             store.appendItems(response.data, total: response.total)
             logger.info("loadOlderArticles done: count=\(store.articles.count), total=\(store.total)")
-        } catch is CancellationError {
-            logger.info("loadOlderArticles cancelled")
-        } catch {
-            self.error = error.localizedDescription
-            logger.error("loadOlderArticles error: \(error.localizedDescription)")
         }
-
-        isLoadingMore = false
     }
 
     // MARK: - Search
@@ -172,17 +166,11 @@ class ArticleListViewModel: ObservableObject {
 
     // MARK: - Copy / export search results
 
-    @Published var isExporting: Bool = false
-    @Published var showCopiedFeedback: Bool = false
-
     /// Calls `POST /api/search/export` with the currently loaded article IDs
     /// and filter snapshot, then writes the server's JSON response to the
     /// pasteboard. Also records a `search.exported` entry in activity_log.
     func exportAndCopy(includeComments: Bool) async {
         guard let store, !store.articles.isEmpty else { return }
-        isExporting = true
-        defer { isExporting = false }
-
         let filters = SearchExportFilters(
             query: searchQuery.isEmpty ? nil : searchQuery,
             searchMode: searchQuery.isEmpty ? nil : "keyword",
@@ -210,18 +198,6 @@ class ArticleListViewModel: ObservableObject {
             includeComments: includeComments
         )
 
-        do {
-            let json = try await dataSources.search.exportSearchResults(request)
-            UIPasteboard.general.string = json
-            HapticManager.notification(.success)
-            showCopiedFeedback = true
-            Task {
-                try? await Task.sleep(nanoseconds: 1_500_000_000)
-                await MainActor.run { self.showCopiedFeedback = false }
-            }
-        } catch {
-            self.error = error.localizedDescription
-            HapticManager.notification(.error)
-        }
+        await performSearchExport(request)
     }
 }
