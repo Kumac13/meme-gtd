@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArticlesService } from "../../api/services/ArticlesService";
-import ItemDetail, { type Item } from "../../components/ItemDetail";
+import ItemDetail, { type Comment, type Item } from "../../components/ItemDetail";
 import { ItemDetailPanel } from "../../components/ItemDetailPanel";
 import LoadingState from "../../components/LoadingState";
 import ErrorState from "../../components/ErrorState";
 import type { Article } from "meme-gtd-shared";
 import { stripArticleBlockIds } from "../../utils/markdown";
-import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
+import { useCopyItemContent } from "../../hooks/useCopyItemContent";
 
 export const ArticleReader: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,7 +17,8 @@ export const ArticleReader: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
-  const { copy } = useCopyToClipboard();
+  const [comments, setComments] = useState<Comment[]>([]);
+  const { copied: isCopied, copy: copyItemContent } = useCopyItemContent();
   // Support clicking on linked items within the reader
   const [selectedItem, setSelectedItem] = useState<{ id: number; type: "memo" | "task" | "article" } | null>(null);
 
@@ -111,9 +112,13 @@ export const ArticleReader: React.FC = () => {
   };
 
   // Handle copy all contents
-  const handleCopyAll = () => {
-    const content = `${article.title}\n\n${article.meta?.originalUrl || ''}\n\n${article.bodyMd}`;
-    void copy(content);
+  const handleCopyAll = async () => {
+    await copyItemContent({
+      title: article.title,
+      sourceUrl: article.meta?.originalUrl,
+      body: article.bodyMd,
+      comments,
+    });
   };
 
   // Build article actions for sidebar (same style as Task's Copy All Contents / Archive to Memo)
@@ -150,7 +155,7 @@ export const ArticleReader: React.FC = () => {
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
         </svg>
-        <span className="text-sm">Copy All Contents</span>
+        <span className="text-sm">{isCopied ? 'Copied!' : 'Copy All Contents'}</span>
       </button>
     </>
   );
@@ -167,6 +172,7 @@ export const ArticleReader: React.FC = () => {
         bookmarking={bookmarking}
         onItemClick={handleItemClick}
         sidebarActions={articleSidebarActions}
+        onCommentsLoaded={setComments}
       />
       <ItemDetailPanel
         itemId={selectedItem?.id ?? null}
