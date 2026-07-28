@@ -228,15 +228,26 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
 
     // MARK: - Copy All Contents
 
-    func copyAllContents() {
-        guard let article = article else { return }
+    var copyAllContentsText: String? {
+        guard let article else { return nil }
 
-        var text = "# \(article.title)\n\n"
-        text += "Source: \(article.meta?.originalUrl ?? "")\n\n"
+        var sections = ["# \(article.title)"]
+        if let originalUrl = article.meta?.originalUrl, !originalUrl.isEmpty {
+            sections.append("Source: \(originalUrl)")
+        }
         if !article.bodyMd.isEmpty {
-            text += article.bodyMd
+            sections.append(article.bodyMd)
+        }
+        if !comments.isEmpty {
+            let commentsText = comments.map(\.bodyMd).joined(separator: "\n\n---\n\n")
+            sections.append("## Comments\n\n\(commentsText)")
         }
 
+        return sections.joined(separator: "\n\n")
+    }
+
+    func copyAllContents() {
+        guard let text = copyAllContentsText else { return }
         UIPasteboard.general.string = text
         HapticManager.notification(.success)
     }

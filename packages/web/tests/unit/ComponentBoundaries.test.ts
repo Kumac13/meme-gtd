@@ -115,7 +115,12 @@ describe('shared component boundaries (web)', () => {
       expect(source(webSrc, path)).toContain('FilterDropdown');
     }
 
-    for (const path of ['pages/TaskDetail.tsx', 'pages/MemoDetail.tsx', 'components/ItemDetailPanel.tsx']) {
+    for (const path of [
+      'pages/TaskDetail.tsx',
+      'pages/MemoDetail.tsx',
+      'pages/Articles/ArticleReader.tsx',
+      'components/ItemDetailPanel.tsx',
+    ]) {
       expect(source(webSrc, path)).toContain('useCopyItemContent');
     }
 

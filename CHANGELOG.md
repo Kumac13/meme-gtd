@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.50.10 - 2026-07-28
+
+### Bug Fixes
+
+- Web / iOS の Article Detail にある「Copy All Contents」が記事本文以外の内容を完全にはコピーできない問題を修正し、タイトル、Source URL、本文、全コメントをコピーするようにした。Web の一覧から開く共通 Detail Panel にも同じ操作を追加した。
+
+### Tests
+
+- Web / iOS の Article 全内容コピーにタイトル、Source URL、本文、複数コメントが含まれることを検証するユニットテストを追加。
+
 ## 0.50.9 - 2026-07-22
 
 ### Bug Fixes

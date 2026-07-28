@@ -20,6 +20,7 @@ export interface CopyContentOptions {
   body: string;
   comments?: Comment[];
   includeTitle?: boolean;
+  sourceUrl?: string | null;
 }
 
 /**
@@ -27,17 +28,19 @@ export interface CopyContentOptions {
  * Format with title: # Title\n\n---\n\nBody\n\n## Comments\n\nComment1\n\n---\n\nComment2
  * Format without title: Body\n\n## Comments\n\nComment1\n\n---\n\nComment2
  */
-function buildCopyContent({
+export function buildCopyContent({
   title,
   body,
   comments = [],
   includeTitle = true,
+  sourceUrl,
 }: CopyContentOptions): string {
   let content: string;
 
   if (includeTitle) {
     const displayTitle = title || 'Untitled';
-    content = `# ${displayTitle}\n\n---\n\n${body}`;
+    const source = sourceUrl ? `\n\nSource: ${sourceUrl}` : '';
+    content = `# ${displayTitle}${source}\n\n---\n\n${body}`;
   } else {
     content = body;
   }
