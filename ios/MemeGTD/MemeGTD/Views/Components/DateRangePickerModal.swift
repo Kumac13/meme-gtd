@@ -15,6 +15,7 @@ struct DateRangePickerModal: View {
     @State private var customFrom: Date = Date()
     @State private var customTo: Date = Date()
     @State private var expandedPicker: PickerField? = nil
+    @State private var selectedDetent: PresentationDetent = .medium
 
     private enum PickerField { case from, to }
 
@@ -76,6 +77,19 @@ struct DateRangePickerModal: View {
         guard let from = dateFrom, let to = dateTo else { return false }
         return Calendar.current.isDate(from, inSameDayAs: preset.from)
             && Calendar.current.isDate(to, inSameDayAs: preset.to)
+    }
+
+    private func togglePicker(_ field: PickerField) {
+        HapticManager.impact(.light)
+        let nextPicker: PickerField? = expandedPicker == field ? nil : field
+
+        // Wheel操作中はホームインジケータから十分な距離を確保する。
+        if nextPicker != nil {
+            selectedDetent = .large
+        }
+        withAnimation(.easeInOut(duration: 0.25)) {
+            expandedPicker = nextPicker
+        }
     }
 
     var body: some View {
@@ -150,10 +164,7 @@ struct DateRangePickerModal: View {
 
                         // From row
                         Button(action: {
-                            HapticManager.impact(.light)
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                expandedPicker = expandedPicker == .from ? nil : .from
-                            }
+                            togglePicker(.from)
                         }) {
                             HStack {
                                 Text("From")
@@ -204,10 +215,7 @@ struct DateRangePickerModal: View {
 
                         // To row
                         Button(action: {
-                            HapticManager.impact(.light)
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                expandedPicker = expandedPicker == .to ? nil : .to
-                            }
+                            togglePicker(.to)
                         }) {
                             HStack {
                                 Text("To")
@@ -260,6 +268,11 @@ struct DateRangePickerModal: View {
             }
         }
         .background(Color(.systemBackground))
+        .presentationDetents(
+            expandedPicker == nil ? [.medium, .large] : [.large],
+            selection: $selectedDetent
+        )
+        .presentationDragIndicator(.visible)
         .onAppear {
             if let from = dateFrom { customFrom = from }
             if let to = dateTo { customTo = to }
