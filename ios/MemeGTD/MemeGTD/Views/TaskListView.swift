@@ -226,7 +226,6 @@ struct TaskListView: View {
                 dateTo: $dateTo,
                 onDismiss: { showDateRangePicker = false }
             )
-            .presentationDetents([.medium])
         }
         .sheet(isPresented: $creation.isChooserPresented, onDismiss: creation.chooserDidDismiss) {
             TemplateChooserSheet(

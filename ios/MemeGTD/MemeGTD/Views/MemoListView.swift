@@ -359,7 +359,6 @@ struct MemoListView: View {
                 dateTo: $dateTo,
                 onDismiss: { showDateRangePicker = false }
             )
-            .presentationDetents([.medium])
         }
         .imageAttachmentPresentation(coordinator: imageAttachment, text: $viewModel.newMemoBody)
         .overlay {
