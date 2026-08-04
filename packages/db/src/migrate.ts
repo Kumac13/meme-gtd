@@ -30,7 +30,8 @@ const migrations = [
   { version: '014_add_sync_support', file: path.join(schemaDir, '014_add_sync_support.sql') },
   { version: '015_add_template_issue_type', file: path.join(schemaDir, '015_add_template_issue_type.sql') },
   { version: '016_add_article_origin', file: path.join(schemaDir, '016_add_article_origin.sql') },
-  { version: '017_backfill_article_origin', file: path.join(schemaDir, '017_backfill_article_origin.sql') }
+  { version: '017_backfill_article_origin', file: path.join(schemaDir, '017_backfill_article_origin.sql') },
+  { version: '018_drop_issue_embeddings', file: path.join(schemaDir, '018_drop_issue_embeddings.sql') }
 ] as const;
 
 const prepareDatabase = (db: Database.Database): void => {
