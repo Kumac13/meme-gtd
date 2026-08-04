@@ -56,26 +56,6 @@ struct IssueListFilterBar<Content: View>: View {
     }
 }
 
-/// Memo / Task の keyword・semantic 検索切替。
-struct IssueSearchModePicker: View {
-    @Binding var selection: SearchMode
-    var verticalPadding: CGFloat = 8
-    let onChange: () -> Void
-
-    var body: some View {
-        Picker("Search Mode", selection: $selection) {
-            ForEach(SearchMode.allCases, id: \.self) { mode in
-                Text(mode.rawValue).tag(mode)
-            }
-        }
-        .pickerStyle(.segmented)
-        .background(.regularMaterial, in: Capsule())
-        .padding(.horizontal, 16)
-        .padding(.vertical, verticalPadding)
-        .onChange(of: selection) { _, _ in onChange() }
-    }
-}
-
 /// 検索中は非表示になる標準の作成ボタン領域。
 struct IssueListCreateBar: View {
     let isSearching: Bool

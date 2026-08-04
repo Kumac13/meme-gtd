@@ -28,13 +28,6 @@ struct TaskListView: View {
         connectivity.isOfflineReadOnly
     }
 
-    /// Standalone Storage Mode: tasks work fully locally (offline support
-    /// plan Phase 9), but semantic search needs the server's embedding stack,
-    /// so the search-mode picker is hidden (keyword-only).
-    private var isStandalone: Bool {
-        Settings.shared.appMode == .standalone
-    }
-
     private var hasActiveFilters: Bool {
         !viewModel.searchQuery.isEmpty ||
         !viewModel.labelFilters.isEmpty ||
@@ -62,12 +55,8 @@ struct TaskListView: View {
                 TaskCell(
                     task: task,
                     snippet: viewModel.searchMatchInfos[task.id],
-                    searchQuery: viewModel.searchMode == .keyword && !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil
+                    searchQuery: !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil
                 )
-                if let score = viewModel.relevanceScores[task.id] {
-                    RelevanceBar(score: score)
-                        .padding(.top, 4)
-                }
             }
         }
         .issueListRefreshable {
@@ -78,16 +67,6 @@ struct TaskListView: View {
         .safeAreaInset(edge: .top) {
             VStack(spacing: 0) {
                 OfflineReadOnlyIndicator()
-
-                // Standalone: semantic search is server-only, so the mode
-                // picker is hidden and search stays on its keyword default.
-                if isSearching && !isStandalone {
-                    IssueSearchModePicker(selection: $viewModel.searchMode) {
-                        if viewModel.isSearching {
-                            viewModel.search()
-                        }
-                    }
-                }
 
                 IssueListFilterBar {
                     FilterPill(

@@ -32,17 +32,7 @@ struct MemoListView: View {
         viewModel.createdTo != nil
     }
 
-    /// Standalone Storage Mode: keyword search runs on the local FTS index
-    /// (offline support plan Phase 9), but semantic search needs the server's
-    /// embedding stack, so the search-mode picker is hidden (keyword-only).
-    private var isStandalone: Bool {
-        Settings.shared.appMode == .standalone
-    }
-
     private var reversedMemos: [Memo] {
-        if viewModel.searchMode == .semantic && isSearching {
-            return memoStore.memos
-        }
         // Date filter fetches ascending from the API (see buildListQueryItems),
         // so the array already runs oldest → newest. Keep order; otherwise the
         // API's newest-first array gets reversed for the chat-style layout.
@@ -92,12 +82,8 @@ struct MemoListView: View {
                                 MemoTimelineItem(
                                     memo: memo,
                                     snippet: viewModel.searchMatchInfos[memo.id],
-                                    searchQuery: viewModel.searchMode == .keyword && !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil
+                                    searchQuery: !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil
                                 )
-                                if let score = viewModel.relevanceScores[memo.id] {
-                                    RelevanceBar(score: score)
-                                        .padding(.top, 4)
-                                }
                             }
                         }
                         .buttonStyle(.plain)
@@ -199,19 +185,6 @@ struct MemoListView: View {
         }
         .safeAreaInset(edge: .top) {
             VStack(spacing: 4) {
-                // Standalone: semantic search is server-only, so the mode
-                // picker is hidden and search stays on its keyword default.
-                if isSearching && !isStandalone {
-                    IssueSearchModePicker(
-                        selection: $viewModel.searchMode,
-                        verticalPadding: 0
-                    ) {
-                        if viewModel.isSearching {
-                            viewModel.search()
-                        }
-                    }
-                }
-
                 IssueListFilterBar {
                     FilterPill(
                         label: labelFilterDisplayLabel,

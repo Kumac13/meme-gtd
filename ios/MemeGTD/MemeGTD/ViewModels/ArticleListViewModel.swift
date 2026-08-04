@@ -173,7 +173,6 @@ class ArticleListViewModel: ObservableObject, IssueListStateProviding {
         guard let store, !store.articles.isEmpty else { return }
         let filters = SearchExportFilters(
             query: searchQuery.isEmpty ? nil : searchQuery,
-            searchMode: searchQuery.isEmpty ? nil : "keyword",
             labels: labelFilters.isEmpty ? nil : Array(labelFilters),
             dateFrom: nil,
             dateTo: nil,
@@ -194,7 +193,6 @@ class ArticleListViewModel: ObservableObject, IssueListStateProviding {
             filters: filters,
             itemIds: store.articles.map { $0.id },
             matchedComments: matchedComments,
-            matchedScores: nil,
             includeComments: includeComments
         )
 
