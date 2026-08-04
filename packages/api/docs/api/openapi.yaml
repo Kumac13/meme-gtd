@@ -9646,222 +9646,6 @@ paths:
                   - error
                   - message
                 additionalProperties: false
-  /api/search/semantic:
-    get:
-      operationId: semanticSearch
-      summary: Semantic search
-      tags:
-        - Search
-      description: Search issues by semantic similarity using vector embeddings
-      parameters:
-        - schema:
-            type: string
-            minLength: 1
-          in: query
-          name: q
-          required: true
-          description: Search query text
-        - schema:
-            type: integer
-            exclusiveMinimum: true
-            minimum: 0
-            maximum: 100
-            default: 20
-          in: query
-          name: limit
-          required: false
-          description: Maximum number of results to return
-        - schema:
-            type: string
-          in: query
-          name: types
-          required: false
-          description: Comma-separated issue types to include (memo,task,article)
-      responses:
-        "200":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  results:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        issue:
-                          type: object
-                          properties:
-                            id:
-                              type: integer
-                              exclusiveMinimum: true
-                              minimum: 0
-                              description: Issue ID
-                            type:
-                              type: string
-                              description: Issue type (memo, task, article)
-                            title:
-                              type: string
-                              nullable: true
-                              description: Issue title
-                            bodyMd:
-                              type: string
-                              description: Issue body in Markdown
-                            status:
-                              type: string
-                              nullable: true
-                              description: Issue status
-                            isBookmarked:
-                              type: boolean
-                              description: Whether the issue is bookmarked
-                            labels:
-                              type: array
-                              items:
-                                type: string
-                              description: Labels assigned to the issue
-                            commentCount:
-                              type: integer
-                              minimum: 0
-                              description: Number of comments
-                            taskKind:
-                              type: string
-                              nullable: true
-                              description: Task kind (action, waiting, etc.)
-                            scheduledOn:
-                              type: string
-                              nullable: true
-                              description: Scheduled date
-                            createdAt:
-                              type: string
-                              description: Creation timestamp
-                            updatedAt:
-                              type: string
-                              description: Last update timestamp
-                          required:
-                            - id
-                            - type
-                            - title
-                            - bodyMd
-                            - status
-                            - isBookmarked
-                            - labels
-                            - commentCount
-                            - taskKind
-                            - scheduledOn
-                            - createdAt
-                            - updatedAt
-                          additionalProperties: false
-                        score:
-                          type: number
-                          description: Combined relevance score
-                        vectorScore:
-                          type: number
-                          description: Vector similarity score
-                        matchReason:
-                          type: array
-                          items:
-                            type: string
-                          description: Reasons for the match
-                      required:
-                        - issue
-                        - score
-                        - vectorScore
-                        - matchReason
-                      additionalProperties: false
-                    description: Search results sorted by relevance
-                  meta:
-                    type: object
-                    properties:
-                      query:
-                        type: string
-                        description: Original search query
-                      totalResults:
-                        type: integer
-                        minimum: 0
-                        description: Total number of results returned
-                      searchTimeMs:
-                        type: number
-                        minimum: 0
-                        description: Search duration in milliseconds
-                    required:
-                      - query
-                      - totalResults
-                      - searchTimeMs
-                    additionalProperties: false
-                required:
-                  - results
-                  - meta
-                additionalProperties: false
-        "400":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    description: Error type or name
-                  code:
-                    type: string
-                    description: Error code
-                  message:
-                    type: string
-                    description: Human-readable error message
-                  stack:
-                    type: string
-                    description: Stack trace (only in development)
-                required:
-                  - error
-                  - message
-                additionalProperties: false
-        "500":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    description: Error type or name
-                  code:
-                    type: string
-                    description: Error code
-                  message:
-                    type: string
-                    description: Human-readable error message
-                  stack:
-                    type: string
-                    description: Stack trace (only in development)
-                required:
-                  - error
-                  - message
-                additionalProperties: false
-        "503":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    description: Error type or name
-                  code:
-                    type: string
-                    description: Error code
-                  message:
-                    type: string
-                    description: Human-readable error message
-                  stack:
-                    type: string
-                    description: Stack trace (only in development)
-                required:
-                  - error
-                  - message
-                additionalProperties: false
   /api/search/export:
     post:
       operationId: exportSearchResults
@@ -9888,12 +9672,6 @@ paths:
                     query:
                       type: string
                       description: Free-text search query
-                    searchMode:
-                      type: string
-                      enum:
-                        - keyword
-                        - semantic
-                      description: Search mode used
                     labels:
                       type: array
                       items:
@@ -9934,17 +9712,12 @@ paths:
                     - loaded
                     - all
                   default: loaded
-                  description: Export scope. "loaded" (default) exports exactly the provided itemIds — the current page / loaded range. "all" ignores itemIds and exports every item matching filters, resolved server-side with no pagination. Semantic search (filters.searchMode="semantic") always behaves as "loaded" because its result set is an inherently bounded top-K ranking.
+                  description: Export scope. "loaded" (default) exports exactly the provided itemIds — the current page / loaded range. "all" ignores itemIds and exports every item matching filters, resolved server-side with no pagination.
                 matchedComments:
                   type: object
                   additionalProperties:
                     type: string
                   description: Matched comment snippets keyed by item id (from keyword search)
-                matchedScores:
-                  type: object
-                  additionalProperties:
-                    type: number
-                  description: Semantic search relevance scores keyed by item id (0-1)
                 includeComments:
                   type: boolean
                   default: false
@@ -9982,12 +9755,6 @@ paths:
                       query:
                         type: string
                         description: Free-text search query
-                      searchMode:
-                        type: string
-                        enum:
-                          - keyword
-                          - semantic
-                        description: Search mode used
                       labels:
                         type: array
                         items:
@@ -10043,8 +9810,6 @@ paths:
                               type: string
                             matchedComment:
                               type: string
-                            matchedScore:
-                              type: number
                             comments:
                               type: array
                               items:
@@ -10108,8 +9873,6 @@ paths:
                               type: string
                             matchedComment:
                               type: string
-                            matchedScore:
-                              type: number
                             comments:
                               type: array
                               items:
@@ -10173,8 +9936,6 @@ paths:
                               type: string
                             matchedComment:
                               type: string
-                            matchedScore:
-                              type: number
                             comments:
                               type: array
                               items:

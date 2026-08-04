@@ -134,22 +134,8 @@ export default class Init extends Command {
     const envPath = path.join(envDir, '.env');
     if (!await fs.pathExists(envPath)) {
       const envTemplate = [
-        '# mgtd embedding configuration',
-        '# OpenAI-compatible embeddings endpoint',
-        'MGTD_EMBEDDING_URL=http://localhost:11434/v1',
-        'MGTD_EMBEDDING_MODEL=qwen3-embedding:4b',
-        'MGTD_EMBEDDING_API_KEY=ollama',
-        '',
-        '# Query prefix (model-specific, prepended to search queries before embedding)',
-        '# qwen3-embedding:',
-        'MGTD_EMBEDDING_QUERY_PREFIX="Instruct: Given a search query, retrieve relevant documents\\nQuery: "',
-        '# nomic-embed-text: MGTD_EMBEDDING_QUERY_PREFIX=search_query: ',
-        '# bge-m3 or models without prefix: leave empty or unset',
-        '',
-        '# For OpenAI:',
-        '# MGTD_EMBEDDING_URL=https://api.openai.com/v1',
-        '# MGTD_EMBEDDING_MODEL=text-embedding-3-small',
-        '# MGTD_EMBEDDING_API_KEY=sk-xxxxx',
+        '# mgtd environment configuration',
+        '# Variables in this file are loaded by the mgtd CLI and API server on startup.',
         '',
       ].join('\n');
       await fs.writeFile(envPath, envTemplate, 'utf-8');

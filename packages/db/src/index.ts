@@ -177,19 +177,6 @@ export {
   type ListTemplateFilters
 } from './templateRepository.js';
 
-// Embedding repository exports
-export {
-  upsertEmbedding,
-  getEmbedding,
-  getAllEmbeddings,
-  deleteEmbedding,
-  listUnembeddedIssues,
-  listEmbeddingHashes,
-  type EmbeddingRow,
-  type EmbeddingWithIssue,
-  type UnembeddedIssue
-} from './embeddingRepository.js';
-
 // Search repository exports
 export {
   searchByKeyword,

@@ -1,56 +1,6 @@
 import { z } from 'zod';
 
 /**
- * Schema for semantic search query parameters
- */
-export const SemanticSearchQuerySchema = z.object({
-  q: z.string().min(1, 'Search query is required').describe('Search query text'),
-  limit: z.coerce.number().int().positive().max(100).default(20).describe('Maximum number of results to return'),
-  types: z.string().optional().describe('Comma-separated issue types to include (memo,task,article)'),
-});
-
-export type SemanticSearchQuery = z.infer<typeof SemanticSearchQuerySchema>;
-
-/**
- * Schema for a single search result item
- */
-export const SearchResultItemSchema = z.object({
-  issue: z.object({
-    id: z.number().int().positive().describe('Issue ID'),
-    type: z.string().describe('Issue type (memo, task, article)'),
-    title: z.string().nullable().describe('Issue title'),
-    bodyMd: z.string().describe('Issue body in Markdown'),
-    status: z.string().nullable().describe('Issue status'),
-    isBookmarked: z.boolean().describe('Whether the issue is bookmarked'),
-    labels: z.array(z.string()).describe('Labels assigned to the issue'),
-    commentCount: z.number().int().nonnegative().describe('Number of comments'),
-    taskKind: z.string().nullable().describe('Task kind (action, waiting, etc.)'),
-    scheduledOn: z.string().nullable().describe('Scheduled date'),
-    createdAt: z.string().describe('Creation timestamp'),
-    updatedAt: z.string().describe('Last update timestamp'),
-  }),
-  score: z.number().describe('Combined relevance score'),
-  vectorScore: z.number().describe('Vector similarity score'),
-  matchReason: z.array(z.string()).describe('Reasons for the match'),
-});
-
-export type SearchResultItem = z.infer<typeof SearchResultItemSchema>;
-
-/**
- * Schema for semantic search response
- */
-export const SemanticSearchResponseSchema = z.object({
-  results: z.array(SearchResultItemSchema).describe('Search results sorted by relevance'),
-  meta: z.object({
-    query: z.string().describe('Original search query'),
-    totalResults: z.number().int().nonnegative().describe('Total number of results returned'),
-    searchTimeMs: z.number().nonnegative().describe('Search duration in milliseconds'),
-  }),
-});
-
-export type SemanticSearchResponse = z.infer<typeof SemanticSearchResponseSchema>;
-
-/**
  * Schema for keyword search query parameters
  */
 export const KeywordSearchQuerySchema = z.object({
@@ -104,7 +54,6 @@ export type KeywordSearchResponse = z.infer<typeof KeywordSearchResponseSchema>;
 export const SearchExportFiltersSchema = z
   .object({
     query: z.string().optional().describe('Free-text search query'),
-    searchMode: z.enum(['keyword', 'semantic']).optional().describe('Search mode used'),
     labels: z.array(z.string()).optional().describe('Labels filter (OR)'),
     dateFrom: z.string().optional().describe('Start of date range filter'),
     dateTo: z.string().optional().describe('End of date range filter'),
@@ -123,16 +72,12 @@ export const SearchExportRequestSchema = z.object({
     .enum(['loaded', 'all'])
     .default('loaded')
     .describe(
-      'Export scope. "loaded" (default) exports exactly the provided itemIds — the current page / loaded range. "all" ignores itemIds and exports every item matching filters, resolved server-side with no pagination. Semantic search (filters.searchMode="semantic") always behaves as "loaded" because its result set is an inherently bounded top-K ranking.'
+      'Export scope. "loaded" (default) exports exactly the provided itemIds — the current page / loaded range. "all" ignores itemIds and exports every item matching filters, resolved server-side with no pagination.'
     ),
   matchedComments: z
     .record(z.string(), z.string())
     .optional()
     .describe('Matched comment snippets keyed by item id (from keyword search)'),
-  matchedScores: z
-    .record(z.string(), z.number())
-    .optional()
-    .describe('Semantic search relevance scores keyed by item id (0-1)'),
   includeComments: z.boolean().default(false).describe('Whether to include full comments for each item'),
 });
 
@@ -154,7 +99,6 @@ const SearchExportMemoResultSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   matchedComment: z.string().optional(),
-  matchedScore: z.number().optional(),
   comments: z.array(SearchExportCommentSchema).optional(),
 });
 
@@ -170,7 +114,6 @@ const SearchExportTaskResultSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   matchedComment: z.string().optional(),
-  matchedScore: z.number().optional(),
   comments: z.array(SearchExportCommentSchema).optional(),
 });
 
@@ -185,7 +128,6 @@ const SearchExportArticleResultSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   matchedComment: z.string().optional(),
-  matchedScore: z.number().optional(),
   comments: z.array(SearchExportCommentSchema).optional(),
 });
 
