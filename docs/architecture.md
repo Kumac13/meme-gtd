@@ -26,8 +26,8 @@ GTD (Getting Things Done) ベースのローカルファースト個人タスク
         ▼              ▼           ▼               ▼
   packages/config  packages/   packages/db    packages/core
   (環境変数・       logger     (SQLite        (Service層・
-   context.json)   (pino)      リポジトリ層・   ActivityLogger・
-                               マイグレーション)  embedding)
+   context.json)   (pino)      リポジトリ層・   ActivityLogger)
+                               マイグレーション)
         │              │           │               │
         └──────────────┴─────┬─────┴───────────────┘
                              │
@@ -62,7 +62,7 @@ GTD (Getting Things Done) ベースのローカルファースト個人タスク
 | `packages/config` | 設定解決（`MGTD_CONFIG_PATH`, `DB_PATH`, `~/.config/mgtd/context.json`）。Zodで検証 | `src/index.ts` |
 | `packages/logger` | pinoロガーのラッパー | `src/index.ts` |
 | `packages/db` | SQLiteリポジトリ層（`src/*Repository.ts`）とマイグレーション実行 | `src/*Repository.ts`, `src/migrate.ts` |
-| `packages/core` | ドメインサービス（`MemoService`/`TaskService`/`LabelService`/`ArticleService` は `src/index.ts` 内、`LinkService`/`ProjectService`/`UrlLinkService` は個別ファイル）。全mutationで `ActivityLogger` によるイベント記録。embedding/ベクトル検索 | `src/index.ts`, `src/activity-log/`, `src/embedding/` |
+| `packages/core` | ドメインサービス（`MemoService`/`TaskService`/`LabelService`/`ArticleService` は `src/index.ts` 内、`LinkService`/`ProjectService`/`UrlLinkService` は個別ファイル）。全mutationで `ActivityLogger` によるイベント記録 | `src/index.ts`, `src/activity-log/` |
 | `packages/api` | Fastify REST APIサーバー。Zodスキーマでバリデーション、OpenAPI specを自動生成。`packages/web/dist` をSPAとして配信 | `src/routes/`, `src/handlers/`, `src/schemas/`, `src/server.ts` |
 | `packages/cli` | oclif製CLI `mgtd`。**APIサーバーを経由せず core のサービスを直接呼ぶ** | `src/commands/`, `src/index.ts` |
 | `packages/web` | React 19 SPA。APIクライアントは openapi.yaml から自動生成（`src/api/` は生成物） | `src/App.tsx`, `src/pages/`, `src/components/` |
@@ -108,7 +108,7 @@ API契約は次の4段階で伝播する。**上流を変えたら下流を全�
 | `Label.swift` | `labelSchemas.ts` |
 | `Link.swift`（IssueLink / UrlLink / LinkType） | `linkSchemas.ts`, `urlLinkSchemas.ts` |
 | `Project.swift` | `projectSchemas.ts` |
-| `KeywordSearch.swift`, `SemanticSearch.swift`, `SearchExport.swift` | `searchSchemas.ts` |
+| `KeywordSearch.swift`, `SearchExport.swift` | `searchSchemas.ts` |
 | `ActivityLogEntry.swift` | `activityLogSchemas.ts` |
 | `TimelineEntry.swift` | 対応なし（iOSローカルのUI型。Comment + ActivityLogEntry の合成） |
 | `../Shared/SyncModels.swift` | `syncSchemas.ts` |
@@ -191,7 +191,7 @@ Calendarを含むIssue詳細の右パネルは`ItemDetailPanel`を単一の正�
 | Templates | `/api/templates`, `/api/templates/{id}`（作成時テンプレートのCRUD。適用はクライアント側プリフィル） |
 | Attachments | `/api/attachments`（multipart画像アップロード）, `/api/attachments/{filename}`（配信） |
 | Activity Log | `/api/activity-log`, `/issues/{issueId}`, `/projects/{projectId}`, `/completed-tasks` |
-| Search | `/api/search/keyword`, `/api/search/semantic`, `/api/search/export` |
+| Search | `/api/search/keyword`, `/api/search/export` |
 | Sync | `/api/sync/changes`（差分プル）, `/api/sync/push`（オフライン操作の適用） |
 
 ## 検索アーキテクチャ
@@ -200,7 +200,6 @@ Calendarを含むIssue詳細の右パネルは`ItemDetailPanel`を単一の正�
 |--------|------|---------|------|
 | タイプ内一覧検索 | FTS5（`issues_fts`） | title, body_md | `mgtd task list --search`, `GET /api/tasks?search=` などの一覧フィルタ |
 | 横断キーワード検索 | LIKE部分一致 | title, body_md, comments | `mgtd search keyword`, `GET /api/search/keyword` |
-| セマンティック検索 | embedding + コサイン類似度 | title + body + comments 全体 | `mgtd search semantic`, `GET /api/search/semantic`（オプトイン） |
 
 ### keyword検索の設計意図
 
@@ -209,13 +208,6 @@ Calendarを含むIssue詳細の右パネルは`ItemDetailPanel`を単一の正�
 - 結果はissue単位でグルーピングし、マッチ箇所（matches配列）を切り詰めずに返す
 - title/bodyMdは常に返す: マッチ内容がどのissueに属するか判断するための文脈情報
 
-### semantic検索の設計意図
-
-- embeddingはtitle+body_md+commentsから生成（コメントに重要情報があるため）。結果にもcomments全件を含め、embedding対象と情報を一致させる
-- scoreはコサイン類似度（0-1）
-- OpenAI互換 `/v1/embeddings` API（Ollama, OpenAI等）を使用。設定は `~/.config/mgtd/.env`（`MGTD_EMBEDDING_URL`, `MGTD_EMBEDDING_MODEL`, `MGTD_EMBEDDING_API_KEY`）
-- 全embeddingをメモリにロードして類似度計算（~1,500件規模で実用的）。content hashで変更検知し、変わったissueのみ再生成
-
 ### 検索結果コピー（`POST /api/search/export`）の設計意図
 
 Web/iOS の「Copy Results」「Copy with Comments」は、表示中のフィルタ結果をサーバーが整形JSONにして返し、クライアントがそのままクリップボードに書き込む（クライアント側にフォーマット処理はない）。`includeComments=true` のとき各アイテムにコメント全文を同梱する。
@@ -223,7 +215,6 @@ Web/iOS の「Copy Results」「Copy with Comments」は、表示中のフィル
 - **scope で範囲を制御**（`scope: 'loaded' | 'all'`、既定 `loaded`）:
   - `loaded`: クライアントが送る `itemIds`（現在ページ／ロード済み範囲）だけを対象にする。従来の挙動。
   - `all`: `itemIds` を無視し、サーバーが `filters` から**同じ一覧／keyword検索クエリをページ制限なしで再実行**して全マッチを確定する。フィルタ→マッチの対応をサーバー単一の正とし、クライアント側でのフィルタ意味論の再実装（ドリフト）を避けるため。Webはページネーションで全件を保持しないため `all` を送る。iOSはフィルタ全件を事前ロードするため `loaded` のまま（`scope` 未指定）。
-- **semanticは常に loaded 相当**: セマンティック検索は類似度ランキングのtop-Kで「全件」が定義できないため、`all` でも `itemIds`（表示中）にフォールバックする。
 - **上限とtruncated**: `all` は暴発防止に安全上限（`EXPORT_ALL_CAP`）を持ち、超過時は切り詰めて `truncated: true` を返す（サイレントカットにしない。クライアントは警告を表示）。個人利用規模では通常到達しない。
 - **keyword検索のスニペット**: `all` かつ keyword のときはサーバーが `searchByKeyword` の結果から `matchedComment` を再構築する（loaded と同じ情報を持たせるため）。articles の検索は一覧の LIKE 検索（`ArticleService.list`）でありkeyword検索エンドポイントを使わない点に注意。
 - 実装は `packages/api/src/handlers/searchHandlers.ts` の `searchExportHandler` / `resolveAllMatchIds`。契約の正は `openapi.yaml`。
@@ -250,7 +241,7 @@ iOSのオフライン対応（Phase 2で導入）。iOS側はローカルDB + �
 - マイグレーションは GRDB の `DatabaseMigrator` に `001_initial` 形式で番号登録（`schema/` と同じ「既存変更禁止・追加のみ」規約）
 - Outbox は `pending_operations` テーブル、同期カーソル等は `sync_meta`。iOS のユニットテストは `MemeGTDTests` ターゲット（in-memory DB でテスト可能）
 - **タスク/記事/プロジェクトは閲覧専用キャッシュ**（メモだけがオフラインで読み書き可）。読みはリモート優先で、サーバー到達不能（ネットワークエラー）のときのみローカルフォールバック。書き込みは到達不能時にエラーとし、UI は編集操作を無効化して Read-only ピルを表示する。task/article の行は差分プルが `issues` に保存するためフォールバック元は同期フィードそのもの（REST レスポンスの書き戻しはしない — 同期の帳簿と矛盾させないため）
-- **Storage Mode（Server / Standalone）**: iOS は App Group 設定 `appMode` で動作モードが決まる。初回解決は「インストール直後 = standalone。ただしアプリを消さずアップデートした既存端末（apiUrl が残存）= server」で、解決結果を永続化する。切替は Settings のピッカーで行う。Standalone→Server の切替は移行そのもの（確認後に端末内データを全件バルクアップロードし、成功時のみモード確定。失敗時は Standalone のまま。冪等・一方向で、端末内データが無ければ実質切替のみ）。Server→Standalone への切替は不可（遮断ダイアログを表示。開発ビルドのみ検証用に許可）。Standalone はサーバー通信ゼロで、メモ・タスク・キーワード検索・ラベル・リンクが端末内 DB で完結する。ローカル CRUD 本体は `LocalMemoStore` / `LocalTaskStore` / `LocalCommentStore`（Outbox を知らない純粋なローカル CRUD 層）として OfflineFirst 実装と共有する。未対応ドメイン（記事/プロジェクト/セマンティック検索）は空レスポンス + 英語エラーの安全実装。Standalone の削除はハード削除（サーバー到達経路がなく tombstone の回収先がないため — Standalone→Server 移行の設計時に要考慮）
+- **Storage Mode（Server / Standalone）**: iOS は App Group 設定 `appMode` で動作モードが決まる。初回解決は「インストール直後 = standalone。ただしアプリを消さずアップデートした既存端末（apiUrl が残存）= server」で、解決結果を永続化する。切替は Settings のピッカーで行う。Standalone→Server の切替は移行そのもの（確認後に端末内データを全件バルクアップロードし、成功時のみモード確定。失敗時は Standalone のまま。冪等・一方向で、端末内データが無ければ実質切替のみ）。Server→Standalone への切替は不可（遮断ダイアログを表示。開発ビルドのみ検証用に許可）。Standalone はサーバー通信ゼロで、メモ・タスク・キーワード検索・ラベル・リンクが端末内 DB で完結する。ローカル CRUD 本体は `LocalMemoStore` / `LocalTaskStore` / `LocalCommentStore`（Outbox を知らない純粋なローカル CRUD 層）として OfflineFirst 実装と共有する。未対応ドメイン（記事/プロジェクト）は空レスポンス + 英語エラーの安全実装。Standalone の削除はハード削除（サーバー到達経路がなく tombstone の回収先がないため — Standalone→Server 移行の設計時に要考慮）
 - **Standalone のキーワード検索はサーバーの LIKE 実装をミラー**（コメント本文含む、issue 単位グルーピング）。FTS5 は採用しない — サーバー自身が日本語対応のため意図的に LIKE を使っている（`packages/db/CLAUDE.md`）ので、ローカルも同じ意味論に揃える
 - projects / project_items は change-feed 対象外（サーバー側ハード削除）のため、REST レスポンスのスナップショットを別テーブルにキャッシュする（`GET /api/projects` 成功ごとに全量入れ替え、所属プロジェクトは issue 単位入れ替え）
 
@@ -259,7 +250,6 @@ iOSのオフライン対応（Phase 2で導入）。iOS側はローカルDB + �
 - **activity_logはappend-only**: SQLiteトリガー（`schema/009_activity_log_immutability.sql`）でUPDATE/DELETEを禁止。イベントソーシングの監査ログとして設計。
 - **promote-previewはサーバ側で生成（例外: iOS Standalone）**: memo→task昇格時の本文整形（メモ本文 + `## コメント` セクション inline）は `GET /api/memos/{id}/promote-preview` が正。Web/iOS（Serverモード）/CLIすべてこれを使ってフォーム/エディタの初期値を埋める。昇格の実行は、Web/iOSでは preview を初期値にしたタスク作成 + `derived_from` リンク作成で構成し、CLIは `mgtd memo promote`（core直接）で行う。**唯一の例外は iOS Standalone モード**: サーバーが存在しないため `ios/MemeGTD/Shared/Promote/PromoteEngine.swift` に同一仕様の Swift 実装を持つ（TS 実行出力とのパリティを XCTest で固定）。**promote 整形の仕様（`buildPromoteBody` 等）を変更するときは TS と Swift の両実装 + パリティテストを同時に更新すること。** `memo.promoted` イベントは `LinkService.create` の `isPromotion` オプション（`POST /api/links` の同名フィールド）で記録する。昇格経路だけがこれを渡し、手動リンク作成や sync 移行時のリンク再作成は渡さない（リンクの形状で判定すると手動 task→memo `derived_from` を昇格と誤検出するため、呼び出し元の意図で判定する）。
 - **スケジュールフィールドは新形式を使う**: `scheduledStart`/`scheduledEnd`/`isAllDay`/`actualStart`/`actualEnd` が現行。`scheduledOn`/`startTime`/`endTime`/`endDate`/`duration` は非推奨（後方互換のため残存）。新規コードで旧形式を使わない。
-- **embedding はオプトイン**: `mgtd embedding sync` 実行後のみセマンティック検索が機能する。
 - **Zodスキーマとsharedの型は意図的に別物**: sharedはドメイン型（純粋なinterface）、apiのZodはHTTP契約（バリデーションルール・ページネーション等を含む）。統合しないこと。
 - **自動 `#id` メンション**: 本文・コメント保存時、`#123` は core サービス層（`rewriteIssueMentions`）が `[#123](/<type>/123)` に書き換え、同時に `relates` リンクを作成する。コードブロック・インラインコード・既存リンク内・`\#id`（エスケープ）・存在しないid・自己参照は変換対象外。一度作られたリンクは本文編集で `#id` が消えても残る（GitHubと同じ流儀）。
 - **インタラクティブMarkdownチェックボックス（Task限定）**: Taskの本文・コメント内の `- [ ]` / `- [x]` は表示画面のままトグルできる。書き換えはクライアント側完結（Web: `packages/web/src/utils/todoMarkdown.ts`、iOS: `ios/.../Utilities/TodoMarkdown.swift`）。トグル結果は既存の `PATCH /api/tasks/{id}` 等で全文置換保存される。**インタラクティブ操作は activity log を積まない** — core層の `isInteractiveTodoChange` が old/new bodyMd を比較してログ呼び出しを抑止する。Memo・Articleは対象外。

@@ -200,11 +200,10 @@ stateDiagram-v2
 - **主要データ**: `issues.type = article`、`title` 必須、`origin = web | manual`。Web保存では `meta` に `originalUrl`、`siteName`、`archivedAt` を保持し、本文は Readability で抽出した Markdown。手動作成では `originalUrl` を持たない。
 - **機能要件**: Web保存・手動作成、一覧・詳細・削除・ブックマーク、コメント・ラベル・プロジェクト・リンクの付与。手動記事はタイトル・本文を編集でき、Web保存記事の本文はアーカイブの同一性を保つため read-only とする。
 
-### 4.11 検索（keyword / semantic）
+### 4.11 検索（keyword）
 
 - **keyword 検索**: title / body_md / コメントを対象とした LIKE 部分一致。日本語の単語境界に対応するため FTS5 ではなく LIKE を採用。マッチ箇所を issue 単位でグルーピングして返す。
-- **semantic 検索**: ベクトル埋め込み（title + body + comments）のコサイン類似度。OpenAI 互換 `/v1/embeddings` API（Ollama 等）で生成し、`mgtd embedding sync` で同期する（オプトイン機能）。
-- CLI（`mgtd search keyword/semantic`）・API（`/api/search/*`）・Web・iOS の全クライアントから利用可能。
+- CLI（`mgtd search keyword`）・API（`/api/search/*`）・Web・iOS の全クライアントから利用可能。
 
 ### 4.12 添付ファイル（画像）
 
@@ -236,7 +235,7 @@ stateDiagram-v2
     - 基本: `id`, `type`, `title`, `body_md`, `status`, `meta`, `created_at`, `updated_at`, `is_bookmarked`, `is_deleted`, `task_kind`
     - スケジュール (新形式): `scheduled_start`, `scheduled_end`, `is_all_day`, `actual_start`, `actual_end`, `notify_before_minutes`
     - スケジュール (旧形式/非推奨): `scheduled_on`, `start_time`, `end_date`, `end_time`, `duration`
-  - `labels`, `issue_labels`, `comments`, `comment_revisions`, `links`, `url_links`, `projects`, `project_items`, `activity_log`, `issues_fts`, `issue_embeddings`
+  - `labels`, `issue_labels`, `comments`, `comment_revisions`, `links`, `url_links`, `projects`, `project_items`, `activity_log`, `issues_fts`
   - カラム定義・enum値の詳細は `docs/er-diagram.md`（データモデルの正）、マイグレーション SQL は `schema/` を参照。
 - **ID ルール**:
   - すべてのエンティティで単一連番 ID を採用。CLI は `memo` / `task` / `article` で型チェックを実施。
@@ -250,7 +249,7 @@ stateDiagram-v2
 
 - **ローカル専用 CLI**: CLI はローカル SQLite に対して即時反映する。リモート環境での同期は行わない。
 - **即時反映**: CLI での操作は即座に DB / API へ反映。書き込みエラー時は詳細メッセージを返す。
-- **検索性能**: 横断 keyword 検索は LIKE（日本語対応のため意図的に FTS5 不使用）、semantic 検索はベクトル類似度（4.11 参照）。
+- **検索性能**: 横断 keyword 検索は LIKE（日本語対応のため意図的に FTS5 不使用、4.11 参照）。
 - **拡張性**: API は OpenAPI 仕様を公開し、将来のクライアントから再利用できる。
 - **CLI 補完**: `fish`, `zsh` 用補完スクリプトを提供。
 

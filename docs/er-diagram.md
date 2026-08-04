@@ -111,16 +111,6 @@ erDiagram
         TEXT     created_at
     }
 
-    issue_embeddings {
-        INTEGER  issue_id PK,FK
-        BLOB     embedding
-        TEXT     model
-        INTEGER  dimensions
-        TEXT     content_hash
-        TEXT     created_at
-        TEXT     updated_at
-    }
-
     activity_log {
         INTEGER  id PK
         TEXT     event_type
@@ -181,7 +171,6 @@ erDiagram
     projects          ||--o{ project_items     : "contains"
     issues            ||--o{ project_items     : "appears in"
     issues            ||--o{ url_links         : "has"
-    issues            ||--o| issue_embeddings  : "vectorized as"
 
     %% --- トリガで同期される論理関係 ---
     issues            ||..o{ issues_fts        : "synced by trigger"
@@ -240,13 +229,6 @@ erDiagram
   - Link: `link.created`, `link.deleted`
   - Comment: `comment.created`, `comment.updated`, `comment.deleted`
   - Search: `search.exported`（`POST /api/search/export`）
-
-### issue_embeddings（セマンティック検索）
-
-- `embedding`: Float32Array のBLOB。title + body_md + comments 全体から生成
-- `model`: 使用モデル名（例: `qwen3-embedding:4b`）、`dimensions`: ベクトル次元数
-- `content_hash`: SHA-256。内容が変わったissueのみ再生成するための変更検知
-- オプトイン機能: `mgtd embedding sync` 実行後のみ populated
 
 ### 同期基盤（migration 014、iOS オフライン同期）
 
