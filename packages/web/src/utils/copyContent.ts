@@ -67,7 +67,6 @@ export interface ExportAndCopyOptions {
   type: ExportItemType;
   filters: {
     query?: string;
-    searchMode?: 'keyword' | 'semantic';
     labels?: string[];
     dateFrom?: string;
     dateTo?: string;
@@ -78,13 +77,11 @@ export interface ExportAndCopyOptions {
   };
   itemIds: number[];
   matchedComments?: Record<string, string>;
-  matchedScores?: Record<string, number>;
   includeComments: boolean;
   /**
    * 'all' exports every item matching the filters (server-side, no pagination),
    * ignoring itemIds. 'loaded' (default) exports only the provided itemIds — the
-   * current page / loaded range. Semantic search must stay 'loaded' since its
-   * result set is a bounded top-K ranking.
+   * current page / loaded range.
    */
   scope?: 'loaded' | 'all';
 }
@@ -125,7 +122,6 @@ export function exportAndCopySearchResults(
     itemIds: options.itemIds,
     scope: options.scope,
     matchedComments: options.matchedComments,
-    matchedScores: options.matchedScores,
     includeComments: options.includeComments,
   });
 
