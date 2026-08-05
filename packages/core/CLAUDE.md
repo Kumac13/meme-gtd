@@ -12,7 +12,6 @@ src/
 ├── urlLinkService.ts # UrlLinkService
 ├── syncService.ts    # SyncService（iOSオフライン同期の push 適用）
 ├── activity-log/     # ActivityLogger + payload-builder
-├── embedding/        # embeddingClient / embeddingService / vectorSearch
 └── domain/           # ドメインロジック（article等）
 ```
 
@@ -35,4 +34,3 @@ mutationには必ずActivityLoggerでイベントを記録すること（欠落�
 ## 注意
 
 - このパッケージの変更は **CLIとAPIの両方に即座に影響する**。両方の観点でテストすること（テストなしのバックエンド変更は禁止）
-- embedding機能はオプトイン（`mgtd embedding sync`実行後のみ有効）。embedding設定は`~/.config/mgtd/.env`から読む

@@ -8,7 +8,6 @@ struct SearchExportRequest: Encodable {
     let filters: SearchExportFilters
     let itemIds: [Int]
     let matchedComments: [String: String]?
-    let matchedScores: [String: Double]?
     let includeComments: Bool
     /// Export scope. "loaded" (default when omitted) exports exactly `itemIds`.
     /// "all" tells the server to ignore `itemIds` and export every item matching
@@ -19,7 +18,6 @@ struct SearchExportRequest: Encodable {
 
 struct SearchExportFilters: Encodable {
     var query: String?
-    var searchMode: String?
     var labels: [String]?
     var dateFrom: String?
     var dateTo: String?

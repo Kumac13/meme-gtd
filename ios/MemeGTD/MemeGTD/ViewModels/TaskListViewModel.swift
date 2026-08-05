@@ -2,11 +2,6 @@ import Combine
 import os
 import SwiftUI
 
-enum SearchMode: String, CaseIterable {
-    case keyword = "Keyword"
-    case semantic = "Semantic"
-}
-
 private let logger = Logger(subsystem: "name.kumac.MemeGTD", category: "TaskList")
 
 @MainActor
@@ -22,7 +17,6 @@ class TaskListViewModel: ObservableObject, IssueListStateProviding {
     @Published var includeNoProject: Bool = false
     @Published var bookmarkFilter: Bool = false
     @Published var searchQuery: String = ""
-    @Published var searchMode: SearchMode = .keyword
     @Published var scheduledFrom: Date?
     @Published var scheduledTo: Date?
 
@@ -33,8 +27,6 @@ class TaskListViewModel: ObservableObject, IssueListStateProviding {
     @Published var allProjects: [Project] = []
 
     @Published var searchMatchInfos: [Int: String] = [:]
-    @Published var relevanceScores: [Int: Double] = [:]
-    @Published var semanticSearchTimeMs: Double?
     @Published var isExporting: Bool = false
     @Published var showCopiedFeedback: Bool = false
 
@@ -59,9 +51,6 @@ class TaskListViewModel: ObservableObject, IssueListStateProviding {
 
     /// Whether the current request should use a search API
     var isSearching: Bool { !searchQuery.isEmpty }
-
-    /// Whether semantic search is active
-    var isSemanticSearching: Bool { isSearching && searchMode == .semantic }
 
     private func buildListQueryItems(offset: Int) -> [URLQueryItem] {
         var items: [URLQueryItem] = [
@@ -130,28 +119,6 @@ class TaskListViewModel: ObservableObject, IssueListStateProviding {
         return TaskListResponse(data: tasks, total: response.total, limit: response.limit, offset: response.offset)
     }
 
-    // MARK: - Semantic search helpers
-
-    private func fetchSemanticSearch() async throws -> TaskListResponse {
-        let queryItems = [
-            URLQueryItem(name: "q", value: searchQuery.trimmingCharacters(in: .whitespaces)),
-            URLQueryItem(name: "types", value: "task"),
-            URLQueryItem(name: "limit", value: "50"),
-        ]
-        let response: SemanticSearchResponse = try await dataSources.search.semanticSearch(
-            queryItems: queryItems
-        )
-        var scores: [Int: Double] = [:]
-        for item in response.results {
-            scores[item.issue.id] = item.score
-        }
-        relevanceScores = scores
-        semanticSearchTimeMs = response.meta.searchTimeMs
-        searchMatchInfos = [:]
-        let tasks = response.results.map { $0.toTaskItem() }
-        return TaskListResponse(data: tasks, total: response.meta.totalResults, limit: 50, offset: 0)
-    }
-
     // MARK: - Load
 
     func loadTasks() async {
@@ -161,16 +128,10 @@ class TaskListViewModel: ObservableObject, IssueListStateProviding {
 
         do {
             let response: TaskListResponse
-            if isSemanticSearching {
-                response = try await fetchSemanticSearch()
-            } else if isSearching {
-                relevanceScores = [:]
-                semanticSearchTimeMs = nil
+            if isSearching {
                 response = try await fetchKeywordSearch(offset: 0)
             } else {
                 searchMatchInfos = [:]
-                relevanceScores = [:]
-                semanticSearchTimeMs = nil
                 response = try await dataSources.tasks.listTasks(
                     queryItems: buildListQueryItems(offset: 0)
                 )
@@ -189,9 +150,6 @@ class TaskListViewModel: ObservableObject, IssueListStateProviding {
 
     func fetchTasks() async -> TaskListResponse? {
         do {
-            if isSemanticSearching {
-                return try await fetchSemanticSearch()
-            }
             if isSearching {
                 return try await fetchKeywordSearch(offset: 0)
             }
@@ -318,7 +276,6 @@ class TaskListViewModel: ObservableObject, IssueListStateProviding {
         guard let store, !store.tasks.isEmpty else { return }
         let filters = SearchExportFilters(
             query: searchQuery.isEmpty ? nil : searchQuery,
-            searchMode: searchQuery.isEmpty ? nil : searchMode.rawValue.lowercased(),
             labels: labelFilters.isEmpty ? nil : Array(labelFilters),
             dateFrom: scheduledFrom.map { Self.dateFormatter.string(from: $0) },
             dateTo: scheduledTo.map { Self.dateFormatter.string(from: $0) },
@@ -334,18 +291,11 @@ class TaskListViewModel: ObservableObject, IssueListStateProviding {
                 uniqueKeysWithValues: searchMatchInfos.map { (String($0.key), $0.value) }
             )
 
-        let matchedScores: [String: Double]? = relevanceScores.isEmpty
-            ? nil
-            : Dictionary(
-                uniqueKeysWithValues: relevanceScores.map { (String($0.key), $0.value) }
-            )
-
         let request = SearchExportRequest(
             type: "tasks",
             filters: filters,
             itemIds: store.tasks.map { $0.id },
             matchedComments: matchedComments,
-            matchedScores: matchedScores,
             includeComments: includeComments
         )
 

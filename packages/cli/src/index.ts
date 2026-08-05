@@ -60,10 +60,7 @@ const MULTIWORD_COMMANDS = [
   ['project', 'delete'],
   ['project'],
   ['search', 'keyword'],
-  ['search', 'semantic'],
   ['search'],
-  ['embedding', 'sync'],
-  ['embedding'],
   ['db', 'backup'],
   ['db', 'migrate'],
   ['db']

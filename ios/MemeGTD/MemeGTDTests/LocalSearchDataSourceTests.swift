@@ -218,15 +218,7 @@ final class LocalSearchDataSourceTests: XCTestCase {
         XCTAssertEqual(response.results[0].bodyMd, "pagetest item 1")
     }
 
-    // MARK: - Semantic / export stand-ins
-
-    func testSemanticSearchAnswersEmpty() async throws {
-        let response = try await search.semanticSearch(queryItems: [
-            URLQueryItem(name: "q", value: "anything"),
-        ])
-        XCTAssertTrue(response.results.isEmpty)
-        XCTAssertEqual(response.meta.query, "anything")
-    }
+    // MARK: - Export stand-ins
 
     func testExportIsRefused() async throws {
         let request = SearchExportRequest(
@@ -234,7 +226,6 @@ final class LocalSearchDataSourceTests: XCTestCase {
             filters: SearchExportFilters(),
             itemIds: [],
             matchedComments: nil,
-            matchedScores: nil,
             includeComments: false
         )
         do {

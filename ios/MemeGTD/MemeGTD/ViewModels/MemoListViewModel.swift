@@ -12,7 +12,6 @@ class MemoListViewModel: ObservableObject, IssueListStateProviding {
     @Published var newMemoBody: String = ""
     @Published var isCreating: Bool = false
     @Published var searchQuery: String = ""
-    @Published var searchMode: SearchMode = .keyword
     @Published var bookmarkFilter: Bool = false
     @Published var labelFilters: Set<String> = []
     @Published var createdFrom: Date?
@@ -23,8 +22,6 @@ class MemoListViewModel: ObservableObject, IssueListStateProviding {
     @Published var allProjects: [Project] = []
 
     @Published var searchMatchInfos: [Int: String] = [:]
-    @Published var relevanceScores: [Int: Double] = [:]
-    @Published var semanticSearchTimeMs: Double?
     @Published var isExporting: Bool = false
     @Published var showCopiedFeedback: Bool = false
 
@@ -109,9 +106,6 @@ class MemoListViewModel: ObservableObject, IssueListStateProviding {
         let parsed = parseSearchQuery(searchQuery)
         return !parsed.freeText.isEmpty
     }
-
-    /// Whether semantic search is active
-    var isSemanticSearching: Bool { isSearching && searchMode == .semantic }
 
     /// Whether a schedule (created date range) filter is active. Search ignores
     /// the date filter (see buildSearchQueryItems), so this is false while searching.
@@ -199,29 +193,6 @@ class MemoListViewModel: ObservableObject, IssueListStateProviding {
         return MemoListResponse(data: memos, total: response.total, limit: response.limit, offset: response.offset)
     }
 
-    // MARK: - Semantic search helpers
-
-    private func fetchSemanticSearch() async throws -> MemoListResponse {
-        let parsed = parseSearchQuery(searchQuery)
-        let queryItems = [
-            URLQueryItem(name: "q", value: parsed.freeText),
-            URLQueryItem(name: "types", value: "memo"),
-            URLQueryItem(name: "limit", value: "50"),
-        ]
-        let response: SemanticSearchResponse = try await dataSources.search.semanticSearch(
-            queryItems: queryItems
-        )
-        var scores: [Int: Double] = [:]
-        for item in response.results {
-            scores[item.issue.id] = item.score
-        }
-        relevanceScores = scores
-        semanticSearchTimeMs = response.meta.searchTimeMs
-        searchMatchInfos = [:]
-        let memos = response.results.map { $0.toMemo() }
-        return MemoListResponse(data: memos, total: response.meta.totalResults, limit: 50, offset: 0)
-    }
-
     // MARK: - Load
 
     func loadMemos() async {
@@ -232,16 +203,10 @@ class MemoListViewModel: ObservableObject, IssueListStateProviding {
 
         do {
             let response: MemoListResponse
-            if isSemanticSearching {
-                response = try await fetchSemanticSearch()
-            } else if isSearching {
-                relevanceScores = [:]
-                semanticSearchTimeMs = nil
+            if isSearching {
                 response = try await fetchKeywordSearch(offset: 0)
             } else {
                 searchMatchInfos = [:]
-                relevanceScores = [:]
-                semanticSearchTimeMs = nil
                 response = try await dataSources.memos.listMemos(
                     queryItems: buildListQueryItems(offset: 0)
                 )
@@ -274,8 +239,6 @@ class MemoListViewModel: ObservableObject, IssueListStateProviding {
 
         do {
             searchMatchInfos = [:]
-            relevanceScores = [:]
-            semanticSearchTimeMs = nil
 
             // Clear immediately so the spinner overlay (memos.isEmpty &&
             // isLoading) shows and the previous (un-filtered) content doesn't
@@ -343,9 +306,6 @@ class MemoListViewModel: ObservableObject, IssueListStateProviding {
 
     func fetchMemos() async -> MemoListResponse? {
         do {
-            if isSemanticSearching {
-                return try await fetchSemanticSearch()
-            }
             if isSearching {
                 return try await fetchKeywordSearch(offset: 0)
             }
@@ -512,7 +472,6 @@ class MemoListViewModel: ObservableObject, IssueListStateProviding {
 
         let filters = SearchExportFilters(
             query: parsed.freeText.isEmpty ? nil : parsed.freeText,
-            searchMode: parsed.freeText.isEmpty ? nil : searchMode.rawValue.lowercased(),
             labels: allLabelFilters.isEmpty ? nil : allLabelFilters,
             dateFrom: createdFrom.map { Self.dateFormatter.string(from: $0) },
             dateTo: createdTo.map { Self.dateFormatter.string(from: $0) },
@@ -528,18 +487,11 @@ class MemoListViewModel: ObservableObject, IssueListStateProviding {
                 uniqueKeysWithValues: searchMatchInfos.map { (String($0.key), $0.value) }
             )
 
-        let matchedScores: [String: Double]? = relevanceScores.isEmpty
-            ? nil
-            : Dictionary(
-                uniqueKeysWithValues: relevanceScores.map { (String($0.key), $0.value) }
-            )
-
         let request = SearchExportRequest(
             type: "memos",
             filters: filters,
             itemIds: store.memos.map { $0.id },
             matchedComments: matchedComments,
-            matchedScores: matchedScores,
             includeComments: includeComments
         )
 

@@ -1,12 +1,9 @@
 import { FastifyPluginAsync } from "fastify";
 import {
-  semanticSearchHandler,
   keywordSearchHandler,
   searchExportHandler,
 } from "../handlers/searchHandlers.js";
 import {
-  SemanticSearchQuerySchema,
-  SemanticSearchResponseSchema,
   KeywordSearchQuerySchema,
   KeywordSearchResponseSchema,
   SearchExportRequestSchema,
@@ -33,27 +30,6 @@ const searchRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     keywordSearchHandler
-  );
-
-  // GET /api/search/semantic - Semantic vector search
-  fastify.get(
-    "/semantic",
-    {
-      schema: {
-        tags: ["Search"],
-        summary: "Semantic search",
-        description: "Search issues by semantic similarity using vector embeddings",
-        operationId: "semanticSearch",
-        querystring: SemanticSearchQuerySchema,
-        response: {
-          200: SemanticSearchResponseSchema,
-          400: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-          503: ErrorResponseSchema,
-        },
-      },
-    },
-    semanticSearchHandler
   );
 
   // POST /api/search/export - Export current search/filter results as JSON

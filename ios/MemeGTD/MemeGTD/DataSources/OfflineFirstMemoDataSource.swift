@@ -26,7 +26,7 @@ import GRDB
 /// - list requests with a projectId filter (project tables have no local
 ///   mirror until Phase 7); offline, such a request returns an empty page
 ///   rather than silently ignoring the filter
-/// - semantic/keyword search endpoints are a different data source entirely
+/// - keyword search endpoints are a different data source entirely
 ///   (SearchDataSource) and are untouched by this class; the plain `search`
 ///   query item on the list endpoint IS served locally with LIKE, mirroring
 ///   the server's behavior

@@ -91,7 +91,7 @@ Web閲覧中の記事を保存するためのChrome拡張機能が利用可能�
 | インターフェース | 使い方 | 詳細 |
 |---|---|---|
 | Web UI | 検索ボックスはフリーテキスト専用。ラベル・ステータスはドロップダウンで絞り込み | — |
-| CLI | `--label` / `--status` / `--search` フラグ、横断検索は `mgtd search keyword` / `semantic` | [docs/cli-commands.md](./docs/cli-commands.md) |
+| CLI | `--label` / `--status` / `--search` フラグ、横断検索は `mgtd search keyword` | [docs/cli-commands.md](./docs/cli-commands.md) |
 | API | クエリパラメータ（`?label=` / `?status=` / `?search=`）、横断検索は `/api/search/*` | [docs/api-filtering.md](./docs/api-filtering.md) |
 
 検索方式は2種類あります（設計背景は [docs/architecture.md](./docs/architecture.md) の「検索アーキテクチャ」）:
@@ -107,47 +107,6 @@ mgtd search keyword "郡司ペギオ" --types memo,task --limit 5 --json
 # API例
 curl "http://localhost:3000/api/tasks?search=OAuth&label=bug&status=open"
 ```
-
-## セマンティック検索（ベクトル検索）
-
-テキストの意味的な近さでissueを検索できます（「料理」で「晩ごはんの献立を考える」がヒットする等）。オプトイン機能です。
-
-### 設定
-
-embeddingサーバーの接続設定は `~/.config/mgtd/.env` で管理します（`mgtd init` で自動生成）。
-OpenAI互換の `/v1/embeddings` エンドポイントをサポートするプロバイダなら何でも使えます。
-
-```bash
-# Ollama（デフォルト）
-MGTD_EMBEDDING_URL=http://localhost:11434/v1
-MGTD_EMBEDDING_MODEL=qwen3-embedding:4b
-MGTD_EMBEDDING_API_KEY=ollama
-
-# OpenAI
-# MGTD_EMBEDDING_URL=https://api.openai.com/v1
-# MGTD_EMBEDDING_MODEL=text-embedding-3-small
-# MGTD_EMBEDDING_API_KEY=sk-xxxxx
-```
-
-Ollamaの場合の前提: `brew install ollama` → `ollama serve` → `ollama pull qwen3-embedding:4b`
-
-### 利用
-
-```bash
-# embedding生成（初回は全issue、2回目以降は変更分のみ。モデル変更時は全再生成）
-mgtd embedding sync
-
-# セマンティック検索（CLI）
-mgtd search semantic "読書メモ" --types memo --limit 10 --json
-
-# セマンティック検索（API。日本語は --data-urlencode で q を単独指定）
-curl --get 'http://localhost:3000/api/search/semantic' \
-  --data-urlencode 'q=料理' \
-  -d 'limit=10' \
-  -d 'types=memo,task'
-```
-
-embeddingサーバーが起動していない場合、セマンティック検索は503を返します（他の機能には影響しません）。
 
 ## テスト実行
 

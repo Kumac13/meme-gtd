@@ -1,16 +1,10 @@
 import { useState, useEffect } from 'react';
 import { IoSearch, IoClose } from 'react-icons/io5';
 
-export type SearchMode = 'keyword' | 'semantic';
-
 interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  /** When provided, shows a keyword/semantic mode toggle */
-  searchMode?: SearchMode;
-  /** Callback when search mode changes */
-  onSearchModeChange?: (mode: SearchMode) => void;
 }
 
 /**
@@ -20,8 +14,6 @@ export default function SearchInput({
   value,
   onChange,
   placeholder = 'Search tasks',
-  searchMode,
-  onSearchModeChange,
 }: SearchInputProps) {
   const [localValue, setLocalValue] = useState(value);
 
@@ -72,30 +64,6 @@ export default function SearchInput({
           </button>
         )}
       </div>
-      {searchMode && onSearchModeChange && (
-        <div className="relative inline-flex rounded-md bg-white p-0.5 shrink-0 self-stretch">
-          <button
-            onClick={() => onSearchModeChange('keyword')}
-            className={`relative px-3 text-xs font-medium rounded transition-all ${
-              searchMode === 'keyword'
-                ? 'bg-github-green-600 text-white shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Keyword
-          </button>
-          <button
-            onClick={() => onSearchModeChange('semantic')}
-            className={`relative px-3 text-xs font-medium rounded transition-all ${
-              searchMode === 'semantic'
-                ? 'bg-github-green-600 text-white shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Semantic
-          </button>
-        </div>
-      )}
     </div>
   );
 }

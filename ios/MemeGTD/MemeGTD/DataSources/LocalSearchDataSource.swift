@@ -12,10 +12,6 @@ import GRDB
 ///   to an FTS index). Cross-type over memos / tasks / articles, comment
 ///   bodies included, one result per issue with its matches grouped, and
 ///   offset/limit applied after grouping — exactly the server's semantics.
-/// - `semanticSearch` needs the server-side embedding stack and answers an
-///   empty result set (same as the Phase 8 stand-in) so the search UI shows
-///   "no results" instead of an error. The Standalone search UI hides the
-///   Semantic mode.
 /// - `exportSearchResults` is a server feature (activity-log side effect) and
 ///   is refused.
 nonisolated final class LocalSearchDataSource: SearchDataSource {
@@ -219,15 +215,7 @@ nonisolated final class LocalSearchDataSource: SearchDataSource {
         }
     }
 
-    // MARK: - Semantic search / export (server-only)
-
-    func semanticSearch(queryItems: [URLQueryItem]) async throws -> SemanticSearchResponse {
-        let query = queryItems.first(where: { $0.name == "q" })?.value ?? ""
-        return SemanticSearchResponse(
-            results: [],
-            meta: SemanticSearchMeta(query: query, totalResults: 0, searchTimeMs: 0)
-        )
-    }
+    // MARK: - Export (server-only)
 
     func exportSearchResults(_ request: SearchExportRequest) async throws -> String {
         throw StandaloneUnavailableError("Export is not available in Standalone mode.")

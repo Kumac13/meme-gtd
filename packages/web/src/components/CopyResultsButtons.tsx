@@ -14,10 +14,6 @@ interface CopyResultsButtonsProps {
    * keys for convenience — both serialize to string keys in JSON.
    */
   matchedComments?: Record<number, string> | Record<string, string>;
-  /**
-   * Semantic search relevance scores keyed by item id (0-1).
-   */
-  matchedScores?: Record<number, number> | Record<string, number>;
 }
 
 /**
@@ -31,7 +27,6 @@ export default function CopyResultsButtons({
   filters,
   itemIds,
   matchedComments,
-  matchedScores,
 }: CopyResultsButtonsProps) {
   const [justCopied, setJustCopied] = useState<'results' | 'comments' | null>(null);
   const [copying, setCopying] = useState<'results' | 'comments' | null>(null);
@@ -39,25 +34,17 @@ export default function CopyResultsButtons({
   const [warning, setWarning] = useState<string | null>(null);
 
   // Copy the full filtered set (server resolves every match, no pagination).
-  // Semantic search is the exception: its result set is a bounded top-K ranking
-  // with no meaningful "all", so it stays scoped to the loaded items.
-  const scope: 'loaded' | 'all' =
-    filters.searchMode === 'semantic' ? 'loaded' : 'all';
+  const scope: 'loaded' | 'all' = 'all';
 
   const handleCopy = async (includeComments: boolean) => {
     setError(null);
     setWarning(null);
     try {
       setCopying(includeComments ? 'comments' : 'results');
-      // Normalize matchedComments/matchedScores keys to string form for the API
+      // Normalize matchedComments keys to string form for the API
       const normalizedMatched: Record<string, string> | undefined = matchedComments
         ? Object.fromEntries(
             Object.entries(matchedComments as Record<string | number, string>)
-          )
-        : undefined;
-      const normalizedScores: Record<string, number> | undefined = matchedScores
-        ? Object.fromEntries(
-            Object.entries(matchedScores as Record<string | number, number>)
           )
         : undefined;
       const result = await exportAndCopySearchResults({
@@ -66,7 +53,6 @@ export default function CopyResultsButtons({
         itemIds,
         scope,
         matchedComments: normalizedMatched,
-        matchedScores: normalizedScores,
         includeComments,
       });
       setJustCopied(includeComments ? 'comments' : 'results');

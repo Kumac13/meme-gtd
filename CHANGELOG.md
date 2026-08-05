@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.51.0 - 2026-08-05
+
+### Breaking Changes
+
+- セマンティック検索（ベクトル検索）機能を削除。
+  - 削除対象: `mgtd search semantic` / `mgtd embedding sync` コマンド、`GET /api/search/semantic`、Web / iOS の検索モード切替（keyword/Semantic トグル）と関連度スコア表示、export API の `searchMode` / `matchedScores` / `matchedScore` フィールド。
+  - マイグレーション 018 で `issue_embeddings` テーブルを削除する（`mgtd db migrate` での適用時に自動バックアップが作成される）。
+  - 移行手順: `~/.config/mgtd/.env` の `MGTD_EMBEDDING_URL` / `MGTD_EMBEDDING_MODEL` / `MGTD_EMBEDDING_API_KEY` / `MGTD_EMBEDDING_QUERY_PREFIX` は不要になったため削除してよい。
+  - キーワード検索（`mgtd search keyword` / `GET /api/search/keyword` / 各一覧の `--search`）は従来どおり利用できる。
+
 ## 0.50.11 - 2026-08-03
 
 ### Bug Fixes

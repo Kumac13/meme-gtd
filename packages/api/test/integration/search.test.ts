@@ -12,7 +12,6 @@ import {
   getIssueLabels,
   setBookmark,
 } from 'meme-gtd-db';
-import { SearchResultItemSchema } from '../../src/schemas/searchSchemas.js';
 
 describe('Keyword Search', () => {
   let app: FastifyInstance;
@@ -343,78 +342,6 @@ describe('GET /api/search/keyword', () => {
     assert.strictEqual(bodyBookmarked.results.length, 1);
     assert.strictEqual(bodyBookmarked.results[0].id, memo1.id);
     assert.strictEqual(bodyBookmarked.results[0].isBookmarked, true);
-  });
-});
-
-describe('SearchResultItemSchema validation', () => {
-  it('should validate a complete semantic search result item', () => {
-    const validItem = {
-      issue: {
-        id: 1,
-        type: 'task',
-        title: 'Test task',
-        bodyMd: 'Some content',
-        status: 'open',
-        isBookmarked: true,
-        labels: ['label-a', 'label-b'],
-        commentCount: 3,
-        taskKind: 'action',
-        scheduledOn: '2026-04-04',
-        createdAt: '2026-01-01T00:00:00Z',
-        updatedAt: '2026-01-02T00:00:00Z',
-      },
-      score: 0.85,
-      vectorScore: 0.85,
-      matchReason: ['vector_similarity'],
-    };
-
-    const result = SearchResultItemSchema.safeParse(validItem);
-    assert.ok(result.success, 'Should validate a complete item');
-  });
-
-  it('should validate item with nullable fields set to null', () => {
-    const itemWithNulls = {
-      issue: {
-        id: 2,
-        type: 'memo',
-        title: null,
-        bodyMd: 'Memo content',
-        status: null,
-        isBookmarked: false,
-        labels: [],
-        commentCount: 0,
-        taskKind: null,
-        scheduledOn: null,
-        createdAt: '2026-01-01T00:00:00Z',
-        updatedAt: '2026-01-02T00:00:00Z',
-      },
-      score: 0.42,
-      vectorScore: 0.42,
-      matchReason: ['vector_similarity'],
-    };
-
-    const result = SearchResultItemSchema.safeParse(itemWithNulls);
-    assert.ok(result.success, 'Should validate item with null fields');
-  });
-
-  it('should reject item missing required fields', () => {
-    const incompleteItem = {
-      issue: {
-        id: 3,
-        type: 'task',
-        title: 'Test',
-        bodyMd: 'Content',
-        createdAt: '2026-01-01T00:00:00Z',
-        updatedAt: '2026-01-02T00:00:00Z',
-        // missing: status, isBookmarked, labels, commentCount, taskKind, scheduledOn
-      },
-      score: 0.5,
-      vectorScore: 0.5,
-      matchReason: ['vector_similarity'],
-    };
-
-    const result = SearchResultItemSchema.safeParse(incompleteItem);
-    assert.ok(!result.success, 'Should reject item missing required fields');
   });
 });
 
@@ -836,7 +763,7 @@ describe('POST /api/search/export (scope="all")', () => {
       url: '/api/search/export',
       payload: {
         type: 'memos',
-        filters: { query: 'scopekwxyz', searchMode: 'keyword' },
+        filters: { query: 'scopekwxyz' },
         // No matched snippets provided by the client — server must rebuild them.
         itemIds: [],
         scope: 'all',
@@ -852,29 +779,6 @@ describe('POST /api/search/export (scope="all")', () => {
     const r1 = body.results.find((r: { id: number }) => r.id === m1.id);
     // m1 matched in body only, so it carries no comment snippet.
     assert.strictEqual(r1.matchedComment, undefined);
-  });
-
-  it('falls back to the loaded itemIds for semantic search (no "all" expansion)', async () => {
-    const m1 = createMemo(app.db, { bodyMd: 'sem_fallback one' });
-    createMemo(app.db, { bodyMd: 'sem_fallback two' });
-
-    const res = await app.inject({
-      method: 'POST',
-      url: '/api/search/export',
-      payload: {
-        type: 'memos',
-        filters: { query: 'sem_fallback', searchMode: 'semantic' },
-        itemIds: [m1.id],
-        scope: 'all',
-        includeComments: false,
-      },
-    });
-
-    assert.strictEqual(res.statusCode, 200);
-    const body = JSON.parse(res.payload);
-    // Semantic stays scoped to the client-provided itemIds — not expanded to all.
-    assert.strictEqual(body.total, 1);
-    assert.strictEqual(body.results[0].id, m1.id);
   });
 
   it('exports every task matching the status filter', async () => {

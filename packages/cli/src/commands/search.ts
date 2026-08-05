@@ -2,7 +2,7 @@ import { Command, Help } from '@oclif/core';
 
 export default class Search extends Command {
   static summary = 'Search commands';
-  static description = 'Search across memos, tasks, and articles using keyword or semantic search.';
+  static description = 'Search across memos, tasks, and articles using keyword search.';
 
   async run(): Promise<void> {
     const help = new Help(this.config);

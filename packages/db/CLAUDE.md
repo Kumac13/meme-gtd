@@ -7,7 +7,7 @@ SQLite（better-sqlite3）のリポジトリ層とマイグレーション実行
 ```
 src/
 ├── *Repository.ts   # ドメインごとのリポジトリ（memo/task/label/link/project/
-│                    #   projectItem/article/activityLog/embedding/search/urlLink）
+│                    #   projectItem/article/activityLog/search/urlLink）
 ├── migrate.ts       # マイグレーションランナー（schema_migrationsテーブルで管理）
 └── index.ts         # 全エクスポート + ensureDatabase / openDatabase
 ```
