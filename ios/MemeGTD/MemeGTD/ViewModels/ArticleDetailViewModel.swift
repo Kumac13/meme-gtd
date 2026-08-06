@@ -2,7 +2,7 @@ import Combine
 import SwiftUI
 
 @MainActor
-class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelationManaging, IssueBookmarkProvider, IssueCopyProvider {
+class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelationManaging, IssueBookmarkProvider, IssueCopyProvider, IssueJSONCopyProvider {
     @Published var article: Article?
     @Published var isLoading: Bool = false
     @Published var error: String?
@@ -248,6 +248,20 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
 
     func copyAllContents() {
         guard let text = copyAllContentsText else { return }
+        UIPasteboard.general.string = text
+        HapticManager.notification(.success)
+    }
+
+    var copyAllContentsJSONText: String? {
+        guard let article else { return nil }
+        return IssueCopyJSONEncoder.string(item: article, comments: comments)
+    }
+
+    func copyAllContentsWithJSON() {
+        guard let text = copyAllContentsJSONText else {
+            HapticManager.notification(.error)
+            return
+        }
         UIPasteboard.general.string = text
         HapticManager.notification(.success)
     }

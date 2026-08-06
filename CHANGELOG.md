@@ -4,13 +4,13 @@
 
 ### New Features
 
-- Web / iOS の Task・Memo 詳細に「Copy All Contents with JSON」を追加。
+- Web / iOS の Task・Memo・Article 詳細に「Copy All Contents with JSON」を追加。
   - 詳細データと全コメントを `{ item, comments }` 形式の整形済みJSONとしてコピーし、作成・更新日時、Taskのスケジュール日時、コメント日時などを保持する。
   - 既存のMarkdown文字列による「Copy All Contents」は引き続き利用できる。
 
 ### Tests
 
-- Web / iOS のJSONコピーがTask・Memo本体とコメントの日時データを保持することを検証するユニットテストを追加。
+- Web / iOS のJSONコピーがTask・Memo・Article本体とコメントの日時データを保持することを検証するユニットテストを追加。
 
 ## 0.51.0 - 2026-08-05
 

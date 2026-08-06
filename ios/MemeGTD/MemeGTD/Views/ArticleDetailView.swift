@@ -253,6 +253,7 @@ struct ArticleDetailView: View {
                 bookmarkProvider: viewModel,
                 linkProvider: viewModel,
                 copyProvider: viewModel,
+                jsonCopyProvider: viewModel,
                 isReadOnly: isOfflineReadOnly,
                 onEditTitle: editTitleAction,
                 onDelete: { showDeleteConfirm = true },
