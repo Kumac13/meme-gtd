@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCopyContent } from '../../src/utils/copyContent';
+import { buildCopyContent, buildCopyContentJSON } from '../../src/utils/copyContent';
 
 describe('buildCopyContent', () => {
   it('includes every article content section', () => {
@@ -21,5 +21,49 @@ describe('buildCopyContent', () => {
       '---',
       'Second comment',
     ].join('\n\n'));
+  });
+
+  it('preserves item dates and complete comment data in JSON', () => {
+    const content = buildCopyContentJSON({
+      item: {
+        id: 42,
+        type: 'task',
+        title: 'Dated task',
+        bodyMd: 'Task body',
+        scheduledStart: '2026-08-06T09:30:00',
+        createdAt: '2026-08-05T01:02:03.000Z',
+        updatedAt: '2026-08-06T04:05:06.000Z',
+      },
+      comments: [
+        {
+          id: 7,
+          issueId: 42,
+          bodyMd: 'Comment body',
+          createdAt: '2026-08-06T05:00:00.000Z',
+          updatedAt: '2026-08-06T05:30:00.000Z',
+        },
+      ],
+    });
+
+    expect(JSON.parse(content)).toEqual({
+      item: {
+        id: 42,
+        type: 'task',
+        title: 'Dated task',
+        bodyMd: 'Task body',
+        scheduledStart: '2026-08-06T09:30:00',
+        createdAt: '2026-08-05T01:02:03.000Z',
+        updatedAt: '2026-08-06T04:05:06.000Z',
+      },
+      comments: [
+        {
+          id: 7,
+          issueId: 42,
+          bodyMd: 'Comment body',
+          createdAt: '2026-08-06T05:00:00.000Z',
+          updatedAt: '2026-08-06T05:30:00.000Z',
+        },
+      ],
+    });
   });
 });

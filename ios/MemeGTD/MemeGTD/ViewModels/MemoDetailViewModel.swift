@@ -2,7 +2,7 @@ import Combine
 import SwiftUI
 
 @MainActor
-class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelationManaging, IssueBookmarkProvider, IssueCopyProvider {
+class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelationManaging, IssueBookmarkProvider, IssueCopyProvider, IssueJSONCopyProvider {
     var issueTypeLabel: String { "memo" }
     var isBookmarked: Bool { memo?.isBookmarked ?? false }
     var issueLabels: [String] { memo?.labels ?? [] }
@@ -221,6 +221,20 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
             }
         }
 
+        UIPasteboard.general.string = text
+        HapticManager.notification(.success)
+    }
+
+    var copyAllContentsJSONText: String? {
+        guard let memo else { return nil }
+        return IssueCopyJSONEncoder.string(item: memo, comments: comments)
+    }
+
+    func copyAllContentsWithJSON() {
+        guard let text = copyAllContentsJSONText else {
+            HapticManager.notification(.error)
+            return
+        }
         UIPasteboard.general.string = text
         HapticManager.notification(.success)
     }

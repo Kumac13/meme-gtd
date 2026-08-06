@@ -6,6 +6,7 @@ struct IssueInfoSheet<VM: IssueMetadataProvider>: View {
     var bookmarkProvider: (any IssueBookmarkProvider)?
     var linkProvider: (any IssueLinkProvider)?
     let copyProvider: any IssueCopyProvider
+    var jsonCopyProvider: (any IssueJSONCopyProvider)? = nil
     /// Disables every write action (offline read-only cache, Phase 7).
     /// Copy and link navigation stay available. Defaults to false so
     /// existing call sites (memos) keep their behavior.
@@ -25,6 +26,7 @@ struct IssueInfoSheet<VM: IssueMetadataProvider>: View {
     @State private var showLinkPicker = false
     @State private var selectedLabelNames: Set<String> = []
     @State private var selectedProjectIds: Set<Int> = []
+    @State private var showJSONCopiedFeedback = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -318,6 +320,31 @@ struct IssueInfoSheet<VM: IssueMetadataProvider>: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
+                }
+
+                if let jsonCopyProvider {
+                    Divider().padding(.leading, 16)
+
+                    Button(action: {
+                        jsonCopyProvider.copyAllContentsWithJSON()
+                        showJSONCopiedFeedback = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            showJSONCopiedFeedback = false
+                        }
+                        dismiss()
+                    }) {
+                        HStack {
+                            Text(showJSONCopiedFeedback ? "Copied!" : "Copy All Contents with JSON")
+                                .font(.system(size: 15))
+                                .foregroundColor(.textPrimary)
+                            Spacer()
+                            Image(systemName: "curlybraces.square")
+                                .font(.system(size: 15))
+                                .foregroundColor(.textSecondary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                    }
                 }
 
                 // Promote to Task (optional, for memos)
