@@ -227,6 +227,7 @@ struct TaskDetailView: View {
                 bookmarkProvider: viewModel,
                 linkProvider: viewModel,
                 copyProvider: viewModel,
+                jsonCopyProvider: viewModel,
                 isReadOnly: isOfflineReadOnly,
                 onEditTitle: {
                     if let task = viewModel.task {

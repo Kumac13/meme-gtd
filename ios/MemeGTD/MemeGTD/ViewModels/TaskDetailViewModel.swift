@@ -2,7 +2,7 @@ import Combine
 import SwiftUI
 
 @MainActor
-class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelationManaging, IssueBookmarkProvider, IssueCopyProvider {
+class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelationManaging, IssueBookmarkProvider, IssueCopyProvider, IssueJSONCopyProvider {
     @Published var task: TaskItem?
     @Published var comments: [Comment] = []
     @Published var isLoading: Bool = false
@@ -317,6 +317,20 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
             }
         }
 
+        UIPasteboard.general.string = text
+        HapticManager.notification(.success)
+    }
+
+    var copyAllContentsJSONText: String? {
+        guard let task else { return nil }
+        return IssueCopyJSONEncoder.string(item: task, comments: comments)
+    }
+
+    func copyAllContentsWithJSON() {
+        guard let text = copyAllContentsJSONText else {
+            HapticManager.notification(.error)
+            return
+        }
         UIPasteboard.general.string = text
         HapticManager.notification(.success)
     }

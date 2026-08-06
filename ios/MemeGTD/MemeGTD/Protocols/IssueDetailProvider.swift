@@ -37,3 +37,8 @@ protocol IssueBookmarkProvider: ObservableObject {
 protocol IssueCopyProvider: ObservableObject {
     func copyAllContents()
 }
+
+@MainActor
+protocol IssueJSONCopyProvider: ObservableObject {
+    func copyAllContentsWithJSON()
+}

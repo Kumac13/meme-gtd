@@ -61,6 +61,32 @@ export async function copyItemContent(options: CopyContentOptions): Promise<void
   await writeToClipboard(content);
 }
 
+export interface CopyContentJSONOptions {
+  item: object;
+  comments?: Comment[];
+}
+
+/**
+ * Builds the structured counterpart to Copy All Contents.
+ *
+ * Keeping the item and its comments separate preserves every API field on the
+ * item, including timestamps and schedule data, without mixing comment fields
+ * into the parent object.
+ */
+export function buildCopyContentJSON({
+  item,
+  comments = [],
+}: CopyContentJSONOptions): string {
+  return JSON.stringify({ item, comments }, null, 2);
+}
+
+/** Copies the complete item and its comments as pretty-printed JSON. */
+export async function copyItemContentWithJSON(
+  options: CopyContentJSONOptions
+): Promise<void> {
+  await writeToClipboard(buildCopyContentJSON(options));
+}
+
 export type ExportItemType = 'memos' | 'tasks' | 'articles';
 
 export interface ExportAndCopyOptions {
