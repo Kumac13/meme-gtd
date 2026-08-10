@@ -26,10 +26,71 @@ enum APIError: Error, LocalizedError {
     }
 }
 
+extension Notification.Name {
+    /// Posted (from an arbitrary thread) each time an APIClient request gets
+    /// an HTTP response back from the server. 4xx/5xx answers count too:
+    /// they prove the server can be REACHED, which is all this signal means.
+    /// ConnectivityMonitor (app target) folds these into the offline
+    /// read-only state — the Shared target cannot reference it directly.
+    nonisolated static let apiServerReachable = Notification.Name("APIClientServerReachable")
+
+    /// Posted (from an arbitrary thread) each time an APIClient request dies
+    /// at the transport level (DNS, no route, timeout) without an HTTP
+    /// response — the server could not be reached.
+    nonisolated static let apiServerUnreachable = Notification.Name("APIClientServerUnreachable")
+}
+
 class APIClient {
     static let shared = APIClient()
 
     private init() {}
+
+    // MARK: - Server reachability signal
+
+    /// Announces whether the transport delivered an HTTP response, right
+    /// where each request learns it. Offline detection is driven by these
+    /// real request outcomes (Apple's guidance: judge connectivity from
+    /// actual requests, not preflight checks); ConnectivityMonitor observes.
+    private func noteServerReachable(_ reachable: Bool) {
+        NotificationCenter.default.post(
+            name: reachable ? .apiServerReachable : .apiServerUnreachable,
+            object: nil
+        )
+    }
+
+    /// A cancelled request (screen navigated away, task cancelled) proves
+    /// nothing about the server — it must not feed the unreachable signal.
+    private func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        return (error as? URLError)?.code == .cancelled
+    }
+
+    /// Posts the unreachable signal for a transport failure, unless the
+    /// failure was a cancellation.
+    private func noteTransportFailure(_ error: Error) {
+        guard !isCancellation(error) else { return }
+        noteServerReachable(false)
+    }
+
+    /// Reachability probe against GET /api/health, used by
+    /// ConnectivityMonitor to detect recovery while offline. Any HTTP
+    /// response — even 5xx — means reachable; only transport-level failures
+    /// count as unreachable. The verdict also flows through the reachability
+    /// notifications, like every other request outcome.
+    func probeServerReachability() async -> Bool {
+        guard let url = try? buildURL(path: "/api/health") else { return false }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 5
+        do {
+            _ = try await URLSession.shared.data(for: request)
+            noteServerReachable(true)
+            return true
+        } catch {
+            noteTransportFailure(error)
+            return false
+        }
+    }
 
     // MARK: - Generic HTTP methods
 
@@ -80,15 +141,29 @@ class APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(body)
 
+        // The transport call gets its own do/catch so that only genuine
+        // transport failures post the unreachable signal — the JSON handling
+        // below can throw too, but by then the server has already answered.
+        let data: Data
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (received, response) = try await URLSession.shared.data(for: request)
+            noteServerReachable(true)
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.serverError(0, "Invalid response")
             }
             guard (200...299).contains(httpResponse.statusCode) else {
-                let message = String(data: data, encoding: .utf8)
+                let message = String(data: received, encoding: .utf8)
                 throw APIError.serverError(httpResponse.statusCode, message)
             }
+            data = received
+        } catch let error as APIError {
+            throw error
+        } catch {
+            noteTransportFailure(error)
+            throw APIError.networkError(error)
+        }
+
+        do {
             let object = try JSONSerialization.jsonObject(with: data, options: [])
             let prettyData = try JSONSerialization.data(
                 withJSONObject: object,
@@ -127,11 +202,22 @@ class APIClient {
         let url = try buildURL(path: path)
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        let (_, response) = try await URLSession.shared.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            throw APIError.serverError(code, nil)
+        // Transport failures are wrapped in APIError.networkError like every
+        // other method — OfflineFirstSupport.isNetworkError relies on that
+        // to classify a delete against an unreachable server as offline.
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            noteServerReachable(true)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+                throw APIError.serverError(code, nil)
+            }
+        } catch let error as APIError {
+            throw error
+        } catch {
+            noteTransportFailure(error)
+            throw APIError.networkError(error)
         }
     }
 
@@ -156,6 +242,7 @@ class APIClient {
         logger.info("execute: \(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "nil")")
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
+            noteServerReachable(true)
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.serverError(0, "Invalid response")
             }
@@ -174,6 +261,7 @@ class APIClient {
             throw error
         } catch {
             logger.error("network error: \(error.localizedDescription)")
+            noteTransportFailure(error)
             throw APIError.networkError(error)
         }
     }
@@ -222,11 +310,13 @@ class APIClient {
         request.timeoutInterval = 5
         do {
             let (_, response) = try await URLSession.shared.data(for: request)
+            noteServerReachable(true)
             if let httpResponse = response as? HTTPURLResponse {
                 return httpResponse.statusCode == 200
             }
             return false
         } catch {
+            noteTransportFailure(error)
             return false
         }
     }
