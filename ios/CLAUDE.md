@@ -52,7 +52,7 @@ xcodebuild test -project MemeGTD.xcodeproj -scheme MemeGTD -destination 'platfor
 - ID規約: ViewModel が扱う整数IDは、同期済み行 = `server_id`、未同期ローカル行 = `-rowid`（負数）。UI層にこの区別を持ち込まない
 - Standalone のキーワード検索はサーバーと同じ LIKE 部分一致。FTS5 にしない（unicode61 が日本語の単語境界を扱えず、サーバー側も同じ理由で LIKE を採用 — `packages/db/CLAUDE.md`）
 - タスク/記事/プロジェクトは閲覧専用キャッシュ（メモだけがオフライン読み書き可）。設計理由と競合ルールは `docs/architecture.md`「同期アーキテクチャ」「iOS ローカル DB」が正
-- オフライン読み取り専用の判定は `ConnectivityMonitor.isOfflineReadOnly`（Serverモード かつ サーバー到達不能）に一元化（`MemeGTD/Services/ConnectivityMonitor.swift`）。「オフライン」は**サーバー到達性のみ**で判定し、端末のネットワーク状態（NWPathMonitor）は判定に一切使わない: 主シグナルは実APIリクエストの結果（`APIClient` が `.apiServerReachable` / `.apiServerUnreachable` を通知。HTTPレスポンス受信=到達可、トランスポート失敗=到達不能、キャンセルは判定外）、オフライン中のみ30秒間隔で `GET /api/health` により復帰検知。SyncScheduler の NWPathMonitor は同期を「いつ試すか」のトリガーであってオフライン判定ではない（混同しない）。Standalone は全機能ローカルなので読み取り専用にしない。メモ画面はオフラインでも編集可のためピルを出さない
+- オフライン読み取り専用の判定は `ConnectivityMonitor.isOfflineReadOnly`（Serverモード かつ サーバー到達不能）に一元化（`MemeGTD/Services/ConnectivityMonitor.swift`）。「オフライン」の**判定はサーバー到達性のみ**で行い、端末のネットワーク状態（NWPathMonitor）を判定に使わない: 主シグナルは実APIリクエストの結果（`APIClient` が `.apiServerReachable` / `.apiServerUnreachable` を通知。HTTPレスポンス受信=到達可、トランスポート失敗=到達不能、キャンセルは判定外）。ただし単発の失敗では反転せず、`GET /api/health` プローブの失敗で確認してからオフラインに切り替える（遅いサーバーへのタイムアウト1回で全体が Read-only になるのを防ぐ）。オフライン中は30秒間隔の自走ループで復帰検知（ループはプローブ結果や通知に依存せず生き続ける）。ConnectivityMonitor 自身の NWPathMonitor は経路変化時に即時プローブを撃つ「トリガー」であって判定ではない（SyncScheduler の NWPathMonitor が同期の試行トリガーであるのと同じ関係。混同しない）。Standalone は全機能ローカルなので読み取り専用にしない。メモ画面はオフラインでも編集可のためピルを出さない
 - テストは `AppDatabase.makeInMemory()` を使い、通信は `SyncTransport` のモックで差し替える。テストファイルは `MemeGTDTests/` に置くだけで認識される
 
 ## 記事抽出バンドル

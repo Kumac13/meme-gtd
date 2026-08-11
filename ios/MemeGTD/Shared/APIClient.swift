@@ -78,10 +78,20 @@ class APIClient {
     /// count as unreachable. The verdict also flows through the reachability
     /// notifications, like every other request outcome.
     func probeServerReachability() async -> Bool {
-        guard let url = try? buildURL(path: "/api/health") else { return false }
+        guard let url = try? buildURL(path: "/api/health") else {
+            // A URL that cannot be built means the server cannot be reached
+            // as configured — the verdict must still flow through the
+            // notifications, or ConnectivityMonitor never hears back.
+            noteServerReachable(false)
+            return false
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.timeoutInterval = 5
+        // Same budget as get(): a slow-but-alive link (Tailscale
+        // re-establishing) can need >5s, and a probe that times out on a
+        // reachable server would wrongly confirm "unreachable". Genuine
+        // outages fail transport-level in well under a second regardless.
+        request.timeoutInterval = 15
         do {
             _ = try await URLSession.shared.data(for: request)
             noteServerReachable(true)
@@ -182,7 +192,10 @@ class APIClient {
         } catch let error as APIError {
             throw error
         } catch {
-            throw APIError.networkError(error)
+            // The server already answered; a JSON re-serialization failure is
+            // a decoding problem, not a network one — misclassifying it as
+            // networkError would send callers down the offline path.
+            throw APIError.decodingError(error)
         }
     }
 
@@ -217,6 +230,10 @@ class APIClient {
             throw error
         } catch {
             noteTransportFailure(error)
+            // A cancellation proves nothing about the server; rethrow it raw
+            // so OfflineFirstSupport.isNetworkError does not classify a
+            // cancelled delete as "server unreachable".
+            if isCancellation(error) { throw error }
             throw APIError.networkError(error)
         }
     }
