@@ -1,42 +1,4 @@
-import Combine
-import Network
 import SwiftUI
-
-/// UI-facing connectivity state (offline support plan Phase 7). A lightweight
-/// NWPathMonitor wrapper, deliberately independent from SyncScheduler's
-/// monitor (that one triggers sync runs; this one only drives the read-only
-/// indication and edit-control disabling in task/article screens).
-///
-/// The default is "online" so screens render exactly as before until the
-/// monitor reports an unsatisfied path.
-@MainActor
-final class ConnectivityMonitor: ObservableObject {
-    static let shared = ConnectivityMonitor()
-
-    @Published private(set) var isOffline = false
-
-    private let monitor = NWPathMonitor()
-
-    private init() {
-        monitor.pathUpdateHandler = { [weak self] path in
-            let offline = path.status != .satisfied
-            Task { @MainActor [weak self] in
-                guard let self, self.isOffline != offline else { return }
-                self.isOffline = offline
-            }
-        }
-        monitor.start(queue: DispatchQueue.global(qos: .utility))
-    }
-
-    /// True while the Phase 7 offline READ-ONLY state applies to tasks and
-    /// articles: SERVER mode with no connectivity (Server mode always syncs).
-    /// The appMode check matters: Standalone is never read-only — everything
-    /// is local. All read-only gating in the Views goes through this single
-    /// definition.
-    var isOfflineReadOnly: Bool {
-        Settings.shared.appMode == .server && isOffline
-    }
-}
 
 /// "Read-only" chip for task/article screens whose data is served from the
 /// offline cache. Communicates the CONSEQUENCE (cannot edit), with the
@@ -46,6 +8,8 @@ final class ConnectivityMonitor: ObservableObject {
 ///
 /// Pure visual: callers decide visibility (detail views already track
 /// `isOfflineReadOnly`); list screens use `OfflineReadOnlyIndicator` below.
+/// The state itself lives in `Services/ConnectivityMonitor.swift`, which
+/// judges "offline" by server reachability.
 struct OfflineReadOnlyBadge: View {
     var body: some View {
         HStack(spacing: 4) {
@@ -63,10 +27,10 @@ struct OfflineReadOnlyBadge: View {
 }
 
 /// Self-checking wrapper for the task/article LIST screens: shows the badge
-/// only while the "Offline Sync (Beta)" setting is on and the device is
-/// offline. Renders nothing otherwise, so embedding it is behavior-neutral
-/// for the default (toggle OFF) setup. Memo screens never show it — memos
-/// stay editable offline via the outbox.
+/// only in Server mode while the server is unreachable
+/// (`ConnectivityMonitor.isOfflineReadOnly`). Renders nothing otherwise, so
+/// embedding it is behavior-neutral while online. Memo screens never show
+/// it — memos stay editable offline via the outbox.
 ///
 /// Centered under the title bar. Sits snug to the toolbar (small top
 /// padding) with a clear gap to the filter row below (bottom padding), so it
