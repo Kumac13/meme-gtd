@@ -23,8 +23,9 @@ private enum SharedSync {
 /// - `.server`: always offline-capable and synced. `memos` is the
 ///   offline-first read/write implementation backed by the local GRDB mirror
 ///   (outbox + push/pull), and `tasks` / `articles` / `projects` are offline
-///   READ-ONLY caches (remote first, local fallback when unreachable). There
-///   is no separate offline-sync setting — syncing IS Server mode.
+///   READ-ONLY caches (remote first, local fallback when unreachable) — with
+///   the exception of task/article COMMENTS, which queue in the same outbox.
+///   There is no separate offline-sync setting — syncing IS Server mode.
 /// - `.standalone`: memos, tasks, articles, keyword search, labels and issue
 ///   relations are fully local (`LocalMemoDataSource` / `LocalTaskDataSource`
 ///   / `LocalArticleDataSource` / `LocalSearchDataSource` /
@@ -97,13 +98,18 @@ final class DataSourceProvider: ObservableObject {
             remote: RemoteMemoDataSource(),
             onLocalWrite: { scheduler.requestSync() }
         )
+        // Tasks and articles stay read-only offline, EXCEPT their comments:
+        // those queue in the outbox, so they need the same "poke the
+        // scheduler after a local write" hook memos have.
         tasks = OfflineFirstTaskDataSource(
             database: AppDatabase.shared,
-            remote: RemoteTaskDataSource()
+            remote: RemoteTaskDataSource(),
+            onLocalWrite: { scheduler.requestSync() }
         )
         articles = OfflineFirstArticleDataSource(
             database: AppDatabase.shared,
-            remote: RemoteArticleDataSource()
+            remote: RemoteArticleDataSource(),
+            onLocalWrite: { scheduler.requestSync() }
         )
         projects = OfflineFirstProjectDataSource(
             database: AppDatabase.shared,

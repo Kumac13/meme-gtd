@@ -37,6 +37,12 @@ extension Notification.Name {
     /// Posted (from an arbitrary thread) each time an APIClient request dies
     /// at the transport level (DNS, no route, timeout) without an HTTP
     /// response — the server could not be reached.
+    ///
+    /// `userInfo[APIClient.definitiveFailureKey] == true` marks a failure that
+    /// PROVES unreachability on its own (connection refused, host not found,
+    /// no route, radio off): those need no confirmation probe. Ambiguous
+    /// failures — a timeout above all — leave the flag off, because one slow
+    /// request against a live server must not put the app into read-only.
     nonisolated static let apiServerUnreachable = Notification.Name("APIClientServerUnreachable")
 }
 
@@ -51,11 +57,38 @@ class APIClient {
     /// where each request learns it. Offline detection is driven by these
     /// real request outcomes (Apple's guidance: judge connectivity from
     /// actual requests, not preflight checks); ConnectivityMonitor observes.
-    private func noteServerReachable(_ reachable: Bool) {
+    private func noteServerReachable(_ reachable: Bool, definitive: Bool = false) {
+        let userInfo: [AnyHashable: Any]? = reachable
+            ? nil
+            : [APIClient.definitiveFailureKey: definitive]
         NotificationCenter.default.post(
             name: reachable ? .apiServerReachable : .apiServerUnreachable,
-            object: nil
+            object: nil,
+            userInfo: userInfo
         )
+    }
+
+    /// `userInfo` key on `.apiServerUnreachable` (see the notification's doc).
+    nonisolated static let definitiveFailureKey = "definitive"
+
+    /// URLError codes that mean "this request never had a chance of reaching
+    /// the server", as opposed to "the answer did not arrive in time". They
+    /// are conclusive on their own, so the offline state can be shown at once
+    /// instead of after a second 15s health probe. Deliberately narrow:
+    /// mid-flight losses (`networkConnectionLost`) and timeouts stay
+    /// ambiguous and keep their confirmation probe.
+    private static let definitiveFailureCodes: Set<URLError.Code> = [
+        .cannotConnectToHost,
+        .cannotFindHost,
+        .dnsLookupFailed,
+        .notConnectedToInternet,
+        .internationalRoamingOff,
+        .dataNotAllowed,
+    ]
+
+    private func isDefinitiveFailure(_ error: Error) -> Bool {
+        guard let code = (error as? URLError)?.code else { return false }
+        return APIClient.definitiveFailureCodes.contains(code)
     }
 
     /// A cancelled request (screen navigated away, task cancelled) proves
@@ -69,7 +102,7 @@ class APIClient {
     /// failure was a cancellation.
     private func noteTransportFailure(_ error: Error) {
         guard !isCancellation(error) else { return }
-        noteServerReachable(false)
+        noteServerReachable(false, definitive: isDefinitiveFailure(error))
     }
 
     /// Reachability probe against GET /api/health, used by
@@ -81,8 +114,9 @@ class APIClient {
         guard let url = try? buildURL(path: "/api/health") else {
             // A URL that cannot be built means the server cannot be reached
             // as configured — the verdict must still flow through the
-            // notifications, or ConnectivityMonitor never hears back.
-            noteServerReachable(false)
+            // notifications, or ConnectivityMonitor never hears back. Nothing
+            // about it is ambiguous, so it needs no confirmation probe.
+            noteServerReachable(false, definitive: true)
             return false
         }
         var request = URLRequest(url: url)
@@ -92,6 +126,9 @@ class APIClient {
         // reachable server would wrongly confirm "unreachable". Genuine
         // outages fail transport-level in well under a second regardless.
         request.timeoutInterval = 15
+        // A probe answered from URLCache would prove nothing about the server
+        // — reachability must be decided by a request that actually goes out.
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         do {
             _ = try await URLSession.shared.data(for: request)
             noteServerReachable(true)

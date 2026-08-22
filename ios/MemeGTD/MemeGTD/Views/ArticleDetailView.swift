@@ -25,6 +25,18 @@ struct ArticleDetailView: View {
         connectivity.isOfflineReadOnly
     }
 
+    /// Offline the ARTICLE is read-only but its COMMENTS are not — they queue
+    /// in the outbox and push on the next sync — so the composer only closes
+    /// for a title/body edit, which cannot be entered offline anyway.
+    private var isComposerDisabled: Bool {
+        if viewModel.isLoading { return true }
+        guard isOfflineReadOnly else { return false }
+        switch editingMode {
+        case .title, .body: return true
+        case .none, .comment: return false
+        }
+    }
+
     enum EditingMode: Equatable {
         case none
         case title
@@ -138,7 +150,6 @@ struct ArticleDetailView: View {
                         IssueTimeline(
                             entries: viewModel.timelineEntries,
                             issueId: articleId,
-                            mutationsDisabled: isOfflineReadOnly,
                             onEditComment: { comment in
                                 viewModel.replyBody = comment.bodyMd
                                 editingMode = .comment(comment.id)
@@ -185,7 +196,7 @@ struct ArticleDetailView: View {
                 FloatingComposer(
                     text: $viewModel.replyBody,
                     placeholder: editingMode == .none ? "Add a comment..." : "Edit...",
-                    disabled: viewModel.isLoading || isOfflineReadOnly,
+                    disabled: isComposerDisabled,
                     submitting: viewModel.isSubmittingReply,
                     notice: editingMode == .none ? nil : "Editing",
                     onDismissNotice: {

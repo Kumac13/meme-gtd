@@ -21,11 +21,23 @@ struct TaskDetailView: View {
     @StateObject private var imageAttachment = ImageAttachmentCoordinator()
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
-    /// Server mode + Offline Sync ON + offline: the task is served from the
-    /// local read cache and cannot be edited (offline support plan Phase 7).
+    /// Server mode + offline: the task is served from the local read cache and
+    /// its own fields cannot be edited (offline support plan Phase 7).
     /// Never true in Standalone (tasks are fully local there).
     private var isOfflineReadOnly: Bool {
         connectivity.isOfflineReadOnly
+    }
+
+    /// Offline the TASK is read-only but its COMMENTS are not — they queue in
+    /// the outbox and push on the next sync — so the composer only closes for
+    /// a title/body edit, which cannot be entered offline in the first place.
+    private var isComposerDisabled: Bool {
+        if viewModel.isLoading { return true }
+        guard isOfflineReadOnly else { return false }
+        switch editingMode {
+        case .title, .body: return true
+        case .none, .comment: return false
+        }
     }
 
     enum EditingMode: Equatable {
@@ -93,7 +105,6 @@ struct TaskDetailView: View {
                         IssueTimeline(
                             entries: viewModel.timelineEntries,
                             issueId: taskId,
-                            mutationsDisabled: isOfflineReadOnly,
                             onEditComment: { comment in
                                 viewModel.replyBody = comment.bodyMd
                                 editingMode = .comment(comment.id)
@@ -105,7 +116,8 @@ struct TaskDetailView: View {
                                 onNavigateToLinkedIssue?(id, type, "")
                             },
                             onTodoToggle: { comment, todoIndex, _ in
-                                guard !isOfflineReadOnly else { return }
+                                // A todo toggle is a comment update, so it
+                                // queues offline like any other comment edit.
                                 Task { await viewModel.toggleCommentTodo(commentId: comment.id, todoIndex: todoIndex) }
                             }
                         )
@@ -144,7 +156,7 @@ struct TaskDetailView: View {
                 FloatingComposer(
                     text: $viewModel.replyBody,
                     placeholder: composerPlaceholder,
-                    disabled: viewModel.isLoading || isOfflineReadOnly,
+                    disabled: isComposerDisabled,
                     submitting: viewModel.isSubmittingReply,
                     notice: composerNotice,
                     onDismissNotice: {

@@ -86,9 +86,12 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
         do {
             let task: TaskItem = try await dataSources.tasks.getTask(id: taskId)
             let commentList: [Comment] = try await dataSources.tasks.listComments(taskId: taskId)
-            let activities: [ActivityLogEntry] = try await dataSources.issueRelations.listActivityLog(
-                issueId: taskId
-            )
+            // The activity log has no offline mirror, so it must not decide
+            // whether the refresh succeeded: offline, task and comments come
+            // from the local cache and the timeline keeps the entries it
+            // already has (same "non-critical" rule as loadActivityLog).
+            let activities: [ActivityLogEntry] =
+                (try? await dataSources.issueRelations.listActivityLog(issueId: taskId)) ?? activityLogs
             return (task, commentList, activities)
         } catch {
             self.error = error.localizedDescription

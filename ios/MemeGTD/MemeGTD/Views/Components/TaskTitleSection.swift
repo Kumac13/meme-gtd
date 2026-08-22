@@ -3,8 +3,8 @@ import SwiftUI
 struct TaskTitleSection: View {
     let title: String
     let status: String
-    /// Offline read-only cache state (offline support plan Phase 7): shows a
-    /// "Read-only" chip beside the status pill, iWork-style.
+    /// Offline read-only cache state (offline support plan Phase 7): shows
+    /// the "Offline" chip beside the status pill (see OfflineReadOnlyBadge).
     var isReadOnly: Bool = false
     var onStatusTap: (() -> Void)?
 

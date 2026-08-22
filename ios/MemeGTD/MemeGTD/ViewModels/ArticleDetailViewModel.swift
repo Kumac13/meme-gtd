@@ -82,9 +82,12 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
     func fetchArticle() async -> (Article, [Comment], [ActivityLogEntry])? {
         do {
             let article: Article = try await dataSources.articles.getArticle(id: articleId)
-            let activities: [ActivityLogEntry] = try await dataSources.issueRelations.listActivityLog(
-                issueId: articleId
-            )
+            // The activity log has no offline mirror, so it must not decide
+            // whether the refresh succeeded: offline, article and comments
+            // come from the local cache and the timeline keeps the entries it
+            // already has (same "non-critical" rule as loadActivityLog).
+            let activities: [ActivityLogEntry] =
+                (try? await dataSources.issueRelations.listActivityLog(issueId: articleId)) ?? activityLogs
             let comments = try await dataSources.articles.listComments(articleId: articleId)
             return (article, comments, activities)
         } catch {

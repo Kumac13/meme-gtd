@@ -4,13 +4,21 @@ import GRDB
 /// Offline-first `TaskDataSource` (offline support plan Phase 7), active only
 /// while the "Offline Sync (Beta)" setting is on.
 ///
-/// Unlike memos, tasks are READ-ONLY offline:
+/// Unlike memos, the task itself is READ-ONLY offline — its COMMENTS are not:
 /// - READS go to the server first; when the server is unreachable
 ///   (`APIError.networkError`) they fall back to the local GRDB mirror, which
 ///   the sync pull keeps seeded with task rows. The local read itself lives
 ///   in `LocalTaskStore` (shared with the Standalone `LocalTaskDataSource`).
-/// - WRITES are delegated to the server; when it is unreachable they throw
-///   `OfflineReadOnlyError` instead of queueing (tasks have no outbox path).
+/// - WRITES on the task (title, body, status, bookmark, delete) are delegated
+///   to the server; when it is unreachable they throw `OfflineReadOnlyError`
+///   instead of queueing (the task fields have no outbox path).
+/// - COMMENT writes DO queue: the sync protocol resolves a comment through
+///   its parent's uuid regardless of issue type, so an offline comment on a
+///   mirrored task goes through `CommentOutbox` exactly like a memo comment
+///   and pushes on the next sync. Online they still go straight to the server
+///   (unchanged behavior); only an unreachable server takes the outbox path,
+///   which keeps the double-write window to "the request reached the server
+///   but its response was lost".
 ///
 /// Successful remote list/detail responses are NOT written back into the
 /// local `issues` table: rows there carry sync bookkeeping (uuid,
@@ -27,10 +35,16 @@ import GRDB
 nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
     private let database: AppDatabase
     private let remote: TaskDataSource
+    private let onLocalWrite: () -> Void
 
-    init(database: AppDatabase, remote: TaskDataSource) {
+    init(
+        database: AppDatabase,
+        remote: TaskDataSource,
+        onLocalWrite: @escaping () -> Void = {}
+    ) {
         self.database = database
         self.remote = remote
+        self.onLocalWrite = onLocalWrite
     }
 
     // MARK: - Reads (remote first, local fallback)
@@ -80,7 +94,8 @@ nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
 
     func listComments(taskId: Int) async throws -> [Comment] {
         do {
-            return try await remote.listComments(taskId: taskId)
+            let comments = try await remote.listComments(taskId: taskId)
+            return try await withPendingComments(comments, taskId: taskId)
         } catch where OfflineFirstSupport.isNetworkError(error) {
             let local: [Comment]? = try await database.dbWriter.read { db in
                 guard let taskRow = try LocalTaskStore.fetchTaskRow(db, id: taskId) else { return nil }
@@ -116,16 +131,103 @@ nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
         try await onlineOnly { try await self.remote.unbookmarkTask(id: id) }
     }
 
+    // MARK: - Comment writes (server first, outbox when unreachable)
+
     func createComment(taskId: Int, _ request: CreateCommentRequest) async throws -> Comment {
-        try await onlineOnly { try await self.remote.createComment(taskId: taskId, request) }
+        do {
+            return try await remote.createComment(taskId: taskId, request)
+        } catch where OfflineFirstSupport.isNetworkError(error) {
+            let now = ISO8601Millis.now()
+            let comment = try await database.dbWriter.write { db -> Comment in
+                let issueUuid = try Self.mirroredTaskUuid(db, taskId: taskId)
+                return try CommentOutbox.create(
+                    db,
+                    issueUuid: issueUuid,
+                    issueId: taskId,
+                    bodyMd: request.bodyMd,
+                    now: now
+                )
+            }
+            onLocalWrite()
+            return comment
+        }
     }
 
     func updateComment(taskId: Int, commentId: Int, _ request: UpdateCommentRequest) async throws -> Comment {
-        try await onlineOnly { try await self.remote.updateComment(taskId: taskId, commentId: commentId, request) }
+        // A negative id is a comment written offline that has not been pushed
+        // yet: the server has no id for it, so the edit stays in the outbox
+        // even when the server is reachable again.
+        if commentId < 0 {
+            return try await queueCommentUpdate(taskId: taskId, commentId: commentId, bodyMd: request.bodyMd)
+        }
+        do {
+            return try await remote.updateComment(taskId: taskId, commentId: commentId, request)
+        } catch where OfflineFirstSupport.isNetworkError(error) {
+            return try await queueCommentUpdate(taskId: taskId, commentId: commentId, bodyMd: request.bodyMd)
+        }
     }
 
     func deleteComment(taskId: Int, commentId: Int) async throws {
-        try await onlineOnly { try await self.remote.deleteComment(taskId: taskId, commentId: commentId) }
+        if commentId < 0 {
+            try await queueCommentDelete(taskId: taskId, commentId: commentId)
+            return
+        }
+        do {
+            try await remote.deleteComment(taskId: taskId, commentId: commentId)
+        } catch where OfflineFirstSupport.isNetworkError(error) {
+            try await queueCommentDelete(taskId: taskId, commentId: commentId)
+        }
+    }
+
+    private func queueCommentUpdate(taskId: Int, commentId: Int, bodyMd: String) async throws -> Comment {
+        let now = ISO8601Millis.now()
+        let comment = try await database.dbWriter.write { db -> Comment in
+            let issueUuid = try Self.mirroredTaskUuid(db, taskId: taskId)
+            return try CommentOutbox.update(
+                db,
+                issueUuid: issueUuid,
+                issueId: taskId,
+                commentId: commentId,
+                bodyMd: bodyMd,
+                now: now
+            )
+        }
+        onLocalWrite()
+        return comment
+    }
+
+    private func queueCommentDelete(taskId: Int, commentId: Int) async throws {
+        let now = ISO8601Millis.now()
+        try await database.dbWriter.write { db in
+            let issueUuid = try Self.mirroredTaskUuid(db, taskId: taskId)
+            try CommentOutbox.delete(db, issueUuid: issueUuid, commentId: commentId, now: now)
+        }
+        onLocalWrite()
+    }
+
+    /// The parent's sync identity, or the read-only error: a task the pull has
+    /// not mirrored yet has no uuid to hang a comment on, so it stays fully
+    /// read-only offline like every other unmirrored row. Throwing from inside
+    /// the write block rolls the transaction back untouched.
+    private static func mirroredTaskUuid(_ db: Database, taskId: Int) throws -> String {
+        guard let row = try LocalTaskStore.fetchTaskRow(db, id: taskId) else {
+            throw OfflineReadOnlyError()
+        }
+        let uuid: String = row["uuid"]
+        return uuid
+    }
+
+    /// Appends comments written offline that the server cannot know about yet,
+    /// so a queued comment stays on the timeline once connectivity returns.
+    /// They are the newest by construction, which is where the server's
+    /// `created_at ASC` order puts them anyway.
+    private func withPendingComments(_ comments: [Comment], taskId: Int) async throws -> [Comment] {
+        let pending = try await database.dbWriter.read { db -> [Comment] in
+            guard let row = try LocalTaskStore.fetchTaskRow(db, id: taskId) else { return [] }
+            let issueUuid: String = row["uuid"]
+            return try CommentOutbox.pendingComments(db, issueUuid: issueUuid, issueId: taskId)
+        }
+        return pending.isEmpty ? comments : comments + pending
     }
 
     /// Delegates a write to the server, translating "unreachable" into the

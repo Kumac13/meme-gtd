@@ -4,8 +4,9 @@ import GRDB
 
 /// Phase 7 read-cache behavior: tasks / articles / projects fall back to the
 /// local GRDB mirror when the server is unreachable, refuse writes offline
-/// with `OfflineReadOnlyError`, and projects keep a snapshot cache written on
-/// every successful online fetch.
+/// with `OfflineReadOnlyError` (comments excepted — those queue in the
+/// outbox, see `OfflineCommentOutboxTests`), and projects keep a snapshot
+/// cache written on every successful online fetch.
 final class OfflineFirstReadCacheTests: XCTestCase {
     private var database: AppDatabase!
 
@@ -248,10 +249,10 @@ final class OfflineFirstReadCacheTests: XCTestCase {
             XCTFail("Expected OfflineReadOnlyError")
         } catch is OfflineReadOnlyError {}
 
-        do {
-            _ = try await dataSource.createComment(taskId: 101, CreateCommentRequest(bodyMd: "hi"))
-            XCTFail("Expected OfflineReadOnlyError")
-        } catch is OfflineReadOnlyError {}
+        // Comments are the exception: they queue in the outbox instead of
+        // being refused (see OfflineCommentOutboxTests for the full rules).
+        let queued = try await dataSource.createComment(taskId: 101, CreateCommentRequest(bodyMd: "hi"))
+        XCTAssertLessThan(queued.id, 0)
 
         // The local mirror stays untouched by refused writes.
         let count = try await database.dbWriter.read { db in

@@ -31,6 +31,10 @@ struct MemeGTDApp: App {
             // off — the scheduler only exists when the toggle is on).
             if newPhase == .active {
                 dataSources.syncScheduler?.sceneDidBecomeActive()
+                // Re-check server reachability at once: a suspended app runs
+                // neither the recovery loop nor any request, so the offline
+                // state on screen could otherwise be minutes stale.
+                ConnectivityMonitor.shared.sceneDidBecomeActive()
             }
         }
     }

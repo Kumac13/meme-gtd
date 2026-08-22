@@ -1,10 +1,11 @@
 import SwiftUI
 
-/// "Read-only" chip for task/article screens whose data is served from the
-/// offline cache. Communicates the CONSEQUENCE (cannot edit), with the
-/// wifi.slash glyph carrying the cause — the iWork "Read Only" document
-/// indicator is the platform precedent. Same visual idiom as the status
-/// chips (TaskTitleSection), so it reads as part of the item's state row.
+/// "Offline" chip for task/article screens whose data is served from the
+/// offline cache. It says CAUSE rather than consequence on purpose: the item
+/// itself is read-only, but its comments are not (they queue in the outbox),
+/// so the older "Read-only" wording would now be wrong on a detail screen
+/// where the composer still works. Same visual idiom as the status chips
+/// (TaskTitleSection), so it reads as part of the item's state row.
 ///
 /// Pure visual: callers decide visibility (detail views already track
 /// `isOfflineReadOnly`); list screens use `OfflineReadOnlyIndicator` below.
@@ -15,7 +16,7 @@ struct OfflineReadOnlyBadge: View {
         HStack(spacing: 4) {
             Image(systemName: "wifi.slash")
                 .font(.system(size: 10, weight: .semibold))
-            Text("Read-only")
+            Text("Offline")
                 .font(.system(size: 12, weight: .medium))
         }
         .padding(.horizontal, 10)
@@ -30,7 +31,7 @@ struct OfflineReadOnlyBadge: View {
 /// only in Server mode while the server is unreachable
 /// (`ConnectivityMonitor.isOfflineReadOnly`). Renders nothing otherwise, so
 /// embedding it is behavior-neutral while online. Memo screens never show
-/// it — memos stay editable offline via the outbox.
+/// it — memos are fully editable offline via the outbox.
 ///
 /// Centered under the title bar. Sits snug to the toolbar (small top
 /// padding) with a clear gap to the filter row below (bottom padding), so it

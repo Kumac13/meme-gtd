@@ -15,21 +15,26 @@ import Network
 ///   response proves the server is reachable; a transport-level failure
 ///   proves it is not (cancellations prove nothing and are never posted).
 ///   Sync runs, list loads and saves keep this fresh without extra traffic.
-/// - Confirmation before flipping offline: a single failed request (e.g. one
+/// - Confirmation before flipping offline: an AMBIGUOUS failure (e.g. one
 ///   slow GET hitting its 15s timeout against a live server) does not flip
 ///   the state by itself — it triggers a `GET /api/health` probe, and only
-///   the probe's own failure declares the server unreachable. Genuine
-///   outages fail the probe in well under a second.
+///   the probe's own failure declares the server unreachable. A DEFINITIVE
+///   failure (connection refused, host not found, no route, radio off —
+///   `APIClient.definitiveFailureKey`) needs no second opinion and flips the
+///   state at once, so a stopped server or a dropped tunnel shows up
+///   immediately instead of after another probe's timeout.
 /// - Recovery loop: while offline the probe repeats every `recheckInterval`
 ///   so recovery (or continued outage) is confirmed even when no screen is
 ///   driving requests. The loop never depends on the probes' outcomes to
 ///   stay alive, and it survives mode switches (it just skips probing
 ///   outside Server mode and picks up again on the next tick).
-/// - Path changes as a TRIGGER only: an NWPathMonitor fires an immediate
-///   probe whenever the device's network path changes (airplane mode, Wi-Fi
-///   loss/regain, cold launch), so the state reacts within seconds instead
-///   of waiting for the next request or recheck tick. The path status
-///   itself never decides anything — the probe against the server does.
+/// - Path changes and scene activation as TRIGGERS only: an NWPathMonitor
+///   fires an immediate probe whenever the device's network path changes
+///   (airplane mode, Wi-Fi loss/regain, cold launch), and `MemeGTDApp` calls
+///   `sceneDidBecomeActive()` on foregrounding — a suspended app runs neither
+///   the recovery loop nor any request, so returning to it must re-check at
+///   once rather than show a stale state for up to `recheckInterval`. Neither
+///   trigger decides anything — the probe against the server does.
 ///
 /// The default is "online" so screens render exactly as before until the
 /// server itself proves unreachable (Apple's guidance: judge connectivity
@@ -60,9 +65,10 @@ final class ConnectivityMonitor: ObservableObject {
         })
         observers.append(NotificationCenter.default.addObserver(
             forName: .apiServerUnreachable, object: nil, queue: nil
-        ) { _ in
+        ) { notification in
+            let definitive = notification.userInfo?[APIClient.definitiveFailureKey] as? Bool ?? false
             Task { @MainActor [weak self] in
-                self?.serverReportedUnreachable()
+                self?.serverReportedUnreachable(definitive: definitive)
             }
         })
         startPathMonitor()
@@ -99,11 +105,18 @@ final class ConnectivityMonitor: ObservableObject {
         }
     }
 
-    /// A request died at the transport level. While online, confirm with a
-    /// health probe before flipping — one slow request must not put the whole
-    /// app into read-only. While offline (or while a confirmation is already
-    /// running) there is nothing to do: the recovery loop owns re-probing.
-    private func serverReportedUnreachable() {
+    /// A request died at the transport level.
+    ///
+    /// A DEFINITIVE failure is proof in itself and flips the state right away.
+    /// An ambiguous one (a timeout above all) is confirmed with a health probe
+    /// first — one slow request must not put the whole app into read-only.
+    /// While offline (or while a confirmation is already running) there is
+    /// nothing to do: the recovery loop owns re-probing.
+    private func serverReportedUnreachable(definitive: Bool) {
+        if definitive {
+            setOffline(true)
+            return
+        }
         guard !isOffline, verifyTask == nil else { return }
         verifyTask = Task { [weak self] in
             let reachable = await APIClient.shared.probeServerReachability()
@@ -150,18 +163,28 @@ final class ConnectivityMonitor: ObservableObject {
         let monitor = NWPathMonitor()
         monitor.pathUpdateHandler = { _ in
             Task { @MainActor [weak self] in
-                self?.pathDidChange()
+                self?.probeNow()
             }
         }
         monitor.start(queue: DispatchQueue.global(qos: .utility))
         pathMonitor = monitor
     }
 
-    private func pathDidChange() {
+    /// Called by `MemeGTDApp` when the scene becomes active. A suspended app
+    /// neither runs the recovery loop nor issues requests, so the state on
+    /// screen right after foregrounding is only as fresh as the last thing
+    /// that happened before the app went away — re-check it immediately, in
+    /// both directions (the server may have come back, or gone away).
+    func sceneDidBecomeActive() {
+        probeNow()
+    }
+
+    /// Fires one probe unless another is already in flight. The verdict flows
+    /// back through the reachability notifications like every other request.
+    private func probeNow() {
         guard Settings.shared.appMode == .server else { return }
         guard pathProbeTask == nil else { return }
         pathProbeTask = Task { [weak self] in
-            // Verdict flows back through the reachability notifications.
             _ = await APIClient.shared.probeServerReachability()
             self?.pathProbeTask = nil
         }
