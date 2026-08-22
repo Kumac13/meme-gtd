@@ -46,17 +46,76 @@ extension Notification.Name {
     nonisolated static let apiServerUnreachable = Notification.Name("APIClientServerUnreachable")
 }
 
+/// Delegate of the reachability-probe session. iOS calls
+/// `urlSession(_:taskIsWaitingForConnectivity:)` as soon as it decides the
+/// device has no connectivity suitable for the request (no path, cellular
+/// disallowed, a VPN required but not up — the Tailscale case).
+///
+/// This callback is the mechanism Apple names for driving offline UI: "if
+/// you're using URLSession you can set waitsForConnectivity, make your
+/// request, and then use the urlSession(_:taskIsWaitingForConnectivity:)
+/// delegate callback to drive your UI" (Apple DTS,
+/// https://developer.apple.com/forums/thread/733178). Using the system's own
+/// verdict here beats inferring the same state from error codes.
+///
+/// Declared `nonisolated` on purpose: `Shared/` is compiled into the app
+/// target too, where MainActor isolation is the default, and this delegate is
+/// called back off the main actor by URLSession.
+private nonisolated final class ConnectivityProbeDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    func urlSession(_ session: URLSession, taskIsWaitingForConnectivity task: URLSessionTask) {
+        NotificationCenter.default.post(
+            name: .apiServerUnreachable,
+            object: nil,
+            userInfo: [APIClient.definitiveFailureKey: true]
+        )
+    }
+}
+
 class APIClient {
     static let shared = APIClient()
 
-    private init() {}
+    /// Session used ONLY by `probeServerReachability()`. It opts into
+    /// `waitsForConnectivity` so that a device with no usable path produces
+    /// the `taskIsWaitingForConnectivity` callback above instead of a silent
+    /// wait, and it is ephemeral + cache-ignoring because a probe answered
+    /// from a cache proves nothing about the server.
+    ///
+    /// The app's DATA requests deliberately do NOT opt in. Apple recommends
+    /// waiting rather than failing when a request has no better outcome to
+    /// offer, but here it does: reads fall back to the local GRDB mirror and
+    /// memo/comment writes go to the outbox, which is a durable version of
+    /// "wait for connectivity" (it survives app termination, which a waiting
+    /// URLSession task does not). Making reads wait would only replace cached
+    /// content with a spinner.
+    private let probeSession: URLSession
+
+    private init() {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.waitsForConnectivity = true
+        configuration.timeoutIntervalForRequest = 15
+        configuration.timeoutIntervalForResource = 15
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        // URLSession keeps its delegate alive until the session is
+        // invalidated; this one lives as long as the shared client.
+        probeSession = URLSession(
+            configuration: configuration,
+            delegate: ConnectivityProbeDelegate(),
+            delegateQueue: nil
+        )
+    }
 
     // MARK: - Server reachability signal
 
     /// Announces whether the transport delivered an HTTP response, right
     /// where each request learns it. Offline detection is driven by these
-    /// real request outcomes (Apple's guidance: judge connectivity from
-    /// actual requests, not preflight checks); ConnectivityMonitor observes.
+    /// real request outcomes, which is what Apple prescribes: "Always attempt
+    /// to make a connection. Do not attempt to guess whether network service
+    /// is available, and do not cache that determination." (Designing for
+    /// Real-World Networks), and, for an app talking to one specific service,
+    /// "they can make decisions based on their attempts to connect to that
+    /// service. That is the approach I recommend." (Apple DTS,
+    /// https://developer.apple.com/forums/thread/733178).
+    /// ConnectivityMonitor observes these and owns the UI state.
     private func noteServerReachable(_ reachable: Bool, definitive: Bool = false) {
         let userInfo: [AnyHashable: Any]? = reachable
             ? nil
@@ -71,12 +130,18 @@ class APIClient {
     /// `userInfo` key on `.apiServerUnreachable` (see the notification's doc).
     nonisolated static let definitiveFailureKey = "definitive"
 
-    /// URLError codes that mean "this request never had a chance of reaching
-    /// the server", as opposed to "the answer did not arrive in time". They
-    /// are conclusive on their own, so the offline state can be shown at once
-    /// instead of after a second 15s health probe. Deliberately narrow:
-    /// mid-flight losses (`networkConnectionLost`) and timeouts stay
-    /// ambiguous and keep their confirmation probe.
+    /// Apple's own split of connection failures, from Designing for
+    /// Real-World Networks: "If the connection failed because of a transient
+    /// error, try making the connection again. If the connection failed
+    /// because the host is unreachable, wait for the [reachability] API to
+    /// call your registered callback."
+    ///
+    /// These are the "host is unreachable" codes — the request had nowhere to
+    /// go — so they are conclusive on their own and the offline state can be
+    /// shown at once. Everything else is treated as transient and keeps its
+    /// confirmation probe; `networkConnectionLost` in particular is a
+    /// documented retry case ("the underlying TCP connection ... disconnected
+    /// while the HTTP request was in progress", QA1941), not a verdict.
     private static let definitiveFailureCodes: Set<URLError.Code> = [
         .cannotConnectToHost,
         .cannotFindHost,
@@ -105,10 +170,18 @@ class APIClient {
         noteServerReachable(false, definitive: isDefinitiveFailure(error))
     }
 
-    /// Reachability probe against GET /api/health, used by
-    /// ConnectivityMonitor to detect recovery while offline. Any HTTP
-    /// response — even 5xx — means reachable; only transport-level failures
-    /// count as unreachable. The verdict also flows through the reachability
+    /// Reachability probe against /api/health, used by ConnectivityMonitor
+    /// AFTER a request has already failed and while offline, never before a
+    /// request. That ordering is the whole point: Apple rules out preflight
+    /// checks, but names this exact move once a request has stalled — "issue
+    /// a HEAD request to your server ... you're not doing a preflight check
+    /// here because you only run this code when you know that the request has
+    /// stalled" (Apple DTS, https://developer.apple.com/forums/thread/106344).
+    ///
+    /// HEAD for the same reason: the probe needs a round trip, not a body.
+    /// Any HTTP response — 404 or 503 included — means the server was
+    /// REACHED, which is all this asks; only transport-level failures count
+    /// as unreachable. The verdict also flows through the reachability
     /// notifications, like every other request outcome.
     func probeServerReachability() async -> Bool {
         guard let url = try? buildURL(path: "/api/health") else {
@@ -120,17 +193,14 @@ class APIClient {
             return false
         }
         var request = URLRequest(url: url)
-        request.httpMethod = "GET"
+        request.httpMethod = "HEAD"
         // Same budget as get(): a slow-but-alive link (Tailscale
         // re-establishing) can need >5s, and a probe that times out on a
         // reachable server would wrongly confirm "unreachable". Genuine
         // outages fail transport-level in well under a second regardless.
         request.timeoutInterval = 15
-        // A probe answered from URLCache would prove nothing about the server
-        // — reachability must be decided by a request that actually goes out.
-        request.cachePolicy = .reloadIgnoringLocalCacheData
         do {
-            _ = try await URLSession.shared.data(for: request)
+            _ = try await probeSession.data(for: request)
             noteServerReachable(true)
             return true
         } catch {

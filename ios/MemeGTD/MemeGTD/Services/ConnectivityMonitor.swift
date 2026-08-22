@@ -2,39 +2,98 @@ import Combine
 import Foundation
 import Network
 
-/// Connectivity state behind the offline read-only UI (offline support plan
-/// Phase 7). "Offline" means THE SERVER CANNOT BE REACHED — the VERDICT never
+/// Connectivity state behind the offline UI (offline support plan Phase 7).
+///
+/// The rules below are Apple's, not ours — the sources are cited per rule so
+/// that changing one means arguing with the source, not with a preference:
+///
+/// - "Always attempt to make a connection. Do not attempt to guess whether
+///   network service is available, and do not cache that determination." /
+///   "The SCNetworkReachability API is not intended for use as a preflight
+///   mechanism ... You determine network connectivity by attempting to
+///   connect. If the connection fails, consult the [reachability] API to help
+///   diagnose the cause of the failure." — Designing for Real-World Networks,
+///   https://developer.apple.com/library/archive/documentation/NetworkingInternetWeb/Conceptual/NetworkingOverview/WhyNetworkingIsHard/WhyNetworkingIsHard.html
+/// - "There's no such thing as an 'active internet connection' ... The device
+///   might think that it has a path to the Internet, and that'll be reported
+///   by NWPathMonitor, but that doesn't mean that a network connection to a
+///   specific host will work. [Apps] talk to a specific service and so they
+///   can make decisions based on their attempts to connect to that service.
+///   That is the approach I recommend." — Apple DTS,
+///   https://developer.apple.com/forums/thread/733178
+/// - "Don't preflight network connections. Let the user try whatever they
+///   want to try and then handle any errors you get." / reachability "is
+///   subject to both false positives and false negatives." — Apple DTS,
+///   https://developer.apple.com/forums/thread/99142
+///
+/// Hence: "offline" means THE SERVER CANNOT BE REACHED, and the VERDICT never
 /// comes from the device's own network state. With the server behind a VPN
 /// (Tailscale) the device path is routinely fine while the server is
 /// unreachable (and a dev server on localhost is reachable with no path at
-/// all), so a path-based verdict is exactly the bug this replaces. Only
-/// evidence about the server itself changes the state:
+/// all), so a path-based verdict is exactly the bug this replaces.
+///
+/// On "do not cache that determination": the NETWORK layer never reads this
+/// state — every data source still attempts the server first, every time, and
+/// only falls back once that attempt has actually failed. What the cached
+/// state feeds is the UI, which Apple sanctions ("display a UI indicating
+/// that the network is offline"). The one place it goes further than Apple
+/// describes is the read-only gating on a task's or an article's OWN fields:
+/// those affordances are disabled while offline instead of letting the user
+/// try and fail. That is a deliberate product rule (those rows have no outbox
+/// path, so an attempt could only ever fail), and it is the reason a false
+/// "offline" must stay cheap to recover from — hence the confirmation probe
+/// and the tight first backoff step below. Comments are NOT gated: they queue.
+///
+/// Only evidence about the server itself changes the state:
 ///
 /// - Real request outcomes (primary): APIClient announces every transport
 ///   result (`.apiServerReachable` / `.apiServerUnreachable`). Any HTTP
 ///   response proves the server is reachable; a transport-level failure
 ///   proves it is not (cancellations prove nothing and are never posted).
 ///   Sync runs, list loads and saves keep this fresh without extra traffic.
-/// - Confirmation before flipping offline: an AMBIGUOUS failure (e.g. one
-///   slow GET hitting its 15s timeout against a live server) does not flip
-///   the state by itself — it triggers a `GET /api/health` probe, and only
-///   the probe's own failure declares the server unreachable. A DEFINITIVE
-///   failure (connection refused, host not found, no route, radio off —
-///   `APIClient.definitiveFailureKey`) needs no second opinion and flips the
-///   state at once, so a stopped server or a dropped tunnel shows up
-///   immediately instead of after another probe's timeout.
-/// - Recovery loop: while offline the probe repeats every `recheckInterval`
-///   so recovery (or continued outage) is confirmed even when no screen is
-///   driving requests. The loop never depends on the probes' outcomes to
-///   stay alive, and it survives mode switches (it just skips probing
-///   outside Server mode and picks up again on the next tick).
+/// - Apple's transient/unreachable split decides how fast to flip. A
+///   TRANSIENT failure ("try making the connection again") — a timeout, a
+///   connection lost mid-flight — does not flip the state by itself: it
+///   triggers a `HEAD /api/health` probe, and only the probe's own failure
+///   declares the server unreachable, so one slow request cannot put the app
+///   into read-only. A HOST-UNREACHABLE failure (connection refused, host not
+///   found, no route, radio off — `APIClient.definitiveFailureKey`) is the
+///   case Apple says to wait on an event for rather than retry into, so it
+///   flips at once and a stopped server or a dropped tunnel shows up
+///   immediately.
+/// - The probe runs only AFTER a failure and while offline — never before a
+///   request. Apple rules out preflight but names this move for a request
+///   that has already stalled ("issue a HEAD request to your server ...
+///   you're not doing a preflight check here because you only run this code
+///   when you know that the request has stalled",
+///   https://developer.apple.com/forums/thread/106344). It goes through
+///   `APIClient`'s probe session, which opts into `waitsForConnectivity` so
+///   that a device with no usable path reports itself through
+///   `urlSession(_:taskIsWaitingForConnectivity:)` — the callback Apple names
+///   for driving offline UI — instead of being guessed at.
+/// - Recovery loop: while offline the probe repeats on a BACKOFF so recovery
+///   is noticed even when no screen is driving requests. Apple's retry
+///   guidance is event-driven first ("when the host becomes reachable again,
+///   your app should retry the connection attempt automatically without user
+///   intervention"), with time-based retry as an explicitly allowed fallback
+///   ("back off to using whatever general retry logic is appropriate for your
+///   app (time based, triggered by the user, triggered by a reachability
+///   query, and so on)", QA1941). A server that is down produces no event at
+///   all — no path change, no callback — so the timer is the only fallback
+///   left, and it backs off instead of hammering a dead host forever. The
+///   loop never depends on the probes' outcomes to stay alive, and it
+///   survives mode switches (it just skips probing outside Server mode and
+///   picks up again on the next tick).
 /// - Path changes and scene activation as TRIGGERS only: an NWPathMonitor
 ///   fires an immediate probe whenever the device's network path changes
 ///   (airplane mode, Wi-Fi loss/regain, cold launch), and `MemeGTDApp` calls
 ///   `sceneDidBecomeActive()` on foregrounding — a suspended app runs neither
 ///   the recovery loop nor any request, so returning to it must re-check at
-///   once rather than show a stale state for up to `recheckInterval`. Neither
-///   trigger decides anything — the probe against the server does.
+///   once rather than show a stale state. This is Apple's "when the host
+///   becomes reachable again, your app should retry the connection attempt
+///   automatically without user intervention" applied to the one event the
+///   system does publish; because the path says nothing about the server,
+///   neither trigger decides anything — the probe against the server does.
 ///
 /// The default is "online" so screens render exactly as before until the
 /// server itself proves unreachable (Apple's guidance: judge connectivity
@@ -53,7 +112,10 @@ final class ConnectivityMonitor: ObservableObject {
     private var verifyTask: Task<Void, Never>?
     private var pathProbeTask: Task<Void, Never>?
     private var observers: [any NSObjectProtocol] = []
-    private let recheckInterval: TimeInterval = 30
+    /// Backoff for the recovery probe, same idiom as SyncScheduler's retry.
+    /// Starts tight so a short outage is noticed almost immediately, settles
+    /// at a minute so a long one costs nothing.
+    private let recheckDelays: [TimeInterval] = [2, 5, 15, 30, 60]
 
     private init() {
         observers.append(NotificationCenter.default.addObserver(
@@ -135,18 +197,24 @@ final class ConnectivityMonitor: ObservableObject {
 
     // MARK: - Probing
 
-    /// While offline — and only then — re-probe on a fixed cadence so
+    /// While offline — and only then — re-probe on a backing-off cadence so
     /// recovery is noticed even when the user is not driving any requests.
     /// The loop is self-sustaining: it does NOT rely on probe outcomes or
     /// notifications to schedule the next tick (a probe that cannot run —
     /// wrong mode, malformed URL — just means this tick passes), so it can
-    /// only end by being cancelled when the server is reachable again.
+    /// only end by being cancelled when the server is reachable again. The
+    /// event triggers below (path change, foregrounding) and any real request
+    /// still short-circuit the wait; the timer only covers the case Apple's
+    /// event-driven guidance cannot: a reachable network with a dead server.
     private func startRecoveryLoop() {
         guard recoveryTask == nil else { return }
-        let interval = recheckInterval
+        let delays = recheckDelays
         recoveryTask = Task {
+            var attempt = 0
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+                let delay = delays[min(attempt, delays.count - 1)]
+                attempt += 1
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 if Task.isCancelled { return }
                 guard Settings.shared.appMode == .server else { continue }
                 // Verdict flows back through the reachability notifications.
