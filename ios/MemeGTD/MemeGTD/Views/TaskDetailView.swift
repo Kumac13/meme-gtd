@@ -90,10 +90,14 @@ struct TaskDetailView: View {
                         )
 
                         // === Timeline: Comments + Activities interleaved ===
+                        // Comments stay writable offline (they queue in the
+                        // outbox like memo comments), so the timeline is never
+                        // gated by the read-only state — only the task content
+                        // above is.
                         IssueTimeline(
                             entries: viewModel.timelineEntries,
                             issueId: taskId,
-                            mutationsDisabled: isOfflineReadOnly,
+                            mutationsDisabled: false,
                             onEditComment: { comment in
                                 viewModel.replyBody = comment.bodyMd
                                 editingMode = .comment(comment.id)
@@ -105,7 +109,6 @@ struct TaskDetailView: View {
                                 onNavigateToLinkedIssue?(id, type, "")
                             },
                             onTodoToggle: { comment, todoIndex, _ in
-                                guard !isOfflineReadOnly else { return }
                                 Task { await viewModel.toggleCommentTodo(commentId: comment.id, todoIndex: todoIndex) }
                             }
                         )
@@ -144,7 +147,7 @@ struct TaskDetailView: View {
                 FloatingComposer(
                     text: $viewModel.replyBody,
                     placeholder: composerPlaceholder,
-                    disabled: viewModel.isLoading || isOfflineReadOnly,
+                    disabled: viewModel.isLoading,
                     submitting: viewModel.isSubmittingReply,
                     notice: composerNotice,
                     onDismissNotice: {

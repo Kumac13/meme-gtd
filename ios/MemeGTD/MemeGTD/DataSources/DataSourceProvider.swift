@@ -99,11 +99,13 @@ final class DataSourceProvider: ObservableObject {
         )
         tasks = OfflineFirstTaskDataSource(
             database: AppDatabase.shared,
-            remote: RemoteTaskDataSource()
+            remote: RemoteTaskDataSource(),
+            onLocalWrite: { scheduler.requestSync() }
         )
         articles = OfflineFirstArticleDataSource(
             database: AppDatabase.shared,
-            remote: RemoteArticleDataSource()
+            remote: RemoteArticleDataSource(),
+            onLocalWrite: { scheduler.requestSync() }
         )
         projects = OfflineFirstProjectDataSource(
             database: AppDatabase.shared,

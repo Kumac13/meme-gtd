@@ -220,6 +220,44 @@ describe('Sync API (GET /api/sync/changes, POST /api/sync/push)', () => {
       assert.strictEqual(comments[0].bodyMd, 'offline comment');
     });
 
+    it('creates comments on task and article parents too (iOS offline comments)', async () => {
+      // The parent resolution is by uuid only, never by issue type — the iOS
+      // offline comment path for tasks/articles depends on this contract.
+      const taskRes = await app.inject({
+        method: 'POST',
+        url: '/api/tasks',
+        payload: { title: 'server task' },
+      });
+      assert.strictEqual(taskRes.statusCode, 201);
+      const taskId = JSON.parse(taskRes.body).id;
+
+      const page = await pullChanges(0);
+      const taskChange = page.changes.find(
+        (c: any) => c.entity === 'issue' && c.data.id === taskId
+      );
+      assert.ok(taskChange);
+
+      const commentUuid = nextUuid();
+      const response = await push([
+        {
+          opId: nextOpId(),
+          entity: 'comment',
+          type: 'create',
+          uuid: commentUuid,
+          issueUuid: taskChange.data.uuid,
+          payload: { bodyMd: 'offline task comment' },
+        },
+      ]);
+      const body = JSON.parse(response.body);
+      assert.strictEqual(body.results[0].status, 'applied');
+
+      const comments = JSON.parse(
+        (await app.inject({ method: 'GET', url: `/api/tasks/${taskId}/comments` })).body
+      );
+      assert.strictEqual(comments.length, 1);
+      assert.strictEqual(comments[0].bodyMd, 'offline task comment');
+    });
+
     it('skips a comment create whose parent uuid is unknown', async () => {
       const response = await push([
         {

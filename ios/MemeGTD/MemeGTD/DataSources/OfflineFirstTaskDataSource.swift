@@ -4,13 +4,21 @@ import GRDB
 /// Offline-first `TaskDataSource` (offline support plan Phase 7), active only
 /// while the "Offline Sync (Beta)" setting is on.
 ///
-/// Unlike memos, tasks are READ-ONLY offline:
+/// Unlike memos, the task CONTENT is READ-ONLY offline:
 /// - READS go to the server first; when the server is unreachable
 ///   (`APIError.networkError`) they fall back to the local GRDB mirror, which
 ///   the sync pull keeps seeded with task rows. The local read itself lives
 ///   in `LocalTaskStore` (shared with the Standalone `LocalTaskDataSource`).
-/// - WRITES are delegated to the server; when it is unreachable they throw
-///   `OfflineReadOnlyError` instead of queueing (tasks have no outbox path).
+/// - TASK WRITES are delegated to the server; when it is unreachable they
+///   throw `OfflineReadOnlyError` instead of queueing (tasks have no outbox
+///   path).
+/// - COMMENTS are the exception: they are remote-first (so the online
+///   behavior — server-side `#id` mention rewriting included — is unchanged),
+///   but when the server is unreachable they fall back to the same
+///   local-write + outbox path memo comments use (`CommentOutbox`), and sync
+///   pushes them on recovery. Comment ops on a local-only comment (negative
+///   id, queued create) skip the server entirely — it has no server identity
+///   to address.
 ///
 /// Successful remote list/detail responses are NOT written back into the
 /// local `issues` table: rows there carry sync bookkeeping (uuid,
@@ -27,10 +35,16 @@ import GRDB
 nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
     private let database: AppDatabase
     private let remote: TaskDataSource
+    private let onLocalWrite: () -> Void
 
-    init(database: AppDatabase, remote: TaskDataSource) {
+    init(
+        database: AppDatabase,
+        remote: TaskDataSource,
+        onLocalWrite: @escaping () -> Void = {}
+    ) {
         self.database = database
         self.remote = remote
+        self.onLocalWrite = onLocalWrite
     }
 
     // MARK: - Reads (remote first, local fallback)
@@ -116,16 +130,88 @@ nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
         try await onlineOnly { try await self.remote.unbookmarkTask(id: id) }
     }
 
+    // MARK: - Comments (remote first, outbox fallback offline)
+
     func createComment(taskId: Int, _ request: CreateCommentRequest) async throws -> Comment {
-        try await onlineOnly { try await self.remote.createComment(taskId: taskId, request) }
+        do {
+            return try await remote.createComment(taskId: taskId, request)
+        } catch where OfflineFirstSupport.isNetworkError(error) {
+            let local: Comment? = try await database.dbWriter.write { db in
+                guard let taskRow = try LocalTaskStore.fetchTaskRow(db, id: taskId) else { return nil }
+                let taskUuid: String = taskRow["uuid"]
+                return try CommentOutbox.createComment(
+                    db,
+                    issueUuid: taskUuid,
+                    issueId: taskId,
+                    bodyMd: request.bodyMd
+                )
+            }
+            // A task that is not mirrored locally has no uuid to attach the
+            // comment to: surface the original network error.
+            guard let local else { throw error }
+            onLocalWrite()
+            return local
+        }
     }
 
     func updateComment(taskId: Int, commentId: Int, _ request: UpdateCommentRequest) async throws -> Comment {
-        try await onlineOnly { try await self.remote.updateComment(taskId: taskId, commentId: commentId, request) }
+        if commentId < 0 {
+            return try await localCommentUpdate(taskId: taskId, commentId: commentId, bodyMd: request.bodyMd)
+        }
+        do {
+            return try await remote.updateComment(taskId: taskId, commentId: commentId, request)
+        } catch where OfflineFirstSupport.isNetworkError(error) {
+            do {
+                return try await localCommentUpdate(taskId: taskId, commentId: commentId, bodyMd: request.bodyMd)
+            } catch is LocalMemoError {
+                throw error
+            }
+        }
     }
 
     func deleteComment(taskId: Int, commentId: Int) async throws {
-        try await onlineOnly { try await self.remote.deleteComment(taskId: taskId, commentId: commentId) }
+        if commentId < 0 {
+            try await localCommentDelete(taskId: taskId, commentId: commentId)
+            return
+        }
+        do {
+            try await remote.deleteComment(taskId: taskId, commentId: commentId)
+        } catch where OfflineFirstSupport.isNetworkError(error) {
+            do {
+                try await localCommentDelete(taskId: taskId, commentId: commentId)
+            } catch is LocalMemoError {
+                throw error
+            }
+        }
+    }
+
+    private func localCommentUpdate(taskId: Int, commentId: Int, bodyMd: String) async throws -> Comment {
+        let updated: Comment = try await database.dbWriter.write { db in
+            guard let taskRow = try LocalTaskStore.fetchTaskRow(db, id: taskId) else {
+                throw LocalMemoError.commentNotFound
+            }
+            let taskUuid: String = taskRow["uuid"]
+            return try CommentOutbox.updateComment(
+                db,
+                issueUuid: taskUuid,
+                issueId: taskId,
+                commentId: commentId,
+                bodyMd: bodyMd
+            )
+        }
+        onLocalWrite()
+        return updated
+    }
+
+    private func localCommentDelete(taskId: Int, commentId: Int) async throws {
+        try await database.dbWriter.write { db in
+            guard let taskRow = try LocalTaskStore.fetchTaskRow(db, id: taskId) else {
+                throw LocalMemoError.commentNotFound
+            }
+            let taskUuid: String = taskRow["uuid"]
+            try CommentOutbox.deleteComment(db, issueUuid: taskUuid, commentId: commentId)
+        }
+        onLocalWrite()
     }
 
     /// Delegates a write to the server, translating "unreachable" into the

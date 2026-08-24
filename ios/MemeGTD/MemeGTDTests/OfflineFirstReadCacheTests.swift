@@ -248,10 +248,8 @@ final class OfflineFirstReadCacheTests: XCTestCase {
             XCTFail("Expected OfflineReadOnlyError")
         } catch is OfflineReadOnlyError {}
 
-        do {
-            _ = try await dataSource.createComment(taskId: 101, CreateCommentRequest(bodyMd: "hi"))
-            XCTFail("Expected OfflineReadOnlyError")
-        } catch is OfflineReadOnlyError {}
+        // Comments are NOT refused offline — they queue in the outbox
+        // (covered by OfflineCommentOutboxTests).
 
         // The local mirror stays untouched by refused writes.
         let count = try await database.dbWriter.read { db in

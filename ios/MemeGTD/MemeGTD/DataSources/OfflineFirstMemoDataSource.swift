@@ -269,39 +269,19 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
     }
 
     func createComment(memoId: Int, _ request: CreateCommentRequest) async throws -> Comment {
-        let uuid = UUIDv7.generate()
-        let now = ISO8601Millis.now()
-
+        // The op carries the PARENT memo's uuid: the server resolves the
+        // comment's issue through it, and FIFO guarantees the memo's own
+        // create op (a smaller outbox id) lands first. The outbox rules live
+        // in CommentOutbox, shared with the task/article data sources.
         let local: Comment? = try await database.dbWriter.write { db in
             guard let memoRow = try LocalMemoStore.fetchMemoRow(db, id: memoId) else { return nil }
             let memoUuid: String = memoRow["uuid"]
-
-            try LocalMemoStore.insertComment(
+            return try CommentOutbox.createComment(
                 db,
-                uuid: uuid,
-                memoUuid: memoUuid,
-                bodyMd: request.bodyMd,
-                now: now
-            )
-
-            // The op carries the PARENT memo's uuid: the server resolves the
-            // comment's issue through it, and FIFO guarantees the memo's own
-            // create op (a smaller outbox id) lands first.
-            try Self.enqueue(
-                db,
-                entity: "comment",
-                opType: "create",
-                targetUuid: uuid,
                 issueUuid: memoUuid,
-                payload: SyncPushPayload(bodyMd: request.bodyMd, createdAt: now),
-                baseUpdatedAt: nil,
-                now: now
+                issueId: memoId,
+                bodyMd: request.bodyMd
             )
-
-            guard let row = try LocalMemoStore.fetchCommentRow(db, uuid: uuid) else {
-                throw LocalMemoError.commentNotFound
-            }
-            return LocalMemoStore.comment(from: row, memoId: memoId)
         }
         if let local {
             onLocalWrite()
@@ -314,53 +294,16 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
     }
 
     func updateComment(memoId: Int, commentId: Int, _ request: UpdateCommentRequest) async throws -> Comment {
-        let now = ISO8601Millis.now()
-
         let local: Comment? = try await database.dbWriter.write { db in
             guard let memoRow = try LocalMemoStore.fetchMemoRow(db, id: memoId) else { return nil }
             let memoUuid: String = memoRow["uuid"]
-            guard let row = try LocalMemoStore.fetchCommentRow(db, memoUuid: memoUuid, id: commentId) else {
-                throw LocalMemoError.commentNotFound
-            }
-            let uuid: String = row["uuid"]
-            let serverUpdatedAt: String? = row["server_updated_at"]
-
-            try LocalMemoStore.updateCommentBody(db, uuid: uuid, bodyMd: request.bodyMd, now: now)
-
-            // Outbox compression, same rules as memo updates: merge into the
-            // newest un-sent op for this comment (a queued create absorbs the
-            // edit; consecutive queued updates collapse into one).
-            if var queued = try PendingOperationRecord.fetchOne(
+            return try CommentOutbox.updateComment(
                 db,
-                sql: """
-                    SELECT * FROM pending_operations
-                    WHERE target_uuid = ? AND entity = 'comment' AND state = 'queued'
-                      AND op_type IN ('create', 'update')
-                    ORDER BY id DESC LIMIT 1
-                    """,
-                arguments: [uuid]
-            ) {
-                var payload = try Self.decodePayload(queued.payload) ?? SyncPushPayload()
-                payload.bodyMd = request.bodyMd
-                queued.payload = try Self.encodePayload(payload)
-                try queued.update(db)
-            } else {
-                try Self.enqueue(
-                    db,
-                    entity: "comment",
-                    opType: "update",
-                    targetUuid: uuid,
-                    issueUuid: memoUuid,
-                    payload: SyncPushPayload(bodyMd: request.bodyMd),
-                    baseUpdatedAt: serverUpdatedAt,
-                    now: now
-                )
-            }
-
-            guard let updated = try LocalMemoStore.fetchCommentRow(db, uuid: uuid) else {
-                throw LocalMemoError.commentNotFound
-            }
-            return LocalMemoStore.comment(from: updated, memoId: memoId)
+                issueUuid: memoUuid,
+                issueId: memoId,
+                commentId: commentId,
+                bodyMd: request.bodyMd
+            )
         }
         if let local {
             onLocalWrite()
@@ -376,55 +319,7 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
         let handledLocally: Bool = try await database.dbWriter.write { db in
             guard let memoRow = try LocalMemoStore.fetchMemoRow(db, id: memoId) else { return false }
             let memoUuid: String = memoRow["uuid"]
-            guard let row = try LocalMemoStore.fetchCommentRow(db, memoUuid: memoUuid, id: commentId) else {
-                throw LocalMemoError.commentNotFound
-            }
-            let uuid: String = row["uuid"]
-            let serverUpdatedAt: String? = row["server_updated_at"]
-
-            let hasQueuedCreate = try Bool.fetchOne(
-                db,
-                sql: """
-                    SELECT EXISTS(
-                      SELECT 1 FROM pending_operations
-                      WHERE target_uuid = ? AND op_type = 'create' AND state = 'queued'
-                    )
-                    """,
-                arguments: [uuid]
-            ) ?? false
-
-            if hasQueuedCreate {
-                // create + delete while still queued cancel each other: the
-                // comment never reached the server, so drop the row and every
-                // pending op for it.
-                try db.execute(
-                    sql: "DELETE FROM pending_operations WHERE target_uuid = ?",
-                    arguments: [uuid]
-                )
-                try LocalMemoStore.hardDeleteComment(db, uuid: uuid)
-            } else {
-                // Soft-delete locally (mirroring the server) and enqueue the
-                // delete; queued updates are superseded and dropped.
-                let now = ISO8601Millis.now()
-                try LocalMemoStore.softDeleteComment(db, uuid: uuid, now: now)
-                try db.execute(
-                    sql: """
-                        DELETE FROM pending_operations
-                        WHERE target_uuid = ? AND op_type = 'update' AND state = 'queued'
-                        """,
-                    arguments: [uuid]
-                )
-                try Self.enqueue(
-                    db,
-                    entity: "comment",
-                    opType: "delete",
-                    targetUuid: uuid,
-                    issueUuid: memoUuid,
-                    payload: nil,
-                    baseUpdatedAt: serverUpdatedAt,
-                    now: now
-                )
-            }
+            try CommentOutbox.deleteComment(db, issueUuid: memoUuid, commentId: commentId)
             return true
         }
         if handledLocally {
@@ -442,10 +337,8 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
 
     private static func enqueue(
         _ db: Database,
-        entity: String = "memo",
         opType: String,
         targetUuid: String,
-        issueUuid: String? = nil,
         payload: SyncPushPayload?,
         baseUpdatedAt: String?,
         now: String
@@ -453,10 +346,10 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
         var record = PendingOperationRecord(
             id: nil,
             opId: UUID().uuidString.lowercased(),
-            entity: entity,
+            entity: "memo",
             opType: opType,
             targetUuid: targetUuid,
-            issueUuid: issueUuid,
+            issueUuid: nil,
             payload: try encodePayload(payload),
             baseUpdatedAt: baseUpdatedAt,
             createdAt: now

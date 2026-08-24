@@ -135,10 +135,12 @@ struct ArticleDetailView: View {
                         )
 
                         // === Timeline: Comments + activities interleaved ===
+                        // Comments stay writable offline (outbox path), so the
+                        // timeline is never gated by the read-only state.
                         IssueTimeline(
                             entries: viewModel.timelineEntries,
                             issueId: articleId,
-                            mutationsDisabled: isOfflineReadOnly,
+                            mutationsDisabled: false,
                             onEditComment: { comment in
                                 viewModel.replyBody = comment.bodyMd
                                 editingMode = .comment(comment.id)
@@ -185,7 +187,7 @@ struct ArticleDetailView: View {
                 FloatingComposer(
                     text: $viewModel.replyBody,
                     placeholder: editingMode == .none ? "Add a comment..." : "Edit...",
-                    disabled: viewModel.isLoading || isOfflineReadOnly,
+                    disabled: viewModel.isLoading,
                     submitting: viewModel.isSubmittingReply,
                     notice: editingMode == .none ? nil : "Editing",
                     onDismissNotice: {
