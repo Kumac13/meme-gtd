@@ -220,6 +220,93 @@ describe('Sync API (GET /api/sync/changes, POST /api/sync/push)', () => {
       assert.strictEqual(comments[0].bodyMd, 'offline comment');
     });
 
+    it('applies comment create/update/delete on task and article parents, not just memos', async () => {
+      // The iOS offline outbox queues comment ops for tasks and articles too:
+      // a comment op resolves its parent through issueUuid and never looks at
+      // the issue type. This pins that down — the whole offline-comment path
+      // on those screens rests on it.
+      const taskId = JSON.parse(
+        (await app.inject({ method: 'POST', url: '/api/tasks', payload: { title: 'server task' } })).body
+      ).id;
+      const articleId = JSON.parse(
+        (await app.inject({
+          method: 'POST',
+          url: '/api/articles',
+          payload: { title: 'server article', bodyMd: 'archived body' },
+        })).body
+      ).id;
+
+      // Parent uuids come from the change feed, which is exactly how the
+      // client learns them (REST responses carry no uuid).
+      const page = await pullChanges(0);
+      const uuidOf = (id: number) =>
+        page.changes.find((c: any) => c.entity === 'issue' && c.data.id === id).data.uuid;
+
+      for (const [parentId, parentUuid, path] of [
+        [taskId, uuidOf(taskId), 'tasks'],
+        [articleId, uuidOf(articleId), 'articles'],
+      ] as [number, string, string][]) {
+        const commentUuid = nextUuid();
+        const created = JSON.parse(
+          (
+            await push([
+              {
+                opId: nextOpId(),
+                entity: 'comment',
+                type: 'create',
+                uuid: commentUuid,
+                issueUuid: parentUuid,
+                payload: { bodyMd: 'written offline' },
+              },
+            ])
+          ).body
+        ).results[0];
+        assert.strictEqual(created.status, 'applied', `${path}: create`);
+
+        const listComments = async () =>
+          JSON.parse((await app.inject({ method: 'GET', url: `/api/${path}/${parentId}/comments` })).body);
+        let comments = await listComments();
+        assert.strictEqual(comments.length, 1, `${path}: comment is visible`);
+        assert.strictEqual(comments[0].bodyMd, 'written offline');
+        assert.strictEqual(comments[0].id, created.serverId);
+
+        const updated = JSON.parse(
+          (
+            await push([
+              {
+                opId: nextOpId(),
+                entity: 'comment',
+                type: 'update',
+                uuid: commentUuid,
+                payload: { bodyMd: 'edited offline' },
+                baseUpdatedAt: created.updatedAt,
+              },
+            ])
+          ).body
+        ).results[0];
+        assert.strictEqual(updated.status, 'applied', `${path}: update`);
+        comments = await listComments();
+        assert.strictEqual(comments[0].bodyMd, 'edited offline');
+
+        const deleted = JSON.parse(
+          (
+            await push([
+              {
+                opId: nextOpId(),
+                entity: 'comment',
+                type: 'delete',
+                uuid: commentUuid,
+                baseUpdatedAt: updated.updatedAt,
+              },
+            ])
+          ).body
+        ).results[0];
+        assert.strictEqual(deleted.status, 'applied', `${path}: delete`);
+        comments = await listComments();
+        assert.strictEqual(comments.length, 0, `${path}: comment is gone`);
+      }
+    });
+
     it('skips a comment create whose parent uuid is unknown', async () => {
       const response = await push([
         {

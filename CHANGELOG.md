@@ -23,6 +23,7 @@
 
 ### Tests
 
+- API の sync push に、comment 操作が memo 以外（task / article）の親でも create / update / delete が適用され、各 REST のコメント一覧に反映されることを検証するテストを追加（iOS のオフラインコメントはこの前提の上に成り立つため）。
 - iOS に Task / Article のオフラインコメント（作成・編集・削除・Outbox 圧縮・create+delete の相殺・未 push コメントの扱い・ミラー未同期 issue の読み取り専用維持）を検証するユニットテストを追加。
 
 ## 0.52.1 - 2026-08-10
