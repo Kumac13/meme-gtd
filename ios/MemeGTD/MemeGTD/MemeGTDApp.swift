@@ -14,6 +14,12 @@ struct MemeGTDApp: App {
         // exist right after launch. No feature reads from it yet (offline
         // support lands in later phases).
         _ = AppDatabase.shared
+        // Start server-reachability monitoring at launch. The singleton is
+        // otherwise created lazily by the first task/article view that
+        // observes it — but memo screens never do, so an outage that starts
+        // there would go completely undetected (no probes, no recovery loop)
+        // until the user happens to open a task or article screen.
+        _ = ConnectivityMonitor.shared
     }
 
     var body: some Scene {
