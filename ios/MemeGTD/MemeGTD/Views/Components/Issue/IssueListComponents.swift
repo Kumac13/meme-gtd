@@ -38,7 +38,9 @@ struct StandardIssueList<Item: Identifiable, RowContent: View>: View {
             }
         }
         .scrollDismissesKeyboard(.immediately)
-        .scrollEdgeEffectStyle(.soft, for: .bottom)
+        // iOS 27 で上端(navigation bar 下)の既定が .soft から .hard(境界線)に
+        // 変わったため、上端も明示して Liquid Glass のぼかしを維持する
+        .scrollEdgeEffectStyle(.soft, for: .all)
     }
 }
 

@@ -106,6 +106,8 @@ struct TemplateDetailView: View {
                     }
                 }
             }
+            // iOS 27 で上端の既定が .hard(境界線)に変わったため .soft を明示
+            .scrollEdgeEffectStyle(.soft, for: .top)
             .safeAreaBar(edge: .bottom) {
                 if editingMode != .none {
                     FloatingComposer(

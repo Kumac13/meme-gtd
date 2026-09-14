@@ -95,7 +95,8 @@ struct MemoListView: View {
                 }
             }
             .scrollDismissesKeyboard(.immediately)
-            .scrollEdgeEffectStyle(.soft, for: .bottom)
+            // iOS 27 で上端の既定が .hard(境界線)に変わったため .all で明示
+            .scrollEdgeEffectStyle(.soft, for: .all)
             .defaultScrollAnchor(viewModel.isDateFiltered ? .top : .bottom)
             // Recreate the ScrollView when the filter mode toggles so the
             // initial scroll offset is taken from defaultScrollAnchor again

@@ -91,7 +91,8 @@ struct MemoDetailView: View {
                 }
             }
             .scrollDismissesKeyboard(.immediately)
-            .scrollEdgeEffectStyle(.soft, for: .bottom)
+            // iOS 27 で上端の既定が .hard(境界線)に変わったため .all で明示
+            .scrollEdgeEffectStyle(.soft, for: .all)
             .refreshable {
                 await withCheckedContinuation { continuation in
                     Task { @MainActor in
