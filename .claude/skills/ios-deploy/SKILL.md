@@ -8,16 +8,12 @@ description: Use when the user asks to build, deploy, or install the iOS app. Al
 Build and deploy MemeGTD iOS app to both Simulator and physical device.
 This skill is the single source of truth for the deploy procedure and configuration values (the `.codex` copy points here).
 
-## <critical>絶対ルール: 実機を何があってもスキップしない</critical>
+## <critical>絶対ルール: 実機をスキップしない</critical>
 
-**IMPORTANT: 実機へのビルド・インストールは、いかなる理由があっても絶対にスキップしない。成功するまでやる。**
-
-「デバイスが unavailable」「タイムアウト」「No profiles」「No Accounts」は全て**過去に何度も発生し、全て復旧手順が確立済みの既知事象**である。これらを理由に実機をスキップして「Simulator は完了、実機はスキップ」と報告するのは、この Mac で何度も繰り返してきた**既知の誤り**であり、ユーザーから厳しく叱責されている。
-
-- 実機ビルド/インストールが失敗したら、**報告する前に**「実機の既知エラーと復旧手順」に従って自力で復旧し、成功させる。
-- ユーザーに「ケーブルを確認してください」「Xcode にサインインしてください」と依頼して作業を止めることは**禁止**。まず復旧手順を全部試す。
-- 実機の結果が「スキップ」「未完了」のまま報告を終えることは**禁止**。報告できる実機の結果は「成功」か、**全復旧手順を試し切った上での**失敗詳細のみ。
-- 実機の失敗を「デバイス未接続」「ログイン切れ」と診断してはならない。過去の同一診断は全て誤診だった。
+- 実機へのビルド・インストールは、自分の判断でスキップしない。
+- 実機が失敗したら、「実機失敗時の Todo」を上から順に全て実行する。
+- ユーザーに確認・依頼するのは「実機失敗時の Todo」の最終段階に達したときのみ。その前に聞かない。
+- 報告できる実機の結果は「成功」か、「Todo を全て実行した上での失敗（試した項目と結果を列挙）」のみ。
 
 ## Configuration
 
@@ -25,7 +21,7 @@ This skill is the single source of truth for the deploy procedure and configurat
 |-----|-------|
 | Project dir | `ios/MemeGTD/` |
 | Scheme | `MemeGTD` |
-| Simulator | `iPhone 17` |
+| Simulator | `iPhone 17`（UDID `8AE8F37B-DB36-4607-A4B5-D1E9BEFEA726`） |
 | Device ID | `711DF058-2471-5314-A487-F8682231A5F6` |
 | Bundle ID | `name.kumac.MemeGTD` |
 | DerivedData | `~/Library/Developer/Xcode/DerivedData/MemeGTD-anbnqzkhbpvbrqcsmlrystorxlsx` |
@@ -48,12 +44,53 @@ xcrun simctl list devices available | grep iPhone
 Run both builds in **parallel** using two Bash tool calls in a single message.
 The working directory must be `ios/MemeGTD/` (absolute path: `/Users/kumac13/ghq/github.com/Kumac13/meme-gtd/ios/MemeGTD`).
 
+### <critical>全コマンドをサンドボックス無効で実行する</critical>
+
+本スキルの `xcodebuild` / `xcrun simctl` / `xcrun devicectl` / `osascript` は**最初の 1 回目から必ず** Bash ツールの `dangerouslyDisableSandbox: true` で実行する。
+サンドボックス内で実行すると、以下の**偽エラー**が出てビルドが 1 行も進まない（2026-09-24 に発生。サンドボックス外では同じコマンドがそのまま通った）:
+
+- `CoreSimulator is out of date. Current version (...) is older than build version (...)`
+- `No locator class for device extension 'Xcode.Device.CoreDevice'` / `Symbol not found: _$s10CoreDevice...`
+- `Unable to find a device matching the provided destination specifier` （実機・シミュレータが両方見えない）
+- エラー B の `No Accounts` もサンドボックスが原因（メモリ `ios_signing_no_accounts_trap` 参照）
+
+これらは Xcode の再インストール・コンポーネント更新・再起動で直すものではない。まずサンドボックスを外して再実行する。
+
 ### Build 1: Simulator
 ```bash
 xcodebuild -scheme MemeGTD -destination 'platform=iOS Simulator,name=iPhone 17' build 2>&1 | grep -E '(error:|BUILD|FAILED)'
 ```
 
 ### Build 2: Device
+
+**Step 2-0（必須・毎回）: プロファイルの有効期限を先に確認する。**
+無料 Apple ID のプロファイルは**作成から 7 日で失効**する。失効後に xcodebuild を実行すると `No profiles for 'name.kumac.MemeGTD' were found` で落ちる（2026-08-12 / 08-21 / 09-08 / 09-24 に再発）。これはエラーではなく週 1 回の定常事象なので、**xcodebuild の前に**確認して先に再生成する。
+
+```bash
+cd ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/ && for f in *.mobileprovision; do security cms -D -i "$f" 2>/dev/null | plutil -extract Name raw -; security cms -D -i "$f" 2>/dev/null | plutil -extract ExpirationDate raw -; done; date -u +%Y-%m-%dT%H:%M:%SZ
+```
+
+`name.kumac.MemeGTD` と `name.kumac.MemeGTD.ShareExtension` の 2 件が**両方**あり、かつ ExpirationDate が現在時刻より **24 時間以上先**でなければ、Step 2-1 を実行する。条件を満たしていれば Step 2-1 は飛ばして Step 2-2 へ。
+
+**Step 2-1（条件付き）: 起動中の Xcode に AppleScript でビルドさせ、プロファイルを再生成する。**
+CLI の xcodebuild からはアカウントが見えず、`-allowProvisioningUpdates` でも生成できない。Xcode 本体にビルドさせるのが唯一の方法。
+```bash
+osascript -e 'with timeout of 540 seconds
+tell application "Xcode"
+  open "/Users/kumac13/ghq/github.com/Kumac13/meme-gtd/ios/MemeGTD/MemeGTD.xcodeproj"
+  delay 5
+  set wd to first workspace document
+  set ar to build wd
+  repeat until completed of ar
+    delay 3
+  end repeat
+  return (status of ar as string)
+end tell
+end timeout'
+```
+`succeeded` が返ったら Step 2-0 のコマンドで 2 件が新しい ExpirationDate で存在することを確認する。
+
+**Step 2-2: 実機ビルド。**
 ```bash
 xcodebuild -scheme MemeGTD -destination 'platform=iOS,id=711DF058-2471-5314-A487-F8682231A5F6' build 2>&1 | grep -E '(error:|BUILD|FAILED)'
 ```
@@ -61,10 +98,14 @@ xcodebuild -scheme MemeGTD -destination 'platform=iOS,id=711DF058-2471-5314-A487
 After both builds succeed, run install commands in **parallel**:
 
 ### Install on Simulator
+`iPhone 17` という名前のシミュレータは 2 台あるため UDID で指定する。未起動だと `Unable to lookup in current state: Shutdown` で失敗するので、先に boot する。
 ```bash
-xcrun simctl install "iPhone 17" ~/Library/Developer/Xcode/DerivedData/MemeGTD-anbnqzkhbpvbrqcsmlrystorxlsx/Build/Products/Debug-iphonesimulator/MemeGTD.app
-xcrun simctl terminate "iPhone 17" name.kumac.MemeGTD 2>/dev/null || true
-xcrun simctl launch "iPhone 17" name.kumac.MemeGTD
+SIM=8AE8F37B-DB36-4607-A4B5-D1E9BEFEA726
+xcrun simctl boot $SIM 2>/dev/null || true
+xcrun simctl bootstatus $SIM -b
+xcrun simctl install $SIM ~/Library/Developer/Xcode/DerivedData/MemeGTD-anbnqzkhbpvbrqcsmlrystorxlsx/Build/Products/Debug-iphonesimulator/MemeGTD.app
+xcrun simctl terminate $SIM name.kumac.MemeGTD 2>/dev/null || true
+xcrun simctl launch $SIM name.kumac.MemeGTD
 ```
 
 ### Install on Device
@@ -83,31 +124,24 @@ xcrun devicectl device install app --device 711DF058-2471-5314-A487-F8682231A5F6
 1. 数十秒待ってから `xcrun devicectl list devices` を再実行する（`available (paired)` に戻る。2026-09-08 に実証）。
 2. `available (paired)` になったら「Build 2: Device」を再実行する。
 3. まだ `unavailable` なら、1〜2 を最低 3 回（間隔 30 秒）繰り返す。
-4. それでも `unavailable` なら、エラー B の Xcode AppleScript ビルド（Xcode がデバイス接続を自ら再確立する）を実行し、再度 1 から試す。
+4. それでも `unavailable` なら、Step 2-1 の Xcode AppleScript ビルド（Xcode がデバイス接続を自ら再確立する）を実行し、再度 1 から試す。
 
 ### エラー B: `No profiles for 'name.kumac.MemeGTD' were found` / `No Accounts: Add a new account in Accounts settings`
 
-**偽シグナル。Xcode の Apple ID ログインは生きている。**（2026-08-12、08-21、09-08 に発生。毎回同じ手順で復旧済み）
-CLI の xcodebuild からアカウントが見えないだけで、`-allowProvisioningUpdates` を付けても直らない。
-**ユーザーに「サインインしてください」と求めることは絶対禁止。**（過去に二度この誤診をして強い不信を招いた）
+**Step 2-0 を実行していれば発生しない。** 発生したなら Step 2-0 を飛ばしたということなので、Step 2-0 → 2-1 → 2-2 をやり直す。
+`No Accounts` は偽シグナルで、Xcode の Apple ID ログインは生きている。**ユーザーに「サインインしてください」と求めることは絶対禁止。**（過去に二度この誤診をして強い不信を招いた）
 
-1. 起動中の Xcode に AppleScript でビルドさせ、プロファイルを再生成させる:
+### エラー D: `Timed out waiting for all destinations` + `needs to be unlocked to enable development services`
+
+エラー A と同じタイムアウト文言だが、原因は**実機の画面ロック**。`devicectl list devices` は `available (paired)` のまま。
+（2026-09-24 に発生。アンロック後に「Build 2: Device」がそのまま通った）
+
+1. ロック状態を確認する（`passcodeRequired: true` ならロック中）:
    ```bash
-   osascript -e 'with timeout of 540 seconds
-   tell application "Xcode"
-     open "/Users/kumac13/ghq/github.com/Kumac13/meme-gtd/ios/MemeGTD/MemeGTD.xcodeproj"
-     delay 5
-     set wd to first workspace document
-     set ar to build wd
-     repeat until completed of ar
-       delay 3
-     end repeat
-     return (status of ar as string)
-   end tell
-   end timeout'
+   xcrun devicectl device info lockState --device 00008140-00121D0C0238801C
    ```
-2. `ls ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/` で `.mobileprovision` が 2 件（MemeGTD / ShareExtension）生成されたことを確認する。
-3. 「Build 2: Device」を標準コマンドで再実行する（そのまま通る）。
+2. 20 秒間隔で最長 2 分ポーリングし、`passcodeRequired: false` になったら「Build 2: Device」を再実行する。
+3. 2 分経ってもロック中なら、ユーザーに「iPhone のロックを解除してください」とだけ依頼し、解除後に再実行する（これは物理操作でありユーザーにしかできない。これ以外の依頼はしない）。
 
 ### エラー C: `devicectl device install app` が失敗
 
