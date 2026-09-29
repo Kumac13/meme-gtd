@@ -72,9 +72,12 @@ cd ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/ && for f in *.mobi
 
 `name.kumac.MemeGTD` と `name.kumac.MemeGTD.ShareExtension` の 2 件が**両方**あり、かつ ExpirationDate が現在時刻より **24 時間以上先**でなければ、Step 2-1 を実行する。条件を満たしていれば Step 2-1 は飛ばして Step 2-2 へ。
 
-**Step 2-1（条件付き）: 起動中の Xcode に AppleScript でビルドさせ、プロファイルを再生成する。**
+**Step 2-1（条件付き）: Xcode に AppleScript でビルドさせ、プロファイルを再生成する。**
 CLI の xcodebuild からはアカウントが見えず、`-allowProvisioningUpdates` でも生成できない。Xcode 本体にビルドさせるのが唯一の方法。
+Xcode が未起動、またはサンドボックス内から起動された Xcode はアカウントを読めず GUI ビルドでも `No Accounts` になる（2026-09-15 に特定）。そのため**必ず一度 Xcode を終了し、サンドボックス無効の Bash から起動し直してから**ビルドする。1 回目が `failed` ならセッション復元前なので、そのままもう 1 回 `build` する（2 回目で `succeeded`）。
 ```bash
+osascript -e 'tell application "Xcode" to quit'; sleep 5
+open -a Xcode /Users/kumac13/ghq/github.com/Kumac13/meme-gtd/ios/MemeGTD/MemeGTD.xcodeproj; sleep 20
 osascript -e 'with timeout of 540 seconds
 tell application "Xcode"
   open "/Users/kumac13/ghq/github.com/Kumac13/meme-gtd/ios/MemeGTD/MemeGTD.xcodeproj"
