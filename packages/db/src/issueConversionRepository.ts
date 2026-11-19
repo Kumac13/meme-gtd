@@ -35,7 +35,7 @@ export function copyIssueToArticle(db: Database.Database, source: Issue) {
 /** 同じIssueをMemoへ移す。ID・UUID・日時・コメント・関連情報を保持する。 */
 export function transferIssueToMemo(db: Database.Database, source: Issue): Memo {
   const sourceId = source.id;
-  const body = [source.title ? `# ${source.title}` : '', source.bodyMd].filter(Boolean).join('\n\n');
+  const body = [source.title ?? '', source.bodyMd].filter(Boolean).join('\n\n');
   // updated_atも含め日時を保存する。server_seqはtype変更のトリガーで進む。
   db.prepare(`UPDATE issues SET type = 'memo', title = NULL, body_md = ?, status = NULL,
     scheduled_on = NULL, scheduled_start = NULL, scheduled_end = NULL, is_all_day = 0,

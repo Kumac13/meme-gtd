@@ -119,7 +119,7 @@ API契約は次の4段階で伝播する。**上流を変えたら下流を全�
 
 iOS の SwiftUI 実装は、リソース別画面を共通コンポーネントから合成する。画面全体を一つの汎用 View にせず、同じ意味と見た目を持つ安定した部品だけを `MemeGTD/Views/Components/` に置く。
 
-- `Foundation/`: モーダルヘッダー、フィードバック、ローディング、作成ボタンなど、ドメインに依存しない画面プリミティブ
+- `Foundation/`: `ConfirmationRequest` / `.confirmationModal` による実行前確認、モーダルヘッダー、フィードバック、ローディング、作成ボタンなど、ドメインに依存しない画面プリミティブ
 - `Issue/`: 相対時刻、ラベルチップ、Issue 種別バッジ、詳細カードなど、Memo / Task / Article / Template が共有する表示プリミティブ
 - `Forms/`: 作成フォームの遷移行、空選択表示、segmented picker。Task / Article / Template のフォームはこれらと共通の title / body / metadata section を合成する。metadata section が Label / Project 候補の取得、picker 表示、draft の確定・キャンセルを所有し、各作成画面は確定済みの選択値と保存処理だけを所有する
 - `Pickers/`: 選択状態、セクション見出し、Issue 候補表示、外部 URL 入力。`IssueLinkPicker` が recent/search の非同期状態、debounce、空表示、URL 入力、処理中表示を一括所有する。保存済み Detail と作成待ち Task の差は selection / mutation callback のアダプターだけに限定する
@@ -166,7 +166,7 @@ Templateを使うTask新規、Article新規、Task DetailのNew Taskは`Template
 
 Task / Memo / Article / Template一覧は`ListPageLayout`で検索、作成導線、filter、件数、empty、results、paginationの配置を共有する。各filterのtrigger、popover、Clearは`FilterDropdown`、選択toggleは`ToggleFilterButton`、documentの外側クリックlistenerは`useOutsideClick`が所有する。リソース固有のURL query、filter内容、ItemList、Memo mobile timelineは各一覧に残す。
 
-Markdown画像のpaste / drop / upload / cursor挿入は`MarkdownTextarea`が所有する。Issue form、comment、editable content、Project formは本文Bindingだけを渡す。DetailのCopy Allは`useCopyItemContent`、overflow操作は`ActionMenu`と`InlineDeleteConfirmation`を使い、画面ごとにclipboard feedback timerやbackdropを複製しない。
+Markdown画像のpaste / drop / upload / cursor挿入は`MarkdownTextarea`が所有する。Issue form、comment、editable content、Project formは本文Bindingだけを渡す。実行前の確認モーダルは`ConfirmationModal`を使い、native dialogのフォーカス制御・背景操作の抑止・キャンセル・処理中の多重実行防止・エラー表示を一箇所で所有する。呼び出し側は確認内容と実行callbackだけを渡す。DetailのCopy Allは`useCopyItemContent`、overflow操作は`ActionMenu`と`InlineDeleteConfirmation`を使い、画面ごとにclipboard feedback timerやbackdropを複製しない。
 
 Label / Project管理欄は`ManagementSection`、Task / Projectの編集可能な日付cardは`EditableSectionCard`、Taskの作成・詳細日時入力は`ScheduleDateTimeFields`を使う。Link追加は保存済みIssueと作成待ちTaskの両方で`LinkCreationEditor`を使い、永続化と重複検証だけをadapter callbackに残す。
 

@@ -11,6 +11,7 @@ struct TaskDetailView: View {
     @EnvironmentObject var memoStore: MemoStore
     @EnvironmentObject var articleStore: ArticleStore
     @State private var pendingConversion: String?
+    @State private var conversionConfirmation: ConfirmationRequest?
     @EnvironmentObject var dataSources: DataSourceProvider
     @StateObject private var viewModel: TaskDetailViewModel
     @Environment(\.dismiss) private var dismiss
@@ -222,15 +223,14 @@ struct TaskDetailView: View {
                 }
                 if let target = pendingConversion {
                     pendingConversion = nil
-                    Task {
-                        if target == "article", let id = await viewModel.archiveToArticle() {
-                            articleStore.needsReload = true
-                            onNavigateToLinkedIssue?(id, "article", viewModel.task?.title ?? "Article")
-                        } else if target == "memo", let id = await viewModel.transferToMemo() {
-                            memoStore.needsReload = true
-                            onTransferredToMemo?(id)
-                        }
-                    }
+                    conversionConfirmation = ConfirmationRequest(
+                        title: target == "article" ? "Archive to Article?" : "Transfer to Memo?",
+                        message: target == "article"
+                            ? "Copy this task and its comments to a new article? The original task will remain unchanged. The article and copied comments will use the current date and time."
+                            : "Change this task itself into a memo? It will no longer appear as a task. Original dates, comments, and relationships will be kept. Task status and scheduling will be removed.",
+                        confirmLabel: target == "article" ? "Archive to Article" : "Transfer to Memo",
+                        onConfirm: { performConversion(target) }
+                    )
                 }
                 if beginNewTaskAfterInfoDismiss {
                     beginNewTaskAfterInfoDismiss = false
@@ -314,6 +314,7 @@ struct TaskDetailView: View {
             )
             .presentationDetents([.large])
         }
+        .confirmationModal($conversionConfirmation)
         .alert("Delete Task", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
@@ -339,6 +340,19 @@ struct TaskDetailView: View {
             await viewModel.loadTask()
         }
         } // GeometryReader
+    }
+
+    private func performConversion(_ target: String) {
+        guard !isOfflineReadOnly else { return }
+        Task {
+            if target == "article", let id = await viewModel.archiveToArticle() {
+                articleStore.needsReload = true
+                onNavigateToLinkedIssue?(id, "article", viewModel.task?.title ?? "Article")
+            } else if target == "memo", let id = await viewModel.transferToMemo() {
+                memoStore.needsReload = true
+                onTransferredToMemo?(id)
+            }
+        }
     }
 
     // MARK: - Toolbar title

@@ -8,6 +8,10 @@
 - Webの通常詳細・サイドパネルとiOSのServer / Standaloneモードに両操作を追加。変換処理は共通のIssue契約を利用する。
 - Standaloneで作った手動ArticleをServerへ移行できるよう、同期のArticle作成にoriginを追加。
 
+### Bug Fixes
+- Web / iOSのArchive / Transferを各プラットフォーム共通の確認モーダル経由に変更。影響を表示し、キャンセル・二重送信防止・失敗時の再試行に対応。
+- Transfer時にタイトルへMarkdown見出しの `#` を追加せず、元の文字列をそのまま移すようDB層で修正。
+
 ### Tests
 - コピー・移動・日時・関連情報・トランザクションのAPIテスト、Web操作テスト、iOSローカル変換テストを追加。
 

@@ -255,7 +255,7 @@ export async function taskRoutes(app: FastifyInstance) {
   server.post('/api/tasks/:id/transfer-to-memo', {
     schema: {
       tags: ['Tasks'], summary: 'Transfer to Memo', operationId: 'transferTaskToMemo',
-      description: 'Change the task itself to a memo. Preserve issue identity, comments, relationships, and original timestamps. Move title into the body.',
+      description: 'Change the task itself to a memo. Preserve issue identity, comments, relationships, and original timestamps. Move the original title text into the body without adding Markdown formatting.',
       params: TaskIdParamsSchema,
       response: { 200: TransferTaskToMemoResponseSchema, 404: ErrorResponseSchema },
     },

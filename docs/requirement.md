@@ -296,10 +296,10 @@ stateDiagram-v2
 
 ### Task の保存先変更
 
-Web / iOS の Task 詳細から次の操作を利用できる。
+Web / iOS の Task 詳細から次の操作を利用できる。Web / iOSでは各プラットフォーム共通の確認モーダルで影響を表示し、明示的な確定後に実行する。キャンセル時は変更しない。
 
 - `Archive to Article`: 元Taskを残し、タイトル・本文・有効なコメント・関連情報を手動Articleへコピーする。コメントは独立したレコードとし、新しいArticleとコメントの作成・更新日時は操作時刻にする。元Taskへの `derived_from` リンクを作る。
-- `Transfer to Memo`: 同じIssueの種別をMemoへ変更する。ID・UUID・作成更新日時・コメント（IDと日時を含む）・ブックマーク・関連情報を保持する。タイトルはMemo本文の見出しへ移し、Task固有のステータス・予定・実績を外す。
+- `Transfer to Memo`: 同じIssueの種別をMemoへ変更する。ID・UUID・作成更新日時・コメント（IDと日時を含む）・ブックマーク・関連情報を保持する。タイトル文字列は装飾を加えずMemo本文へ移し、Task固有のステータス・予定・実績を外す。
 - iOS Serverモードではオンラインで実行し、StandaloneモードではローカルDB内で実行する。
 
 旧 `Archive to Memo` のWeb導線は廃止する。既存スクリプト向けの `task demote` と `/api/tasks/{id}/demote` は旧コピー動作の互換機能として残す。

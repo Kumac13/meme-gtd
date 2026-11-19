@@ -69,7 +69,7 @@ describe('Task archive and transfer', () => {
     assert.equal(response.statusCode, 200, response.body);
     assert.equal(response.json().memoId, task.id);
     const memo = (await app.inject({ method: 'GET', url: `/api/memos/${task.id}` })).json();
-    assert.equal(memo.bodyMd, '# Context\n\nTask body');
+    assert.equal(memo.bodyMd, 'Context\n\nTask body');
     assert.equal(memo.type, 'memo');
     assert.equal(memo.createdAt, before.created_at);
     assert.equal(memo.updatedAt, before.updated_at);

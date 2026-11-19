@@ -3295,7 +3295,7 @@ paths:
       summary: Transfer to Memo
       tags:
         - Tasks
-      description: Change the task itself to a memo. Preserve issue identity, comments, relationships, and original timestamps. Move title into the body.
+      description: Change the task itself to a memo. Preserve issue identity, comments, relationships, and original timestamps. Move the original title text into the body without adding Markdown formatting.
       parameters:
         - schema:
             type: string

@@ -41,6 +41,8 @@ describe('shared component boundaries (web)', () => {
       'utils/copyContent.ts',
       'utils/markdown.tsx',
     ]);
+    expectOwnedBy(webSrc, files, '<dialog', ['components/ConfirmationModal.tsx']);
+    expect(source(webSrc, 'components/TaskConversionActions.tsx')).toContain('ConfirmationModal');
     expectOwnedBy(webSrc, files, 'fixed inset-0', ['components/ActionMenu.tsx', 'components/SidePanel.tsx']);
   });
 
@@ -131,6 +133,12 @@ describe('shared component boundaries (web)', () => {
 });
 
 describe('shared component boundaries (iOS)', () => {
+  it('keeps task conversion confirmation on the common modal', () => {
+    const task = source(iosApp, 'Views/TaskDetailView.swift');
+    expect(task).toContain('.confirmationModal($conversionConfirmation)');
+    expect(task).toContain('ConfirmationRequest(');
+  });
+
   // CI（web-ci.yml）で唯一自動実行される iOS 境界チェック。
   // Xcode 側の同等チェックは MemeGTDTests/ComponentBoundaryTests.swift。
   const swiftFiles = listFiles(iosApp, ['.swift']);

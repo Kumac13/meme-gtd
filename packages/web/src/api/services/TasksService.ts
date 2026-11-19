@@ -1216,7 +1216,7 @@ export class TasksService {
     }
     /**
      * Transfer to Memo
-     * Change the task itself to a memo. Preserve issue identity, comments, relationships, and original timestamps. Move title into the body.
+     * Change the task itself to a memo. Preserve issue identity, comments, relationships, and original timestamps. Move the original title text into the body without adding Markdown formatting.
      * @param id Task ID
      * @returns any Default Response
      * @throws ApiError

@@ -24,6 +24,13 @@ final class ComponentBoundaryTests: XCTestCase {
         return files
     }
 
+    func testTaskConversionsUseSharedConfirmation() throws {
+        let files = try swiftFiles()
+        let task = try XCTUnwrap(files.first { $0.path == "Views/TaskDetailView.swift" })
+        XCTAssertTrue(task.contents.contains(".confirmationModal($conversionConfirmation)"))
+        XCTAssertTrue(task.contents.contains("ConfirmationRequest("))
+    }
+
     func testListViewModelsAdoptIssueListStateProviding() throws {
         let targets = try swiftFiles().filter { $0.path.hasSuffix("ListViewModel.swift") }
         XCTAssertGreaterThanOrEqual(targets.count, 4)
