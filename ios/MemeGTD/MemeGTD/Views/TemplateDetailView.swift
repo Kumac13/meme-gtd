@@ -94,6 +94,7 @@ struct TemplateDetailView: View {
             .background(Color.menuBackground)
             .scrollDismissesKeyboard(.immediately)
             .ignoresSafeArea(edges: .top)
+            .scrollEdgeEffectStyle(.soft, for: .vertical)
             .refreshable {
                 await withCheckedContinuation { continuation in
                     Task { @MainActor in

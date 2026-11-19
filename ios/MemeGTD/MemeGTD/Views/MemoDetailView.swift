@@ -91,7 +91,7 @@ struct MemoDetailView: View {
                 }
             }
             .scrollDismissesKeyboard(.immediately)
-            .scrollEdgeEffectStyle(.soft, for: .bottom)
+            .scrollEdgeEffectStyle(.soft, for: .vertical)
             .refreshable {
                 await withCheckedContinuation { continuation in
                     Task { @MainActor in
