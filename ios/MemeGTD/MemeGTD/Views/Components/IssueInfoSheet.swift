@@ -38,8 +38,10 @@ struct IssueInfoSheet<VM: IssueMetadataProvider>: View {
             } label: {
                 HStack {
                     Text(title)
+                        .foregroundColor(.textPrimary)
                     Spacer()
                     Image(systemName: icon)
+                        .foregroundColor(.textSecondary)
                 }
                 .font(.system(size: 15))
                 .padding(.horizontal, 16)
@@ -151,7 +153,7 @@ struct IssueInfoSheet<VM: IssueMetadataProvider>: View {
                                 Spacer()
                                 Text("Edit")
                                     .font(.system(size: 15))
-                                    .foregroundColor(.accent)
+                                    .foregroundColor(.textSecondary)
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 14)
@@ -174,7 +176,7 @@ struct IssueInfoSheet<VM: IssueMetadataProvider>: View {
                                 Spacer()
                                 Text("Edit")
                                     .font(.system(size: 15))
-                                    .foregroundColor(.accent)
+                                    .foregroundColor(.textSecondary)
                             }
 
                             if !viewModel.issueLabels.isEmpty {
@@ -217,7 +219,7 @@ struct IssueInfoSheet<VM: IssueMetadataProvider>: View {
                                 Spacer()
                                 Text("Edit")
                                     .font(.system(size: 15))
-                                    .foregroundColor(.accent)
+                                    .foregroundColor(.textSecondary)
                             }
 
                             if !viewModel.associatedProjects.isEmpty {
@@ -254,7 +256,7 @@ struct IssueInfoSheet<VM: IssueMetadataProvider>: View {
                                 Spacer()
                                 Text("Edit")
                                     .font(.system(size: 15))
-                                    .foregroundColor(.accent)
+                                    .foregroundColor(.textSecondary)
                             }
                         }
                         .disabled(isReadOnly)
@@ -313,7 +315,7 @@ struct IssueInfoSheet<VM: IssueMetadataProvider>: View {
                         } else {
                             Text("None")
                                 .font(.system(size: 13))
-                                .foregroundColor(.accentDark)
+                                .foregroundColor(.textSecondary)
                                 .padding(.top, 4)
                         }
                     }

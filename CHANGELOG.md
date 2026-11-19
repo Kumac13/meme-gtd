@@ -9,6 +9,7 @@
 - Standaloneで作った手動ArticleをServerへ移行できるよう、同期のArticle作成にoriginを追加。
 
 ### Bug Fixes
+- iOS情報シートのArchive / Transferに混入していた標準の青とEditの緑を既存の共通テキスト色へ統一。削除操作の赤は維持。
 - iOSの情報シートで項目数が多いと上端・下端が見切れる問題を修正。共通ヘッダーを固定し、操作一覧をスクロール可能にした。
 - Web / iOSのArchive / Transferを各プラットフォーム共通の確認モーダル経由に変更。影響を表示し、キャンセル・二重送信防止・失敗時の再試行に対応。
 - Transfer時にタイトルへMarkdown見出しの `#` を追加せず、元の文字列をそのまま移すようDB層で修正。
