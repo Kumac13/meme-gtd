@@ -24,6 +24,7 @@ xcodebuild test -project MemeGTD.xcodeproj -scheme MemeGTD -destination 'platfor
 
 新しい画面・ViewModel を作るとき、以下は共通実装を必ず使う。既存リソースからのコピーは禁止。所有権ルールの正は `docs/architecture.md`、構造チェックは `MemeGTDTests/ComponentBoundaryTests.swift`（Xcodeテスト）と Web側 `ComponentBoundaries.test.ts`（Web CI）が実行する:
 
+- Issue情報シート: `IssueInfoSheet` の `ModalHeader` を固定し、操作一覧を `ScrollView` に収める（項目追加でsheetの上下が見切れるのを防ぐ）
 - 実行前の確認モーダル: `ConfirmationRequest` と `.confirmationModal` を使う（確認文と確定時のcallbackを渡す）
 - 一覧セル（title・検索highlight・snippet・metadata行の配置）: `IssueCellLayout`
 - Label / Project の複数選択modal: `MultiSelectPickerShell`

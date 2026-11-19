@@ -144,7 +144,7 @@ DetailのLabel / Project操作は`IssueMetadataService`を単一の正とし、V
 
 Issue一覧ViewModelの追加読込とexport feedbackは`IssueListStateProviding`のdefault implementationを使う。Task / Memo / Article / TemplateはSwiftUIが直接監視する`@Published`状態、query構築、API response型、store適用を所有し、非同期lifecycleだけを共通実装へ渡す。
 
-Detailが共有UIへ公開する機能は`IssueMetadataProvider`、`IssueLinkProvider`、`IssueBookmarkProvider`、`IssueCopyProvider`へ分割する。`IssueInfoSheet`はMetadataだけを必須とし、LinksとBookmarkはoptional capabilityとして受け取る。TemplateはMetadataとCopyだけを実装し、未対応機能のno-opを持たない。
+Detailが共有UIへ公開する機能は`IssueMetadataProvider`、`IssueLinkProvider`、`IssueBookmarkProvider`、`IssueCopyProvider`へ分割する。`IssueInfoSheet`は`ModalHeader`を固定し、操作一覧を`ScrollView`へ収めてsheetの高さを超える項目へアクセス可能にする。Metadataだけを必須とし、LinksとBookmarkはoptional capabilityとして受け取る。TemplateはMetadataとCopyだけを実装し、未対応機能のno-opを持たない。
 
 Detailのscroll位置制御は`IssueDetailScrollShell`を使う。初期表示はinteraction policyとして指定し、Memoは最新位置、Task / Article / Templateは上端を正とする。composer展開とコメント投稿成功後の最下部移動は明示的なactionとしてshellへ渡し、非同期ロードやコメント件数の変化を投稿完了の代用にしない。
 
