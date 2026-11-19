@@ -53,6 +53,7 @@ GTD (Getting Things Done) ベースのローカルファースト個人タスク
 | Web UI | `packages/web` | REST API（OpenAPIから自動生成したクライアント） |
 | iOS アプリ + Share Extension | `ios/MemeGTD` | REST API（手書きSwiftモデル・要手動同期） |
 | Chrome 拡張 | `packages/extension` | REST API（`POST /api/articles`） |
+| MCP | `packages/mcp` | REST API（Task・Articleの作成/閲覧/更新、Memoの閲覧。削除なし） |
 
 ## パッケージ一覧と責務
 
@@ -67,6 +68,7 @@ GTD (Getting Things Done) ベースのローカルファースト個人タスク
 | `packages/cli` | oclif製CLI `mgtd`。**APIサーバーを経由せず core のサービスを直接呼ぶ** | `src/commands/`, `src/index.ts` |
 | `packages/web` | React 19 SPA。APIクライアントは openapi.yaml から自動生成（`src/api/` は生成物） | `src/App.tsx`, `src/pages/`, `src/components/` |
 | `packages/extension` | Chrome拡張（記事保存）+ iOS ShareExtension用のJS抽出バンドルのソース | `src/background/`, `src/ios-extractor.ts` |
+| `packages/mcp` | 既存APIを呼ぶ公式SDK v2製MCPサンプル。stdio / loopbackのStreamable HTTP。DB/coreに直接依存しない。起動・接続は `docs/mcp.md` | `src/server.ts`, `src/api.ts`, `src/http.ts`, `src/index.ts` |
 | `ios/MemeGTD` | SwiftUI iOSアプリ + Safari ShareExtension。**SwiftモデルはAPIスキーマの手書きミラー** | `MemeGTD/Models/`, `Shared/APIClient.swift` |
 | `schema/` | SQLマイグレーションファイル（連番、`packages/db` が実行） | `NNN_*.sql` |
 
