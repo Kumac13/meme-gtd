@@ -104,6 +104,14 @@ nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
         try await onlineOnly { try await self.remote.updateTask(id: id, request) }
     }
 
+    func archiveToArticle(id: Int) async throws -> Int {
+        try await onlineOnly { try await self.remote.archiveToArticle(id: id) }
+    }
+
+    func transferToMemo(id: Int) async throws -> Int {
+        try await onlineOnly { try await self.remote.transferToMemo(id: id) }
+    }
+
     func deleteTask(id: Int) async throws {
         try await onlineOnly { try await self.remote.deleteTask(id: id) }
     }

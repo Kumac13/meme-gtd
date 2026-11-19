@@ -63,6 +63,7 @@ export interface SyncPushOperation {
     actualStart?: string;
     actualEnd?: string;
     // article
+    origin?: 'web' | 'manual';
     meta?: {
       originalUrl?: string;
       siteName?: string;
@@ -272,7 +273,7 @@ export class SyncService {
         updatedAt: existing.updatedAt
       };
     }
-    if (!op.payload?.title || op.payload.bodyMd === undefined || !op.payload.meta?.originalUrl) {
+    if (!op.payload?.title || op.payload.bodyMd === undefined || (op.payload.origin !== 'manual' && !op.payload.meta?.originalUrl)) {
       return {
         opId: op.opId,
         status: 'skipped',
@@ -285,9 +286,10 @@ export class SyncService {
       uuid: op.uuid,
       title: op.payload.title,
       bodyMd: op.payload.bodyMd,
-      originalUrl: op.payload.meta.originalUrl,
-      siteName: op.payload.meta.siteName,
-      archivedAt: op.payload.meta.archivedAt,
+      origin: op.payload.origin ?? 'web',
+      originalUrl: op.payload.meta?.originalUrl,
+      siteName: op.payload.meta?.siteName,
+      archivedAt: op.payload.meta?.archivedAt,
       createdAt: op.payload.createdAt
     });
     return {

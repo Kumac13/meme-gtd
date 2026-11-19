@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.53.0 - 2026-11-19
+
+### New Features
+- Taskの `Archive to Memo` を `Archive to Article` に置き換え、Taskを残したまま手動Articleと独立したコメントを操作日時でコピーできるようにした。
+- `Transfer to Memo` を追加。同じIssueのID・UUID・コメント・日時・関連情報を保ってMemoへ移す。
+- Webの通常詳細・サイドパネルとiOSのServer / Standaloneモードに両操作を追加。変換処理は共通のIssue契約を利用する。
+- Standaloneで作った手動ArticleをServerへ移行できるよう、同期のArticle作成にoriginを追加。
+
+### Tests
+- コピー・移動・日時・関連情報・トランザクションのAPIテスト、Web操作テスト、iOSローカル変換テストを追加。
+
 ## 0.52.1 - 2026-08-10
 
 ### Bug Fixes

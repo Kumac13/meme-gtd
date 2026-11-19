@@ -182,3 +182,10 @@ export const DemoteTaskResponseSchema = z.object({
 });
 
 export type DemoteTaskResponse = z.infer<typeof DemoteTaskResponseSchema>;
+
+export const ArchiveTaskToArticleResponseSchema = z.object({
+  articleId: z.number().int().positive(),
+});
+export const TransferTaskToMemoResponseSchema = z.object({
+  memoId: z.number().int().positive(),
+});

@@ -15,6 +15,8 @@ struct IssueInfoSheet<VM: IssueMetadataProvider>: View {
     var onDelete: (() -> Void)?
     var onNewTask: (() -> Void)?
     var onAddChild: (() -> Void)?
+    var onArchiveToArticle: (() -> Void)?
+    var onTransferToMemo: (() -> Void)?
     var onPromoteToTask: (() -> Void)?
     var onNavigateToIssue: ((TargetIssue) -> Void)?
     var labelCountKeyPath: KeyPath<IssueLabel, Int> = \.memoCount
@@ -27,6 +29,26 @@ struct IssueInfoSheet<VM: IssueMetadataProvider>: View {
     @State private var selectedLabelNames: Set<String> = []
     @State private var selectedProjectIds: Set<Int> = []
     @State private var showJSONCopiedFeedback = false
+
+    private func conversionButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+        VStack(spacing: 0) {
+            Button {
+                dismiss()
+                action()
+            } label: {
+                HStack {
+                    Text(title)
+                    Spacer()
+                    Image(systemName: icon)
+                }
+                .font(.system(size: 15))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+            }
+            .disabled(isReadOnly)
+            Divider().padding(.leading, 16)
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -90,6 +112,13 @@ struct IssueInfoSheet<VM: IssueMetadataProvider>: View {
                     .disabled(isReadOnly)
 
                     Divider().padding(.leading, 16)
+                }
+
+                if let onArchiveToArticle {
+                    conversionButton("Archive to Article", icon: "archivebox", action: onArchiveToArticle)
+                }
+                if let onTransferToMemo {
+                    conversionButton("Transfer to Memo", icon: "note.text", action: onTransferToMemo)
                 }
 
                 // Add Child (optional, for tasks)

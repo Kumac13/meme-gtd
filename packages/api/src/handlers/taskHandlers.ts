@@ -355,3 +355,27 @@ export async function demoteTaskHandler(
     throw error;
   }
 }
+
+export async function archiveTaskToArticleHandler(
+  request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply
+) {
+  const taskId = Number(request.params.id);
+  try {
+    return reply.status(201).send(new TaskService({ db: request.server.db }).archiveToArticle(taskId));
+  } catch (error) {
+    if (error instanceof Error && (error.message.includes('not found') || error.message.includes('different type'))) throw new NotFoundError('Task', taskId);
+    throw error;
+  }
+}
+
+export async function transferTaskToMemoHandler(
+  request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply
+) {
+  const taskId = Number(request.params.id);
+  try {
+    return reply.status(200).send(new TaskService({ db: request.server.db }).transferToMemo(taskId));
+  } catch (error) {
+    if (error instanceof Error && (error.message.includes('not found') || error.message.includes('different type'))) throw new NotFoundError('Task', taskId);
+    throw error;
+  }
+}

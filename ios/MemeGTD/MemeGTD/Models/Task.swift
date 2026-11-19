@@ -161,3 +161,11 @@ struct PendingUrlLink: Identifiable {
     let url: String
     let title: String?
 }
+
+struct ArchiveTaskToArticleResponse: Decodable {
+    let articleId: Int
+}
+
+struct TransferTaskToMemoResponse: Decodable {
+    let memoId: Int
+}

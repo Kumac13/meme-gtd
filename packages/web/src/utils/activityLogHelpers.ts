@@ -5,6 +5,7 @@
 // Event types from OpenAPI spec
 type EventType =
   | 'task.created'
+  | 'issue.transferred'
   | 'task.updated'
   | 'task.status_changed'
   | 'task.deleted'
@@ -86,6 +87,7 @@ export function isPrimaryEntity(type: ActivityType): type is PrimaryEntityType {
  * Example: 'task.status_changed' -> { type: 'task', action: 'status changed' }
  */
 export function parseEventType(eventType: EventType): ParsedEventType {
+  if (eventType === 'issue.transferred') return { type: 'memo', action: 'transferred' };
   const [type, ...actionParts] = eventType.split('.');
   const action = actionParts.join('.').replace(/_/g, ' ');
   return { type: type as ActivityType, action };
@@ -147,6 +149,7 @@ function formatIssueIdFallback(issueType: string | null | undefined, issueId: nu
  */
 export function getActivityIssueId(activity: ActivityLogEntry): number | null {
   const { eventType, payload, issueId, projectId, labelId } = activity;
+  if (eventType === 'issue.transferred') return issueId ?? (payload.issue_id as number | undefined) ?? null;
 
   // Task events
   if (eventType.startsWith('task.')) {
@@ -210,6 +213,7 @@ export function getActivityTitle(activity: ActivityLogEntry): string {
       return extractString(payload.title) || extractString(payload.issue_title) || 'Unknown task';
 
     // Memo events
+    case 'issue.transferred':
     case 'memo.created':
     case 'memo.updated':
     case 'memo.deleted':
@@ -297,6 +301,7 @@ export function getActivityDetails(activity: ActivityLogEntry): string | null {
     case 'memo.bookmarked':
       // Backend uses 'is_bookmarked', support both for compatibility
       return (payload.is_bookmarked ?? payload.bookmarked) ? 'Bookmarked' : 'Unbookmarked';
+    case 'issue.transferred':
     case 'memo.created':
     case 'memo.updated':
     case 'memo.deleted':
@@ -371,6 +376,7 @@ export function getActivityLink(activity: ActivityLogEntry): string | null {
       return null;
 
     // Memo events
+    case 'issue.transferred':
     case 'memo.created':
     case 'memo.updated':
     case 'memo.bookmarked':

@@ -3236,10 +3236,116 @@ paths:
                   - error
                   - message
                 additionalProperties: false
+  /api/tasks/{id}/archive-to-article:
+    post:
+      operationId: archiveTaskToArticle
+      summary: Archive to Article
+      tags:
+        - Tasks
+      description: Copy the task and separate comments to a manual article using operation timestamps. The task remains unchanged.
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Task ID
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  articleId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                required:
+                  - articleId
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+  /api/tasks/{id}/transfer-to-memo:
+    post:
+      operationId: transferTaskToMemo
+      summary: Transfer to Memo
+      tags:
+        - Tasks
+      description: Change the task itself to a memo. Preserve issue identity, comments, relationships, and original timestamps. Move title into the body.
+      parameters:
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: path
+          name: id
+          required: true
+          description: Task ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  memoId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                required:
+                  - memoId
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
   /api/tasks/{id}/demote:
     post:
       operationId: demoteTask
-      summary: Demote task to memo
+      summary: Demote task to memo (legacy copy)
       tags:
         - Tasks
       description: Copy task content (title, body, comments) to create a new memo. The original task remains unchanged.
@@ -3266,6 +3372,7 @@ paths:
           name: id
           required: true
           description: Task ID
+      deprecated: true
       responses:
         "201":
           description: Default Response
@@ -6580,6 +6687,7 @@ paths:
             type: string
             enum:
               - task.created
+              - issue.transferred
               - task.updated
               - task.status_changed
               - task.deleted
@@ -6683,6 +6791,7 @@ paths:
                       type: string
                       enum:
                         - task.created
+                        - issue.transferred
                         - task.updated
                         - task.status_changed
                         - task.deleted
@@ -6849,6 +6958,7 @@ paths:
                       type: string
                       enum:
                         - task.created
+                        - issue.transferred
                         - task.updated
                         - task.status_changed
                         - task.deleted
@@ -7015,6 +7125,7 @@ paths:
                       type: string
                       enum:
                         - task.created
+                        - issue.transferred
                         - task.updated
                         - task.status_changed
                         - task.deleted
@@ -7474,13 +7585,19 @@ paths:
                           actualEnd:
                             type: string
                             description: Execution end stamp to preserve, ISO 8601 datetime (task create only)
+                          origin:
+                            type: string
+                            enum:
+                              - web
+                              - manual
+                            description: Article origin; defaults to web for legacy clients
                           meta:
                             type: object
                             properties:
                               originalUrl:
                                 type: string
                                 minLength: 1
-                                description: Source URL (required for article create)
+                                description: Source URL (required for web article create)
                               siteName:
                                 type: string
                                 description: Site name

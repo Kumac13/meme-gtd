@@ -293,3 +293,13 @@ stateDiagram-v2
 ---
 
 この文書は、`meme-gtd` プロジェクト全体の要件をまとめたものであり、CLI コマンドの詳細仕様は `docs/cli-commands.md` を、実装アーキテクチャは `docs/architecture.md` を参照すること。
+
+### Task の保存先変更
+
+Web / iOS の Task 詳細から次の操作を利用できる。
+
+- `Archive to Article`: 元Taskを残し、タイトル・本文・有効なコメント・関連情報を手動Articleへコピーする。コメントは独立したレコードとし、新しいArticleとコメントの作成・更新日時は操作時刻にする。元Taskへの `derived_from` リンクを作る。
+- `Transfer to Memo`: 同じIssueの種別をMemoへ変更する。ID・UUID・作成更新日時・コメント（IDと日時を含む）・ブックマーク・関連情報を保持する。タイトルはMemo本文の見出しへ移し、Task固有のステータス・予定・実績を外す。
+- iOS Serverモードではオンラインで実行し、StandaloneモードではローカルDB内で実行する。
+
+旧 `Archive to Memo` のWeb導線は廃止する。既存スクリプト向けの `task demote` と `/api/tasks/{id}/demote` は旧コピー動作の互換機能として残す。

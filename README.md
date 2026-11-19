@@ -3,6 +3,8 @@
 GTD (Getting Things Done) ベースのローカルファースト個人タスク管理ツール。
 CLI（`mgtd`）・REST API・Web UI・Chrome拡張・iOSアプリからメモ / タスク / 記事を一元管理する。
 
+Taskの詳細画面（Web / iOS）では、コンテクストとして残す `Archive to Article` と、同じIssueをメモへ移す `Transfer to Memo` を選べる。コメントはどちらも本文と分けて保持する。
+
 ## 動作前提
 
 - Node.js 22 以上（`.tool-versions` 参照）

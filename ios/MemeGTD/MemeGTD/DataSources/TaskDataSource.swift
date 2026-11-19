@@ -10,6 +10,8 @@ protocol TaskDataSource {
     func createTask(_ request: CreateTaskRequest) async throws -> TaskItem
     func updateTask(id: Int, _ request: UpdateTaskRequest) async throws -> TaskItem
     func deleteTask(id: Int) async throws
+    func archiveToArticle(id: Int) async throws -> Int
+    func transferToMemo(id: Int) async throws -> Int
     func bookmarkTask(id: Int) async throws -> TaskItem
     func unbookmarkTask(id: Int) async throws -> TaskItem
 
@@ -52,6 +54,16 @@ struct RemoteTaskDataSource: TaskDataSource {
 
     func unbookmarkTask(id: Int) async throws -> TaskItem {
         try await APIClient.shared.postReturning(path: "/api/tasks/\(id)/unbookmark")
+    }
+
+    func archiveToArticle(id: Int) async throws -> Int {
+        let response: ArchiveTaskToArticleResponse = try await APIClient.shared.postReturning(path: "/api/tasks/\(id)/archive-to-article")
+        return response.articleId
+    }
+
+    func transferToMemo(id: Int) async throws -> Int {
+        let response: TransferTaskToMemoResponse = try await APIClient.shared.postReturning(path: "/api/tasks/\(id)/transfer-to-memo")
+        return response.memoId
     }
 
     // MARK: - Comments

@@ -273,7 +273,7 @@ curl "http://localhost:3001/api/sync/changes?since=42&limit=500"
 | `memo` | create / update / delete | `bodyMd`, `isBookmarked`, `createdAt` | `uuid` |
 | `comment` | create / update / delete | `bodyMd`, `createdAt`（親はトップレベル `issueUuid`） | `uuid` |
 | `task` | **createのみ** | `title`（必須）, `bodyMd?`, `status?`, `taskKind?`, `scheduledStart/End?`, `isAllDay?`, `scheduledOn?`, `actualStart/End?`, `createdAt?`, `updatedAt?` | `uuid` |
-| `article` | **createのみ** | `title`, `bodyMd`, `meta.originalUrl`（必須）, `meta.siteName?`, `meta.archivedAt?`, `createdAt?` | `uuid` |
+| `article` | **createのみ** | `title`, `bodyMd`, `origin?`（省略時web）, `meta.originalUrl`（webのみ必須）, `meta.siteName?`, `meta.archivedAt?`, `createdAt?` | `uuid` |
 | `label` | **createのみ** | `name`（必須・自然キー）, `description?`, `createdAt?` | `name`（同名既存は `alreadyApplied` で既存idを返す） |
 | `issue_label` | **createのみ** | `issueUuid`, `labelName`（いずれも必須） | 既存の付与組み合わせ |
 | `link` | **createのみ** | `sourceIssueUuid`, `targetIssueUuid`, `linkType`（いずれも必須。`relates` は逆向き既存も同一視） | 既存の同組リンク |

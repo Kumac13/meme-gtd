@@ -182,7 +182,7 @@ Calendarを含むIssue詳細の右パネルは`ItemDetailPanel`を単一の正�
 |---|---|
 | Health | `/api/health`（DB接続・スキーマバージョン。異常時503） |
 | Memos | `/api/memos`, `/api/memos/{id}`, `/{id}/promote-preview`, `/{id}/bookmark`, `/{id}/unbookmark`, `/{memoId}/comments`, `/{memoId}/comments/{commentId}` |
-| Tasks | `/api/tasks`, `/api/tasks/{id}`, `/{id}/close`, `/{id}/cancel`, `/{id}/reopen`, `/{id}/bookmark`, `/{id}/unbookmark`, `/{id}/demote`, `/{taskId}/comments`, `/{taskId}/comments/{commentId}` |
+| Tasks | `/api/tasks`, `/api/tasks/{id}`, `/{id}/close`, `/{id}/cancel`, `/{id}/reopen`, `/{id}/bookmark`, `/{id}/unbookmark`, `/{id}/demote`（旧コピー互換）, `/{id}/archive-to-article`, `/{id}/transfer-to-memo`, `/{taskId}/comments`, `/{taskId}/comments/{commentId}` |
 | Labels | `/api/labels`, `/api/labels/{name}`, `/api/issues/{issueId}/labels`, `/api/issues/{issueId}/labels/{labelId}` |
 | Links | `/api/links`, `/api/links/{id}`, `/api/issues/{id}/links` |
 | URL Links | `/api/issues/{id}/url-links`, `/api/url-links/{id}` |
@@ -244,6 +244,12 @@ iOSのオフライン対応（Phase 2で導入）。iOS側はローカルDB + �
 - **Storage Mode（Server / Standalone）**: iOS は App Group 設定 `appMode` で動作モードが決まる。初回解決は「インストール直後 = standalone。ただしアプリを消さずアップデートした既存端末（apiUrl が残存）= server」で、解決結果を永続化する。切替は Settings のピッカーで行う。Standalone→Server の切替は移行そのもの（確認後に端末内データを全件バルクアップロードし、成功時のみモード確定。失敗時は Standalone のまま。冪等・一方向で、端末内データが無ければ実質切替のみ）。Server→Standalone への切替は不可（遮断ダイアログを表示。開発ビルドのみ検証用に許可）。Standalone はサーバー通信ゼロで、メモ・タスク・キーワード検索・ラベル・リンクが端末内 DB で完結する。ローカル CRUD 本体は `LocalMemoStore` / `LocalTaskStore` / `LocalCommentStore`（Outbox を知らない純粋なローカル CRUD 層）として OfflineFirst 実装と共有する。未対応ドメイン（記事/プロジェクト）は空レスポンス + 英語エラーの安全実装。Standalone の削除はハード削除（サーバー到達経路がなく tombstone の回収先がないため — Standalone→Server 移行の設計時に要考慮）
 - **Standalone のキーワード検索はサーバーの LIKE 実装をミラー**（コメント本文含む、issue 単位グルーピング）。FTS5 は採用しない — サーバー自身が日本語対応のため意図的に LIKE を使っている（`packages/db/CLAUDE.md`）ので、ローカルも同じ意味論に揃える
 - projects / project_items は change-feed 対象外（サーバー側ハード削除）のため、REST レスポンスのスナップショットを別テーブルにキャッシュする（`GET /api/projects` 成功ごとに全量入れ替え、所属プロジェクトは issue 単位入れ替え）
+
+### Issue のコピーと種別変更
+
+`IssueBase` を継承する `Memo` / `Task` / `Article` と、その共用型 `Issue` を変換元の契約とする。`packages/db/src/issueConversionRepository.ts` が元Issueを変更しないコピーと、同じIssueの種別変更を所有する。関連コメント・ラベル・プロジェクト・Issueリンク・URLリンクの処理を、変換元の種別ごとに複製しない。トランザクションとactivity記録はcoreの `IssueConversionService`、元種別の検証と公開する操作の選択はリソース別の入口が所有する。
+
+iOS Standalone では共通の `IssueRecord` を受け取る `LocalIssueConversionStore` が同じ責務を持つ。DataSourceは元種別の検証とトランザクションを担当する。現在公開するのはTaskの `Archive to Article` と `Transfer to Memo` のみで、他の組み合わせは公開しない。
 
 ## 設計意図（変更前に理解すべき判断）
 

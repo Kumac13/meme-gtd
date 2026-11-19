@@ -423,6 +423,20 @@ final class MigrationServiceTests: XCTestCase {
         ])
     }
 
+    func testArchivedTaskMigratesAsManualArticleWithSeparateComment() async throws {
+        let tasks = LocalTaskDataSource(database: database)
+        let task = try await tasks.createTask(CreateTaskRequest(title: "Archive source", bodyMd: "Body", status: nil, taskKind: nil, scheduledStart: nil, scheduledEnd: nil, isAllDay: nil))
+        _ = try await tasks.createComment(taskId: task.id, CreateCommentRequest(bodyMd: "Comment"))
+        _ = try await tasks.archiveToArticle(id: task.id)
+        let summary = try await makeService().migrate()
+        XCTAssertEqual(summary.skippedCount, 0)
+        let ops = transport.pushedRequests.flatMap { $0.operations }
+        let article = ops.first { $0.entity == .article }
+        XCTAssertEqual(article?.payload?.origin, "manual")
+        XCTAssertNil(article?.payload?.meta?.originalUrl)
+        XCTAssertEqual(ops.filter { $0.entity == .comment }.count, 2)
+    }
+
     // MARK: - Skip aggregation
 
     func testAggregatesServerSkipsAndLocalValidationSkips() async throws {

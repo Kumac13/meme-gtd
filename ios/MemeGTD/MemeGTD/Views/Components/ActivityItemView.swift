@@ -114,6 +114,10 @@ struct ActivityItemView: View {
             Text("removed from \(name)")
                 .font(.system(size: 12))
                 .foregroundColor(Color(.systemGray))
+        case "issue.transferred":
+            Text("Transferred to Memo")
+                .font(.system(size: 12))
+                .foregroundColor(Color(.systemGray))
         default:
             Text(activity.eventType)
                 .font(.system(size: 12))

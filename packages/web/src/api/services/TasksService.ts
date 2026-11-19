@@ -1192,7 +1192,54 @@ export class TasksService {
         });
     }
     /**
-     * Demote task to memo
+     * Archive to Article
+     * Copy the task and separate comments to a manual article using operation timestamps. The task remains unchanged.
+     * @param id Task ID
+     * @returns any Default Response
+     * @throws ApiError
+     */
+    public static archiveTaskToArticle(
+        id: string,
+    ): CancelablePromise<{
+        articleId: number;
+    }> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/tasks/{id}/archive-to-article',
+            path: {
+                'id': id,
+            },
+            errors: {
+                404: `Default Response`,
+            },
+        });
+    }
+    /**
+     * Transfer to Memo
+     * Change the task itself to a memo. Preserve issue identity, comments, relationships, and original timestamps. Move title into the body.
+     * @param id Task ID
+     * @returns any Default Response
+     * @throws ApiError
+     */
+    public static transferTaskToMemo(
+        id: string,
+    ): CancelablePromise<{
+        memoId: number;
+    }> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/tasks/{id}/transfer-to-memo',
+            path: {
+                'id': id,
+            },
+            errors: {
+                404: `Default Response`,
+            },
+        });
+    }
+    /**
+     * @deprecated
+     * Demote task to memo (legacy copy)
      * Copy task content (title, body, comments) to create a new memo. The original task remains unchanged.
      * @param id Task ID
      * @param requestBody

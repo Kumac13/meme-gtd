@@ -4,9 +4,13 @@ struct TaskDetailView: View {
     let taskId: Int
     let initialTitle: String?
     let onMenuTap: () -> Void
+    var onTransferredToMemo: ((Int) -> Void)?
     var onNavigateToLinkedIssue: ((Int, String, String) -> Void)?
 
     @EnvironmentObject var taskStore: TaskStore
+    @EnvironmentObject var memoStore: MemoStore
+    @EnvironmentObject var articleStore: ArticleStore
+    @State private var pendingConversion: String?
     @EnvironmentObject var dataSources: DataSourceProvider
     @StateObject private var viewModel: TaskDetailViewModel
     @Environment(\.dismiss) private var dismiss
@@ -35,11 +39,12 @@ struct TaskDetailView: View {
         case comment(Int)
     }
 
-    init(taskId: Int, initialTitle: String? = nil, onMenuTap: @escaping () -> Void, onNavigateToLinkedIssue: ((Int, String, String) -> Void)? = nil) {
+    init(taskId: Int, initialTitle: String? = nil, onMenuTap: @escaping () -> Void, onNavigateToLinkedIssue: ((Int, String, String) -> Void)? = nil, onTransferredToMemo: ((Int) -> Void)? = nil) {
         self.taskId = taskId
         self.initialTitle = initialTitle
         self.onMenuTap = onMenuTap
         self.onNavigateToLinkedIssue = onNavigateToLinkedIssue
+        self.onTransferredToMemo = onTransferredToMemo
         self._viewModel = StateObject(wrappedValue: TaskDetailViewModel(taskId: taskId))
     }
 
@@ -57,7 +62,7 @@ struct TaskDetailView: View {
                             TaskTitleSection(
                                 title: task.title,
                                 status: task.status,
-                                isReadOnly: isOfflineReadOnly,
+                                isReadOnly: isOfflineReadOnly || viewModel.isConverting,
                                 onStatusTap: {
                                     guard !isOfflineReadOnly else { return }
                                     showStatusPicker = true
@@ -215,6 +220,18 @@ struct TaskDetailView: View {
                 linkedIssueNavigation.performPending { target in
                     onNavigateToLinkedIssue?(target.id, target.type, target.title)
                 }
+                if let target = pendingConversion {
+                    pendingConversion = nil
+                    Task {
+                        if target == "article", let id = await viewModel.archiveToArticle() {
+                            articleStore.needsReload = true
+                            onNavigateToLinkedIssue?(id, "article", viewModel.task?.title ?? "Article")
+                        } else if target == "memo", let id = await viewModel.transferToMemo() {
+                            memoStore.needsReload = true
+                            onTransferredToMemo?(id)
+                        }
+                    }
+                }
                 if beginNewTaskAfterInfoDismiss {
                     beginNewTaskAfterInfoDismiss = false
                     newTaskCreation.beginChoosing()
@@ -228,7 +245,7 @@ struct TaskDetailView: View {
                 linkProvider: viewModel,
                 copyProvider: viewModel,
                 jsonCopyProvider: viewModel,
-                isReadOnly: isOfflineReadOnly,
+                isReadOnly: isOfflineReadOnly || viewModel.isConverting,
                 onEditTitle: {
                     if let task = viewModel.task {
                         viewModel.replyBody = task.title
@@ -248,6 +265,8 @@ struct TaskDetailView: View {
                         ))
                     }
                 },
+                onArchiveToArticle: { pendingConversion = "article" },
+                onTransferToMemo: { pendingConversion = "memo" },
                 onNavigateToIssue: { target in
                     linkedIssueNavigation.requestAfterDismiss(target)
                 },

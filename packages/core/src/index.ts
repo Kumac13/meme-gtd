@@ -1,3 +1,4 @@
+import { IssueConversionService } from './issueConversionService.js';
 import Database from 'better-sqlite3';
 import { ensureDatabase } from 'meme-gtd-db';
 import type { MgtdConfig } from 'meme-gtd-config';
@@ -548,6 +549,16 @@ export class TaskService {
     })();
   }
 
+  public archiveToArticle(taskId: number) {
+    return new IssueConversionService(this.db, this.options.sourceType)
+      .copyToArticle(getTask(this.db, taskId));
+  }
+
+  public transferToMemo(taskId: number) {
+    return new IssueConversionService(this.db, this.options.sourceType)
+      .transferToMemo(getTask(this.db, taskId));
+  }
+
   public demote(input: DemoteTaskInput) {
     return this.db.transaction(() => {
       return demoteTask(this.db, input);
@@ -681,14 +692,15 @@ export class ArticleService {
     uuid: string;
     title: string;
     bodyMd: string;
-    originalUrl: string;
+    originalUrl?: string;
+    origin?: 'web' | 'manual';
     siteName?: string;
     archivedAt?: string;
     createdAt?: string;
   }) {
     return this.db.transaction(() => {
       const { rewritten, mentionedIssueIds } = rewriteIssueMentions(this.db, input.bodyMd);
-      const article = createArticle(this.db, { ...input, origin: 'web', bodyMd: rewritten });
+      const article = createArticle(this.db, { ...input, origin: input.origin ?? 'web', bodyMd: rewritten });
       this.logger.logArticleCreated(
         article.id,
         input.title,
@@ -928,3 +940,5 @@ export {
   buildMemoPromotedPayload,
   buildArticleCreatedPayload,
 } from './activity-log/payload-builder.js';
+
+export { IssueConversionService } from './issueConversionService.js';

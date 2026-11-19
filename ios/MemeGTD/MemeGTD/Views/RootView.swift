@@ -119,6 +119,10 @@ struct RootView: View {
                         onMenuTap: { openMenu() },
                         onNavigateToLinkedIssue: { id, type, title in
                             navigateToIssue(id: id, type: type, title: title)
+                        },
+                        onTransferredToMemo: { id in
+                            if !navigationPath.isEmpty { navigationPath.removeLast() }
+                            navigateToIssue(id: id, type: "memo", title: "Memo")
                         }
                     )
                 }

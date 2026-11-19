@@ -98,9 +98,10 @@ export const SyncPushOperationSchema = z
         scheduledOn: z.string().optional().describe('Deprecated scheduled date YYYY-MM-DD (task create only, backward compatibility)'),
         actualStart: z.string().optional().describe('Execution start stamp to preserve, ISO 8601 datetime (task create only)'),
         actualEnd: z.string().optional().describe('Execution end stamp to preserve, ISO 8601 datetime (task create only)'),
+        origin: z.enum(['web', 'manual']).optional().describe('Article origin; defaults to web for legacy clients'),
         meta: z
           .object({
-            originalUrl: z.string().min(1).optional().describe('Source URL (required for article create)'),
+            originalUrl: z.string().min(1).optional().describe('Source URL (required for web article create)'),
             siteName: z.string().optional().describe('Site name'),
             archivedAt: z.string().optional().describe('Client-side archive time to preserve'),
           })
@@ -166,7 +167,7 @@ export const SyncPushOperationSchema = z
           'payload.bodyMd is required for article create operations'
         );
         requireField(
-          !!op.payload?.meta?.originalUrl,
+          op.payload?.origin === 'manual' || !!op.payload?.meta?.originalUrl,
           ['payload', 'meta', 'originalUrl'],
           'payload.meta.originalUrl is required for article create operations'
         );

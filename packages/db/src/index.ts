@@ -216,3 +216,4 @@ export {
   type SyncCommentRecord,
   type AppliedOpRecord
 } from './syncRepository.js';
+export { copyIssueToArticle, transferIssueToMemo } from './issueConversionRepository.js';
