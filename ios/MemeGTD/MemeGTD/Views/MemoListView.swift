@@ -95,7 +95,7 @@ struct MemoListView: View {
                 }
             }
             .scrollDismissesKeyboard(.immediately)
-            .scrollEdgeEffectStyle(.soft, for: .bottom)
+            .scrollEdgeEffectStyle(.soft, for: .vertical)
             .defaultScrollAnchor(viewModel.isDateFiltered ? .top : .bottom)
             // Recreate the ScrollView when the filter mode toggles so the
             // initial scroll offset is taken from defaultScrollAnchor again

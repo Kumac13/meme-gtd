@@ -38,7 +38,7 @@ struct StandardIssueList<Item: Identifiable, RowContent: View>: View {
             }
         }
         .scrollDismissesKeyboard(.immediately)
-        .scrollEdgeEffectStyle(.soft, for: .bottom)
+        .scrollEdgeEffectStyle(.soft, for: .vertical)
     }
 }
 

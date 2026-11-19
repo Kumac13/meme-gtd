@@ -123,7 +123,7 @@ struct TaskDetailView: View {
             .background(Color.menuBackground)
             .scrollDismissesKeyboard(.immediately)
             .ignoresSafeArea(edges: .top)
-            .scrollEdgeEffectStyle(.soft, for: .bottom)
+            .scrollEdgeEffectStyle(.soft, for: .vertical)
             .refreshable {
                 await withCheckedContinuation { continuation in
                     Task { @MainActor in
