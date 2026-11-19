@@ -158,11 +158,15 @@ export class SyncService {
                      */
                     actualEnd?: string;
                     /**
+                     * Article origin; defaults to web for legacy clients
+                     */
+                    origin?: 'web' | 'manual';
+                    /**
                      * Article metadata (article create only)
                      */
                     meta?: {
                         /**
-                         * Source URL (required for article create)
+                         * Source URL (required for web article create)
                          */
                         originalUrl?: string;
                         /**

@@ -1,3 +1,4 @@
+import TaskConversionActions from './TaskConversionActions';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
@@ -192,16 +193,7 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
         </svg>
         {copiedFormat === 'json' ? 'Copied!' : 'Copy All Contents with JSON'}
       </button>
-      <Link
-        to={`/memos/new?fromTask=${itemId}`}
-        onClick={onClose}
-        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-        </svg>
-        Archive to Memo
-      </Link>
+      <TaskConversionActions taskId={itemId} onConverted={() => { onItemUpdated?.(); onClose(); }} />
     </>
   ) : itemType === 'memo' ? (
     <>

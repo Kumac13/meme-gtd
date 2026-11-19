@@ -276,6 +276,35 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
         }
     }
 
+    @Published var isConverting = false
+
+    func archiveToArticle() async -> Int? {
+        guard !isConverting else { return nil }
+        isConverting = true
+        defer { isConverting = false }
+        do {
+            return try await dataSources.tasks.archiveToArticle(id: taskId)
+        } catch {
+            self.error = error.localizedDescription
+            return nil
+        }
+    }
+
+    func transferToMemo() async -> Int? {
+        guard !isConverting else { return nil }
+        isConverting = true
+        defer { isConverting = false }
+        do {
+            let memoId = try await dataSources.tasks.transferToMemo(id: taskId)
+            taskStore?.removeItem(taskId)
+            taskStore?.needsReload = true
+            return memoId
+        } catch {
+            self.error = error.localizedDescription
+            return nil
+        }
+    }
+
     func deleteTask() async -> Bool {
         do {
             try await dataSources.tasks.deleteTask(id: taskId)

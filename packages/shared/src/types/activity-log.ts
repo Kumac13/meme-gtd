@@ -10,6 +10,7 @@ export type SourceType = (typeof SOURCE_TYPES)[number];
 // Event type categories - defined as const arrays for runtime access
 export const ISSUE_EVENT_TYPES = [
   'task.created',
+  'issue.transferred',
   'task.updated',
   'task.status_changed',
   'task.deleted',

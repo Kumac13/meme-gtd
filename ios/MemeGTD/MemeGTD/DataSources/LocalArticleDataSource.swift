@@ -61,6 +61,16 @@ nonisolated final class LocalArticleDataSource: ArticleDataSource {
         }
     }
 
+    func listComments(articleId: Int) async throws -> [Comment] {
+        try await database.dbWriter.read { db in
+            guard let row = try LocalArticleStore.fetchArticleRow(db, id: articleId) else {
+                throw LocalArticleError.articleNotFound
+            }
+            let uuid: String = row["uuid"]
+            return try LocalCommentStore.listComments(db, issueUuid: uuid, issueId: articleId)
+        }
+    }
+
     // MARK: - Delete
 
     func deleteArticle(id: Int) async throws {

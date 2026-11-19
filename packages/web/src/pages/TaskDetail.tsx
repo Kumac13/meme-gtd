@@ -1,5 +1,6 @@
+import TaskConversionActions from '../components/TaskConversionActions';
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import type { IssueType } from 'meme-gtd-shared';
 import { TasksService } from '../api/services/TasksService';
 import ItemDetail, { type Item, type Comment } from '../components/ItemDetail';
@@ -185,15 +186,7 @@ export default function TaskDetail() {
         </svg>
         {copiedFormat === 'json' ? 'Copied!' : 'Copy All Contents with JSON'}
       </button>
-      <Link
-        to={`/memos/new?fromTask=${id}`}
-        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-        </svg>
-        Archive to Memo
-      </Link>
+      <TaskConversionActions taskId={Number(id)} />
     </>
   );
 

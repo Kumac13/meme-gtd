@@ -222,6 +222,7 @@ erDiagram
 - Diff Logging: 更新系イベントは `{ old, new }` 形式で変更前後を記録
 - Snapshotting: イベント発生時点の関連エンティティ名を焼き付け
 - イベントタイプ:
+  - Issue: `issue.transferred`（同じIssueの種別変更）
   - Task: `task.created`, `task.updated`, `task.status_changed`, `task.deleted`, `task.bookmarked`
   - Memo: `memo.created`, `memo.updated`, `memo.promoted`, `memo.deleted`, `memo.bookmarked`
   - Project: `project.created`, `project.updated`, `project.deleted`, `project.item_added`, `project.item_removed`

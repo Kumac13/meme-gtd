@@ -5,5 +5,6 @@
 このディレクトリで特に守ること:
 
 - 外側クリックで閉じる挙動は `hooks/useOutsideClick.ts`、クリップボード操作は `hooks/useCopyToClipboard.ts` / `utils/copyContent.ts`、画像 paste/drop/upload は `MarkdownTextarea` が所有する。これらを再実装しない
+- 確認モーダルは `ConfirmationModal` を使う。native `<dialog>` と実行中状態の管理はこの部品だけが所有する
 - 全画面バックドロップ（`fixed inset-0`）を持てるのは `ActionMenu` と `SidePanel` のみ
 - 複数画面で同じ意味を持つ表示を新たに共通化したら、選択表・`ComponentBoundaries.test.ts`・`docs/architecture.md` を同時に更新する（更新漏れは境界検査の対象外を生む）

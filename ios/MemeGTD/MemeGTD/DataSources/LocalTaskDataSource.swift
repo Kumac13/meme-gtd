@@ -115,6 +115,21 @@ nonisolated final class LocalTaskDataSource: TaskDataSource {
         }
     }
 
+    func archiveToArticle(id: Int) async throws -> Int {
+        try await database.dbWriter.write { db in
+            guard let row = try LocalTaskStore.fetchTaskRow(db, id: id) else { throw LocalTaskError.taskNotFound }
+            return try LocalIssueConversionStore.copyToArticle(db, source: try IssueRecord(row: row))
+        }
+    }
+
+    func transferToMemo(id: Int) async throws -> Int {
+        try await database.dbWriter.write { db in
+            guard let row = try LocalTaskStore.fetchTaskRow(db, id: id) else { throw LocalTaskError.taskNotFound }
+            try LocalIssueConversionStore.transferToMemo(db, source: try IssueRecord(row: row))
+            return id
+        }
+    }
+
     // MARK: - Delete
 
     func deleteTask(id: Int) async throws {

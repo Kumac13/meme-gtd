@@ -21,6 +21,52 @@ final class LocalTaskDataSourceTests: XCTestCase {
         labelSource = LocalLabelDataSource(database: database)
     }
 
+    func testArchiveCopiesCommentsWithOperationDatesAndPreservesTask() async throws {
+        let task = try await makeTask(title: "Context", bodyMd: "Body")
+        let comment = try await dataSource.createComment(taskId: task.id, CreateCommentRequest(bodyMd: "Comment"))
+        try await database.dbWriter.write { db in
+            try db.execute(sql: "UPDATE comments SET created_at = '2020-01-01', updated_at = '2020-02-01'")
+        }
+        let articleId = try await dataSource.archiveToArticle(id: task.id)
+        let source = LocalArticleDataSource(database: database)
+        let article = try await source.getArticle(id: articleId)
+        let copied = try await source.listComments(articleId: articleId)
+        XCTAssertNotEqual(articleId, task.id)
+        XCTAssertEqual(article.title, task.title)
+        XCTAssertEqual(article.bodyMd, task.bodyMd)
+        XCTAssertEqual(copied.count, 1)
+        XCTAssertNotEqual(copied.first?.id, comment.id)
+        XCTAssertEqual(copied.first?.bodyMd, comment.bodyMd)
+        XCTAssertEqual(copied.first?.createdAt, article.createdAt)
+        XCTAssertEqual(copied.first?.updatedAt, article.createdAt)
+        let original = try await dataSource.getTask(id: task.id)
+        XCTAssertEqual(original.createdAt, task.createdAt)
+        XCTAssertEqual(original.updatedAt, task.updatedAt)
+    }
+
+    func testTransferPreservesIdentityCommentsDatesAndBookmark() async throws {
+        let task = try await makeTask(title: "Memo", bodyMd: "Body", status: "next")
+        _ = try await dataSource.bookmarkTask(id: task.id)
+        let comment = try await dataSource.createComment(taskId: task.id, CreateCommentRequest(bodyMd: "Comment"))
+        let original = try await dataSource.getTask(id: task.id)
+        let memoId = try await dataSource.transferToMemo(id: task.id)
+        let source = LocalMemoDataSource(database: database)
+        let memo = try await source.getMemo(id: memoId)
+        let comments = try await source.listComments(memoId: memoId)
+        XCTAssertEqual(memoId, task.id)
+        XCTAssertEqual(memo.bodyMd, "# Memo\n\nBody")
+        XCTAssertEqual(memo.createdAt, original.createdAt)
+        XCTAssertEqual(memo.updatedAt, original.updatedAt)
+        XCTAssertEqual(memo.isBookmarked, true)
+        XCTAssertEqual(comments.first?.id, comment.id)
+        XCTAssertEqual(comments.first?.createdAt, comment.createdAt)
+        XCTAssertEqual(comments.first?.updatedAt, comment.updatedAt)
+        do {
+            _ = try await dataSource.getTask(id: task.id)
+            XCTFail("Transferred issue must no longer be a task")
+        } catch {}
+    }
+
     // MARK: - Helpers
 
     /// Local wall-clock datetime shape the server writes into

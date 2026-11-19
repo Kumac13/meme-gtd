@@ -125,6 +125,14 @@ export class ActivityLogger {
   // Memo Events
   // ============================================================
 
+  logIssueTransferred(issueId: number, oldType: IssueType, newType: IssueType, bodyMd: string): void {
+    createActivityLog(this.db, {
+      eventType: 'issue.transferred', sourceType: this.sourceType,
+      payload: { issue_id: issueId, issue_type: newType, body: bodyMd,
+        old_type: oldType, new_type: newType },
+    });
+  }
+
   logMemoCreated(memoId: number, bodyMd: string): void {
     createActivityLog(this.db, {
       eventType: 'memo.created',

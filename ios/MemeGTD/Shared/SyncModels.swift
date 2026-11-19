@@ -129,6 +129,7 @@ nonisolated struct SyncPushPayload: Codable {
     var actualStart: String?
     var actualEnd: String?
     // article
+    var origin: String?
     var meta: SyncPushArticleMeta?
     // label (name is the natural key)
     var name: String?

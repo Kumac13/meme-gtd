@@ -13,6 +13,8 @@ import {
   bookmarkTaskHandler,
   unbookmarkTaskHandler,
   demoteTaskHandler,
+  archiveTaskToArticleHandler,
+  transferTaskToMemoHandler,
 } from '../handlers/taskHandlers.js';
 import {
   listTaskCommentsHandler,
@@ -29,6 +31,8 @@ import {
   TaskQuerySchema,
   DemoteTaskRequestSchema,
   DemoteTaskResponseSchema,
+  ArchiveTaskToArticleResponseSchema,
+  TransferTaskToMemoResponseSchema,
   PaginatedTaskListResponseSchema,
 } from '../schemas/taskSchemas.js';
 import {
@@ -239,13 +243,32 @@ export async function taskRoutes(app: FastifyInstance) {
     unbookmarkTaskHandler
   );
 
+  server.post('/api/tasks/:id/archive-to-article', {
+    schema: {
+      tags: ['Tasks'], summary: 'Archive to Article', operationId: 'archiveTaskToArticle',
+      description: 'Copy the task and separate comments to a manual article using operation timestamps. The task remains unchanged.',
+      params: TaskIdParamsSchema,
+      response: { 201: ArchiveTaskToArticleResponseSchema, 404: ErrorResponseSchema },
+    },
+  }, archiveTaskToArticleHandler);
+
+  server.post('/api/tasks/:id/transfer-to-memo', {
+    schema: {
+      tags: ['Tasks'], summary: 'Transfer to Memo', operationId: 'transferTaskToMemo',
+      description: 'Change the task itself to a memo. Preserve issue identity, comments, relationships, and original timestamps. Move the original title text into the body without adding Markdown formatting.',
+      params: TaskIdParamsSchema,
+      response: { 200: TransferTaskToMemoResponseSchema, 404: ErrorResponseSchema },
+    },
+  }, transferTaskToMemoHandler);
+
   // POST /api/tasks/:id/demote - Demote task to memo
   server.post(
     '/api/tasks/:id/demote',
     {
       schema: {
         tags: ['Tasks'],
-        summary: 'Demote task to memo',
+        summary: 'Demote task to memo (legacy copy)',
+        deprecated: true,
         description: 'Copy task content (title, body, comments) to create a new memo. The original task remains unchanged.',
         operationId: 'demoteTask',
         params: TaskIdParamsSchema,

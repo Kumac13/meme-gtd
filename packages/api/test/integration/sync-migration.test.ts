@@ -167,6 +167,23 @@ describe('Sync push bulk migration (POST /api/sync/push)', () => {
       assert.strictEqual(replay.serverId, result.serverId);
     });
 
+    it('migrates manual articles created by task archive without a source URL', async () => {
+      const response = await app.inject({ method: 'POST', url: '/api/sync/push', payload: {
+        deviceId: 'manual-archive-device', operations: [{
+          opId: 'manual-archive-op', entity: 'article', type: 'create', uuid: 'manual-archive-uuid',
+          payload: { title: 'Archived task', bodyMd: 'Context', origin: 'manual',
+            createdAt: '2026-11-19T00:00:00.000Z', meta: { archivedAt: '2026-11-19T00:00:00.000Z' } },
+        }],
+      } });
+      assert.equal(response.statusCode, 200, response.body);
+      const result = response.json().results[0];
+      assert.equal(result.status, 'applied');
+      const article = (await app.inject({ method: 'GET', url: `/api/articles/${result.serverId}` })).json();
+      assert.equal(article.origin, 'manual');
+      assert.equal(article.meta.originalUrl, undefined);
+      assert.equal(article.createdAt, '2026-11-19T00:00:00.000Z');
+    });
+
     it('rejects an article create without meta.originalUrl (400)', async () => {
       const response = await push([
         {

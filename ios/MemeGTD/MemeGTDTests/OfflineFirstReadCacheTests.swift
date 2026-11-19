@@ -382,6 +382,9 @@ final class OfflineFirstReadCacheTests: XCTestCase {
 /// throws when the server is unreachable, so the fallback paths are exercised
 /// exactly as in the field.
 private struct UnreachableTaskRemote: TaskDataSource {
+    func archiveToArticle(id: Int) async throws -> Int { throw fail() }
+    func transferToMemo(id: Int) async throws -> Int { throw fail() }
+
     private func fail() -> Error { APIError.networkError(URLError(.notConnectedToInternet)) }
     func listTasks(queryItems: [URLQueryItem]) async throws -> TaskListResponse { throw fail() }
     func searchTasks(queryItems: [URLQueryItem]) async throws -> SearchTasksResponse { throw fail() }

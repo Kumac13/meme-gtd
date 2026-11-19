@@ -13,6 +13,7 @@ export type SourceType = z.infer<typeof SourceTypeSchema>;
 export const EventTypeSchema = z.enum([
   // Issue events (Task/Memo)
   'task.created',
+  'issue.transferred',
   'task.updated',
   'task.status_changed',
   'task.deleted',
