@@ -5,6 +5,8 @@ CLI（`mgtd`）・REST API・Web UI・Chrome拡張・iOSアプリからメモ / 
 
 Taskの詳細画面（Web / iOS）では、コンテクストとして残す `Archive to Article` と、同じIssueをメモへ移す `Transfer to Memo` を選べる。コメントはどちらも本文と分けて保持する。
 
+AIクライアント向けの[MCPサンプル](docs/mcp.md)も用意。既存APIを経由し、Task・Articleの作成／閲覧／更新とMemoの閲覧を提供する。削除ツールは提供しない。
+
 ## 動作前提
 
 - Node.js 22 以上（`.tool-versions` 参照）

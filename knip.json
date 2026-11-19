@@ -107,6 +107,15 @@
         "@types/chrome",
         "esbuild"
       ]
+    },
+    "packages/mcp": {
+      "entry": [
+        "src/index.ts"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "test/**/*.ts"
+      ]
     }
   },
   "ignore": [

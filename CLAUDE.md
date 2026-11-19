@@ -11,6 +11,7 @@ pnpmモノレポ（CLI / REST API / Web UI / Chrome拡張）+ iOSアプリ。単
 | 要件・仕様を確認したい | `docs/requirement.md` |
 | DBスキーマ・データ構造に触れる | `docs/er-diagram.md`（データモデルの正） |
 | CLIコマンドの仕様 | `docs/cli-commands.md` |
+| MCPツール・起動・接続 | `docs/mcp.md` |
 | REST APIのフィルタ・検索仕様 | `docs/api-filtering.md`（契約の正は `packages/api/docs/api/openapi.yaml`） |
 | バージョニングポリシー | `docs/versioning.md` |
 | ドキュメント自体を追加・変更する | `docs/CLAUDE.md`（カタログ・ガバナンス・書き方） |

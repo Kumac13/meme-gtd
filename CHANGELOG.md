@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.54.0 - 2026-11-19
+
+### New Features
+
+- 既存REST APIをラップするMCPサンプルを `packages/mcp` に追加。Task・Articleは作成/閲覧/更新、Memoは閲覧のみを提供し、削除ツールは公開しない。
+  - stdioとloopbackのStreamable HTTPに対応。入力/出力スキーマ、ページング、ツール属性、タイムアウトを備え、既定ではテストAPI・読み取り専用で起動する。
+
+### Tests
+
+- MCPクライアントによるHTTP/stdio結合テスト、RESTへの変換、入力不正、接続境界、書き込み再試行防止を検証。
+
 ## 0.53.1 - 2026-11-19
 
 ### Bug Fixes

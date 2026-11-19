@@ -20,6 +20,7 @@
 | `docs/versioning.md` | バージョニングポリシー | ルール自体の変更時のみ |
 | `docs/extension-setup.md` | Chrome拡張のビルド・インストール手順（人間向け） | 拡張のビルド・設定方法変更時 |
 | `docs/remote-access.md` | Tailscaleリモートアクセス設定（人間向け） | リモートアクセス構成の変更時 |
+| `docs/mcp.md` | MCPサンプルの設計・ツール・起動・接続境界 | MCPツール・設定・接続方式の変更時 |
 | `ios/README.md` | iOSセットアップ・実機デプロイ・デザインシステム | iOSビルド要件・デザインシステム変更時 |
 | `ios/CLAUDE.md` `schema/CLAUDE.md` `packages/*/CLAUDE.md` `packages/web/src/*/CLAUDE.md` | 各ディレクトリ固有の開発ルール（作業時に自動ロード）。入れ子の CLAUDE.md は「そのディレクトリでファイルを作る瞬間に考慮すべきこと」を書き、詳細は親へのポインタにする | そのディレクトリのルール変更時 |
 | `.claude/skills/*/SKILL.md` | 定型手順の唯一の正（release / api-schema-sync / db-migration / test-env / ios-deploy） | 手順が変わったとき・手順ミスが再発したとき |
