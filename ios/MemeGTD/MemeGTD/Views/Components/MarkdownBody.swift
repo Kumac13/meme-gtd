@@ -1,5 +1,6 @@
 import HighlightSwift
 import SwiftUI
+import UIKit
 import WebKit
 
 /// A view that renders markdown text with support for headings, code blocks,
@@ -77,7 +78,7 @@ struct MarkdownBody: View {
 
     private func headingView(level: Int, content: String) -> some View {
         let size: CGFloat
-        let weight: Font.Weight
+        let weight: UIFont.Weight
         switch level {
         case 1:
             size = fontSize + 6
@@ -93,9 +94,9 @@ struct MarkdownBody: View {
             weight = .semibold
         }
 
-        return inlineAttributedText(content)
-            .font(.system(size: size, weight: weight))
-            .foregroundColor(Color(.label))
+        return inlineMarkdownText(
+            content, font: .systemFont(ofSize: size, weight: weight), color: .label, lineSpacing: 0
+        )
             .padding(.top, level <= 2 ? 4 : 2)
     }
 
@@ -155,14 +156,7 @@ struct MarkdownBody: View {
     // MARK: - Blockquote
 
     private func blockquoteView(content: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            let lines = content.components(separatedBy: "\n")
-            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                if !line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    inlineMarkdownText(line)
-                }
-            }
-        }
+        inlineMarkdownText(content)
         .padding(.leading, 10)
         .overlay(alignment: .leading) {
             RoundedRectangle(cornerRadius: 1.5)
@@ -216,60 +210,66 @@ struct MarkdownBody: View {
 
     // MARK: - Inline markdown text (with accent-colored links)
 
-    private func inlineMarkdownText(_ content: String) -> some View {
-        inlineAttributedText(content)
-            .font(.system(size: fontSize))
-            .lineSpacing(4)
-            .foregroundColor(color)
-            .multilineTextAlignment(.leading)
-    }
-
-    private func inlineAttributedText(_ content: String) -> Text {
-        if var attributed = try? AttributedString(
+    private func inlineMarkdownText(
+        _ content: String,
+        font: UIFont? = nil,
+        color: UIColor? = nil,
+        lineSpacing: CGFloat = 4
+    ) -> some View {
+        let baseFont = font ?? .systemFont(ofSize: fontSize)
+        let baseColor = color ?? UIColor(self.color)
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineSpacing = lineSpacing
+        let parsed = (try? AttributedString(
             markdown: content,
             options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        ) {
-            // Recolor links to accent + promote path-only URLs so SwiftUI fires OpenURLAction
-            for run in attributed.runs {
-                if let url = run.link {
-                    let range = run.range
-                    attributed[range].foregroundColor = UIColor(red: 0x2d/255.0, green: 0xa4/255.0, blue: 0x4e/255.0, alpha: 1.0)
-                    attributed[range].underlineStyle = .single
-                    // `[#63](/tasks/63)` parses with `scheme == nil`. SwiftUI's Text
-                    // silently no-ops such links because there's nothing to "open".
-                    // Wrap the path under a custom scheme so OpenURLAction always
-                    // gets called — we still route through the same parser.
-                    if url.scheme == nil, !url.path.isEmpty {
-                        var components = URLComponents()
-                        components.scheme = "memegtd-internal"
-                        components.host = "internal"
-                        components.path = url.path.hasPrefix("/") ? url.path : "/\(url.path)"
-                        if let promoted = components.url {
-                            attributed[range].link = promoted
-                        }
-                    }
-                }
+        )) ?? AttributedString(content)
+        let rendered = NSMutableAttributedString()
+        for run in parsed.runs {
+            let intent = run.inlinePresentationIntent ?? []
+            let runFont = intent.contains(.code)
+                ? UIFont.monospacedSystemFont(ofSize: baseFont.pointSize, weight: .regular)
+                : baseFont
+            var traits = runFont.fontDescriptor.symbolicTraits
+            if intent.contains(.stronglyEmphasized) { traits.insert(.traitBold) }
+            if intent.contains(.emphasized) { traits.insert(.traitItalic) }
+            let descriptor = runFont.fontDescriptor.withSymbolicTraits(traits) ?? runFont.fontDescriptor
+            var attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont(descriptor: descriptor, size: runFont.pointSize),
+                .foregroundColor: baseColor,
+                .paragraphStyle: paragraph,
+            ]
+            if intent.contains(.strikethrough) {
+                attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
             }
-            // Highlight search keywords
-            if let query = searchQuery, !query.isEmpty {
-                let plainText = String(attributed.characters)
-                let lower = plainText.lowercased()
-                let queryLower = query.lowercased()
-                var searchStart = lower.startIndex
-                while let range = lower.range(of: queryLower, range: searchStart..<lower.endIndex) {
-                    let startOffset = lower.distance(from: lower.startIndex, to: range.lowerBound)
-                    let endOffset = lower.distance(from: lower.startIndex, to: range.upperBound)
-                    let attrStart = attributed.characters.index(attributed.characters.startIndex, offsetBy: startOffset)
-                    let attrEnd = attributed.characters.index(attributed.characters.startIndex, offsetBy: endOffset)
-                    attributed[attrStart..<attrEnd].foregroundColor = UIColor(Color.accentDarker)
-                    attributed[attrStart..<attrEnd].font = .system(size: fontSize, weight: .semibold)
-                    searchStart = range.upperBound
-                }
+            if let url = run.link {
+                attributes[.link] = selectableLinkURL(url)
             }
-            return Text(attributed)
-        } else {
-            return Text(content)
+            rendered.append(NSAttributedString(string: String(parsed[run.range].characters), attributes: attributes))
         }
+
+        if let query = searchQuery, !query.isEmpty {
+            let plainText = rendered.string
+            var searchStart = plainText.startIndex
+            while let range = plainText.range(of: query, options: .caseInsensitive, range: searchStart..<plainText.endIndex) {
+                rendered.addAttributes([
+                    .foregroundColor: UIColor(Color.accentDarker),
+                    .font: UIFont.systemFont(ofSize: baseFont.pointSize, weight: .semibold),
+                ], range: NSRange(range, in: plainText))
+                searchStart = range.upperBound
+            }
+        }
+        return SelectableText(content: rendered)
+    }
+
+    private func selectableLinkURL(_ url: URL) -> URL {
+        // 相対リンクも既存のアプリ内ルーティングに渡す。
+        guard url.scheme == nil, !url.path.isEmpty else { return url }
+        var components = URLComponents()
+        components.scheme = "memegtd-internal"
+        components.host = "internal"
+        components.path = url.path.hasPrefix("/") ? url.path : "/\(url.path)"
+        return components.url ?? url
     }
 }
 
@@ -498,6 +498,20 @@ private struct HighlightedCodeBlockView: View {
         return aliases[lang] ?? lang
     }
 
+    private var renderedCode: NSAttributedString {
+        let font = UIFont.monospacedSystemFont(ofSize: fontSize - 1, weight: .regular)
+        let fallbackColor = UIColor.white.withAlphaComponent(0.85)
+        var highlighted = highlightedCode ?? AttributedString(code)
+        for run in highlighted.runs {
+            let range = run.range
+            highlighted[range].uiKit.font = run.uiKit.font?.withSize(font.pointSize) ?? font
+            if run.uiKit.foregroundColor == nil {
+                highlighted[range].uiKit.foregroundColor = fallbackColor
+            }
+        }
+        return NSAttributedString(highlighted)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if !language.isEmpty {
@@ -509,31 +523,20 @@ private struct HighlightedCodeBlockView: View {
                     .padding(.bottom, 4)
             }
 
-            if let highlighted = highlightedCode {
-                Text(highlighted)
-                    .font(.system(size: fontSize - 1, design: .monospaced))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, language.isEmpty ? 8 : 4)
-                    .padding(.bottom, language.isEmpty ? 0 : 4)
-                    .textSelection(.enabled)
-            } else {
-                Text(code)
-                    .font(.system(size: fontSize - 1, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.85))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, language.isEmpty ? 8 : 4)
-                    .padding(.bottom, language.isEmpty ? 0 : 4)
-                    .textSelection(.enabled)
-            }
+            SelectableText(content: renderedCode)
+                .padding(.horizontal, 10)
+                .padding(.vertical, language.isEmpty ? 8 : 4)
+                .padding(.bottom, language.isEmpty ? 0 : 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Self.darkBg)
         .cornerRadius(8)
         .task(id: code) {
+            highlightedCode = nil
             guard !language.isEmpty else { return }
             let result = try? await Highlight()
                 .attributedText(code, language: resolvedLanguage, colors: .dark(.atomOne))
-            highlightedCode = result
+            if !_Concurrency.Task.isCancelled { highlightedCode = result }
         }
     }
 }
