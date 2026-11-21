@@ -22,7 +22,7 @@
   - 公開 API（OpenAPI 準拠、`packages/api`）。自動化や AI エージェントからの利用を想定。
   - Web UI（`packages/web`、React SPA）。API サーバーが同一ポートで配信する。
   - iOS アプリ + Safari Share Extension（`ios/MemeGTD`、SwiftUI）。
-    - メモ・タスク・コメントの本文は、長押しして Markdown のブロック内で範囲を選択し、コピーできる。
+    - メモ一覧やメモ・タスク・コメントの詳細画面では、本文を長押しして Markdown のブロック内で範囲を選択し、コピーできる。メモ一覧の短いタップはスレッドを開く。
   - Chrome 拡張（`packages/extension`、Web 記事の保存用）。
 - **データストア**:
   - ローカル SQLite（単一ファイル）が唯一のデータストア。CLI と API サーバーは同じ DB ファイルを共有する。

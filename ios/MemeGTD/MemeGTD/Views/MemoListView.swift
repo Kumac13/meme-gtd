@@ -81,11 +81,9 @@ struct MemoListView: View {
                         MemoTimelineItem(
                             memo: memo,
                             snippet: viewModel.searchMatchInfos[memo.id],
-                            searchQuery: !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil
+                            searchQuery: !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil,
+                            onOpen: openMemo
                         )
-                        .contentShape(Rectangle())
-                        .onTapGesture(perform: openMemo)
-                        .accessibilityAction(named: Text("Open Memo"), openMemo)
                         .padding(.horizontal, 16)
                     }
 
