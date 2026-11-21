@@ -24,3 +24,4 @@ Diagnostics are allowed only after the configured build/install commands fail.
 - Do not store deploy corrections in memory instead of the canonical skill file (`.claude/skills/ios-deploy/SKILL.md`).
 - Do not web-search broad Apple/DDI topics when the task is local CLI deployment.
 - Do not change target scope from Simulator+device to device-only unless the user explicitly asks.
+- **Never skip the physical device.** `unavailable`, `Timed out waiting for all destinations`, `No profiles`, and `No Accounts` are all known, recoverable conditions. Follow the recovery procedure in `.claude/skills/ios-deploy/SKILL.md` ("実機の既知エラーと復旧手順") until the device install succeeds. Do not report "device skipped" and do not ask the user to check the cable or sign in to Xcode.
