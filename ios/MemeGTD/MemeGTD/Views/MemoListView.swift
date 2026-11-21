@@ -74,19 +74,16 @@ struct MemoListView: View {
                             TimelineTimestamp(text: TimelineHelpers.formatTimelineTime(iso: memo.createdAt))
                         }
 
-                        Button(action: {
+                        let openMemo = {
                             HapticManager.selection()
                             navigationPath.append(MemoRoute(memoId: memo.id, initialBody: memo.bodyMd))
-                        }) {
-                            VStack(alignment: .leading, spacing: 0) {
-                                MemoTimelineItem(
-                                    memo: memo,
-                                    snippet: viewModel.searchMatchInfos[memo.id],
-                                    searchQuery: !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil
-                                )
-                            }
                         }
-                        .buttonStyle(.plain)
+                        MemoTimelineItem(
+                            memo: memo,
+                            snippet: viewModel.searchMatchInfos[memo.id],
+                            searchQuery: !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil,
+                            onOpen: openMemo
+                        )
                         .padding(.horizontal, 16)
                     }
 
