@@ -20,6 +20,7 @@ struct MemoListResponse: Codable {
 }
 
 struct CreateMemoRequest: Codable {
+    var projectIds: [Int]? = nil
     let bodyMd: String
 }
 

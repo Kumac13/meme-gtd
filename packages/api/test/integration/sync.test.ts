@@ -220,6 +220,17 @@ describe('Sync API (GET /api/sync/changes, POST /api/sync/push)', () => {
       assert.strictEqual(comments[0].bodyMd, 'offline comment');
     });
 
+    it('skips an offline reply when its parent has been deleted', async () => {
+      const uuid = nextUuid();
+      const created = await push([{ opId: nextOpId(), entity: 'memo', type: 'create', uuid, payload: { bodyMd: 'parent' } }]);
+      const id = created.json().results[0].serverId;
+      const deleted = await app.inject({ method: 'DELETE', url: `/api/memos/${id}` });
+      assert.ok(deleted.statusCode < 300);
+      const reply = await push([{ opId: nextOpId(), entity: 'comment', type: 'create',
+        uuid: nextUuid(), issueUuid: uuid, payload: { bodyMd: 'offline reply' } }]);
+      assert.equal(reply.json().results[0].status, 'skipped');
+    });
+
     it('skips a comment create whose parent uuid is unknown', async () => {
       const response = await push([
         {

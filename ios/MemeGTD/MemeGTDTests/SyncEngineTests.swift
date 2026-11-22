@@ -108,6 +108,33 @@ final class SyncEngineTests: XCTestCase {
 
     // MARK: - Push result handling
 
+    func testPushSplits501OperationsInOrder() async throws {
+        try await database.dbWriter.write { db in
+            for index in 0..<501 {
+                try OfflineThreadStore.enqueue(db, entity: .memo, uuid: "memo-\(index)",
+                    payload: SyncPushPayload(bodyMd: "memo"), now: ISO8601Millis.now())
+            }
+        }
+        let summary = await engine.syncNow()
+        XCTAssertTrue(summary.errors.isEmpty)
+        XCTAssertEqual(transport.pushedRequests.map { $0.operations.count }, [500, 1])
+        XCTAssertEqual(summary.remainingOutboxCount, 0)
+        XCTAssertEqual(transport.pushedRequests.last?.operations.first?.uuid, "memo-500")
+    }
+
+    func testUnmirroredReplyResolvesParentAfterPull() async throws {
+        _ = try await dataSource.createComment(memoId: 71, CreateCommentRequest(bodyMd: "still here"))
+        transport.changePages = [SyncChangesResponse(changes: [SyncChange(serverSeq: 1, entity: .issue,
+            op: .upsert, data: ["id": .number(71), "uuid": .string("parent-71"), "type": .string("memo")])],
+            latestSeq: 1, hasMore: false)]
+        _ = await engine.syncNow()
+        XCTAssertTrue(transport.pushedRequests.isEmpty)
+        let replies = try await dataSource.listComments(memoId: 71)
+        XCTAssertEqual(replies.map(\.bodyMd), ["still here"])
+        _ = await engine.syncNow()
+        XCTAssertEqual(transport.pushedRequests.first?.operations.first?.issueUuid, "parent-71")
+    }
+
     func testAppliedPushClearsOutboxAndStoresServerIdentity() async throws {
         let memo = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "to push"))
         XCTAssertLessThan(memo.id, 0, "Unsynced rows surface negative local ids")

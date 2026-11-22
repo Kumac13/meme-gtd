@@ -88,6 +88,34 @@ nonisolated final class OfflineFirstProjectDataSource: ProjectDataSource {
         }
     }
 
+    static func flushMemberships(database: AppDatabase) async throws {
+        let memberships = try await database.dbWriter.read { db in
+            try Row.fetchAll(db, sql: """
+                SELECT m.issue_uuid, m.project_id, i.server_id FROM pending_memberships m
+                JOIN issues i ON i.uuid = m.issue_uuid
+                WHERE i.server_id IS NOT NULL AND i.is_deleted = 0 AND m.needs_review = 0
+                """).map { ($0["issue_uuid"] as String, $0["project_id"] as Int, $0["server_id"] as Int) }
+        }
+        let remote = RemoteProjectDataSource()
+        for (uuid, project, issue) in memberships {
+            do {
+                _ = try await remote.addProjectItem(projectId: project, AddProjectItemRequest(issueId: issue))
+            } catch APIError.serverError(409, _) {
+                let confirmed = try await remote.listIssueProjects(issueId: issue)
+                guard confirmed.contains(where: { $0.id == project }) else { throw APIError.serverError(409, nil) }
+            } catch APIError.serverError(404, _) {
+                try await database.dbWriter.write { db in
+                    try db.execute(sql: "UPDATE pending_memberships SET needs_review = 1 WHERE issue_uuid = ? AND project_id = ?", arguments: [uuid, project])
+                }
+                continue
+            }
+            try await database.dbWriter.write { db in
+                try ProjectItemRecord(projectId: Int64(project), issueId: Int64(issue)).upsert(db)
+                try db.execute(sql: "DELETE FROM pending_memberships WHERE issue_uuid = ? AND project_id = ?", arguments: [uuid, project])
+            }
+        }
+    }
+
     // MARK: - Writes (online only, cache kept in step)
 
     func addProjectItem(projectId: Int, _ request: AddProjectItemRequest) async throws -> ProjectItem {

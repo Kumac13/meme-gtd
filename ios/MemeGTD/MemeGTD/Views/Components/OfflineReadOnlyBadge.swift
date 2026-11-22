@@ -11,11 +11,12 @@ import SwiftUI
 /// The state itself lives in `Services/ConnectivityMonitor.swift`, which
 /// judges "offline" by server reachability.
 struct OfflineReadOnlyBadge: View {
+    @ObservedObject private var connectivity = ConnectivityMonitor.shared
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: "wifi.slash")
                 .font(.system(size: 10, weight: .semibold))
-            Text("Read-only")
+            Text(connectivity.hasNoNetworkPath ? "Offline" : "Server unavailable")
                 .font(.system(size: 12, weight: .medium))
         }
         .padding(.horizontal, 10)

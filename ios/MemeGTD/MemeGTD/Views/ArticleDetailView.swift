@@ -185,7 +185,7 @@ struct ArticleDetailView: View {
                 FloatingComposer(
                     text: $viewModel.replyBody,
                     placeholder: editingMode == .none ? "Add a comment..." : "Edit...",
-                    disabled: viewModel.isLoading || isOfflineReadOnly,
+                    disabled: viewModel.isLoading || (editingMode != .none && isOfflineReadOnly),
                     submitting: viewModel.isSubmittingReply,
                     notice: editingMode == .none ? nil : "Editing",
                     onDismissNotice: {

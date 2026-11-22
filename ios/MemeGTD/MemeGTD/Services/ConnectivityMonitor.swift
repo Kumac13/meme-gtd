@@ -43,6 +43,8 @@ final class ConnectivityMonitor: ObservableObject {
 
     @Published private(set) var isOffline = false
 
+    @Published private(set) var hasNoNetworkPath = false
+
     private var pathMonitor: NWPathMonitor?
     private var recoveryTask: Task<Void, Never>?
     private var verifyTask: Task<Void, Never>?
@@ -148,8 +150,10 @@ final class ConnectivityMonitor: ObservableObject {
     /// server is.
     private func startPathMonitor() {
         let monitor = NWPathMonitor()
-        monitor.pathUpdateHandler = { _ in
+        monitor.pathUpdateHandler = { path in
+            let disconnected = path.status == .unsatisfied
             Task { @MainActor [weak self] in
+                self?.hasNoNetworkPath = disconnected
                 self?.pathDidChange()
             }
         }

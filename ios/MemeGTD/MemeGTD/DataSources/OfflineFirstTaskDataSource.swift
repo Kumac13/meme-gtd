@@ -1,34 +1,16 @@
 import Foundation
 import GRDB
 
-/// Offline-first `TaskDataSource` (offline support plan Phase 7), active only
-/// while the "Offline Sync (Beta)" setting is on.
-///
-/// Unlike memos, tasks are READ-ONLY offline:
-/// - READS go to the server first; when the server is unreachable
-///   (`APIError.networkError`) they fall back to the local GRDB mirror, which
-///   the sync pull keeps seeded with task rows. The local read itself lives
-///   in `LocalTaskStore` (shared with the Standalone `LocalTaskDataSource`).
-/// - WRITES are delegated to the server; when it is unreachable they throw
-///   `OfflineReadOnlyError` instead of queueing (tasks have no outbox path).
-///
-/// Successful remote list/detail responses are NOT written back into the
-/// local `issues` table: rows there carry sync bookkeeping (uuid,
-/// server_updated_at, server_seq) that a REST response does not, so an upsert
-/// here could disagree with the pull cursor and clobber sync state. The pull
-/// already carries every issue type, which keeps the cache fresh enough for a
-/// read-only fallback. Only projects/project_items (see
-/// OfflineFirstProjectDataSource) maintain an explicit response cache,
-/// because they are not part of the change feed at all.
-///
-/// Identity follows the app-wide convention: synced rows surface
-/// `id == server_id`; rows only exist locally via the pull, so negative
-/// (-rowid) ids never occur for tasks in practice but are resolved anyway.
+/// 同期済みの本文・コメントを端末から読み、記録を永続キューに追加する。
 nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
+    private var threads: OfflineThreadStore { OfflineThreadStore(database: database, onLocalWrite: onLocalWrite) }
     private let database: AppDatabase
     private let remote: TaskDataSource
 
-    init(database: AppDatabase, remote: TaskDataSource) {
+    private let onLocalWrite: () -> Void
+
+    init(database: AppDatabase, remote: TaskDataSource, onLocalWrite: @escaping () -> Void = {}) {
+        self.onLocalWrite = onLocalWrite
         self.database = database
         self.remote = remote
     }
@@ -36,6 +18,11 @@ nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
     // MARK: - Reads (remote first, local fallback)
 
     func listTasks(queryItems: [URLQueryItem]) async throws -> TaskListResponse {
+        let supported = ["limit", "offset", "label", "status", "bookmarked", "search", "scheduledFrom", "scheduledTo"]
+        if queryItems.allSatisfy({ supported.contains($0.name) }) {
+            let local = try await localListTasks(queryItems: queryItems)
+            if local.total > 0 { return local }
+        }
         do {
             return try await remote.listTasks(queryItems: queryItems)
         } catch where OfflineFirstSupport.isNetworkError(error) {
@@ -66,32 +53,15 @@ nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
     }
 
     func getTask(id: Int) async throws -> TaskItem {
-        do {
-            return try await remote.getTask(id: id)
-        } catch where OfflineFirstSupport.isNetworkError(error) {
-            let local: TaskItem? = try await database.dbWriter.read { db in
-                guard let row = try LocalTaskStore.fetchTaskRow(db, id: id) else { return nil }
-                return try LocalTaskStore.taskItem(from: row, db: db)
-            }
-            guard let local else { throw error }
-            return local
-        }
+        if let local = try await database.dbWriter.read({ db -> TaskItem? in
+            guard let row = try LocalTaskStore.fetchTaskRow(db, id: id) else { return nil }
+            return try LocalTaskStore.taskItem(from: row, db: db)
+        }) { return local }
+        return try await threads.loadBeforeInitialPull(kind: "task", id: id) { try await remote.getTask(id: id) }
     }
 
     func listComments(taskId: Int) async throws -> [Comment] {
-        do {
-            return try await remote.listComments(taskId: taskId)
-        } catch where OfflineFirstSupport.isNetworkError(error) {
-            let local: [Comment]? = try await database.dbWriter.read { db in
-                guard let taskRow = try LocalTaskStore.fetchTaskRow(db, id: taskId) else { return nil }
-                let taskUuid: String = taskRow["uuid"]
-                // Same order the server uses: created_at ASC, deleted rows
-                // excluded.
-                return try LocalCommentStore.listComments(db, issueUuid: taskUuid, issueId: taskId)
-            }
-            guard let local else { throw error }
-            return local
-        }
+        try await threads.comments(id: taskId) { try await remote.listComments(taskId: taskId) }
     }
 
     // MARK: - Writes (online only)
@@ -125,7 +95,7 @@ nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
     }
 
     func createComment(taskId: Int, _ request: CreateCommentRequest) async throws -> Comment {
-        try await onlineOnly { try await self.remote.createComment(taskId: taskId, request) }
+        try await threads.add(id: taskId, body: request.bodyMd)
     }
 
     func updateComment(taskId: Int, commentId: Int, _ request: UpdateCommentRequest) async throws -> Comment {
@@ -140,7 +110,9 @@ nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
     /// user-facing read-only error.
     private func onlineOnly<T>(_ operation: () async throws -> T) async throws -> T {
         do {
-            return try await operation()
+            let result = try await operation()
+            onLocalWrite()
+            return result
         } catch where OfflineFirstSupport.isNetworkError(error) {
             throw OfflineReadOnlyError()
         }

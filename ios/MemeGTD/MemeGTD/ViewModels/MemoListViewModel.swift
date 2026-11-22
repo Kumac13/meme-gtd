@@ -371,19 +371,9 @@ class MemoListViewModel: ObservableObject, IssueListStateProviding {
         isCreating = true
 
         do {
-            let request = CreateMemoRequest(bodyMd: body)
+            let request = CreateMemoRequest(projectIds: Array(projectFilters), bodyMd: body)
             let memo: Memo = try await dataSources.memos.createMemo(request)
             store?.insertItem(memo, at: 0)
-
-            // Auto-link to filtered projects
-            if !projectFilters.isEmpty {
-                for projectId in projectFilters {
-                    let _: ProjectItem? = try? await dataSources.projects.addProjectItem(
-                        projectId: projectId,
-                        AddProjectItemRequest(issueId: memo.id)
-                    )
-                }
-            }
 
             newMemoBody = ""
             HapticManager.notification(.success)

@@ -71,13 +71,12 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
         }
 
         // Load metadata, links & activity in parallel
+        isLoading = false
         async let metadataResult: () = loadMetadataOptions()
         async let linksResult: () = loadIssueLinks()
         async let urlLinksResult: () = loadUrlLinks()
         async let activityResult: () = loadActivityLog()
         _ = await (metadataResult, linksResult, urlLinksResult, activityResult)
-
-        isLoading = false
     }
 
     // MARK: - Fetch without UI update (for pull-to-refresh)
@@ -167,7 +166,7 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
 
     func addComment() async -> Bool {
         let body = replyBody.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !body.isEmpty else { return false }
+        guard !isSubmittingReply, !body.isEmpty else { return false }
 
         isSubmittingReply = true
         defer { isSubmittingReply = false }
@@ -181,7 +180,7 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
             comments.append(comment)
             replyBody = ""
             HapticManager.notification(.success)
-            await loadIssueLinks()
+            Task { await loadIssueLinks() }
             return true
         } catch {
             self.error = error.localizedDescription

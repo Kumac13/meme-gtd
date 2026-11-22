@@ -253,6 +253,21 @@ nonisolated final class AppDatabase {
                 """)
         }
 
+        migrator.registerMigration("004_offline_capture") { db in
+            try db.execute(sql: "ALTER TABLE issues ADD COLUMN origin TEXT")
+            try db.execute(sql: """
+                UPDATE issues SET origin = CASE WHEN json_extract(meta, '$.originalUrl') IS NULL
+                    THEN 'manual' ELSE 'web' END WHERE type = 'article' AND json_valid(coalesce(meta, '{}'))
+                """)
+            try db.execute(sql: """
+                CREATE TABLE pending_memberships (
+                    issue_uuid TEXT NOT NULL,
+                    project_id INTEGER NOT NULL,
+                    needs_review INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY(issue_uuid, project_id)
+                )
+                """)
+        }
         return migrator
     }
 

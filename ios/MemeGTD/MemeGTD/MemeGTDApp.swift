@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 @main
@@ -24,6 +25,15 @@ struct MemeGTDApp: App {
                 .environmentObject(articleStore)
                 .environmentObject(templateStore)
                 .environmentObject(dataSources)
+                .task {
+                    if Settings.shared.appMode == .server { _ = try? await ArticleTemplateCache.shared.refresh() }
+                }
+                .onReceive(ConnectivityMonitor.shared.$isOffline.removeDuplicates().dropFirst()) { offline in
+                    if !offline, let scheduler = dataSources.syncScheduler {
+                        scheduler.requestSync()
+                        Task { _ = try? await ArticleTemplateCache.shared.refresh() }
+                    }
+                }
                 .preferredColorScheme(.light)
         }
         .onChange(of: scenePhase) { _, newPhase in

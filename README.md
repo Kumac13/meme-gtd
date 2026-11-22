@@ -2,6 +2,7 @@
 
 GTD (Getting Things Done) ベースのローカルファースト個人タスク管理ツール。
 CLI（`mgtd`）・REST API・Web UI・Chrome拡張・iOSアプリからメモ / タスク / 記事を一元管理する。
+iOSのServerモードでは、圏外でもメモの記入、メモ・Task・Articleへのコメント追加、白紙・取得済みTemplateからの手動Article作成ができる。アプリの実行中または次回起動時に自動同期する。
 iOS ではメモ一覧やメモ・タスク・コメントの詳細画面で本文を長押しして、選んだ範囲をコピーできる。
 
 Taskの詳細画面（Web / iOS）では、コンテクストとして残す `Archive to Article` と、同じIssueをメモへ移す `Transfer to Memo` を選べる。コメントはどちらも本文と分けて保持する。

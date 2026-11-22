@@ -24,6 +24,7 @@ nonisolated struct IssueRecord: Codable, Equatable, FetchableRecord, Persistable
     var endDate: String?
     var duration: Int?
     var taskKind: String?
+    var origin: String?
     var meta: String?
     var isBookmarked: Bool = false
     var isDeleted: Bool = false
@@ -50,6 +51,7 @@ nonisolated struct IssueRecord: Codable, Equatable, FetchableRecord, Persistable
         case endDate = "end_date"
         case duration
         case taskKind = "task_kind"
+        case origin
         case meta
         case isBookmarked = "is_bookmarked"
         case isDeleted = "is_deleted"

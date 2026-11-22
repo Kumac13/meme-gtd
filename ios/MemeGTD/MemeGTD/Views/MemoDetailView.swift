@@ -134,13 +134,13 @@ struct MemoDetailView: View {
                     onSubmit: {
                         if editingMemo {
                             Task {
-                                await viewModel.updateMemo(bodyMd: viewModel.replyBody)
+                                guard await viewModel.updateMemo(bodyMd: viewModel.replyBody) else { return }
                                 editingMemo = false
                                 viewModel.replyBody = ""
                             }
                         } else if let commentId = editingCommentId {
                             Task {
-                                await viewModel.updateComment(commentId, bodyMd: viewModel.replyBody)
+                                guard await viewModel.updateComment(commentId, bodyMd: viewModel.replyBody) else { return }
                                 editingCommentId = nil
                                 viewModel.replyBody = ""
                             }

@@ -45,6 +45,7 @@ nonisolated enum LocalMemoStore {
         var search: String?
         var createdFrom: String?
         var createdTo: String?
+        var projectIds: [Int] = []
         var hasProjectFilter = false
 
         init(queryItems: [URLQueryItem]) {
@@ -71,6 +72,7 @@ nonisolated enum LocalMemoStore {
                     createdTo = item.value
                 case "projectId":
                     hasProjectFilter = true
+                    projectIds = (item.value ?? "").split(separator: ",").compactMap { Int($0) }
                 default:
                     break
                 }
@@ -93,6 +95,16 @@ nonisolated enum LocalMemoStore {
         var conditions = ["i.type = 'memo'", "i.is_deleted = 0"]
         var arguments: [DatabaseValueConvertible] = []
 
+        if query.hasProjectFilter {
+            let ids = query.projectIds
+            let placeholders = ids.map { _ in "?" }.joined(separator: ",")
+            conditions.append("""
+                (i.uuid IN (SELECT issue_uuid FROM pending_memberships WHERE project_id IN (\(placeholders)))
+                 OR i.server_id IN (SELECT issue_id FROM project_items WHERE project_id IN (\(placeholders))))
+                """)
+            arguments.append(contentsOf: ids)
+            arguments.append(contentsOf: ids)
+        }
         if query.bookmarked {
             conditions.append("i.is_bookmarked = 1")
         }

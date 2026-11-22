@@ -21,6 +21,7 @@ struct Article: Codable, Identifiable {
 }
 
 struct CreateManualArticleRequest: Codable {
+    var projectIds: [Int]? = nil
     let title: String
     let bodyMd: String
     let labels: [String]?

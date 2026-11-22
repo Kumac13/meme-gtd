@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 struct ArticleListView: View {
@@ -50,6 +51,7 @@ struct ArticleListView: View {
         .safeAreaInset(edge: .top) {
             VStack(spacing: 0) {
                 OfflineReadOnlyIndicator()
+                OfflineQueueStatus()
                 IssueListFilterBar {
                     FilterPill(
                         label: viewModel.originFilter == "all" ? "Origin" : viewModel.originFilter.capitalized,
@@ -192,6 +194,9 @@ struct ArticleListView: View {
                 isPresented: viewModel.isLoading && articleStore.articles.isEmpty,
                 message: "Loading articles..."
             )
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .syncEngineDidChangeData).receive(on: DispatchQueue.main)) { _ in
+            Task { await viewModel.loadArticles() }
         }
         .task {
             viewModel.store = articleStore

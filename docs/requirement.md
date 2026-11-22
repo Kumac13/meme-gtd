@@ -304,3 +304,8 @@ Web / iOS の Task 詳細から次の操作を利用できる。Web / iOSでは�
 - iOS Serverモードではオンラインで実行し、StandaloneモードではローカルDB内で実行する。
 
 旧 `Archive to Memo` のWeb導線は廃止する。既存スクリプト向けの `task demote` と `/api/tasks/{id}/demote` は旧コピー動作の互換機能として残す。
+
+## iOSのServerモードでのオフライン記録
+
+- メモ一覧での連続入力、同期済みメモ・Task・Articleの閲覧とコメント追加、白紙・取得済みTemplateからの手動Article作成は端末で完結する。
+- 端末保存とサーバー反映を区別する。再起動をまたいで本文と親子関係を保持し、接続回復後または次回アクティブ時に自動で送信する。

@@ -67,14 +67,13 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
         }
 
         // Load metadata, links & activity in parallel
+        await loadComments()
+        isLoading = false
         async let metadataResult: () = loadMetadataOptions()
         async let linksResult: () = loadIssueLinks()
         async let urlLinksResult: () = loadUrlLinks()
         async let activityResult: () = loadActivityLog()
-        async let commentsResult: () = loadComments()
-        _ = await (metadataResult, linksResult, urlLinksResult, activityResult, commentsResult)
-
-        isLoading = false
+        _ = await (metadataResult, linksResult, urlLinksResult, activityResult)
     }
 
     // MARK: - Fetch without UI update (for pull-to-refresh)
@@ -157,7 +156,7 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
 
     func addComment() async -> Bool {
         let body = replyBody.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !body.isEmpty else { return false }
+        guard !isSubmittingReply, !body.isEmpty else { return false }
         isSubmittingReply = true
         defer { isSubmittingReply = false }
         do {

@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 struct TaskListView: View {
@@ -67,6 +68,7 @@ struct TaskListView: View {
         .safeAreaInset(edge: .top) {
             VStack(spacing: 0) {
                 OfflineReadOnlyIndicator()
+                OfflineQueueStatus()
 
                 IssueListFilterBar {
                     FilterPill(
@@ -231,6 +233,9 @@ struct TaskListView: View {
                 isPresented: viewModel.isLoading && taskStore.tasks.isEmpty,
                 message: "Loading tasks..."
             )
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .syncEngineDidChangeData).receive(on: DispatchQueue.main)) { _ in
+            Task { await viewModel.loadTasks() }
         }
         .task {
             viewModel.store = taskStore

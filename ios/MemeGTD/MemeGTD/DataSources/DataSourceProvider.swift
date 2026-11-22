@@ -9,7 +9,8 @@ import Foundation
 @MainActor
 private enum SharedSync {
     static let scheduler = SyncScheduler(
-        engine: SyncEngine(database: AppDatabase.shared, transport: APISyncTransport())
+        engine: SyncEngine(database: AppDatabase.shared, transport: APISyncTransport(),
+                           syncMemberships: { try await OfflineFirstProjectDataSource.flushMemberships(database: .shared) })
     )
 }
 
@@ -20,11 +21,7 @@ private enum SharedSync {
 /// The implementations follow the Storage Mode setting (offline support plan
 /// Phase 8):
 ///
-/// - `.server`: always offline-capable and synced. `memos` is the
-///   offline-first read/write implementation backed by the local GRDB mirror
-///   (outbox + push/pull), and `tasks` / `articles` / `projects` are offline
-///   READ-ONLY caches (remote first, local fallback when unreachable). There
-///   is no separate offline-sync setting — syncing IS Server mode.
+/// - Serverモードはメモ・手動記事の作成と各スレッドへのコメントを端末に保存し、自動同期する。
 /// - `.standalone`: memos, tasks, articles, keyword search, labels and issue
 ///   relations are fully local (`LocalMemoDataSource` / `LocalTaskDataSource`
 ///   / `LocalArticleDataSource` / `LocalSearchDataSource` /
@@ -95,15 +92,17 @@ final class DataSourceProvider: ObservableObject {
         memos = OfflineFirstMemoDataSource(
             database: AppDatabase.shared,
             remote: RemoteMemoDataSource(),
-            onLocalWrite: { scheduler.requestSync() }
+            onLocalWrite: { Task { @MainActor in scheduler.requestSync() } }
         )
         tasks = OfflineFirstTaskDataSource(
             database: AppDatabase.shared,
-            remote: RemoteTaskDataSource()
+            remote: RemoteTaskDataSource(),
+            onLocalWrite: { Task { @MainActor in scheduler.requestSync() } }
         )
         articles = OfflineFirstArticleDataSource(
             database: AppDatabase.shared,
-            remote: RemoteArticleDataSource()
+            remote: RemoteArticleDataSource(),
+            onLocalWrite: { Task { @MainActor in scheduler.requestSync() } }
         )
         projects = OfflineFirstProjectDataSource(
             database: AppDatabase.shared,

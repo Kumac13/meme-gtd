@@ -150,7 +150,7 @@ struct TaskDetailView: View {
                 FloatingComposer(
                     text: $viewModel.replyBody,
                     placeholder: composerPlaceholder,
-                    disabled: viewModel.isLoading || isOfflineReadOnly,
+                    disabled: viewModel.isLoading || (editingMode != .none && isOfflineReadOnly),
                     submitting: viewModel.isSubmittingReply,
                     notice: composerNotice,
                     onDismissNotice: {
