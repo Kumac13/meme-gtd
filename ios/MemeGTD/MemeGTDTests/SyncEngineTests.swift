@@ -104,7 +104,7 @@ final class SyncEngineTests: XCTestCase {
         _ = await engine.syncNow()
         let after = try await database.dbWriter.read { db in try ThreadDelivery.read(db, id: memo.id, endpoint: "A") }
         XCTAssertEqual(after.comments.map(\.bodyMd), ["reply"])
-        XCTAssertEqual(after.states[reply.id], "Synced")
+        XCTAssertTrue(after.states.isEmpty)
         XCTAssertGreaterThan(try XCTUnwrap(after.serverID), 0)
     }
 

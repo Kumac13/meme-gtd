@@ -25,7 +25,8 @@ nonisolated struct ThreadDelivery {
         let rows = try Row.fetchAll(db, sql: """
             SELECT c.rowid AS local_id, c.server_id, o.state FROM comments c
             LEFT JOIN pending_operations o ON o.target_uuid = c.uuid
-            WHERE c.issue_uuid = ? ORDER BY o.id
+            WHERE c.issue_uuid = ? AND (c.server_id IS NULL OR o.id IS NOT NULL)
+            ORDER BY o.id
             """, arguments: [uuid])
         for row in rows {
             let localID: Int = row["local_id"]
@@ -34,7 +35,7 @@ nonisolated struct ThreadDelivery {
             let text: String
             switch state {
             case "review": text = "Needs review"
-            case nil: text = remoteID == nil ? "Saved on device" : "Synced"
+            case nil: text = "Saved on device"
             default: text = "Waiting to sync"
             }
             states[-localID] = text
