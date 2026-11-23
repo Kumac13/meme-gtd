@@ -91,7 +91,6 @@ struct IssueContentCard: View {
 
 struct IssueTimeline: View {
     let entries: [TimelineEntry]
-    var deliveryStates: [Int: String] = [:]
     let issueId: Int
     var mutationsDisabled = false
     let onEditComment: (Comment) -> Void
@@ -105,9 +104,6 @@ struct IssueTimeline: View {
 
             switch entry {
             case .comment(let comment):
-                if let state = deliveryStates[comment.id] {
-                    Text(state).font(.caption2).foregroundStyle(.secondary)
-                }
                 IssueContentCard(
                     bodyMd: comment.bodyMd,
                     createdAt: comment.createdAt,

@@ -51,7 +51,6 @@ struct ArticleListView: View {
         .safeAreaInset(edge: .top) {
             VStack(spacing: 0) {
                 OfflineReadOnlyIndicator()
-                OfflineQueueStatus()
                 IssueListFilterBar {
                     FilterPill(
                         label: viewModel.originFilter == "all" ? "Origin" : viewModel.originFilter.capitalized,

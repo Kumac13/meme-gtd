@@ -61,9 +61,6 @@ struct MemoDetailView: View {
                                 TimelineTimestamp(text: TimelineHelpers.formatTimelineTime(iso: item.createdAt))
                             }
 
-                            if let state = item.isOriginal ? delivery.parentState : item.commentId.flatMap({ delivery.states[$0] }) {
-                                Text(state).font(.caption2).foregroundStyle(.secondary)
-                            }
                             ThreadItem(
                                 bodyMd: item.bodyMd,
                                 labels: nil,

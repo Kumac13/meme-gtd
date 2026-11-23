@@ -204,6 +204,8 @@ struct SettingsView: View {
                 if appMode == .server {
                     Divider().padding(.leading, 16)
 
+                    OfflineQueueStatus()
+
                     // API Configuration section
                     VStack(alignment: .leading, spacing: 12) {
                         Text("API Configuration")

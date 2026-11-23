@@ -41,10 +41,6 @@ struct ArticleDetailView: View {
         ) { scrollActions in
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    if !delivery.historyAvailable {
-                        Text("Earlier replies have not been downloaded.")
-                            .font(.footnote).foregroundStyle(.secondary)
-                    }
                     if let article = viewModel.article {
                         // === Header Area (glass card): Title + Meta ===
                         IssueAreaCard {
@@ -83,9 +79,6 @@ struct ArticleDetailView: View {
                                     }
                                 }
 
-                                if let state = delivery.parentState {
-                                    Text(state).font(.caption).foregroundStyle(.secondary)
-                                }
                                 if connectivity.isOfflineReadOnly {
                                     OfflineReadOnlyBadge()
                                 }
@@ -135,9 +128,12 @@ struct ArticleDetailView: View {
                         )
 
                         // === Timeline: Comments + activities interleaved ===
+                        if !delivery.historyAvailable {
+                            Text("Earlier replies have not been downloaded.")
+                                .font(.footnote).foregroundStyle(.secondary)
+                        }
                         IssueTimeline(
                             entries: viewModel.timelineEntries,
-                            deliveryStates: delivery.states,
                             issueId: viewModel.articleId,
                             mutationsDisabled: isOfflineReadOnly,
                             onEditComment: { comment in

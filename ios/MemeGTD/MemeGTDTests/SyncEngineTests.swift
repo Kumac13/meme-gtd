@@ -98,13 +98,12 @@ final class SyncEngineTests: XCTestCase {
 
     func testThreadShowsPendingThenAcceptedReplyOnSameRoute() async throws {
         let memo = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "parent"))
-        let reply = try await dataSource.createComment(memoId: memo.id, CreateCommentRequest(bodyMd: "reply"))
+        _ = try await dataSource.createComment(memoId: memo.id, CreateCommentRequest(bodyMd: "reply"))
         let before = try await database.dbWriter.read { db in try ThreadDelivery.read(db, id: memo.id, endpoint: "A") }
-        XCTAssertEqual(before.states[reply.id], "Waiting to sync")
+        XCTAssertEqual(before.comments.map(\.bodyMd), ["reply"])
         _ = await engine.syncNow()
         let after = try await database.dbWriter.read { db in try ThreadDelivery.read(db, id: memo.id, endpoint: "A") }
         XCTAssertEqual(after.comments.map(\.bodyMd), ["reply"])
-        XCTAssertTrue(after.states.isEmpty)
         XCTAssertGreaterThan(try XCTUnwrap(after.serverID), 0)
     }
 

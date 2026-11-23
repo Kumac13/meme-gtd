@@ -180,7 +180,6 @@ struct MemoListView: View {
         .safeAreaInset(edge: .top) {
             VStack(spacing: 4) {
                 OfflineReadOnlyIndicator()
-                OfflineQueueStatus()
                 IssueListFilterBar {
                     FilterPill(
                         label: labelFilterDisplayLabel,

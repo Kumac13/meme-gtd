@@ -3,8 +3,6 @@ import Foundation
 
 nonisolated struct ThreadDelivery {
     var historyAvailable = true
-    var states: [Int: String] = [:]
-    var parentState: String?
     var serverID: Int?
     var comments: [Comment] = []
 
@@ -21,34 +19,7 @@ nonisolated struct ThreadDelivery {
             let ids = Set(comments.map(\.id))
             comments = history.filter { !ids.contains($0.id) } + comments
         }
-        var states: [Int: String] = [:]
-        let rows = try Row.fetchAll(db, sql: """
-            SELECT c.rowid AS local_id, c.server_id, o.state FROM comments c
-            LEFT JOIN pending_operations o ON o.target_uuid = c.uuid
-            WHERE c.issue_uuid = ? AND (c.server_id IS NULL OR o.id IS NOT NULL)
-            ORDER BY o.id
-            """, arguments: [uuid])
-        for row in rows {
-            let localID: Int = row["local_id"]
-            let remoteID: Int? = row["server_id"]
-            let state: String? = row["state"]
-            let text: String
-            switch state {
-            case "review": text = "Needs review"
-            case nil: text = "Saved on device"
-            default: text = "Waiting to sync"
-            }
-            states[-localID] = text
-            if let remoteID { states[remoteID] = text }
-        }
-        let pendingState = try String.fetchOne(db, sql: "SELECT state FROM pending_operations WHERE target_uuid = ? ORDER BY id LIMIT 1", arguments: [uuid])
-        let parentState: String?
-        switch pendingState {
-        case "review": parentState = "Needs review"
-        case nil: parentState = nil
-        default: parentState = "Waiting to sync"
-        }
         return ThreadDelivery(historyAvailable: id < 0 || history != nil || (parent != nil && complete),
-                              states: states, parentState: parentState, serverID: serverID ?? (id > 0 ? id : nil), comments: comments)
+                              serverID: serverID ?? (id > 0 ? id : nil), comments: comments)
     }
 }

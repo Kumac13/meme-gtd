@@ -68,7 +68,6 @@ struct TaskListView: View {
         .safeAreaInset(edge: .top) {
             VStack(spacing: 0) {
                 OfflineReadOnlyIndicator()
-                OfflineQueueStatus()
 
                 IssueListFilterBar {
                     FilterPill(

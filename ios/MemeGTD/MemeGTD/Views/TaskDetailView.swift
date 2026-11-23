@@ -58,10 +58,7 @@ struct TaskDetailView: View {
         ) { scrollActions in
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    if !delivery.historyAvailable {
-                        Text("Earlier replies have not been downloaded.").font(.footnote).foregroundStyle(.secondary)
-                        }
-                        if let task = viewModel.task {
+                    if let task = viewModel.task {
                         // === Title Area (glass, extends to top of screen) ===
                         IssueAreaCard {
                             TaskTitleSection(
@@ -100,9 +97,12 @@ struct TaskDetailView: View {
                         )
 
                         // === Timeline: Comments + Activities interleaved ===
+                        if !delivery.historyAvailable {
+                            Text("Earlier replies have not been downloaded.")
+                                .font(.footnote).foregroundStyle(.secondary)
+                        }
                         IssueTimeline(
                             entries: viewModel.timelineEntries,
-                            deliveryStates: delivery.states,
                             issueId: taskId,
                             mutationsDisabled: isOfflineReadOnly,
                             onEditComment: { comment in

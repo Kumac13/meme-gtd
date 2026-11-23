@@ -241,7 +241,7 @@ iOSのオフライン対応（Phase 2で導入）。iOS側はローカルDB + �
 - スキーマはサーバー `schema/` のテーブル・カラム名を 1:1 ミラー。ただし PK はクライアント生成 UUIDv7 の `uuid TEXT PRIMARY KEY`、`server_id INTEGER UNIQUE` を併設（オフライン作成時に ID が確定し、push 後の数値 ID 再マッピングが不要）
 - マイグレーションは GRDB の `DatabaseMigrator` に `001_initial` 形式で番号登録（`schema/` と同じ「既存変更禁止・追加のみ」規約）
 - Outbox は `pending_operations` テーブル、同期カーソル等は `sync_meta`。iOS のユニットテストは `MemeGTDTests` ターゲット（in-memory DB でテスト可能）
-- Serverモードのメモ作成、手動Article作成、3種類の親へのコメント追加は端末DBとOutboxに一括保存する。pushは操作IDを保って最大500件ずつ送る。未取得の親に対するコメントは初回pullでサーバーIDをUUIDへ解決するまで保留する。拒否された作成の本文は一覧の送信待ち表示から回収できる。
+- Serverモードのメモ作成、手動Article作成、3種類の親へのコメント追加は端末DBとOutboxに一括保存する。pushは操作IDを保って最大500件ずつ送る。未取得の親に対するコメントは初回pullでサーバーIDをUUIDへ解決するまで保留する。拒否された作成の本文は設定画面の送信待ち一覧から回収できる。
 - プロジェクト所属は親UUIDとともに端末に保存し、記事・メモのサーバーID確定後に別APIで登録する。Template選択用の本文・ラベル・所属は接続先ごとに全ページ取得したスナップショットを利用する。TaskやArticleの本文変更など、オンライン専用の操作はサーバー不達時に制限する。
 - **Storage Mode（Server / Standalone）**: iOS は App Group 設定 `appMode` で動作モードが決まる。初回解決は「インストール直後 = standalone。ただしアプリを消さずアップデートした既存端末（apiUrl が残存）= server」で、解決結果を永続化する。切替は Settings のピッカーで行う。Standalone→Server の切替は移行そのもの（確認後に端末内データを全件バルクアップロードし、成功時のみモード確定。失敗時は Standalone のまま。冪等・一方向で、端末内データが無ければ実質切替のみ）。Server→Standalone への切替は不可（遮断ダイアログを表示。開発ビルドのみ検証用に許可）。Standalone はサーバー通信ゼロで、メモ・タスク・キーワード検索・ラベル・リンクが端末内 DB で完結する。ローカル CRUD 本体は `LocalMemoStore` / `LocalTaskStore` / `LocalCommentStore`（Outbox を知らない純粋なローカル CRUD 層）として OfflineFirst 実装と共有する。未対応ドメイン（記事/プロジェクト）は空レスポンス + 英語エラーの安全実装。Standalone の削除はハード削除（サーバー到達経路がなく tombstone の回収先がないため — Standalone→Server 移行の設計時に要考慮）
 - **Standalone のキーワード検索はサーバーの LIKE 実装をミラー**（コメント本文含む、issue 単位グルーピング）。FTS5 は採用しない — サーバー自身が日本語対応のため意図的に LIKE を使っている（`packages/db/CLAUDE.md`）ので、ローカルも同じ意味論に揃える

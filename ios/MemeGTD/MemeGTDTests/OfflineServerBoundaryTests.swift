@@ -113,7 +113,8 @@ final class OfflineServerBoundaryTests: XCTestCase {
             try ThreadDelivery.read(db, id: route, endpoint: "https://a.test")
         }
         XCTAssertEqual(delivery.comments.map(\.bodyMd), ["first", "second"])
-        XCTAssertEqual(delivery.parentState, "Waiting to sync")
+        let pending = try await reopened.dbWriter.read { db in try PendingOperationRecord.fetchCount(db) }
+        XCTAssertEqual(pending, 3)
     }
 
     func testEditingArticleThroughCreationRouteAfterAcknowledgmentUsesPositiveRESTID() async throws {
