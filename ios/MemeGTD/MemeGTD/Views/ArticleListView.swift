@@ -43,7 +43,7 @@ struct ArticleListView: View {
                 searchQuery: viewModel.searchQuery.isEmpty ? nil : viewModel.searchQuery
             )
         }
-        .issueListRefreshable {
+        .issueListRefreshable(scheduler: dataSources.syncScheduler) {
             if let response = await viewModel.fetchArticles() {
                 viewModel.applyArticles(response)
             }

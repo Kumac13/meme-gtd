@@ -29,7 +29,10 @@ final class SyncScheduler {
     private let engine: SyncEngine
     private let retryDelays: [TimeInterval]
     private var monitor: NWPathMonitor?
+    private var stopped = false
     private var isSyncing = false
+    private var refreshWaiters: [CheckedContinuation<SyncSummary, Never>] = []
+    private var refreshProjectsRequested = false
     private var followUpRequested = false
     private var wasConnected: Bool?
     private var retryTask: Task<Void, Never>?
@@ -44,6 +47,7 @@ final class SyncScheduler {
     /// Idempotent: calling it again while already started does nothing.
     func start() {
         guard monitor == nil else { return }
+        stopped = false
         let monitor = NWPathMonitor()
         monitor.pathUpdateHandler = { [weak self] path in
             let satisfied = path.status == .satisfied
@@ -58,6 +62,11 @@ final class SyncScheduler {
 
     /// Stops connectivity monitoring (used when offline sync turns off).
     func stop() {
+        stopped = true
+        followUpRequested = false
+        refreshProjectsRequested = false
+        for waiter in refreshWaiters { waiter.resume(returning: SyncSummary(errors: ["Sync stopped."])) }
+        refreshWaiters.removeAll()
         monitor?.cancel()
         monitor = nil
         wasConnected = nil
@@ -71,9 +80,19 @@ final class SyncScheduler {
         requestSync()
     }
 
+    func refresh() async -> SyncSummary {
+        guard !stopped else { return SyncSummary() }
+        return await withCheckedContinuation { waiter in
+            refreshWaiters.append(waiter)
+            requestSync()
+        }
+    }
+
     /// Requests a sync run. Serialized: when a run is already in flight the
     /// request collapses into a single queued follow-up run.
-    func requestSync() {
+    func requestSync(refreshProjects: Bool = true) {
+        guard !stopped else { return }
+        refreshProjectsRequested = refreshProjectsRequested || refreshProjects
         retryTask?.cancel()
         retryTask = nil
         if isSyncing {
@@ -81,14 +100,20 @@ final class SyncScheduler {
             return
         }
         isSyncing = true
+        let refreshSnapshot = refreshProjectsRequested
+        refreshProjectsRequested = false
+        let waiters = refreshWaiters
+        refreshWaiters.removeAll()
         let engine = engine
         Task { [weak self] in
-            let summary = await engine.syncNow()
+            let summary = await engine.syncNow(refreshProjectSnapshot: refreshSnapshot)
+            for waiter in waiters { waiter.resume(returning: summary) }
             guard let self else { return }
             self.isSyncing = false
+            guard !self.stopped else { return }
             if self.followUpRequested {
                 self.followUpRequested = false
-                self.requestSync()
+                self.requestSync(refreshProjects: refreshSnapshot && !summary.errors.isEmpty)
             } else {
                 self.scheduleRetryIfNeeded(after: summary)
             }

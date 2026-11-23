@@ -16,7 +16,7 @@ struct OfflineReadOnlyBadge: View {
         HStack(spacing: 4) {
             Image(systemName: "wifi.slash")
                 .font(.system(size: 10, weight: .semibold))
-            Text(connectivity.hasNoNetworkPath ? "Offline" : "Server unavailable")
+            Text(connectivity.statusText)
                 .font(.system(size: 12, weight: .medium))
         }
         .padding(.horizontal, 10)

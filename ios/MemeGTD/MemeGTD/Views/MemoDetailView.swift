@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MemoDetailView: View {
+    @State private var delivery = ThreadDelivery()
     let memoId: Int
     let initialBody: String?
     let onMenuTap: () -> Void
@@ -33,6 +34,10 @@ struct MemoDetailView: View {
         ) { scrollActions in
             ScrollView {
                 LazyVStack(spacing: 0) {
+                    if !delivery.historyAvailable {
+                        Text("Earlier replies have not been downloaded.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
                     if let memo = viewModel.memo {
                         let allItems = buildTimelineItems(memo: memo, comments: viewModel.comments)
 
@@ -56,6 +61,9 @@ struct MemoDetailView: View {
                                 TimelineTimestamp(text: TimelineHelpers.formatTimelineTime(iso: item.createdAt))
                             }
 
+                            if let state = item.isOriginal ? delivery.parentState : item.commentId.flatMap({ delivery.states[$0] }) {
+                                Text(state).font(.caption2).foregroundStyle(.secondary)
+                            }
                             ThreadItem(
                                 bodyMd: item.bodyMd,
                                 labels: nil,
@@ -118,7 +126,7 @@ struct MemoDetailView: View {
                 FloatingComposer(
                     text: $viewModel.replyBody,
                     placeholder: (editingMemo || editingCommentId != nil) ? "Edit..." : "Add a comment...",
-                    disabled: viewModel.isLoading,
+                    disabled: viewModel.memo == nil,
                     submitting: viewModel.isSubmittingReply,
                     notice: editingMemo ? "Editing this memo" : editingCommentId != nil ? "Editing this comment" : nil,
                     onDismissNotice: {
@@ -176,6 +184,10 @@ struct MemoDetailView: View {
                 }
             )
         }
+        .alert("Could not complete the action", isPresented: Binding(
+            get: { viewModel.error != nil },
+            set: { if !$0 { viewModel.error = nil } }
+        )) { Button("OK") { viewModel.error = nil } } message: { Text(viewModel.error ?? "") }
         .navigationBarTitleDisplayMode(.inline)
         .sheet(
             isPresented: $linkedIssueNavigation.isPresented,
@@ -273,6 +285,10 @@ struct MemoDetailView: View {
                 isPresented: viewModel.isLoading && viewModel.memo == nil,
                 message: "Loading..."
             )
+        }
+        .observeThread(id: memoId) { snapshot in
+            delivery = snapshot
+            viewModel.comments = snapshot.comments
         }
         .task {
             viewModel.memoStore = memoStore

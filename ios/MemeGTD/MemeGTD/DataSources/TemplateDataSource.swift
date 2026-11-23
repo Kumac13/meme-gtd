@@ -11,24 +11,26 @@ protocol TemplateDataSource {
 
 /// Server-backed implementation: a thin wrapper around `APIClient`.
 struct RemoteTemplateDataSource: TemplateDataSource {
+    var client = APIClient.shared
+
     func listTemplates(queryItems: [URLQueryItem]) async throws -> TemplateListResponse {
-        try await APIClient.shared.get(path: "/api/templates", queryItems: queryItems)
+        try await client.get(path: "/api/templates", queryItems: queryItems)
     }
 
     func getTemplate(id: Int) async throws -> Template {
-        try await APIClient.shared.get(path: "/api/templates/\(id)")
+        try await client.get(path: "/api/templates/\(id)")
     }
 
     func createTemplate(_ request: CreateTemplateRequest) async throws -> Template {
-        try await APIClient.shared.post(path: "/api/templates", body: request)
+        try await client.post(path: "/api/templates", body: request)
     }
 
     func updateTemplate(id: Int, _ request: UpdateTemplateRequest) async throws -> Template {
-        try await APIClient.shared.patch(path: "/api/templates/\(id)", body: request)
+        try await client.patch(path: "/api/templates/\(id)", body: request)
     }
 
     func deleteTemplate(id: Int) async throws {
-        try await APIClient.shared.delete(path: "/api/templates/\(id)")
+        try await client.delete(path: "/api/templates/\(id)")
     }
 }
 

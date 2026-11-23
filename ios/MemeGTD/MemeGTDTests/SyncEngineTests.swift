@@ -70,6 +70,44 @@ final class SyncEngineTests: XCTestCase {
 
     // MARK: - Outbox behavior (writes through the offline-first data source)
 
+    func testProjectMemoSurvivesParentAcknowledgementBeforeMembershipIsSent() async throws {
+        let memo = try await dataSource.createMemo(CreateMemoRequest(projectIds: [7], bodyMd: "on the train"))
+        let unassigned = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "loose"))
+        try await database.dbWriter.write { db in
+            try db.execute(sql: "UPDATE issues SET server_id = 41 WHERE rowid = ?", arguments: [-memo.id])
+            try db.execute(sql: "DELETE FROM pending_operations WHERE target_uuid = (SELECT uuid FROM issues WHERE server_id = 41)")
+        }
+        for (value, ids) in [("7", [41]), ("none", [unassigned.id]), ("none,7", [41, unassigned.id])] {
+            let response = try await dataSource.listMemos(queryItems: [URLQueryItem(name: "projectId", value: value)])
+            XCTAssertEqual(Set(response.data.map(\.id)), Set(ids))
+        }
+    }
+
+    func testPartialThreadAndConfirmedEmptyHistoryAreDifferent() async throws {
+        let issue = issueChange(seq: 81, uuid: "parent", body: "parent")
+        try await database.dbWriter.write { db in
+            _ = try SyncChangeApplier.apply([issue], skippingUuids: [], in: db)
+        }
+        let before = try await database.dbWriter.read { db in try ThreadDelivery.read(db, id: 81, endpoint: "A") }
+        XCTAssertFalse(before.historyAvailable)
+        _ = await engine.syncNow()
+        let after = try await database.dbWriter.read { db in try ThreadDelivery.read(db, id: 81, endpoint: "A") }
+        XCTAssertTrue(after.historyAvailable)
+        XCTAssertTrue(after.comments.isEmpty)
+    }
+
+    func testThreadShowsPendingThenAcceptedReplyOnSameRoute() async throws {
+        let memo = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "parent"))
+        let reply = try await dataSource.createComment(memoId: memo.id, CreateCommentRequest(bodyMd: "reply"))
+        let before = try await database.dbWriter.read { db in try ThreadDelivery.read(db, id: memo.id, endpoint: "A") }
+        XCTAssertEqual(before.states[reply.id], "Waiting to sync")
+        _ = await engine.syncNow()
+        let after = try await database.dbWriter.read { db in try ThreadDelivery.read(db, id: memo.id, endpoint: "A") }
+        XCTAssertEqual(after.comments.map(\.bodyMd), ["reply"])
+        XCTAssertEqual(after.states[reply.id], "Synced")
+        XCTAssertGreaterThan(try XCTUnwrap(after.serverID), 0)
+    }
+
     func testWritesEnqueueInFIFOOrderAndUpdatesMerge() async throws {
         let memo = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "first"))
         _ = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "second"))

@@ -28,11 +28,15 @@ struct OfflineQueueStatus: View {
                 let ops = try String.fetchAll(db, sql: """
                     SELECT CASE state WHEN 'review' THEN 'Needs review' ELSE 'Waiting to sync' END
                         || ' · ' || entity || char(10)
+                        || coalesce(i.title, nullif(substr(i.body_md, 1, 80), ''), o.issue_uuid, '') || char(10)
                         || COALESCE(json_extract(payload, '$.bodyMd'), json_extract(payload, '$.labelName'), op_type)
-                    FROM pending_operations ORDER BY id
+                        || coalesce(char(10) || review_reason, '')
+                    FROM pending_operations o LEFT JOIN issues i
+                      ON i.uuid = coalesce(o.issue_uuid, json_extract(payload, '$.issueUuid'), o.target_uuid)
+                    ORDER BY o.id
                     """)
                 let memberships = try String.fetchAll(db, sql: """
-                    SELECT CASE needs_review WHEN 1 THEN 'Needs review' ELSE 'Waiting to sync' END
+                    SELECT CASE needs_review WHEN 1 THEN 'Needs review · Project or item no longer available' ELSE 'Waiting to sync' END
                         || ' · Project #' || project_id || ' · ' || coalesce(i.title, i.body_md, '')
                     FROM pending_memberships m JOIN issues i ON i.uuid = m.issue_uuid
                     """)

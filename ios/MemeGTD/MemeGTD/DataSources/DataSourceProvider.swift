@@ -8,10 +8,27 @@ import Foundation
 /// Offline Sync setting is on, so the OFF path never builds any sync objects.
 @MainActor
 private enum SharedSync {
-    static let scheduler = SyncScheduler(
-        engine: SyncEngine(database: AppDatabase.shared, transport: APISyncTransport(),
-                           syncMemberships: { try await OfflineFirstProjectDataSource.flushMemberships(database: .shared) })
-    )
+    private static var active: SyncScheduler?
+    private static var schedulers: [String: SyncScheduler] = [:]
+    static func scheduler(for database: AppDatabase) -> SyncScheduler {
+        let client = APIClient.shared
+        if let cached = schedulers[client.baseUrl] {
+            if active !== cached {
+                active?.stop()
+                active = cached
+            }
+            return cached
+        }
+        active?.stop()
+        let projects = RemoteProjectDataSource(client: client)
+        let scheduler = SyncScheduler(engine: SyncEngine(database: database, transport: APISyncTransport(client: client),
+            syncMemberships: {
+                try await OfflineFirstProjectDataSource.flushMemberships(database: database, remote: projects)
+            }, refreshProjects: { try await projects.refreshMembershipSnapshot(database) }))
+        schedulers[client.baseUrl] = scheduler
+        active = scheduler
+        return scheduler
+    }
 }
 
 /// Assembles the concrete data source implementations the ViewModels consume.
@@ -87,22 +104,22 @@ final class DataSourceProvider: ObservableObject {
         labels = RemoteLabelDataSource()
         issueRelations = RemoteIssueRelationsDataSource()
         templates = RemoteTemplateDataSource()
-        let scheduler = SharedSync.scheduler
+        let scheduler = SharedSync.scheduler(for: AppDatabase.shared)
         syncScheduler = scheduler
         memos = OfflineFirstMemoDataSource(
             database: AppDatabase.shared,
             remote: RemoteMemoDataSource(),
-            onLocalWrite: { Task { @MainActor in scheduler.requestSync() } }
+            onLocalWrite: { Task { @MainActor in scheduler.requestSync(refreshProjects: false) } }
         )
         tasks = OfflineFirstTaskDataSource(
             database: AppDatabase.shared,
             remote: RemoteTaskDataSource(),
-            onLocalWrite: { Task { @MainActor in scheduler.requestSync() } }
+            onLocalWrite: { Task { @MainActor in scheduler.requestSync(refreshProjects: false) } }
         )
         articles = OfflineFirstArticleDataSource(
             database: AppDatabase.shared,
             remote: RemoteArticleDataSource(),
-            onLocalWrite: { Task { @MainActor in scheduler.requestSync() } }
+            onLocalWrite: { Task { @MainActor in scheduler.requestSync(refreshProjects: false) } }
         )
         projects = OfflineFirstProjectDataSource(
             database: AppDatabase.shared,

@@ -45,7 +45,7 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
         do {
             memo = try await dataSources.memos.getMemo(id: memoId)
             let commentList: [Comment] = try await dataSources.memos.listComments(memoId: memoId)
-            comments = commentList
+            if dataSources.syncScheduler == nil { comments = commentList }
         } catch {
             self.error = error.localizedDescription
         }
@@ -73,7 +73,7 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
 
     func applyMemo(_ memo: Memo, comments: [Comment]) {
         self.memo = memo
-        self.comments = comments
+        if dataSources.syncScheduler == nil { self.comments = comments }
     }
 
     func relationDidChange() async {}
@@ -122,7 +122,7 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
                 memoId: memoId,
                 request
             )
-            comments.append(comment)
+            if dataSources.syncScheduler == nil { comments.append(comment) }
             replyBody = ""
             HapticManager.notification(.success)
             // Server may have created relates links from `#id` mentions.

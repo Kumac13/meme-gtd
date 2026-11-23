@@ -3,7 +3,7 @@ import GRDB
 
 /// 同期済みの本文・コメントを端末から読み、記録を永続キューに追加する。
 nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
-    private var threads: OfflineThreadStore { OfflineThreadStore(database: database, onLocalWrite: onLocalWrite) }
+    private let threads: OfflineThreadStore
     private let database: AppDatabase
     private let remote: TaskDataSource
 
@@ -11,6 +11,7 @@ nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
 
     init(database: AppDatabase, remote: TaskDataSource, onLocalWrite: @escaping () -> Void = {}) {
         self.onLocalWrite = onLocalWrite
+        self.threads = OfflineThreadStore(database: database, onLocalWrite: onLocalWrite)
         self.database = database
         self.remote = remote
     }
@@ -21,7 +22,7 @@ nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
         let supported = ["limit", "offset", "label", "status", "bookmarked", "search", "scheduledFrom", "scheduledTo"]
         if queryItems.allSatisfy({ supported.contains($0.name) }) {
             let local = try await localListTasks(queryItems: queryItems)
-            if local.total > 0 { return local }
+            if local.total > 0 || database.hasCompletedPull { return local }
         }
         do {
             return try await remote.listTasks(queryItems: queryItems)
@@ -99,11 +100,15 @@ nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
     }
 
     func updateComment(taskId: Int, commentId: Int, _ request: UpdateCommentRequest) async throws -> Comment {
-        try await onlineOnly { try await self.remote.updateComment(taskId: taskId, commentId: commentId, request) }
+        let parent = try await threads.serverIssueID(taskId)
+        let resolved = try await threads.serverCommentID(commentId, parentID: parent)
+        return try await onlineOnly { try await self.remote.updateComment(taskId: parent, commentId: resolved, request) }
     }
 
     func deleteComment(taskId: Int, commentId: Int) async throws {
-        try await onlineOnly { try await self.remote.deleteComment(taskId: taskId, commentId: commentId) }
+        let parent = try await threads.serverIssueID(taskId)
+        let resolved = try await threads.serverCommentID(commentId, parentID: parent)
+        return try await onlineOnly { try await self.remote.deleteComment(taskId: parent, commentId: resolved) }
     }
 
     /// Delegates a write to the server, translating "unreachable" into the

@@ -100,10 +100,7 @@ struct MemoListView: View {
             // unfiltered feed). Without this, the prior mode's pixel offset
             // bleeds into the new mode and lands the user mid-list.
             .id(viewModel.isDateFiltered ? "filtered" : "feed")
-            .issueListRefreshable {
-                // Sync trigger: pull-to-refresh (no-op while Offline Sync is off).
-                dataSources.syncScheduler?.requestSync()
-
+            .issueListRefreshable(scheduler: dataSources.syncScheduler) {
                 if viewModel.isDateFiltered {
                     await viewModel.loadAllMemos()
                     return

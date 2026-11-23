@@ -65,7 +65,7 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
         do {
             task = try await dataSources.tasks.getTask(id: taskId)
             let commentList: [Comment] = try await dataSources.tasks.listComments(taskId: taskId)
-            comments = commentList
+            if dataSources.syncScheduler == nil { comments = commentList }
         } catch {
             self.error = error.localizedDescription
         }
@@ -85,9 +85,7 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
         do {
             let task: TaskItem = try await dataSources.tasks.getTask(id: taskId)
             let commentList: [Comment] = try await dataSources.tasks.listComments(taskId: taskId)
-            let activities: [ActivityLogEntry] = try await dataSources.issueRelations.listActivityLog(
-                issueId: taskId
-            )
+            let activities = (try? await dataSources.issueRelations.listActivityLog(issueId: taskId)) ?? activityLogs
             return (task, commentList, activities)
         } catch {
             self.error = error.localizedDescription
@@ -97,7 +95,7 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
 
     func applyTask(_ task: TaskItem, comments: [Comment], activities: [ActivityLogEntry]) {
         self.task = task
-        self.comments = comments
+        if dataSources.syncScheduler == nil { self.comments = comments }
         self.activityLogs = activities
     }
 
@@ -137,7 +135,11 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
 
     // MARK: - Update Task
 
-    func updateTask(title: String? = nil, bodyMd: String? = nil, status: String? = nil) async {
+    @discardableResult
+    func updateTask(title: String? = nil, bodyMd: String? = nil, status: String? = nil) async -> Bool {
+        guard !isSubmittingReply else { return false }
+        isSubmittingReply = true
+        defer { isSubmittingReply = false }
         do {
             let request = UpdateTaskRequest(title: title, bodyMd: bodyMd, status: status)
             let updated: TaskItem = try await dataSources.tasks.updateTask(
@@ -156,9 +158,11 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
                 await loadIssueLinks()
             }
             HapticManager.notification(.success)
+            return true
         } catch {
             self.error = error.localizedDescription
             HapticManager.notification(.error)
+            return false
         }
     }
 
@@ -177,7 +181,7 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
                 taskId: taskId,
                 request
             )
-            comments.append(comment)
+            if dataSources.syncScheduler == nil { comments.append(comment) }
             replyBody = ""
             HapticManager.notification(.success)
             Task { await loadIssueLinks() }
@@ -189,7 +193,11 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
         }
     }
 
-    func updateComment(_ commentId: Int, bodyMd: String) async {
+    @discardableResult
+    func updateComment(_ commentId: Int, bodyMd: String) async -> Bool {
+        guard !isSubmittingReply else { return false }
+        isSubmittingReply = true
+        defer { isSubmittingReply = false }
         do {
             let request = UpdateCommentRequest(bodyMd: bodyMd)
             let updated: Comment = try await dataSources.tasks.updateComment(
@@ -201,8 +209,10 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
                 comments[index] = updated
             }
             await loadIssueLinks()
+            return true
         } catch {
             self.error = error.localizedDescription
+            return false
         }
     }
 

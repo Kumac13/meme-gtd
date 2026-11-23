@@ -16,6 +16,9 @@ nonisolated extension LocalArticleStore {
     struct ListQuery {
         var limit: Int?
         var offset = 0
+        var projects = ProjectFilter(nil)
+        var labels: [String] = []
+        var bookmarked = false
         var origin: String?
         var search: String?
 
@@ -26,6 +29,9 @@ nonisolated extension LocalArticleStore {
                     limit = item.value.flatMap(Int.init)
                 case "offset":
                     offset = item.value.flatMap(Int.init) ?? 0
+                case "projectId": projects = ProjectFilter(item.value)
+                case "label": labels = (item.value ?? "").split(separator: ",").map(String.init)
+                case "bookmarked": bookmarked = item.value == "true"
                 case "origin": origin = item.value
                 case "search":
                     search = item.value
@@ -45,6 +51,13 @@ nonisolated extension LocalArticleStore {
         var conditions = ["i.type = 'article'", "i.is_deleted = 0"]
         var arguments: [DatabaseValueConvertible] = []
 
+        query.projects.append(to: &conditions, arguments: &arguments)
+        if query.bookmarked { conditions.append("i.is_bookmarked = 1") }
+        if !query.labels.isEmpty {
+            let parameters = query.labels.map { _ in "?" }.joined(separator: ",")
+            conditions.append("i.uuid IN (SELECT issue_uuid FROM issue_labels WHERE label_name IN (\(parameters)))")
+            arguments += query.labels
+        }
         if let origin = query.origin {
             conditions.append("COALESCE(i.origin, CASE WHEN json_extract(i.meta, '$.originalUrl') IS NULL THEN 'manual' ELSE 'web' END) = ?")
             arguments.append(origin)

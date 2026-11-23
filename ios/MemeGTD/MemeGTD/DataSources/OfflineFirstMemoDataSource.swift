@@ -3,7 +3,7 @@ import GRDB
 
 /// Serverモードでメモとコメントを端末に保存し、同じトランザクションで再送を予約する。
 nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
-    private var threads: OfflineThreadStore { OfflineThreadStore(database: database, onLocalWrite: onLocalWrite) }
+    private let threads: OfflineThreadStore
     private let database: AppDatabase
     private let remote: MemoDataSource
     private let onLocalWrite: () -> Void
@@ -13,6 +13,7 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
         remote: MemoDataSource,
         onLocalWrite: @escaping () -> Void = {}
     ) {
+        self.threads = OfflineThreadStore(database: database, onLocalWrite: onLocalWrite)
         self.database = database
         self.remote = remote
         self.onLocalWrite = onLocalWrite
@@ -22,15 +23,6 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
 
     func listMemos(queryItems: [URLQueryItem]) async throws -> MemoListResponse {
         let query = LocalMemoStore.ListQuery(queryItems: queryItems)
-
-        // 所属は差分同期の対象外。圏外では取得済みの所属と端末の登録待ちを参照する。
-        if query.hasProjectFilter {
-            do {
-                return try await remote.listMemos(queryItems: queryItems)
-            } catch where OfflineFirstSupport.isNetworkError(error) {
-                return try await database.dbWriter.read { db in try LocalMemoStore.listMemos(db, query: query) }
-            }
-        }
 
         return try await database.dbWriter.read { db in
             try LocalMemoStore.listMemos(db, query: query)

@@ -60,7 +60,7 @@ struct TaskListView: View {
                 )
             }
         }
-        .issueListRefreshable {
+        .issueListRefreshable(scheduler: dataSources.syncScheduler) {
             if let response = await viewModel.fetchTasks() {
                 viewModel.applyTasks(response)
             }

@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 /// Storage Mode (offline support plan Phase 8): where the app's data lives.
 /// Raw values are persisted in App Group UserDefaults — do not rename.
@@ -67,6 +68,20 @@ class Settings {
         set {
             userDefaults?.set(newValue.rawValue, forKey: appModeKey)
         }
+    }
+
+    // The first server inherits the existing installation, including its unsent operations.
+    // Other endpoints have independent mirrors, cursors and queues.
+    var databaseFilename: String {
+        guard appMode == .server else { return "local.sqlite" }
+        let endpoint = effectiveApiUrl
+        let legacyKey = "legacyDatabaseEndpoint"
+        if userDefaults?.string(forKey: legacyKey) == nil {
+            userDefaults?.set(endpoint, forKey: legacyKey)
+        }
+        if userDefaults?.string(forKey: legacyKey) == endpoint { return "local.sqlite" }
+        let digest = SHA256.hash(data: Data(endpoint.utf8)).map { String(format: "%02x", $0) }.joined()
+        return "server-" + digest + ".sqlite"
     }
 
     // Default API URL for initial setup

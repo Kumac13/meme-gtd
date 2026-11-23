@@ -3,7 +3,7 @@ import GRDB
 
 /// 同期済みの本文・コメントを端末から読み、記録を永続キューに追加する。
 nonisolated final class OfflineFirstArticleDataSource: ArticleDataSource {
-    private var threads: OfflineThreadStore { OfflineThreadStore(database: database, onLocalWrite: onLocalWrite) }
+    private let threads: OfflineThreadStore
     private let database: AppDatabase
     private let remote: ArticleDataSource
 
@@ -11,6 +11,7 @@ nonisolated final class OfflineFirstArticleDataSource: ArticleDataSource {
 
     init(database: AppDatabase, remote: ArticleDataSource, onLocalWrite: @escaping () -> Void = {}) {
         self.onLocalWrite = onLocalWrite
+        self.threads = OfflineThreadStore(database: database, onLocalWrite: onLocalWrite)
         self.database = database
         self.remote = remote
     }
@@ -18,10 +19,10 @@ nonisolated final class OfflineFirstArticleDataSource: ArticleDataSource {
     // MARK: - Reads (remote first, local fallback)
 
     func listArticles(queryItems: [URLQueryItem]) async throws -> ArticleListResponse {
-        let supported = ["limit", "offset", "origin", "search"]
+        let supported = ["limit", "offset", "origin", "search", "label", "projectId", "bookmarked"]
         if queryItems.allSatisfy({ supported.contains($0.name) }) {
             let local = try await localListArticles(queryItems: queryItems)
-            if local.total > 0 { return local }
+            if local.total > 0 || database.hasCompletedPull { return local }
         }
         do {
             return try await remote.listArticles(queryItems: queryItems)
@@ -85,15 +86,18 @@ nonisolated final class OfflineFirstArticleDataSource: ArticleDataSource {
     }
 
     func updateArticle(id: Int, _ request: UpdateArticleRequest) async throws -> Article {
-        try await onlineWrite { try await remote.updateArticle(id: id, request) }
+        let resolved = try await threads.serverIssueID(id)
+        return try await onlineWrite { try await remote.updateArticle(id: resolved, request) }
     }
 
     func bookmarkArticle(id: Int) async throws -> Article {
-        try await onlineWrite { try await remote.bookmarkArticle(id: id) }
+        let resolved = try await threads.serverIssueID(id)
+        return try await onlineWrite { try await remote.bookmarkArticle(id: resolved) }
     }
 
     func unbookmarkArticle(id: Int) async throws -> Article {
-        try await onlineWrite { try await remote.unbookmarkArticle(id: id) }
+        let resolved = try await threads.serverIssueID(id)
+        return try await onlineWrite { try await remote.unbookmarkArticle(id: resolved) }
     }
 
     func listComments(articleId: Int) async throws -> [Comment] {
@@ -105,16 +109,21 @@ nonisolated final class OfflineFirstArticleDataSource: ArticleDataSource {
     }
 
     func updateComment(articleId: Int, commentId: Int, _ request: UpdateCommentRequest) async throws -> Comment {
-        try await onlineWrite { try await remote.updateComment(articleId: articleId, commentId: commentId, request) }
+        let parent = try await threads.serverIssueID(articleId)
+        let resolved = try await threads.serverCommentID(commentId, parentID: parent)
+        return try await onlineWrite { try await remote.updateComment(articleId: parent, commentId: resolved, request) }
     }
 
     func deleteComment(articleId: Int, commentId: Int) async throws {
-        try await onlineWrite { try await remote.deleteComment(articleId: articleId, commentId: commentId) }
+        let parent = try await threads.serverIssueID(articleId)
+        let resolved = try await threads.serverCommentID(commentId, parentID: parent)
+        return try await onlineWrite { try await remote.deleteComment(articleId: parent, commentId: resolved) }
     }
 
     func deleteArticle(id: Int) async throws {
+        let resolved = try await threads.serverIssueID(id)
         do {
-            try await remote.deleteArticle(id: id)
+            try await remote.deleteArticle(id: resolved)
         } catch where OfflineFirstSupport.isNetworkError(error) {
             throw OfflineReadOnlyError()
         }

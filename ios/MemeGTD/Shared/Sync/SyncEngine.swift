@@ -61,10 +61,13 @@ actor SyncEngine {
     private let database: AppDatabase
     private let transport: SyncTransport
     private let syncMemberships: @Sendable () async throws -> Void
+    private let refreshProjects: @Sendable () async throws -> Void
     private let pullPageSize: Int
 
     init(database: AppDatabase, transport: SyncTransport, pullPageSize: Int = 500,
-         syncMemberships: @escaping @Sendable () async throws -> Void = {}) {
+         syncMemberships: @escaping @Sendable () async throws -> Void = {},
+         refreshProjects: @escaping @Sendable () async throws -> Void = {}) {
+        self.refreshProjects = refreshProjects
         self.syncMemberships = syncMemberships
         self.database = database
         self.transport = transport
@@ -75,7 +78,7 @@ actor SyncEngine {
     /// transport error aborts the run (no retry within the same run — the
     /// scheduler triggers again later, which acts as the backoff).
     @discardableResult
-    func syncNow() async -> SyncSummary {
+    func syncNow(refreshProjectSnapshot: Bool = true) async -> SyncSummary {
         var summary = SyncSummary()
         do {
             while true {
@@ -86,6 +89,7 @@ actor SyncEngine {
             }
             summary.pulledCount = try await pullChanges()
             try await syncMemberships()
+            if refreshProjectSnapshot { try await refreshProjects() }
         } catch {
             summary.errors.append(error.localizedDescription)
             logger.error("syncNow failed: \(error.localizedDescription, privacy: .public)")
@@ -206,7 +210,7 @@ actor SyncEngine {
                     // Server state wins; the pull that follows restores the
                     // server row.
                     if op.opType == "create", op.entity == "comment" || op.entity == "issue_label" || op.entity == "article" {
-                        try db.execute(sql: "UPDATE pending_operations SET state = 'review' WHERE op_id = ?", arguments: [op.opId])
+                        try db.execute(sql: "UPDATE pending_operations SET state = 'review', review_reason = ? WHERE op_id = ?", arguments: [result.reason ?? (op.entity == "comment" ? "Parent is unavailable on the server." : "Server could not apply this change."), op.opId])
                         continue
                     }
                 }
@@ -288,7 +292,10 @@ actor SyncEngine {
                 }
                 pulled += applied
             }
-            if !page.hasMore { break }
+            if !page.hasMore {
+                if !database.hasCompletedPull { try database.setSyncMetaValue("1", for: "initial_pull_complete") }
+                break
+            }
         }
         return pulled
     }

@@ -236,7 +236,8 @@ iOSのオフライン対応（Phase 2で導入）。iOS側はローカルDB + �
 
 ### iOS ローカル DB（GRDB）
 
-- 配置: App Group `group.com.memegtd.app` コンテナ内 `Library/Application Support/MemeGTD/local.sqlite`（ShareExtension も同一 DB に書けるようにするため）。アクセス層は `ios/MemeGTD/Shared/Database/AppDatabase.swift`（`DatabasePool` + WAL、app / ShareExtension 両ターゲット所属）
+- 接続先の URL ごとに DB・同期カーソル・未送信操作を分離する。既存端末では更新時の接続先が従来の DB を引き継ぐ。接続テストは設定を保存せず、実行中の同期は開始時の URL と DB を使い続ける。
+- 既存 DB の配置: App Group `group.com.memegtd.app` コンテナ内 `Library/Application Support/MemeGTD/local.sqlite`（ShareExtension も同一 DB に書けるようにするため）。アクセス層は `ios/MemeGTD/Shared/Database/AppDatabase.swift`（`DatabasePool` + WAL、app / ShareExtension 両ターゲット所属）
 - スキーマはサーバー `schema/` のテーブル・カラム名を 1:1 ミラー。ただし PK はクライアント生成 UUIDv7 の `uuid TEXT PRIMARY KEY`、`server_id INTEGER UNIQUE` を併設（オフライン作成時に ID が確定し、push 後の数値 ID 再マッピングが不要）
 - マイグレーションは GRDB の `DatabaseMigrator` に `001_initial` 形式で番号登録（`schema/` と同じ「既存変更禁止・追加のみ」規約）
 - Outbox は `pending_operations` テーブル、同期カーソル等は `sync_meta`。iOS のユニットテストは `MemeGTDTests` ターゲット（in-memory DB でテスト可能）

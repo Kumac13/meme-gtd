@@ -3,6 +3,23 @@ import SwiftUI
 
 @main
 struct MemeGTDApp: App {
+    @State private var endpoint = Settings.shared.effectiveApiUrl
+    var body: some Scene {
+        WindowGroup {
+            ServerSessionView()
+                .id(endpoint)
+                .onReceive(NotificationCenter.default.publisher(for: .serverEndpointChanged)) { _ in
+                    endpoint = Settings.shared.effectiveApiUrl
+                }
+        }
+    }
+}
+
+extension Notification.Name {
+    static let serverEndpointChanged = Notification.Name("ServerEndpointChanged")
+}
+
+private struct ServerSessionView: View {
     @StateObject private var taskStore = TaskStore()
     @StateObject private var memoStore = MemoStore()
     @StateObject private var articleStore = ArticleStore()
@@ -10,32 +27,23 @@ struct MemeGTDApp: App {
     @StateObject private var dataSources = DataSourceProvider()
     @Environment(\.scenePhase) private var scenePhase
 
-    init() {
-        // Touch the shared local database so the App Group DB file and schema
-        // exist right after launch. No feature reads from it yet (offline
-        // support lands in later phases).
-        _ = AppDatabase.shared
-    }
-
-    var body: some Scene {
-        WindowGroup {
-            RootView()
-                .environmentObject(taskStore)
-                .environmentObject(memoStore)
-                .environmentObject(articleStore)
-                .environmentObject(templateStore)
-                .environmentObject(dataSources)
-                .task {
-                    if Settings.shared.appMode == .server { _ = try? await ArticleTemplateCache.shared.refresh() }
+    var body: some View {
+        RootView()
+            .environmentObject(taskStore)
+            .environmentObject(memoStore)
+            .environmentObject(articleStore)
+            .environmentObject(templateStore)
+            .environmentObject(dataSources)
+            .task {
+                if Settings.shared.appMode == .server { _ = try? await ArticleTemplateCache.shared.refresh() }
+            }
+            .onReceive(ConnectivityMonitor.shared.$state.removeDuplicates().dropFirst()) { state in
+                if state == .available, let scheduler = dataSources.syncScheduler {
+                    scheduler.requestSync()
+                    Task { _ = try? await ArticleTemplateCache.shared.refresh() }
                 }
-                .onReceive(ConnectivityMonitor.shared.$isOffline.removeDuplicates().dropFirst()) { offline in
-                    if !offline, let scheduler = dataSources.syncScheduler {
-                        scheduler.requestSync()
-                        Task { _ = try? await ArticleTemplateCache.shared.refresh() }
-                    }
-                }
-                .preferredColorScheme(.light)
-        }
+            }
+            .preferredColorScheme(.light)
         .onChange(of: scenePhase) { _, newPhase in
             // Sync trigger: scene became active (no-op while Offline Sync is
             // off — the scheduler only exists when the toggle is on).

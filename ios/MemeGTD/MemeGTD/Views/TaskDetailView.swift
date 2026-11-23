@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TaskDetailView: View {
+    @State private var delivery = ThreadDelivery()
     let taskId: Int
     let initialTitle: String?
     let onMenuTap: () -> Void
@@ -57,7 +58,10 @@ struct TaskDetailView: View {
         ) { scrollActions in
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    if let task = viewModel.task {
+                    if !delivery.historyAvailable {
+                        Text("Earlier replies have not been downloaded.").font(.footnote).foregroundStyle(.secondary)
+                        }
+                        if let task = viewModel.task {
                         // === Title Area (glass, extends to top of screen) ===
                         IssueAreaCard {
                             TaskTitleSection(
@@ -98,6 +102,7 @@ struct TaskDetailView: View {
                         // === Timeline: Comments + Activities interleaved ===
                         IssueTimeline(
                             entries: viewModel.timelineEntries,
+                            deliveryStates: delivery.states,
                             issueId: taskId,
                             mutationsDisabled: isOfflineReadOnly,
                             onEditComment: { comment in
@@ -130,6 +135,7 @@ struct TaskDetailView: View {
                         HapticManager.impact(.medium)
 
                         let start = Date()
+                        let sync = await dataSources.syncScheduler?.refresh()
                         let result = await viewModel.fetchTask()
 
                         let elapsed = Date().timeIntervalSince(start)
@@ -141,7 +147,7 @@ struct TaskDetailView: View {
                         if let (task, comments, activities) = result {
                             viewModel.applyTask(task, comments: comments, activities: activities)
                         }
-                        HapticManager.notification(.success)
+                        HapticManager.notification(result == nil || sync?.errors.isEmpty == false ? .error : .success)
                         continuation.resume()
                     }
                 }
@@ -150,7 +156,7 @@ struct TaskDetailView: View {
                 FloatingComposer(
                     text: $viewModel.replyBody,
                     placeholder: composerPlaceholder,
-                    disabled: viewModel.isLoading || (editingMode != .none && isOfflineReadOnly),
+                    disabled: viewModel.task == nil || (editingMode != .none && isOfflineReadOnly),
                     submitting: viewModel.isSubmittingReply,
                     notice: composerNotice,
                     onDismissNotice: {
@@ -166,19 +172,19 @@ struct TaskDetailView: View {
                         switch editingMode {
                         case .title:
                             Task {
-                                await viewModel.updateTask(title: viewModel.replyBody)
+                                guard await viewModel.updateTask(title: viewModel.replyBody) else { return }
                                 editingMode = .none
                                 viewModel.replyBody = ""
                             }
                         case .body:
                             Task {
-                                await viewModel.updateTask(bodyMd: viewModel.replyBody)
+                                guard await viewModel.updateTask(bodyMd: viewModel.replyBody) else { return }
                                 editingMode = .none
                                 viewModel.replyBody = ""
                             }
                         case .comment(let commentId):
                             Task {
-                                await viewModel.updateComment(commentId, bodyMd: viewModel.replyBody)
+                                guard await viewModel.updateComment(commentId, bodyMd: viewModel.replyBody) else { return }
                                 editingMode = .none
                                 viewModel.replyBody = ""
                             }
@@ -214,6 +220,10 @@ struct TaskDetailView: View {
                 }
             )
         }
+        .alert("Could not complete the action", isPresented: Binding(
+            get: { viewModel.error != nil },
+            set: { if !$0 { viewModel.error = nil } }
+        )) { Button("OK") { viewModel.error = nil } } message: { Text(viewModel.error ?? "") }
         .navigationBarTitleDisplayMode(.inline)
         .sheet(
             isPresented: $linkedIssueNavigation.isPresented,
@@ -333,6 +343,10 @@ struct TaskDetailView: View {
                 isPresented: viewModel.isLoading && viewModel.task == nil,
                 message: "Loading..."
             )
+        }
+        .observeThread(id: taskId) { snapshot in
+            delivery = snapshot
+            viewModel.comments = snapshot.comments
         }
         .task {
             viewModel.taskStore = taskStore

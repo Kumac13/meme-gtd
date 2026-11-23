@@ -276,6 +276,40 @@ final class OfflineFirstReadCacheTests: XCTestCase {
                        IssueCreationDefaults(bodyMd: "Draft 1", labelNames: ["reading"], projectIds: [42]))
     }
 
+    func testArticleFiltersApplyToPendingAndCachedRows() async throws {
+        let source = OfflineFirstArticleDataSource(database: database, remote: UnreachableArticleRemote())
+        let a = try await source.createArticle(CreateManualArticleRequest(projectIds: [5], title: "A", bodyMd: "", labels: ["red"]))
+        let b = try await source.createArticle(CreateManualArticleRequest(title: "B", bodyMd: "", labels: ["blue"]))
+        try await database.dbWriter.write { db in
+            try db.execute(sql: "UPDATE issues SET is_bookmarked = 1 WHERE rowid = ?", arguments: [-a.id])
+        }
+        for (name, value, ids) in [("label", "blue", [b.id]), ("bookmarked", "true", [a.id]),
+                                   ("projectId", "5", [a.id]), ("projectId", "none", [b.id]),
+                                   ("label", "missing", [])] {
+            let result = try await source.listArticles(queryItems: [.init(name: name, value: value)])
+            XCTAssertEqual(result.data.map(\.id), ids)
+        }
+    }
+
+    func testPendingArticleEditRequiresAckAndUsesResolvedID() async throws {
+        let source = OfflineFirstArticleDataSource(database: database, remote: UnreachableArticleRemote())
+        let created = try await source.createArticle(CreateManualArticleRequest(title: "New", bodyMd: "original", labels: nil))
+        let thread = OfflineThreadStore(database: database, onLocalWrite: {})
+        do {
+            _ = try await source.updateArticle(id: created.id, UpdateArticleRequest(title: nil, bodyMd: "draft"))
+            XCTFail("An unsent article has no REST identity")
+        } catch is OfflineThreadStore.PendingIdentity { }
+        let reply = try await source.createComment(articleId: created.id, CreateCommentRequest(bodyMd: "reply"))
+        try await database.dbWriter.write { db in
+            try db.execute(sql: "UPDATE issues SET server_id = 234 WHERE rowid = ?", arguments: [-created.id])
+            try db.execute(sql: "UPDATE comments SET server_id = 82 WHERE rowid = ?", arguments: [-reply.id])
+        }
+        let issue = try await thread.serverIssueID(created.id)
+        let comment = try await thread.serverCommentID(reply.id, parentID: issue)
+        XCTAssertEqual(issue, 234)
+        XCTAssertEqual(comment, 82)
+    }
+
     func testManualArticleAndRepliesPersistAcrossDataSources() async throws {
         let articles = OfflineFirstArticleDataSource(database: database, remote: UnreachableArticleRemote())
         let created = try await articles.createArticle(CreateManualArticleRequest(

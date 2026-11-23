@@ -4,6 +4,7 @@ import GRDB
 nonisolated struct OfflineThreadStore {
     let database: AppDatabase
     let onLocalWrite: () -> Void
+    var endpoint = Settings.shared.effectiveApiUrl
 
     private func parent(_ db: Database, id: Int) throws -> String {
         let column = id > 0 ? "server_id" : "rowid"
@@ -16,7 +17,7 @@ nonisolated struct OfflineThreadStore {
     }
 
     func loadBeforeInitialPull<T: Codable>(kind: String, id: Int, fetch: () async throws -> T) async throws -> T {
-        let key = "thread.\(Settings.shared.effectiveApiUrl).\(kind).\(id)"
+        let key = "thread.\(endpoint).\(kind).\(id)"
         if let saved = try database.syncMetaValue(for: key), let data = Data(base64Encoded: saved) {
             return try JSONDecoder().decode(T.self, from: data)
         }
@@ -27,16 +28,37 @@ nonisolated struct OfflineThreadStore {
     }
 
     func comments(id: Int, fetch: () async throws -> [Comment]) async throws -> [Comment] {
-        let (key, pending) = try await database.dbWriter.read { db in
-            let key = try parent(db, id: id)
-            return (key, try LocalCommentStore.listComments(db, issueUuid: key, issueId: id))
+        let key = try await database.dbWriter.read { db in try parent(db, id: id) }
+        if key.hasPrefix("server-id:") {
+            _ = try? await loadBeforeInitialPull(kind: "comments", id: id, fetch: fetch)
         }
-        guard key.hasPrefix("server-id:") else { return pending }
-        do {
-            let history = try await loadBeforeInitialPull(kind: "comments", id: id, fetch: fetch)
-            return history + pending
-        } catch where !pending.isEmpty {
-            return pending
+        return try await database.dbWriter.read { db in
+            try ThreadDelivery.read(db, id: id, endpoint: endpoint).comments
+        }
+    }
+
+    enum PendingIdentity: LocalizedError {
+        case awaitingSync
+        var errorDescription: String? { "Saved on this device. Try this action after it syncs." }
+    }
+
+    func serverIssueID(_ id: Int) async throws -> Int {
+        guard id < 0 else { return id }
+        return try await database.dbWriter.read { db in
+            guard let resolved = try Int.fetchOne(db, sql: "SELECT server_id FROM issues WHERE rowid = ? AND is_deleted = 0", arguments: [-id])
+            else { throw PendingIdentity.awaitingSync }
+            return resolved
+        }
+    }
+
+    func serverCommentID(_ id: Int, parentID: Int) async throws -> Int {
+        guard id < 0 else { return id }
+        return try await database.dbWriter.read { db in
+            guard let resolved = try Int.fetchOne(db, sql: """
+                SELECT c.server_id FROM comments c JOIN issues i ON i.uuid = c.issue_uuid
+                WHERE c.rowid = ? AND i.server_id = ? AND c.is_deleted = 0
+                """, arguments: [-id, parentID]) else { throw PendingIdentity.awaitingSync }
+            return resolved
         }
     }
 
@@ -64,6 +86,7 @@ nonisolated struct OfflineThreadStore {
     }
 
     static func saveProjects(_ db: Database, ids: [Int], uuid: String) throws {
+        try db.execute(sql: "UPDATE issues SET memberships_known = 1 WHERE uuid = ?", arguments: [uuid])
         for id in ids {
             try db.execute(sql: "INSERT OR IGNORE INTO pending_memberships(issue_uuid, project_id) VALUES (?, ?)", arguments: [uuid, id])
         }
