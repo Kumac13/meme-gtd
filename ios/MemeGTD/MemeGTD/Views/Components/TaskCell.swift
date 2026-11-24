@@ -2,11 +2,12 @@ import SwiftUI
 
 struct TaskCell: View {
     let task: TaskItem
+    var pending = false
     var snippet: String? = nil
     var searchQuery: String? = nil
 
     var body: some View {
-        IssueCellLayout(title: task.title, snippet: snippet, searchQuery: searchQuery) {
+        IssueCellLayout(title: task.title, pending: pending, snippet: snippet, searchQuery: searchQuery) {
                 // The integer id is a SERVER identity; rows that only exist
                 // on this device (Standalone / not-yet-synced, id = -rowid)
                 // have no meaningful number to show.

@@ -3,6 +3,7 @@ import UIKit
 
 struct MemoTimelineItem: View {
     let memo: Memo
+    var pending = false
     var snippet: String? = nil
     var searchQuery: String? = nil
     let onOpen: () -> Void
@@ -12,6 +13,7 @@ struct MemoTimelineItem: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 10) {
                 MemoBody(bodyMd: memo.bodyMd, labels: memo.labels, searchQuery: searchQuery)
+                    .pendingSyncDot(pending)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 Spacer(minLength: 0)

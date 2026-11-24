@@ -100,9 +100,14 @@ final class SyncEngineTests: XCTestCase {
         let memo = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "parent"))
         _ = try await dataSource.createComment(memoId: memo.id, CreateCommentRequest(bodyMd: "reply"))
         let before = try await database.dbWriter.read { db in try ThreadDelivery.read(db, id: memo.id, endpoint: "A") }
+        XCTAssertTrue(before.parentPending)
+        XCTAssertEqual(before.pendingComments, Set(before.comments.map(\.id)))
+        let list = try await database.dbWriter.read { try ThreadDelivery.pendingThreadIDs($0, kind: "memo", endpoint: "A") }
+        XCTAssertEqual(list, [memo.id])
         XCTAssertEqual(before.comments.map(\.bodyMd), ["reply"])
         _ = await engine.syncNow()
         let after = try await database.dbWriter.read { db in try ThreadDelivery.read(db, id: memo.id, endpoint: "A") }
+        XCTAssertFalse(after.hasPending)
         XCTAssertEqual(after.comments.map(\.bodyMd), ["reply"])
         XCTAssertGreaterThan(try XCTUnwrap(after.serverID), 0)
     }

@@ -2,6 +2,7 @@ import Combine
 import SwiftUI
 
 struct MemoListView: View {
+    @State private var pendingThreads: Set<Int> = []
     let onMenuTap: () -> Void
     @Binding var navigationPath: NavigationPath
 
@@ -80,6 +81,7 @@ struct MemoListView: View {
                         }
                         MemoTimelineItem(
                             memo: memo,
+                            pending: pendingThreads.contains(memo.id),
                             snippet: viewModel.searchMatchInfos[memo.id],
                             searchQuery: !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil,
                             onOpen: openMemo
@@ -179,7 +181,6 @@ struct MemoListView: View {
         }
         .safeAreaInset(edge: .top) {
             VStack(spacing: 4) {
-                OfflineReadOnlyIndicator()
                 IssueListFilterBar {
                     FilterPill(
                         label: labelFilterDisplayLabel,
@@ -217,9 +218,11 @@ struct MemoListView: View {
                 }
             }
         }
+        .observePendingThreads(kind: "memo") { pendingThreads = $0 }
         .toolbar {
             AppToolbar(
                 title: "Memos",
+                showsPending: !pendingThreads.isEmpty,
                 onMenuTap: onMenuTap,
                 isSearching: $isSearching,
                 searchQuery: $viewModel.searchQuery,

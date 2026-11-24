@@ -79,10 +79,6 @@ struct ArticleDetailView: View {
                                     }
                                 }
 
-                                if connectivity.isOfflineReadOnly {
-                                    OfflineReadOnlyBadge()
-                                }
-
                                 // Labels
                                 if let labels = article.labels, !labels.isEmpty {
                                     FlowLayout(spacing: 6) {
@@ -115,6 +111,7 @@ struct ArticleDetailView: View {
                             bodyMd: displayBody,
                             createdAt: article.createdAt,
                             updatedAt: article.updatedAt,
+                            pending: delivery.parentPending,
                             emptyText: "No content available.",
                             copyText: article.bodyMd,
                             mutationsDisabled: isOfflineReadOnly,
@@ -135,6 +132,7 @@ struct ArticleDetailView: View {
                         IssueTimeline(
                             entries: viewModel.timelineEntries,
                             issueId: viewModel.articleId,
+                            pendingComments: delivery.pendingComments,
                             mutationsDisabled: isOfflineReadOnly,
                             onEditComment: { comment in
                                 viewModel.replyBody = comment.bodyMd
@@ -218,6 +216,7 @@ struct ArticleDetailView: View {
         .toolbar {
             AppToolbar(
                 title: toolbarTitle,
+                showsPending: delivery.hasPending,
                 onMenuTap: onMenuTap,
                 titleLineLimit: 1,
                 trailing: {
@@ -298,7 +297,7 @@ struct ArticleDetailView: View {
     private var toolbarTitle: String {
         // Negative ids are device-local rows with no server identity — not a
         // number to surface.
-        viewModel.article?.title ?? initialTitle ?? (articleId > 0 ? "#\(articleId)" : "")
+        viewModel.article?.title ?? initialTitle.flatMap { $0.isEmpty ? nil : $0 } ?? (articleId > 0 ? "#\(articleId)" : "Article")
     }
 
     private var editTitleAction: (() -> Void)? {

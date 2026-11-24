@@ -63,6 +63,7 @@ struct MemoDetailView: View {
 
                             ThreadItem(
                                 bodyMd: item.bodyMd,
+                                pending: item.commentId.map(delivery.pendingComments.contains) ?? delivery.parentPending,
                                 labels: nil,
                                 onEdit: {
                                     viewModel.replyBody = item.bodyMd
@@ -167,6 +168,7 @@ struct MemoDetailView: View {
         .toolbar {
             AppToolbar(
                 title: memoTitlePreview,
+                showsPending: delivery.hasPending,
                 onMenuTap: onMenuTap,
                 titleLineLimit: 1,
                 trailing: {

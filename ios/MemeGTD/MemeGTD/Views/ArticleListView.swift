@@ -2,6 +2,7 @@ import Combine
 import SwiftUI
 
 struct ArticleListView: View {
+    @State private var pendingThreads: Set<Int> = []
     let onMenuTap: () -> Void
     @Binding var navigationPath: NavigationPath
 
@@ -39,6 +40,7 @@ struct ArticleListView: View {
         ) { article in
             ArticleCell(
                 article: article,
+                pending: pendingThreads.contains(article.id),
                 snippet: viewModel.searchMatchInfos[article.id],
                 searchQuery: viewModel.searchQuery.isEmpty ? nil : viewModel.searchQuery
             )
@@ -50,7 +52,6 @@ struct ArticleListView: View {
         }
         .safeAreaInset(edge: .top) {
             VStack(spacing: 0) {
-                OfflineReadOnlyIndicator()
                 IssueListFilterBar {
                     FilterPill(
                         label: viewModel.originFilter == "all" ? "Origin" : viewModel.originFilter.capitalized,
@@ -92,9 +93,11 @@ struct ArticleListView: View {
                 creation.beginChoosing()
             }
         }
+        .observePendingThreads(kind: "article") { pendingThreads = $0 }
         .toolbar {
             AppToolbar(
                 title: "Articles",
+                showsPending: !pendingThreads.isEmpty,
                 onMenuTap: onMenuTap,
                 isSearching: $isSearching,
                 searchQuery: $viewModel.searchQuery,

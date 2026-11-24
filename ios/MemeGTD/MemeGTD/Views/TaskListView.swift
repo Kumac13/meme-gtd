@@ -2,6 +2,7 @@ import Combine
 import SwiftUI
 
 struct TaskListView: View {
+    @State private var pendingThreads: Set<Int> = []
     let onMenuTap: () -> Void
     @Binding var navigationPath: NavigationPath
 
@@ -55,6 +56,7 @@ struct TaskListView: View {
             VStack(alignment: .leading, spacing: 0) {
                 TaskCell(
                     task: task,
+                    pending: pendingThreads.contains(task.id),
                     snippet: viewModel.searchMatchInfos[task.id],
                     searchQuery: !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil
                 )
@@ -67,7 +69,6 @@ struct TaskListView: View {
         }
         .safeAreaInset(edge: .top) {
             VStack(spacing: 0) {
-                OfflineReadOnlyIndicator()
 
                 IssueListFilterBar {
                     FilterPill(
@@ -118,9 +119,11 @@ struct TaskListView: View {
                 creation.beginChoosing()
             }
         }
+        .observePendingThreads(kind: "task") { pendingThreads = $0 }
         .toolbar {
             AppToolbar(
                 title: "Tasks",
+                showsPending: !pendingThreads.isEmpty,
                 onMenuTap: onMenuTap,
                 isSearching: $isSearching,
                 searchQuery: $viewModel.searchQuery,

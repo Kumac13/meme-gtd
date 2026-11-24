@@ -81,6 +81,7 @@ struct TaskDetailView: View {
                             bodyMd: task.bodyMd,
                             createdAt: task.createdAt,
                             updatedAt: task.updatedAt,
+                            pending: delivery.parentPending,
                             emptyText: "No description provided.",
                             mutationsDisabled: isOfflineReadOnly,
                             onEdit: {
@@ -104,6 +105,7 @@ struct TaskDetailView: View {
                         IssueTimeline(
                             entries: viewModel.timelineEntries,
                             issueId: taskId,
+                            pendingComments: delivery.pendingComments,
                             mutationsDisabled: isOfflineReadOnly,
                             onEditComment: { comment in
                                 viewModel.replyBody = comment.bodyMd
@@ -201,11 +203,13 @@ struct TaskDetailView: View {
                 .padding(.bottom, 10)
             }
         }
+        } // GeometryReader
         .enableSwipeBack()
         .navigationBarBackButtonHidden(true)
         .toolbar {
             AppToolbar(
                 title: toolbarTitle,
+                showsPending: delivery.hasPending,
                 onMenuTap: onMenuTap,
                 titleLineLimit: 1,
                 trailing: {
@@ -353,7 +357,6 @@ struct TaskDetailView: View {
             viewModel.dataSources = dataSources
             await viewModel.loadTask()
         }
-        } // GeometryReader
     }
 
     private func performConversion(_ target: String) {
@@ -374,7 +377,7 @@ struct TaskDetailView: View {
     private var toolbarTitle: String {
         // Negative ids are device-local rows with no server identity — not a
         // number to surface.
-        let title = viewModel.task?.title ?? initialTitle ?? (taskId > 0 ? "#\(taskId)" : "")
+        let title = viewModel.task?.title ?? initialTitle.flatMap { $0.isEmpty ? nil : $0 } ?? (taskId > 0 ? "#\(taskId)" : "Task")
         return title
     }
 
