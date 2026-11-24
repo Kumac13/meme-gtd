@@ -12,24 +12,25 @@ UI の検討・実装確認・レビューで、実画面のスクショを撮�
 
 ## テスト用サーバー
 
-作業中の worktree の変更を表示するには、その worktree でビルドしてテスト用サーバーを起動する。ポート3001は別の作業ツリーが使っていることがあるため、空いているポートを指定する。
+テスト環境の作り方は `test-env` スキルに従う。ここには、作業中の worktree の変更を表示するときの差分だけを書く。
+
+- その worktree で `pnpm build` を実行してから、テスト DB を初期化してサーバーを起動する。
+- ポート3001を別の作業ツリーのサーバーが使っている場合は、ポートを指定して起動する。以降の例は3002を使う。
 
 ```bash
-export PATH="$HOME/.asdf/shims:$PATH"
-pnpm build
-pnpm mgtd:test init -d $PWD/test-data/test.db -f --yes
 pnpm server:dev --port 3002
 ```
 
-新しく作った worktree では、`pnpm mgtd:test init` が better-sqlite3 の bindings file を見つけられずに失敗する（pnpm がインストール時にこのパッケージのビルドを実行しないため。`pnpm rebuild better-sqlite3` でもビルドされない）。パッケージのインストールスクリプトを直接実行する。
+- 新しく作った worktree では、`pnpm mgtd:test init` が better-sqlite3 の bindings file を見つけられずに失敗する（pnpm がインストール時にこのパッケージのビルドを実行しないため。`pnpm rebuild better-sqlite3` でもビルドされない。2026-11-24 検証）。パッケージのインストールスクリプトを直接実行する。
 
 ```bash
 (cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npm run install)
 ```
 
-データは API で入れる。
+データは API で入れる。画像の保存先は最初に1つ決める。
 
 ```bash
+OUT_DIR=$(mktemp -d)
 BASE=http://localhost:3002
 jq -n --arg t "$TITLE" --arg b "$BODY" '{title:$t,bodyMd:$b}' \
   | curl -fsS -X POST "$BASE/api/tasks" -H 'Content-Type: application/json' -d @-
@@ -55,7 +56,7 @@ agent-browser close
 
 ```bash
 xcrun simctl list devices available
-UDID=<対象の iOS バージョンの iPhone 17 の UDID>
+UDID=<Task が指定する iOS バージョンの iPhone 17 の UDID。指定が無ければ、一覧にある最新の iOS バージョンのもの>
 xcrun simctl bootstatus "$UDID" -b
 ```
 

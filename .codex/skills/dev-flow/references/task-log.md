@@ -38,6 +38,15 @@ jq -n --arg b "$BODY" '{bodyMd:$b}' \
 
 1件を短く保ち、調査の全文や長い計画は書かない。
 
+## Task を起票する
+
+ユーザーが起票を指示したときに使う。
+
+```bash
+jq -n --arg t "$TITLE" --arg b "$BODY" '{title:$t,bodyMd:$b}' \
+  | curl -fsS -X POST "$API/api/tasks" -H 'Content-Type: application/json' -d @-
+```
+
 ## サブ Task を作る
 
 親 Task の既存リンクを先に読み、同じ粒度のサブ Task が無いことを確かめてから作る。
