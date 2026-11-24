@@ -37,6 +37,13 @@ enum LinkDirection: String, Codable {
 // MARK: - Target Issue (embedded in link response)
 
 struct TargetIssue: Codable {
+    static func memoPreview(_ body: String) -> String {
+        let text = body.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+        return text.count > 30 ? String(text.prefix(30)) + "…" : text
+    }
+
+    var displayTitle: String { type == "memo" ? Self.memoPreview(title) : title }
+
     let id: Int
     let type: String
     let title: String

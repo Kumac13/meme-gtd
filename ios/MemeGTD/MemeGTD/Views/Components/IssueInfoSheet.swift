@@ -279,7 +279,7 @@ struct IssueInfoSheet<VM: IssueMetadataProvider>: View {
 
                                             IssueTypeBadge(type: link.targetIssue.type)
 
-                                            Text(link.targetIssue.title)
+                                            Text(link.targetIssue.displayTitle)
                                                 .font(.system(size: 13))
                                                 .foregroundColor(.textPrimary)
                                                 .lineLimit(1)
@@ -491,7 +491,7 @@ struct IssueInfoSheet<VM: IssueMetadataProvider>: View {
             LinkPickerIssueSelection(
                 id: .persisted(link.id),
                 targetIssueId: link.targetIssue.id,
-                title: link.targetIssue.title,
+                title: link.targetIssue.displayTitle,
                 item: provider.linkedPickerItems.first { $0.id == link.targetIssue.id },
                 linkType: link.linkType
             )

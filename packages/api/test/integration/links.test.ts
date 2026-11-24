@@ -18,6 +18,30 @@ describe('Link Operations', () => {
     await cleanup();
   });
 
+  it('uses a single-line memo preview in links and current and legacy activity payloads', async () => {
+    const bodyMd = '短い\n' + '本'.repeat(29);
+    const expected = '短い ' + '本'.repeat(27) + '…';
+    const memo = (await app.inject({ method: 'POST', url: '/api/memos', payload: createMemoFixture({ bodyMd }) })).json();
+    const task = (await app.inject({ method: 'POST', url: '/api/tasks', payload: createTaskFixture() })).json();
+    const link = (await app.inject({ method: 'POST', url: '/api/links',
+      payload: { sourceIssueId: memo.id, targetIssueId: task.id, linkType: 'relates' } })).json();
+    const links = (await app.inject({ method: 'GET', url: `/api/issues/${task.id}/links` })).json();
+    assert.equal(links[0].targetIssue.title, expected);
+    await app.inject({ method: 'DELETE', url: `/api/links/${link.id}` });
+    const logs = async () => (await app.inject({ method: 'GET', url: `/api/activity-log/issues/${task.id}` })).json()
+      .filter((event: { eventType: string }) => event.eventType.startsWith('link.'));
+    const events = await logs();
+    assert.equal(events.length, 2);
+    for (const event of events) assert.equal(event.payload.source_issue_title, expected);
+    const legacy = app.db.prepare(`
+      INSERT INTO activity_log(event_type, occurred_at, source_type, payload)
+      SELECT event_type, occurred_at, source_type, json_set(payload, '$.source_issue_title', NULL)
+      FROM activity_log WHERE id = ?
+    `).run(events[0].id);
+    const restored = (await logs()).find((event: { id: number }) => event.id === Number(legacy.lastInsertRowid));
+    assert.equal(restored.payload.source_issue_title, expected);
+  });
+
   it('should create a new link (POST /api/links)', async () => {
     // Create two tasks
     const task1Response = await app.inject({

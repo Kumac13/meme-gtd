@@ -4,7 +4,91 @@ struct ActivityItemView: View {
     let activity: ActivityLogEntry
     var issueId: Int?
 
+    var isLast = false
+    @EnvironmentObject private var dataSources: DataSourceProvider
+    @State private var memoPreview: String?
+
     var body: some View {
+        Group {
+            if activity.eventType == "link.created" || activity.eventType == "link.deleted" {
+                linkRow
+            } else {
+                compactRow
+            }
+        }
+        .background(alignment: .topLeading) {
+            Rectangle().fill(Color(.systemGray3))
+                .frame(width: 2)
+                .frame(height: isLast ? 12 : nil)
+                .padding(.leading, 24)
+        }
+    }
+
+    private var linkRow: some View {
+        let payload = activity.payload
+        let side = payload["source_issue_id"]?.intValue == issueId ? "target_issue_" : "source_issue_"
+        let type = payload[side + "type"]?.stringValue
+        let id = payload[side + "id"]?.intValue
+        let snapshot = payload[side + "title"]?.stringValue
+        let title = snapshot ?? memoPreview ?? ""
+        return HStack(alignment: .top, spacing: 0) {
+            Image(systemName: "link")
+                .font(.system(size: 11)).foregroundStyle(.secondary)
+                .frame(width: 18, height: 18).background(Color(.systemBackground), in: Circle())
+                .frame(width: 50, height: 16)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(activity.eventType == "link.created" ? "Linked" : "Unlinked")
+                    Spacer()
+                    Text(TimelineHelpers.relativeTimeString(iso: activity.occurredAt))
+                }.font(.system(size: 11)).foregroundStyle(.secondary)
+                if let id {
+                    let target = targetLabel(id: id, type: type, title: title)
+                    switch IssueRouteDestination(id: id, type: type, title: title) {
+                    case .memo(let route): NavigationLink(value: route) { target }
+                    case .task(let route): NavigationLink(value: route) { target }
+                    case .article(let route): NavigationLink(value: route) { target }
+                    case .template(let route): NavigationLink(value: route) { target }
+                    case nil: target
+                    }
+                }
+            }.padding(.trailing, 16)
+        }
+        .buttonStyle(.plain)
+        .padding(.vertical, 4)
+        .task(id: id) {
+            memoPreview = nil
+            if type == "memo", snapshot == nil, let id,
+               let memo = try? await dataSources.memos.getMemo(id: id), !Task.isCancelled {
+                memoPreview = TargetIssue.memoPreview(memo.bodyMd)
+            }
+        }
+    }
+
+    private func targetLabel(id: Int, type: String?, title: String) -> some View {
+        let symbol: String
+        switch type {
+        case "memo": symbol = "note.text"
+        case "article": symbol = "newspaper"
+        case "task": symbol = "checkmark.square"
+        default: symbol = "doc"
+        }
+        return HStack(spacing: 7) {
+            Image(systemName: symbol).foregroundStyle(Color.accentDark)
+            Text(verbatim: "#\(id)").font(.caption.monospacedDigit()).fixedSize()
+            Text(title).font(.system(size: 13, weight: .medium)).lineLimit(1)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 9)
+        .frame(height: 30)
+        .foregroundStyle(Color.textPrimary)
+        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.border))
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(type ?? "Item") #\(id) \(title)")
+    }
+
+    private var compactRow: some View {
         HStack(spacing: 0) {
             // Icon area: centered on the connector line (leading 24pt = center of 2pt line)
             Image(systemName: iconName)
@@ -70,34 +154,6 @@ struct ActivityItemView: View {
                     .font(.system(size: 12))
                     .foregroundColor(Color(.systemGray))
             }
-        case "link.created":
-            let sourceId = p["source_issue_id"]?.intValue
-            let isSource = issueId != nil && sourceId == issueId
-            let otherId = isSource ? p["target_issue_id"]?.intValue : p["source_issue_id"]?.intValue
-            let otherTitle = isSource ? p["target_issue_title"]?.stringValue : p["source_issue_title"]?.stringValue
-            let otherType = isSource ? p["target_issue_type"]?.stringValue : p["source_issue_type"]?.stringValue
-            HStack(spacing: 2) {
-                Text("linked")
-                    .font(.system(size: 12))
-                    .foregroundColor(Color(.systemGray))
-                if let id = otherId {
-                    issueLink(id: id, title: otherTitle, type: otherType)
-                }
-            }
-        case "link.deleted":
-            let delSourceId = p["source_issue_id"]?.intValue
-            let delIsSource = issueId != nil && delSourceId == issueId
-            let delOtherId = delIsSource ? p["target_issue_id"]?.intValue : p["source_issue_id"]?.intValue
-            let delOtherTitle = delIsSource ? p["target_issue_title"]?.stringValue : p["source_issue_title"]?.stringValue
-            let delOtherType = delIsSource ? p["target_issue_type"]?.stringValue : p["source_issue_type"]?.stringValue
-            HStack(spacing: 2) {
-                Text("unlinked")
-                    .font(.system(size: 12))
-                    .foregroundColor(Color(.systemGray))
-                if let id = delOtherId {
-                    issueLink(id: id, title: delOtherTitle, type: delOtherType)
-                }
-            }
         case "task.status_changed":
             let from = p["from_status"]?.stringValue ?? "?"
             let to = p["to_status"]?.stringValue ?? "?"
@@ -137,51 +193,4 @@ struct ActivityItemView: View {
             .clipShape(Capsule())
     }
 
-    @ViewBuilder
-    private func issueLink(id: Int, title: String?, type: String?) -> some View {
-        HStack(spacing: 2) {
-            if let destination = IssueRouteDestination(id: id, type: type, title: title ?? "") {
-                destinationLink(destination, id: id)
-            } else {
-                Text(verbatim: "#\(id)")
-                    .font(.system(size: 12))
-                    .foregroundColor(Color(.systemGray))
-            }
-            if let title {
-                Text(title)
-                    .font(.system(size: 12))
-                    .foregroundColor(Color(.systemGray))
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func destinationLink(_ destination: IssueRouteDestination, id: Int) -> some View {
-        switch destination {
-        case .memo(let route):
-            NavigationLink(value: route) { issueIdLabel(id) }
-        case .task(let route):
-            NavigationLink(value: route) { issueIdLabel(id) }
-        case .article(let route):
-            NavigationLink(value: route) { issueIdLabel(id) }
-        case .template(let route):
-            NavigationLink(value: route) { issueIdLabel(id) }
-        }
-    }
-
-    private func issueIdLabel(_ id: Int) -> some View {
-        Text(verbatim: "#\(id)")
-            .font(.system(size: 12))
-            .foregroundColor(Color.accentDark)
-    }
-
-    private func linkText(id: Int?, title: String?) -> String {
-        if let title = title, let id = id {
-            return "#\(id) \(title)"
-        }
-        if let id = id {
-            return "#\(id)"
-        }
-        return ""
-    }
 }

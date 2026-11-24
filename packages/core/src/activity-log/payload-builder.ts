@@ -1,3 +1,4 @@
+import { memoPreviewTitle } from 'meme-gtd-shared';
 import Database from 'better-sqlite3';
 import type {
   ProjectSnapshot,
@@ -273,6 +274,13 @@ interface LinkCreatedPayload {
   target_issue_title: string | null;
 }
 
+export function getLinkIssueTitle(db: Database.Database, id: number): string | null {
+  const row = db.prepare(`
+    SELECT title, CASE WHEN type = 'memo' THEN body_md END AS memo_body FROM issues WHERE id = ?
+  `).get(id) as { title: string | null; memo_body: string | null } | undefined;
+  return row?.memo_body ? memoPreviewTitle(row.memo_body) : row?.title ?? null;
+}
+
 export const buildLinkCreatedPayload = (
   db: Database.Database,
   linkId: number,
@@ -285,10 +293,10 @@ export const buildLinkCreatedPayload = (
     link_type: linkType,
     source_issue_id: sourceIssueId,
     source_issue_type: getIssueType(db, sourceIssueId),
-    source_issue_title: getIssueTitle(db, sourceIssueId),
+    source_issue_title: getLinkIssueTitle(db, sourceIssueId),
     target_issue_id: targetIssueId,
     target_issue_type: getIssueType(db, targetIssueId),
-    target_issue_title: getIssueTitle(db, targetIssueId),
+    target_issue_title: getLinkIssueTitle(db, targetIssueId),
   };
 };
 

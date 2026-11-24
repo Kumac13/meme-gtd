@@ -118,12 +118,7 @@ export default function CommentSection({
 
               // Activity: icon with white circle bg sits ON the line
               return (
-                <div key={key} className="flex items-center gap-2 py-0.5 pl-5 pr-4">
-                  <span className="relative z-10 flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-400">
-                    {getActivityIcon(entry.activity.eventType)}
-                  </span>
-                  <ActivityTimelineItem activity={entry.activity} issueId={issueId} />
-                </div>
+                <ActivityRow key={key} activity={entry.activity} issueId={issueId} />
               );
             })}
 
@@ -153,6 +148,18 @@ export default function CommentSection({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+export function ActivityRow({ activity, issueId }: { activity: ActivityLogEntry; issueId?: number }) {
+  const align = activity.eventType.startsWith('link.') ? 'items-start' : 'items-center';
+  return (
+    <div className={`flex ${align} gap-2 py-0.5 pl-5 pr-4`}>
+      <span className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-400">
+        {getActivityIcon(activity.eventType)}
+      </span>
+      <ActivityTimelineItem activity={activity} issueId={issueId} />
     </div>
   );
 }

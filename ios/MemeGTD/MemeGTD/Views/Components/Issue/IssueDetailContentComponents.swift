@@ -123,7 +123,7 @@ struct IssueTimeline: View {
                     }
                 )
             case .activity(let activity):
-                ActivityItemView(activity: activity, issueId: issueId)
+                ActivityItemView(activity: activity, issueId: issueId, isLast: entry.id == entries.last?.id)
             }
         }
     }

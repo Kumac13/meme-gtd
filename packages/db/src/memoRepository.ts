@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { nowIso, uuidv7, type Memo, type Comment, toBoolean } from 'meme-gtd-shared';
+import { memoPreviewTitle, nowIso, uuidv7, type Memo, type Comment, toBoolean } from 'meme-gtd-shared';
 
 export interface CreateMemoInput {
   bodyMd: string;
@@ -442,7 +442,7 @@ export const getPromotePreview = (
   const linkedIssues: PromotePreviewLink[] = linkRows.map((row) => {
     const isOutgoing = row.source_issue_id === memoId;
     const targetId = isOutgoing ? row.target_issue_id : row.source_issue_id;
-    const fallbackTitle = (row.target_body ?? '').replace(/\s+/g, ' ').trim().slice(0, 80);
+    const fallbackTitle = row.target_type === 'memo' ? memoPreviewTitle(row.target_body ?? '') : (row.target_body ?? '').replace(/\s+/g, ' ').trim().slice(0, 80);
     return {
       direction: isOutgoing ? 'outgoing' : 'incoming',
       linkType: row.link_type,

@@ -1,13 +1,14 @@
+import { ActivityTarget } from './ActivityTarget';
+import { LinkedActivityTarget } from './ActivityTimelineItem';
 import { Link } from 'react-router-dom';
 import { formatTimeOnly, formatDateTime, formatDateOnly, getDateKey } from '../utils/dates';
 import {
   parseEventType,
   getActivityDetails,
+  getLinkDescription,
   getActivityLink,
-  getActivityTypeColor,
   getActivityIssueId,
   isPrimaryEntity,
-  getLinkDescription,
   getCommentHeadline,
   getCommentBody,
   getLabelHeadline,
@@ -39,7 +40,7 @@ function TimeColumn({ time, showDate }: TimeColumnProps) {
 
 function TimelineNode() {
   return (
-    <div className="flex-shrink-0 w-3 mt-1">
+    <div className="flex-shrink-0 w-3 mt-0.5">
       <div className="w-3 h-3 rounded-full bg-gray-400" />
     </div>
   );
@@ -47,11 +48,11 @@ function TimelineNode() {
 
 // Timeline line: positioned from wrapper (relative)
 // left: px-4(16px) + w-20(80px) + gap-4(16px) + dot-center(5px) = 117px
-// top: mt-1(4px) + dot-height(12px) = 16px
+// top: mt-0.5(2px) + dot-height(12px) = 14px
 // bottom: -4px to extend into next item's mt-1 area
 const timelineLineStyle = {
   left: '117px',
-  top: '16px',
+  top: '14px',
   bottom: '-4px',
 };
 
@@ -65,7 +66,6 @@ function ActivityTimelineItem({ activity, isLast, showDate }: ActivityTimelineIt
   const { type, action } = parseEventType(activity.eventType);
   const issueId = getActivityIssueId(activity);
   const link = getActivityLink(activity);
-  const typeColor = getActivityTypeColor(type);
 
   const timelineLine = !isLast && (
     <div className="absolute w-0.5 bg-gray-200" style={timelineLineStyle} />
@@ -75,7 +75,6 @@ function ActivityTimelineItem({ activity, isLast, showDate }: ActivityTimelineIt
   if (isPrimaryEntity(type)) {
     const title = getPrimaryEntityTitle(activity);
     const details = getActivityDetails(activity);
-    const capitalizedType = type.charAt(0).toUpperCase() + type.slice(1);
 
     return (
       <div className="px-4 relative">
@@ -83,28 +82,9 @@ function ActivityTimelineItem({ activity, isLast, showDate }: ActivityTimelineIt
         <div className="flex gap-4">
           <TimeColumn time={activity.occurredAt} showDate={showDate} />
           <TimelineNode />
-          <div className="flex-1 pb-6">
-            {/* Line 1: Clickable badge [#ID Type] + title */}
-            <div className="flex items-center gap-2">
-              {link ? (
-                <Link
-                  to={link}
-                  className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${typeColor} hover:opacity-80 transition-opacity`}
-                >
-                  #{issueId} {capitalizedType}
-                </Link>
-              ) : (
-                <span
-                  className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${typeColor} opacity-75`}
-                >
-                  #{issueId} {capitalizedType}
-                </span>
-              )}
-              {title && <span className="text-gray-900 text-sm">{title}</span>}
-            </div>
-            {/* Line 2: action */}
-            <p className="mt-1 text-gray-600 text-sm">{action}</p>
-            {/* Line 3: details (if available) */}
+          <div className="min-w-0 flex-1 pb-6">
+            <p className="mb-1 text-xs text-gray-500">{action}</p>
+            <ActivityTarget id={issueId} type={activity.eventType === 'memo.promoted' ? 'task' : type} title={title} to={link} />
             {details && <p className="mt-0.5 text-sm text-gray-500">{details}</p>}
           </div>
         </div>
@@ -115,32 +95,21 @@ function ActivityTimelineItem({ activity, isLast, showDate }: ActivityTimelineIt
   // Link events - simple text format
   if (type === 'link') {
     const linkText = action === 'created' ? 'linked' : 'unlinked';
-    const description = getLinkDescription(activity);
-
-    const content = (
-      <div className="flex gap-4">
-        <TimeColumn time={activity.occurredAt} showDate={showDate} />
-        <TimelineNode />
-        <div className="flex-1 pb-4">
-          <p className="text-gray-700 text-sm">{linkText}</p>
-          <p className="text-sm text-gray-500">{description}</p>
-        </div>
-      </div>
-    );
-
-    if (link) {
-      return (
-        <Link to={link} className="block hover:bg-gray-50 transition-colors px-4 relative">
-          {timelineLine}
-          {content}
-        </Link>
-      );
-    }
-
+    const sourceId = activity.payload.source_issue_id;
     return (
-      <div className="px-4 opacity-75 cursor-not-allowed relative">
+      <div className="relative px-4">
         {timelineLine}
-        {content}
+        <div className="flex gap-4">
+          <TimeColumn time={activity.occurredAt} showDate={showDate} />
+          <TimelineNode />
+          <div className="min-w-0 flex-1 pb-4">
+            <p className="mb-1 text-xs text-gray-500" title={getLinkDescription(activity)}>
+              {typeof sourceId === 'number' && (link ? <Link to={link}>#{sourceId} </Link> : `#${sourceId} `)}
+              {linkText}
+            </p>
+            <LinkedActivityTarget payload={activity.payload} />
+          </div>
+        </div>
       </div>
     );
   }

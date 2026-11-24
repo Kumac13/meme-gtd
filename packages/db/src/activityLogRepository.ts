@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { nowIso } from 'meme-gtd-shared';
+import { memoPreviewTitle, nowIso } from 'meme-gtd-shared';
 import type {
   ActivityLogEntry,
   CreateActivityLogInput,
@@ -136,7 +136,30 @@ export const listActivityLog = (
   const stmt = db.prepare(sql);
   const rows = stmt.all({ ...params, limit, offset });
 
-  return rows.map(rowToActivityLogEntry);
+  const entries = rows.map(rowToActivityLogEntry);
+  // 旧ログにはメモのタイトルがないため、取得したページ分だけまとめて補う。
+  const missing: Array<{ payload: Record<string, unknown>; key: string; id: number }> = [];
+  for (const { eventType, payload } of entries) {
+    if (eventType !== 'link.created' && eventType !== 'link.deleted') continue;
+    for (const side of ['source', 'target']) {
+      const key = side + '_issue_title';
+      const id = payload[side + '_issue_id'];
+      if (payload[side + '_issue_type'] === 'memo' && payload[key] == null && typeof id === 'number') {
+        missing.push({ payload, key, id });
+      }
+    }
+  }
+  if (missing.length) {
+    const ids = [...new Set(missing.map(({ id }) => id))];
+    const memos = db.prepare(`
+      SELECT id, body_md FROM issues WHERE type = 'memo' AND id IN (SELECT value FROM json_each(?))
+    `).all(JSON.stringify(ids)) as Array<{ id: number; body_md: string }>;
+    const previews = new Map(memos.map(memo => [memo.id, memoPreviewTitle(memo.body_md ?? '')]));
+    for (const { payload, key, id } of missing) {
+      if (previews.has(id)) payload[key] = previews.get(id);
+    }
+  }
+  return entries;
 };
 
 /**

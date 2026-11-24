@@ -80,6 +80,8 @@ interface ItemDetailProps {
   /** Optional callback before navigation (used in panel mode to close modal first) */
   onBeforeNavigate?: () => void;
   /** Callback to expose comments to parent component */
+  threadRevision?: number;
+  onActivitiesLoaded?: (activities: ActivityLogEntry[]) => void;
   onCommentsLoaded?: (comments: Comment[]) => void;
 }
 
@@ -99,6 +101,8 @@ export default function ItemDetail({
   mode = 'page',
   onItemClick,
   onBeforeNavigate,
+  threadRevision,
+  onActivitiesLoaded,
   onCommentsLoaded,
 }: ItemDetailProps) {
   // Comments & activities state management
@@ -122,6 +126,7 @@ export default function ItemDetail({
       return;
     }
 
+    let active = true;
     const fetchComments = async () => {
       try {
         setCommentsLoading(true);
@@ -135,19 +140,22 @@ export default function ItemDetail({
             .then((res) => res.filter(isDisplayedActivity))
             .catch(() => [] as ActivityLogEntry[]),
         ]);
+        if (!active) return;
         setComments(commentsResponse);
         setActivities(activitiesResponse);
+        onActivitiesLoaded?.(activitiesResponse);
         // Use ref to call callback without causing re-renders
         onCommentsLoadedRef.current?.(commentsResponse);
       } catch (error) {
         console.error('Error fetching comments:', error);
       } finally {
-        setCommentsLoading(false);
+        if (active) setCommentsLoading(false);
       }
     };
 
     fetchComments();
-  }, [item.id, itemType]);
+    return () => { active = false; };
+  }, [item.id, itemType, onActivitiesLoaded, linksRefreshKey, threadRevision]);
 
   const handleAddComment = async (bodyMd: string) => {
     const newComment =
@@ -315,6 +323,7 @@ export default function ItemDetail({
                 status: 'status' in item ? item.status : null,
                 labels: item.labels || [],
               } : undefined}
+              onIssueLinksChanged={bumpLinks}
               refreshKey={linksRefreshKey}
             />
           )}

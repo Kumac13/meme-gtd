@@ -61,35 +61,39 @@ struct MemoDetailView: View {
                                 TimelineTimestamp(text: TimelineHelpers.formatTimelineTime(iso: item.createdAt))
                             }
 
-                            ThreadItem(
-                                bodyMd: item.bodyMd,
-                                pending: item.commentId.map(delivery.pendingComments.contains) ?? delivery.parentPending,
-                                labels: nil,
-                                onEdit: {
-                                    viewModel.replyBody = item.bodyMd
-                                    if item.isOriginal {
-                                        editingMemo = true
-                                        editingCommentId = nil
-                                    } else {
-                                        editingMemo = false
-                                        editingCommentId = item.commentId
+                            if let activity = item.activity {
+                                ActivityItemView(activity: activity, issueId: memoId, isLast: index == allItems.count - 1)
+                            } else {
+                                ThreadItem(
+                                    bodyMd: item.bodyMd,
+                                    pending: item.commentId.map(delivery.pendingComments.contains) ?? delivery.parentPending,
+                                    labels: nil,
+                                    onEdit: {
+                                        viewModel.replyBody = item.bodyMd
+                                        if item.isOriginal {
+                                            editingMemo = true
+                                            editingCommentId = nil
+                                        } else {
+                                            editingMemo = false
+                                            editingCommentId = item.commentId
+                                        }
+                                    },
+                                    onDelete: {
+                                        if item.isOriginal {
+                                            showDeleteConfirm = true
+                                        } else {
+                                            Task { await viewModel.deleteComment(item.commentId!) }
+                                        }
+                                    },
+                                    onCopy: {
+                                        UIPasteboard.general.string = item.bodyMd
+                                        HapticManager.notification(.success)
+                                    },
+                                    onIssueTap: { id, type in
+                                        onNavigateToLinkedIssue?(id, type, "")
                                     }
-                                },
-                                onDelete: {
-                                    if item.isOriginal {
-                                        showDeleteConfirm = true
-                                    } else {
-                                        Task { await viewModel.deleteComment(item.commentId!) }
-                                    }
-                                },
-                                onCopy: {
-                                    UIPasteboard.general.string = item.bodyMd
-                                    HapticManager.notification(.success)
-                                },
-                                onIssueTap: { id, type in
-                                    onNavigateToLinkedIssue?(id, type, "")
-                                }
-                            )
+                                )
+                            }
                         }
                     }
 
@@ -220,7 +224,7 @@ struct MemoDetailView: View {
                                 return PendingLink(
                                     targetIssueId: link.targetIssue.id,
                                     linkType: linkType,
-                                    title: link.targetIssue.title
+                                    title: link.targetIssue.type == "memo" ? TargetIssue.memoPreview(link.targetIssue.title) : link.targetIssue.title
                                 )
                             }
                         } catch {
@@ -230,8 +234,7 @@ struct MemoDetailView: View {
                         // so it appears in the Links picker alongside the carried-over links.
                         let memoTitleSnippet: String = {
                             let body = viewModel.memo?.bodyMd ?? resolvedBody
-                            let stripped = body.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression).trimmingCharacters(in: .whitespaces)
-                            let snippet = String(stripped.prefix(80))
+                            let snippet = TargetIssue.memoPreview(body)
                             return snippet.isEmpty ? "Memo #\(memoId)" : snippet
                         }()
                         let derivedFromLink = PendingLink(
@@ -336,7 +339,13 @@ struct MemoDetailView: View {
             ))
         }
 
-        return items
+        for activity in viewModel.activityLogs {
+            items.append(ThreadTimelineItem(
+                id: "activity-\(activity.id)", bodyMd: "", createdAt: activity.occurredAt,
+                labels: nil, isOriginal: false, commentId: nil, activity: activity
+            ))
+        }
+        return items.sorted { $0.createdAt < $1.createdAt }
     }
 }
 
@@ -349,4 +358,5 @@ private struct ThreadTimelineItem: Identifiable {
     let labels: [String]?
     let isOriginal: Bool
     let commentId: Int?
+    var activity: ActivityLogEntry? = nil
 }
