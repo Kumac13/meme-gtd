@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ArticleDetailView: View {
+    @State private var delivery = ThreadDelivery()
     let articleId: Int
     let initialTitle: String?
     let onMenuTap: () -> Void
@@ -14,7 +15,6 @@ struct ArticleDetailView: View {
     @State private var showDeleteConfirm: Bool = false
     @StateObject private var linkedIssueNavigation = DeferredSheetActionCoordinator<TargetIssue>()
     @State private var showCopiedFeedback: Bool = false
-    @State private var editingMode: EditingMode = .none
     @StateObject private var imageAttachment = ImageAttachmentCoordinator()
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
@@ -22,14 +22,7 @@ struct ArticleDetailView: View {
     /// the local read cache and cannot be edited (offline support plan
     /// Phase 7). Never true in Standalone.
     private var isOfflineReadOnly: Bool {
-        connectivity.isOfflineReadOnly
-    }
-
-    enum EditingMode: Equatable {
-        case none
-        case title
-        case body
-        case comment(Int)
+        connectivity.isOfflineReadOnly || (Settings.shared.appMode == .server && delivery.serverID == nil)
     }
 
     init(articleId: Int, initialTitle: String? = nil, onMenuTap: @escaping () -> Void, onNavigateToLinkedIssue: ((Int, String, String) -> Void)? = nil) {
@@ -86,10 +79,6 @@ struct ArticleDetailView: View {
                                     }
                                 }
 
-                                if isOfflineReadOnly {
-                                    OfflineReadOnlyBadge()
-                                }
-
                                 // Labels
                                 if let labels = article.labels, !labels.isEmpty {
                                     FlowLayout(spacing: 6) {
@@ -122,12 +111,13 @@ struct ArticleDetailView: View {
                             bodyMd: displayBody,
                             createdAt: article.createdAt,
                             updatedAt: article.updatedAt,
+                            pending: delivery.parentPending,
                             emptyText: "No content available.",
                             copyText: article.bodyMd,
                             mutationsDisabled: isOfflineReadOnly,
                             onEdit: article.origin == .manual ? {
                                 viewModel.replyBody = article.bodyMd
-                                editingMode = .body
+                                viewModel.editingMode = .body
                             } : nil,
                             onIssueTap: { id, type in
                                 onNavigateToLinkedIssue?(id, type, "")
@@ -135,13 +125,18 @@ struct ArticleDetailView: View {
                         )
 
                         // === Timeline: Comments + activities interleaved ===
+                        if !delivery.historyAvailable {
+                            Text("Earlier replies have not been downloaded.")
+                                .font(.footnote).foregroundStyle(.secondary)
+                        }
                         IssueTimeline(
                             entries: viewModel.timelineEntries,
-                            issueId: articleId,
+                            issueId: viewModel.articleId,
+                            pendingComments: delivery.pendingComments,
                             mutationsDisabled: isOfflineReadOnly,
                             onEditComment: { comment in
                                 viewModel.replyBody = comment.bodyMd
-                                editingMode = .comment(comment.id)
+                                viewModel.editingMode = .comment(comment.id)
                             },
                             onDeleteComment: { comment in
                                 Task { await viewModel.deleteComment(comment.id) }
@@ -165,6 +160,7 @@ struct ArticleDetailView: View {
                         HapticManager.impact(.medium)
 
                         let start = Date()
+                        let sync = await dataSources.syncScheduler?.refresh()
                         let result = await viewModel.fetchArticle()
 
                         let elapsed = Date().timeIntervalSince(start)
@@ -176,7 +172,7 @@ struct ArticleDetailView: View {
                         if let (article, comments, activities) = result {
                             viewModel.applyArticle(article, comments: comments, activities: activities)
                         }
-                        HapticManager.notification(.success)
+                        HapticManager.notification(result == nil || sync?.errors.isEmpty == false ? .error : .success)
                         continuation.resume()
                     }
                 }
@@ -184,12 +180,12 @@ struct ArticleDetailView: View {
             .safeAreaBar(edge: .bottom) {
                 FloatingComposer(
                     text: $viewModel.replyBody,
-                    placeholder: editingMode == .none ? "Add a comment..." : "Edit...",
-                    disabled: viewModel.isLoading || isOfflineReadOnly,
+                    placeholder: viewModel.editingMode == .none ? "Add a comment..." : "Edit...",
+                    disabled: viewModel.article == nil || (viewModel.editingMode != .none && isOfflineReadOnly),
                     submitting: viewModel.isSubmittingReply,
-                    notice: editingMode == .none ? nil : "Editing",
+                    notice: viewModel.editingMode == .none ? nil : "Editing",
                     onDismissNotice: {
-                        editingMode = .none
+                        viewModel.editingMode = .none
                         viewModel.replyBody = ""
                     },
                     onAttachImage: imageAttachment.presentImagePicker,
@@ -198,13 +194,9 @@ struct ArticleDetailView: View {
                         scrollActions.composerDidExpand()
                     },
                     onSubmit: {
-                        switch editingMode {
-                        case .title:
-                            Task { await viewModel.updateArticle(title: viewModel.replyBody); editingMode = .none; viewModel.replyBody = "" }
-                        case .body:
-                            Task { await viewModel.updateArticle(bodyMd: viewModel.replyBody); editingMode = .none; viewModel.replyBody = "" }
-                        case .comment(let id):
-                            Task { await viewModel.updateComment(id, bodyMd: viewModel.replyBody); editingMode = .none; viewModel.replyBody = "" }
+                        switch viewModel.editingMode {
+                        case .title, .body, .comment:
+                            Task { await viewModel.submitEdit() }
                         case .none:
                             Task {
                                 if await viewModel.addComment() {
@@ -224,6 +216,7 @@ struct ArticleDetailView: View {
         .toolbar {
             AppToolbar(
                 title: toolbarTitle,
+                showsPending: delivery.hasPending,
                 onMenuTap: onMenuTap,
                 titleLineLimit: 1,
                 trailing: {
@@ -238,6 +231,10 @@ struct ArticleDetailView: View {
                 }
             )
         }
+        .alert("Could not complete the action", isPresented: Binding(
+            get: { viewModel.error != nil },
+            set: { if !$0 { viewModel.error = nil } }
+        )) { Button("OK") { viewModel.error = nil } } message: { Text(viewModel.error ?? "") }
         .navigationBarTitleDisplayMode(.inline)
         .sheet(
             isPresented: $linkedIssueNavigation.isPresented,
@@ -283,6 +280,11 @@ struct ArticleDetailView: View {
                 message: "Loading..."
             )
         }
+        .observeThread(id: articleId) { snapshot in
+            if let resolved = snapshot.serverID { viewModel.resolvedID = resolved }
+            delivery = snapshot
+            viewModel.comments = snapshot.comments
+        }
         .task {
             viewModel.articleStore = articleStore
             viewModel.dataSources = dataSources
@@ -295,7 +297,7 @@ struct ArticleDetailView: View {
     private var toolbarTitle: String {
         // Negative ids are device-local rows with no server identity — not a
         // number to surface.
-        viewModel.article?.title ?? initialTitle ?? (articleId > 0 ? "#\(articleId)" : "")
+        viewModel.article?.title ?? initialTitle.flatMap { $0.isEmpty ? nil : $0 } ?? (articleId > 0 ? "#\(articleId)" : "Article")
     }
 
     private var editTitleAction: (() -> Void)? {
@@ -303,7 +305,7 @@ struct ArticleDetailView: View {
         return {
             guard let article = viewModel.article else { return }
             viewModel.replyBody = article.title
-            editingMode = .title
+            viewModel.editingMode = .title
         }
     }
 

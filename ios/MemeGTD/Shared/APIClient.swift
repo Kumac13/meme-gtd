@@ -37,13 +37,22 @@ extension Notification.Name {
     /// Posted (from an arbitrary thread) each time an APIClient request dies
     /// at the transport level (DNS, no route, timeout) without an HTTP
     /// response — the server could not be reached.
+    nonisolated static let apiHealthReady = Notification.Name("APIHealthReady")
+    nonisolated static let apiHealthUnreachable = Notification.Name("APIHealthUnreachable")
+    nonisolated static let apiServerError = Notification.Name("APIClientServerError")
     nonisolated static let apiServerUnreachable = Notification.Name("APIClientServerUnreachable")
 }
 
 class APIClient {
-    static let shared = APIClient()
+    static var shared: APIClient { APIClient(baseUrl: Settings.shared.effectiveApiUrl) }
 
-    private init() {}
+    let baseUrl: String
+    private let session: URLSession
+
+    init(baseUrl: String, session: URLSession = .shared) {
+        self.baseUrl = baseUrl
+        self.session = session
+    }
 
     // MARK: - Server reachability signal
 
@@ -54,8 +63,16 @@ class APIClient {
     private func noteServerReachable(_ reachable: Bool) {
         NotificationCenter.default.post(
             name: reachable ? .apiServerReachable : .apiServerUnreachable,
-            object: nil
+            object: baseUrl
         )
+    }
+
+    private func report(_ response: URLResponse) {
+        if let http = response as? HTTPURLResponse, http.statusCode >= 500 {
+            NotificationCenter.default.post(name: .apiServerError, object: baseUrl)
+        } else {
+            noteServerReachable(true)
+        }
     }
 
     /// A cancelled request (screen navigated away, task cancelled) proves
@@ -72,17 +89,13 @@ class APIClient {
         noteServerReachable(false)
     }
 
-    /// Reachability probe against GET /api/health, used by
-    /// ConnectivityMonitor to detect recovery while offline. Any HTTP
-    /// response — even 5xx — means reachable; only transport-level failures
-    /// count as unreachable. The verdict also flows through the reachability
-    /// notifications, like every other request outcome.
+    /// Only a successful health response confirms recovery.
     func probeServerReachability() async -> Bool {
         guard let url = try? buildURL(path: "/api/health") else {
             // A URL that cannot be built means the server cannot be reached
             // as configured — the verdict must still flow through the
             // notifications, or ConnectivityMonitor never hears back.
-            noteServerReachable(false)
+            NotificationCenter.default.post(name: .apiHealthUnreachable, object: baseUrl)
             return false
         }
         var request = URLRequest(url: url)
@@ -93,11 +106,13 @@ class APIClient {
         // outages fail transport-level in well under a second regardless.
         request.timeoutInterval = 15
         do {
-            _ = try await URLSession.shared.data(for: request)
-            noteServerReachable(true)
-            return true
+            let (_, response) = try await session.data(for: request)
+            let healthy = (response as? HTTPURLResponse).map { (200..<300).contains($0.statusCode) } ?? false
+            if healthy { NotificationCenter.default.post(name: .apiHealthReady, object: baseUrl) }
+            else { NotificationCenter.default.post(name: .apiServerError, object: baseUrl) }
+            return healthy
         } catch {
-            noteTransportFailure(error)
+            if !isCancellation(error) { NotificationCenter.default.post(name: .apiHealthUnreachable, object: baseUrl) }
             return false
         }
     }
@@ -156,8 +171,8 @@ class APIClient {
         // below can throw too, but by then the server has already answered.
         let data: Data
         do {
-            let (received, response) = try await URLSession.shared.data(for: request)
-            noteServerReachable(true)
+            let (received, response) = try await session.data(for: request)
+            report(response)
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.serverError(0, "Invalid response")
             }
@@ -219,8 +234,8 @@ class APIClient {
         // other method — OfflineFirstSupport.isNetworkError relies on that
         // to classify a delete against an unreachable server as offline.
         do {
-            let (_, response) = try await URLSession.shared.data(for: request)
-            noteServerReachable(true)
+            let (_, response) = try await session.data(for: request)
+            report(response)
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {
                 let code = (response as? HTTPURLResponse)?.statusCode ?? 0
@@ -241,8 +256,7 @@ class APIClient {
     // MARK: - URL building
 
     private func buildURL(path: String, queryItems: [URLQueryItem]? = nil) throws -> URL {
-        let baseUrl = Settings.shared.effectiveApiUrl
-        logger.info("buildURL: baseUrl=\(baseUrl), path=\(path)")
+        logger.info("buildURL: baseUrl=\(self.baseUrl), path=\(path)")
         guard var components = URLComponents(string: "\(baseUrl)\(path)") else {
             throw APIError.invalidURL
         }
@@ -258,8 +272,8 @@ class APIClient {
     private func execute<T: Decodable>(_ request: URLRequest) async throws -> T {
         logger.info("execute: \(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "nil")")
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            noteServerReachable(true)
+            let (data, response) = try await session.data(for: request)
+            report(response)
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.serverError(0, "Invalid response")
             }
@@ -318,7 +332,6 @@ class APIClient {
     }
 
     func testConnection() async -> Bool {
-        let baseUrl = Settings.shared.effectiveApiUrl
         guard let url = URL(string: "\(baseUrl)/api/articles") else {
             return false
         }
@@ -326,14 +339,12 @@ class APIClient {
         request.httpMethod = "GET"
         request.timeoutInterval = 5
         do {
-            let (_, response) = try await URLSession.shared.data(for: request)
-            noteServerReachable(true)
+            let (_, response) = try await session.data(for: request)
             if let httpResponse = response as? HTTPURLResponse {
                 return httpResponse.statusCode == 200
             }
             return false
         } catch {
-            noteTransportFailure(error)
             return false
         }
     }

@@ -45,18 +45,17 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
         do {
             memo = try await dataSources.memos.getMemo(id: memoId)
             let commentList: [Comment] = try await dataSources.memos.listComments(memoId: memoId)
-            comments = commentList
+            if dataSources.syncScheduler == nil { comments = commentList }
         } catch {
             self.error = error.localizedDescription
         }
 
         // Load metadata & links in parallel
+        isLoading = false
         async let metadataResult: () = loadMetadataOptions()
         async let linksResult: () = loadIssueLinks()
         async let urlLinksResult: () = loadUrlLinks()
         _ = await (metadataResult, linksResult, urlLinksResult)
-
-        isLoading = false
     }
 
     // MARK: - Fetch without UI update (for pull-to-refresh)
@@ -74,7 +73,7 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
 
     func applyMemo(_ memo: Memo, comments: [Comment]) {
         self.memo = memo
-        self.comments = comments
+        if dataSources.syncScheduler == nil { self.comments = comments }
     }
 
     func relationDidChange() async {}
@@ -113,7 +112,7 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
 
     func addComment() async -> Bool {
         let body = replyBody.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !body.isEmpty else { return false }
+        guard !isSubmittingReply, !body.isEmpty else { return false }
 
         isSubmittingReply = true
 
@@ -123,11 +122,11 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
                 memoId: memoId,
                 request
             )
-            comments.append(comment)
+            if dataSources.syncScheduler == nil { comments.append(comment) }
             replyBody = ""
             HapticManager.notification(.success)
             // Server may have created relates links from `#id` mentions.
-            await loadIssueLinks()
+            Task { await loadIssueLinks() }
             isSubmittingReply = false
             return true
         } catch {
@@ -138,7 +137,7 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
         }
     }
 
-    func updateComment(_ commentId: Int, bodyMd: String) async {
+    func updateComment(_ commentId: Int, bodyMd: String) async -> Bool {
         do {
             let request = UpdateCommentRequest(bodyMd: bodyMd)
             let updated: Comment = try await dataSources.memos.updateComment(
@@ -149,15 +148,17 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
             if let index = comments.firstIndex(where: { $0.id == commentId }) {
                 comments[index] = updated
             }
-            await loadIssueLinks()
+            Task { await loadIssueLinks() }
+            return true
         } catch {
             self.error = error.localizedDescription
+            return false
         }
     }
 
     // MARK: - Update Memo
 
-    func updateMemo(bodyMd: String) async {
+    func updateMemo(bodyMd: String) async -> Bool {
         do {
             let request = UpdateMemoRequest(bodyMd: bodyMd, isBookmarked: nil)
             let updated: Memo = try await dataSources.memos.updateMemo(
@@ -167,10 +168,12 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
             memo = updated
             memoStore?.updateItem(updated)
             HapticManager.notification(.success)
-            await loadIssueLinks()
+            Task { await loadIssueLinks() }
+            return true
         } catch {
             self.error = error.localizedDescription
             HapticManager.notification(.error)
+            return false
         }
     }
 

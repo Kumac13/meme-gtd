@@ -75,13 +75,13 @@ nonisolated enum SyncChangeApplier {
                   uuid, server_id, type, title, body_md, status,
                   scheduled_on, scheduled_start, scheduled_end, is_all_day,
                   actual_start, actual_end, start_time, end_time, end_date,
-                  duration, task_kind, meta, is_bookmarked, is_deleted,
+                  duration, task_kind, origin, meta, is_bookmarked, is_deleted,
                   created_at, updated_at, server_updated_at, server_seq
                 ) VALUES (
                   :uuid, :serverId, :type, :title, :bodyMd, :status,
                   :scheduledOn, :scheduledStart, :scheduledEnd, :isAllDay,
                   :actualStart, :actualEnd, :startTime, :endTime, :endDate,
-                  :duration, :taskKind, :meta, :isBookmarked, :isDeleted,
+                  :duration, :taskKind, :origin, :meta, :isBookmarked, :isDeleted,
                   :createdAt, :updatedAt, :serverUpdatedAt, :serverSeq
                 )
                 ON CONFLICT(uuid) DO UPDATE SET
@@ -101,6 +101,7 @@ nonisolated enum SyncChangeApplier {
                   end_date = excluded.end_date,
                   duration = excluded.duration,
                   task_kind = excluded.task_kind,
+                  origin = excluded.origin,
                   meta = excluded.meta,
                   is_bookmarked = excluded.is_bookmarked,
                   is_deleted = excluded.is_deleted,
@@ -127,6 +128,7 @@ nonisolated enum SyncChangeApplier {
                 "endDate": string(data, "endDate"),
                 "duration": int(data, "duration"),
                 "taskKind": string(data, "taskKind"),
+                "origin": string(data, "origin"),
                 "meta": jsonString(data, "meta"),
                 "isBookmarked": bool(data, "isBookmarked"),
                 "isDeleted": bool(data, "isDeleted"),

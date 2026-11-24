@@ -1,6 +1,8 @@
+import Combine
 import SwiftUI
 
 struct ArticleListView: View {
+    @State private var pendingThreads: Set<Int> = []
     let onMenuTap: () -> Void
     @Binding var navigationPath: NavigationPath
 
@@ -38,18 +40,18 @@ struct ArticleListView: View {
         ) { article in
             ArticleCell(
                 article: article,
+                pending: pendingThreads.contains(article.id),
                 snippet: viewModel.searchMatchInfos[article.id],
                 searchQuery: viewModel.searchQuery.isEmpty ? nil : viewModel.searchQuery
             )
         }
-        .issueListRefreshable {
+        .issueListRefreshable(scheduler: dataSources.syncScheduler) {
             if let response = await viewModel.fetchArticles() {
                 viewModel.applyArticles(response)
             }
         }
         .safeAreaInset(edge: .top) {
             VStack(spacing: 0) {
-                OfflineReadOnlyIndicator()
                 IssueListFilterBar {
                     FilterPill(
                         label: viewModel.originFilter == "all" ? "Origin" : viewModel.originFilter.capitalized,
@@ -91,9 +93,11 @@ struct ArticleListView: View {
                 creation.beginChoosing()
             }
         }
+        .observePendingThreads(kind: "article") { pendingThreads = $0 }
         .toolbar {
             AppToolbar(
                 title: "Articles",
+                showsPending: !pendingThreads.isEmpty,
                 onMenuTap: onMenuTap,
                 isSearching: $isSearching,
                 searchQuery: $viewModel.searchQuery,
@@ -192,6 +196,9 @@ struct ArticleListView: View {
                 isPresented: viewModel.isLoading && articleStore.articles.isEmpty,
                 message: "Loading articles..."
             )
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .syncEngineDidChangeData).receive(on: DispatchQueue.main)) { _ in
+            Task { await viewModel.loadArticles() }
         }
         .task {
             viewModel.store = articleStore

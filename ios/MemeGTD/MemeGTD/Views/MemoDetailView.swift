@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MemoDetailView: View {
+    @State private var delivery = ThreadDelivery()
     let memoId: Int
     let initialBody: String?
     let onMenuTap: () -> Void
@@ -33,6 +34,10 @@ struct MemoDetailView: View {
         ) { scrollActions in
             ScrollView {
                 LazyVStack(spacing: 0) {
+                    if !delivery.historyAvailable {
+                        Text("Earlier replies have not been downloaded.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
                     if let memo = viewModel.memo {
                         let allItems = buildTimelineItems(memo: memo, comments: viewModel.comments)
 
@@ -58,6 +63,7 @@ struct MemoDetailView: View {
 
                             ThreadItem(
                                 bodyMd: item.bodyMd,
+                                pending: item.commentId.map(delivery.pendingComments.contains) ?? delivery.parentPending,
                                 labels: nil,
                                 onEdit: {
                                     viewModel.replyBody = item.bodyMd
@@ -118,7 +124,7 @@ struct MemoDetailView: View {
                 FloatingComposer(
                     text: $viewModel.replyBody,
                     placeholder: (editingMemo || editingCommentId != nil) ? "Edit..." : "Add a comment...",
-                    disabled: viewModel.isLoading,
+                    disabled: viewModel.memo == nil,
                     submitting: viewModel.isSubmittingReply,
                     notice: editingMemo ? "Editing this memo" : editingCommentId != nil ? "Editing this comment" : nil,
                     onDismissNotice: {
@@ -134,13 +140,13 @@ struct MemoDetailView: View {
                     onSubmit: {
                         if editingMemo {
                             Task {
-                                await viewModel.updateMemo(bodyMd: viewModel.replyBody)
+                                guard await viewModel.updateMemo(bodyMd: viewModel.replyBody) else { return }
                                 editingMemo = false
                                 viewModel.replyBody = ""
                             }
                         } else if let commentId = editingCommentId {
                             Task {
-                                await viewModel.updateComment(commentId, bodyMd: viewModel.replyBody)
+                                guard await viewModel.updateComment(commentId, bodyMd: viewModel.replyBody) else { return }
                                 editingCommentId = nil
                                 viewModel.replyBody = ""
                             }
@@ -162,6 +168,7 @@ struct MemoDetailView: View {
         .toolbar {
             AppToolbar(
                 title: memoTitlePreview,
+                showsPending: delivery.hasPending,
                 onMenuTap: onMenuTap,
                 titleLineLimit: 1,
                 trailing: {
@@ -176,6 +183,10 @@ struct MemoDetailView: View {
                 }
             )
         }
+        .alert("Could not complete the action", isPresented: Binding(
+            get: { viewModel.error != nil },
+            set: { if !$0 { viewModel.error = nil } }
+        )) { Button("OK") { viewModel.error = nil } } message: { Text(viewModel.error ?? "") }
         .navigationBarTitleDisplayMode(.inline)
         .sheet(
             isPresented: $linkedIssueNavigation.isPresented,
@@ -273,6 +284,10 @@ struct MemoDetailView: View {
                 isPresented: viewModel.isLoading && viewModel.memo == nil,
                 message: "Loading..."
             )
+        }
+        .observeThread(id: memoId) { snapshot in
+            delivery = snapshot
+            viewModel.comments = snapshot.comments
         }
         .task {
             viewModel.memoStore = memoStore

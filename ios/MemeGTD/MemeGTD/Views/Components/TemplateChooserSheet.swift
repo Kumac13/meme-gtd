@@ -10,6 +10,7 @@ struct TemplateChooserSheet: View {
 
     @EnvironmentObject var dataSources: DataSourceProvider
     @State private var templates: [Template] = []
+    @State private var unavailable = false
     @State private var isLoading = true
 
     var body: some View {
@@ -40,6 +41,7 @@ struct TemplateChooserSheet: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
                     } else {
+                        if unavailable { Text("Templates have not been downloaded.").foregroundStyle(.secondary) }
                         ForEach(templates) { template in
                             Button(action: {
                                 HapticManager.selection()
@@ -63,6 +65,17 @@ struct TemplateChooserSheet: View {
         }
         .background(Color(.systemBackground))
         .task {
+            if target == .article, Settings.shared.appMode == .server {
+                let cache = ArticleTemplateCache.shared
+                if let saved = cache.cached {
+                    templates = saved
+                    isLoading = false
+                }
+                do { templates = try await cache.refresh() }
+                catch { unavailable = cache.cached == nil }
+                isLoading = false
+                return
+            }
             do {
                 let response = try await dataSources.templates.listTemplates(queryItems: [
                     URLQueryItem(name: "target", value: target.rawValue)

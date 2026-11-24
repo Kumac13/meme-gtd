@@ -98,23 +98,12 @@ struct CreateArticleModal: View {
             do {
                 let article = try await dataSources.articles.createArticle(
                     CreateManualArticleRequest(
+                        projectIds: Array(selectedProjectIds),
                         title: trimmedTitle,
                         bodyMd: bodyMd,
                         labels: selectedLabelNames.isEmpty ? nil : Array(selectedLabelNames).sorted()
                     )
                 )
-
-                let dataSources = dataSources
-                await withTaskGroup(of: Void.self) { group in
-                    for projectId in selectedProjectIds {
-                        group.addTask {
-                            let _: ProjectItem? = try? await dataSources.projects.addProjectItem(
-                                projectId: projectId,
-                                AddProjectItemRequest(issueId: article.id)
-                            )
-                        }
-                    }
-                }
 
                 HapticManager.notification(.success)
                 isSubmitting = false

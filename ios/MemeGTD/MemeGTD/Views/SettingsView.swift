@@ -204,6 +204,8 @@ struct SettingsView: View {
                 if appMode == .server {
                     Divider().padding(.leading, 16)
 
+                    OfflineQueueStatus()
+
                     // API Configuration section
                     VStack(alignment: .leading, spacing: 12) {
                         Text("API Configuration")
@@ -320,7 +322,11 @@ struct SettingsView: View {
     }
 
     private func saveSettings() {
-        Settings.shared.apiUrl = apiUrl
+        if Settings.shared.effectiveApiUrl != apiUrl {
+            Settings.shared.apiUrl = apiUrl
+            ConnectivityMonitor.shared.checkEndpoint()
+            NotificationCenter.default.post(name: .serverEndpointChanged, object: nil)
+        }
         HapticManager.notification(.success)
         withAnimation {
             isSaved = true
@@ -335,10 +341,10 @@ struct SettingsView: View {
     private func testConnection() {
         isTestingConnection = true
         connectionStatus = .unknown
-        Settings.shared.apiUrl = apiUrl
+        let client = APIClient(baseUrl: apiUrl)
 
         Task {
-            let success = await APIClient.shared.testConnection()
+            let success = await client.testConnection()
             await MainActor.run {
                 connectionStatus = success ? .success : .failure
                 isTestingConnection = false

@@ -1,6 +1,8 @@
+import Combine
 import SwiftUI
 
 struct TaskListView: View {
+    @State private var pendingThreads: Set<Int> = []
     let onMenuTap: () -> Void
     @Binding var navigationPath: NavigationPath
 
@@ -54,19 +56,19 @@ struct TaskListView: View {
             VStack(alignment: .leading, spacing: 0) {
                 TaskCell(
                     task: task,
+                    pending: pendingThreads.contains(task.id),
                     snippet: viewModel.searchMatchInfos[task.id],
                     searchQuery: !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil
                 )
             }
         }
-        .issueListRefreshable {
+        .issueListRefreshable(scheduler: dataSources.syncScheduler) {
             if let response = await viewModel.fetchTasks() {
                 viewModel.applyTasks(response)
             }
         }
         .safeAreaInset(edge: .top) {
             VStack(spacing: 0) {
-                OfflineReadOnlyIndicator()
 
                 IssueListFilterBar {
                     FilterPill(
@@ -117,9 +119,11 @@ struct TaskListView: View {
                 creation.beginChoosing()
             }
         }
+        .observePendingThreads(kind: "task") { pendingThreads = $0 }
         .toolbar {
             AppToolbar(
                 title: "Tasks",
+                showsPending: !pendingThreads.isEmpty,
                 onMenuTap: onMenuTap,
                 isSearching: $isSearching,
                 searchQuery: $viewModel.searchQuery,
@@ -231,6 +235,9 @@ struct TaskListView: View {
                 isPresented: viewModel.isLoading && taskStore.tasks.isEmpty,
                 message: "Loading tasks..."
             )
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .syncEngineDidChangeData).receive(on: DispatchQueue.main)) { _ in
+            Task { await viewModel.loadTasks() }
         }
         .task {
             viewModel.store = taskStore

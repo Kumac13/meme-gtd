@@ -101,6 +101,7 @@ struct IssueListExportButton: View {
 }
 
 private struct IssueListRefreshModifier: ViewModifier {
+    var scheduler: SyncScheduler?
     let action: @MainActor () async -> Void
 
     func body(content: Content) -> some View {
@@ -108,13 +109,14 @@ private struct IssueListRefreshModifier: ViewModifier {
             HapticManager.impact(.medium)
             let start = Date()
 
+            let summary = await scheduler?.refresh()
             await action()
 
             let remaining = 0.75 - Date().timeIntervalSince(start)
             if remaining > 0 {
                 try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
             }
-            HapticManager.notification(.success)
+            HapticManager.notification(summary?.errors.isEmpty == false ? .error : .success)
         }
     }
 }
@@ -136,8 +138,8 @@ private struct IssueListSearchLifecycleModifier: ViewModifier {
 }
 
 extension View {
-    func issueListRefreshable(action: @escaping @MainActor () async -> Void) -> some View {
-        modifier(IssueListRefreshModifier(action: action))
+    func issueListRefreshable(scheduler: SyncScheduler? = nil, action: @escaping @MainActor () async -> Void) -> some View {
+        modifier(IssueListRefreshModifier(scheduler: scheduler, action: action))
     }
 
     func issueListSearchLifecycle(isSearching: Bool) -> some View {

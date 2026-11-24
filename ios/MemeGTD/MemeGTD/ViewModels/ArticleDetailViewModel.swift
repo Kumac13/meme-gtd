@@ -3,6 +3,15 @@ import SwiftUI
 
 @MainActor
 class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelationManaging, IssueBookmarkProvider, IssueCopyProvider, IssueJSONCopyProvider {
+    enum EditingMode: Equatable {
+        case none
+        case title
+        case body
+        case comment(Int)
+    }
+
+    @Published var editingMode: EditingMode = .none
+
     @Published var article: Article?
     @Published var isLoading: Bool = false
     @Published var error: String?
@@ -41,7 +50,9 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
     var isBookmarked: Bool { article?.isBookmarked ?? false }
     var issueLabels: [String] { article?.labels ?? [] }
 
-    let articleId: Int
+    private let routeId: Int
+    @Published var resolvedID: Int?
+    var articleId: Int { resolvedID ?? article?.id ?? routeId }
     var metadataIssueId: Int { articleId }
     var relationIssueId: Int { articleId }
     var articleStore: ArticleStore?
@@ -51,7 +62,7 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
     var dataSources = DataSourceProvider()
 
     init(articleId: Int) {
-        self.articleId = articleId
+        self.routeId = articleId
     }
 
     // MARK: - Load
@@ -67,14 +78,13 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
         }
 
         // Load metadata, links & activity in parallel
+        await loadComments()
+        isLoading = false
         async let metadataResult: () = loadMetadataOptions()
         async let linksResult: () = loadIssueLinks()
         async let urlLinksResult: () = loadUrlLinks()
         async let activityResult: () = loadActivityLog()
-        async let commentsResult: () = loadComments()
-        _ = await (metadataResult, linksResult, urlLinksResult, activityResult, commentsResult)
-
-        isLoading = false
+        _ = await (metadataResult, linksResult, urlLinksResult, activityResult)
     }
 
     // MARK: - Fetch without UI update (for pull-to-refresh)
@@ -82,9 +92,7 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
     func fetchArticle() async -> (Article, [Comment], [ActivityLogEntry])? {
         do {
             let article: Article = try await dataSources.articles.getArticle(id: articleId)
-            let activities: [ActivityLogEntry] = try await dataSources.issueRelations.listActivityLog(
-                issueId: articleId
-            )
+            let activities = (try? await dataSources.issueRelations.listActivityLog(issueId: articleId)) ?? activityLogs
             let comments = try await dataSources.articles.listComments(articleId: articleId)
             return (article, comments, activities)
         } catch {
@@ -95,7 +103,7 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
 
     func applyArticle(_ article: Article, comments: [Comment], activities: [ActivityLogEntry]) {
         self.article = article
-        self.comments = comments
+        if dataSources.syncScheduler == nil { self.comments = comments }
         self.activityLogs = activities
     }
 
@@ -132,7 +140,27 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
 
     // MARK: - Article and comments
 
-    func updateArticle(title: String? = nil, bodyMd: String? = nil) async {
+    func submitEdit() async {
+        let draft = replyBody
+        let mode = editingMode
+        let saved: Bool
+        switch mode {
+        case .title: saved = await updateArticle(title: draft)
+        case .body: saved = await updateArticle(bodyMd: draft)
+        case .comment(let id): saved = await updateComment(id, bodyMd: draft)
+        case .none: return
+        }
+        if saved, editingMode == mode, replyBody == draft {
+            replyBody = ""
+            editingMode = .none
+        }
+    }
+
+    @discardableResult
+    func updateArticle(title: String? = nil, bodyMd: String? = nil) async -> Bool {
+        guard !isSubmittingReply else { return false }
+        isSubmittingReply = true
+        defer { isSubmittingReply = false }
         do {
             let updated = try await dataSources.articles.updateArticle(
                 id: articleId,
@@ -141,15 +169,18 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
             article = updated
             articleStore?.needsReload = true
             HapticManager.notification(.success)
+            return true
         } catch {
             self.error = error.localizedDescription
             HapticManager.notification(.error)
+            return false
         }
     }
 
     private func loadComments() async {
         do {
-            comments = try await dataSources.articles.listComments(articleId: articleId)
+            let history = try await dataSources.articles.listComments(articleId: articleId)
+            if dataSources.syncScheduler == nil { comments = history }
         } catch {
             // Non-critical in offline read-only mode.
         }
@@ -157,7 +188,7 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
 
     func addComment() async -> Bool {
         let body = replyBody.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !body.isEmpty else { return false }
+        guard !isSubmittingReply, !body.isEmpty else { return false }
         isSubmittingReply = true
         defer { isSubmittingReply = false }
         do {
@@ -165,7 +196,7 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
                 articleId: articleId,
                 CreateCommentRequest(bodyMd: body)
             )
-            comments.append(comment)
+            if dataSources.syncScheduler == nil { comments.append(comment) }
             replyBody = ""
             HapticManager.notification(.success)
             return true
@@ -176,7 +207,11 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
         }
     }
 
-    func updateComment(_ commentId: Int, bodyMd: String) async {
+    @discardableResult
+    func updateComment(_ commentId: Int, bodyMd: String) async -> Bool {
+        guard !isSubmittingReply else { return false }
+        isSubmittingReply = true
+        defer { isSubmittingReply = false }
         do {
             let updated = try await dataSources.articles.updateComment(
                 articleId: articleId,
@@ -186,8 +221,10 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
             if let index = comments.firstIndex(where: { $0.id == commentId }) {
                 comments[index] = updated
             }
+            return true
         } catch {
             self.error = error.localizedDescription
+            return false
         }
     }
 
@@ -206,6 +243,7 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
         do {
             try await dataSources.articles.deleteArticle(id: articleId)
             articleStore?.removeItem(articleId)
+            articleStore?.needsReload = true
             return true
         } catch {
             self.error = error.localizedDescription

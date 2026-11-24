@@ -46,7 +46,7 @@ nonisolated enum LocalArticleStore {
         uuid: String,
         title: String,
         bodyMd: String,
-        originalUrl: String,
+        originalUrl: String?,
         siteName: String?,
         now: String
     ) throws {
@@ -64,6 +64,7 @@ nonisolated enum LocalArticleStore {
             type: "article",
             title: title,
             bodyMd: bodyMd,
+            origin: originalUrl == nil ? "manual" : "web",
             meta: try metaJSON(meta),
             createdAt: now,
             updatedAt: now

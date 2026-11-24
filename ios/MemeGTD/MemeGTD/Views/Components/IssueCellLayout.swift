@@ -3,21 +3,25 @@ import SwiftUI
 /// Shared title/snippet/metadata anatomy for issue list rows.
 struct IssueCellLayout<Metadata: View>: View {
     let title: String
+    var pending = false
     var snippet: String? = nil
     var searchQuery: String? = nil
     @ViewBuilder let metadata: () -> Metadata
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let searchQuery, !searchQuery.isEmpty {
-                Text(highlightKeyword(in: title, query: searchQuery, fontSize: 14, baseColor: .textPrimary))
-                    .lineLimit(2)
-            } else {
-                Text(title)
-                    .font(.system(size: 14))
-                    .foregroundColor(.textPrimary)
-                    .lineLimit(2)
+            Group {
+                if let searchQuery, !searchQuery.isEmpty {
+                    Text(highlightKeyword(in: title, query: searchQuery, fontSize: 14, baseColor: .textPrimary))
+                        .lineLimit(2)
+                } else {
+                    Text(title)
+                        .font(.system(size: 14))
+                        .foregroundColor(.textPrimary)
+                        .lineLimit(2)
+                }
             }
+            .pendingSyncDot(pending)
 
             if let snippet, let searchQuery, !searchQuery.isEmpty {
                 Text(highlightKeyword(in: snippet, query: searchQuery))

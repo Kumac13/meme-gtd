@@ -2,6 +2,7 @@ import Combine
 import SwiftUI
 
 struct MemoListView: View {
+    @State private var pendingThreads: Set<Int> = []
     let onMenuTap: () -> Void
     @Binding var navigationPath: NavigationPath
 
@@ -80,6 +81,7 @@ struct MemoListView: View {
                         }
                         MemoTimelineItem(
                             memo: memo,
+                            pending: pendingThreads.contains(memo.id),
                             snippet: viewModel.searchMatchInfos[memo.id],
                             searchQuery: !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil,
                             onOpen: openMemo
@@ -100,10 +102,7 @@ struct MemoListView: View {
             // unfiltered feed). Without this, the prior mode's pixel offset
             // bleeds into the new mode and lands the user mid-list.
             .id(viewModel.isDateFiltered ? "filtered" : "feed")
-            .issueListRefreshable {
-                // Sync trigger: pull-to-refresh (no-op while Offline Sync is off).
-                dataSources.syncScheduler?.requestSync()
-
+            .issueListRefreshable(scheduler: dataSources.syncScheduler) {
                 if viewModel.isDateFiltered {
                     await viewModel.loadAllMemos()
                     return
@@ -219,9 +218,11 @@ struct MemoListView: View {
                 }
             }
         }
+        .observePendingThreads(kind: "memo") { pendingThreads = $0 }
         .toolbar {
             AppToolbar(
                 title: "Memos",
+                showsPending: !pendingThreads.isEmpty,
                 onMenuTap: onMenuTap,
                 isSearching: $isSearching,
                 searchQuery: $viewModel.searchQuery,

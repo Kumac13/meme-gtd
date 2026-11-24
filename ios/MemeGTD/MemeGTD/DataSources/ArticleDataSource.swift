@@ -31,51 +31,53 @@ extension ArticleDataSource {
 
 /// Server-backed implementation: a thin wrapper around `APIClient`.
 struct RemoteArticleDataSource: ArticleDataSource {
+    var client = APIClient.shared
+
     func listArticles(queryItems: [URLQueryItem]) async throws -> ArticleListResponse {
-        try await APIClient.shared.get(path: "/api/articles", queryItems: queryItems)
+        try await client.get(path: "/api/articles", queryItems: queryItems)
     }
 
     func searchArticles(queryItems: [URLQueryItem]) async throws -> SearchArticlesResponse {
-        try await APIClient.shared.get(path: "/api/articles", queryItems: queryItems)
+        try await client.get(path: "/api/articles", queryItems: queryItems)
     }
 
     func getArticle(id: Int) async throws -> Article {
-        try await APIClient.shared.get(path: "/api/articles/\(id)")
+        try await client.get(path: "/api/articles/\(id)")
     }
 
     func createArticle(_ request: CreateManualArticleRequest) async throws -> Article {
-        try await APIClient.shared.post(path: "/api/articles", body: request)
+        try await client.post(path: "/api/articles", body: request)
     }
 
     func updateArticle(id: Int, _ request: UpdateArticleRequest) async throws -> Article {
-        try await APIClient.shared.patch(path: "/api/articles/\(id)", body: request)
+        try await client.patch(path: "/api/articles/\(id)", body: request)
     }
 
     func bookmarkArticle(id: Int) async throws -> Article {
-        try await APIClient.shared.postReturning(path: "/api/articles/\(id)/bookmark")
+        try await client.postReturning(path: "/api/articles/\(id)/bookmark")
     }
 
     func unbookmarkArticle(id: Int) async throws -> Article {
-        try await APIClient.shared.postReturning(path: "/api/articles/\(id)/unbookmark")
+        try await client.postReturning(path: "/api/articles/\(id)/unbookmark")
     }
 
     func listComments(articleId: Int) async throws -> [Comment] {
-        try await APIClient.shared.get(path: "/api/articles/\(articleId)/comments")
+        try await client.get(path: "/api/articles/\(articleId)/comments")
     }
 
     func createComment(articleId: Int, _ request: CreateCommentRequest) async throws -> Comment {
-        try await APIClient.shared.post(path: "/api/articles/\(articleId)/comments", body: request)
+        try await client.post(path: "/api/articles/\(articleId)/comments", body: request)
     }
 
     func updateComment(articleId: Int, commentId: Int, _ request: UpdateCommentRequest) async throws -> Comment {
-        try await APIClient.shared.patch(path: "/api/articles/\(articleId)/comments/\(commentId)", body: request)
+        try await client.patch(path: "/api/articles/\(articleId)/comments/\(commentId)", body: request)
     }
 
     func deleteComment(articleId: Int, commentId: Int) async throws {
-        try await APIClient.shared.delete(path: "/api/articles/\(articleId)/comments/\(commentId)")
+        try await client.delete(path: "/api/articles/\(articleId)/comments/\(commentId)")
     }
 
     func deleteArticle(id: Int) async throws {
-        try await APIClient.shared.delete(path: "/api/articles/\(id)")
+        try await client.delete(path: "/api/articles/\(id)")
     }
 }

@@ -10,19 +10,21 @@ protocol LabelDataSource {
 
 /// Server-backed implementation: a thin wrapper around `APIClient`.
 struct RemoteLabelDataSource: LabelDataSource {
+    var client = APIClient.shared
+
     func listLabels() async throws -> [IssueLabel] {
-        try await APIClient.shared.get(path: "/api/labels")
+        try await client.get(path: "/api/labels")
     }
 
     func createLabel(_ request: CreateLabelRequest) async throws -> IssueLabel {
-        try await APIClient.shared.post(path: "/api/labels", body: request)
+        try await client.post(path: "/api/labels", body: request)
     }
 
     func assignLabel(issueId: Int, _ request: AssignLabelRequest) async throws -> AssignLabelResponse {
-        try await APIClient.shared.post(path: "/api/issues/\(issueId)/labels", body: request)
+        try await client.post(path: "/api/issues/\(issueId)/labels", body: request)
     }
 
     func removeLabel(issueId: Int, labelId: Int) async throws {
-        try await APIClient.shared.delete(path: "/api/issues/\(issueId)/labels/\(labelId)")
+        try await client.delete(path: "/api/issues/\(issueId)/labels/\(labelId)")
     }
 }

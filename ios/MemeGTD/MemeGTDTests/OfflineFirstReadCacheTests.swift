@@ -248,10 +248,9 @@ final class OfflineFirstReadCacheTests: XCTestCase {
             XCTFail("Expected OfflineReadOnlyError")
         } catch is OfflineReadOnlyError {}
 
-        do {
-            _ = try await dataSource.createComment(taskId: 101, CreateCommentRequest(bodyMd: "hi"))
-            XCTFail("Expected OfflineReadOnlyError")
-        } catch is OfflineReadOnlyError {}
+        let reply = try await dataSource.createComment(taskId: 101, CreateCommentRequest(bodyMd: "hi"))
+        let history = try await dataSource.listComments(taskId: 101)
+        XCTAssertTrue(history.contains { $0.id == reply.id && $0.bodyMd == "hi" })
 
         // The local mirror stays untouched by refused writes.
         let count = try await database.dbWriter.read { db in
@@ -261,6 +260,73 @@ final class OfflineFirstReadCacheTests: XCTestCase {
     }
 
     // MARK: - Article read fallback
+
+    @MainActor
+    func testArticleTemplatePagesKeepAllCreationDefaults() async throws {
+        var offsets: [Int] = []
+        let templates = try await ArticleTemplateCache.fetchAll { offset in
+            offsets.append(offset)
+            let template = Template(id: offset + 1, type: "template", templateTarget: "article", title: "Entry",
+                bodyMd: "Draft \(offset)", createdAt: "", updatedAt: "", isBookmarked: false, isDeleted: false,
+                labels: ["reading"], projectIds: [42])
+            return TemplateListResponse(data: [template], total: 2, limit: 1, offset: offset)
+        }
+        XCTAssertEqual(offsets, [0, 1])
+        XCTAssertEqual(IssueCreationDefaults(template: templates[1]),
+                       IssueCreationDefaults(bodyMd: "Draft 1", labelNames: ["reading"], projectIds: [42]))
+    }
+
+    func testArticleFiltersApplyToPendingAndCachedRows() async throws {
+        let source = OfflineFirstArticleDataSource(database: database, remote: UnreachableArticleRemote())
+        let a = try await source.createArticle(CreateManualArticleRequest(projectIds: [5], title: "A", bodyMd: "", labels: ["red"]))
+        let b = try await source.createArticle(CreateManualArticleRequest(title: "B", bodyMd: "", labels: ["blue"]))
+        try await database.dbWriter.write { db in
+            try db.execute(sql: "UPDATE issues SET is_bookmarked = 1 WHERE rowid = ?", arguments: [-a.id])
+        }
+        for (name, value, ids) in [("label", "blue", [b.id]), ("bookmarked", "true", [a.id]),
+                                   ("projectId", "5", [a.id]), ("projectId", "none", [b.id]),
+                                   ("label", "missing", [])] {
+            let result = try await source.listArticles(queryItems: [.init(name: name, value: value)])
+            XCTAssertEqual(result.data.map(\.id), ids)
+        }
+    }
+
+    func testPendingArticleEditRequiresAckAndUsesResolvedID() async throws {
+        let source = OfflineFirstArticleDataSource(database: database, remote: UnreachableArticleRemote())
+        let created = try await source.createArticle(CreateManualArticleRequest(title: "New", bodyMd: "original", labels: nil))
+        let thread = OfflineThreadStore(database: database, onLocalWrite: {})
+        do {
+            _ = try await source.updateArticle(id: created.id, UpdateArticleRequest(title: nil, bodyMd: "draft"))
+            XCTFail("An unsent article has no REST identity")
+        } catch is OfflineThreadStore.PendingIdentity { }
+        let reply = try await source.createComment(articleId: created.id, CreateCommentRequest(bodyMd: "reply"))
+        try await database.dbWriter.write { db in
+            try db.execute(sql: "UPDATE issues SET server_id = 234 WHERE rowid = ?", arguments: [-created.id])
+            try db.execute(sql: "UPDATE comments SET server_id = 82 WHERE rowid = ?", arguments: [-reply.id])
+        }
+        let issue = try await thread.serverIssueID(created.id)
+        let comment = try await thread.serverCommentID(reply.id, parentID: issue)
+        XCTAssertEqual(issue, 234)
+        XCTAssertEqual(comment, 82)
+    }
+
+    func testManualArticleAndRepliesPersistAcrossDataSources() async throws {
+        let articles = OfflineFirstArticleDataSource(database: database, remote: UnreachableArticleRemote())
+        let created = try await articles.createArticle(CreateManualArticleRequest(
+            projectIds: [7], title: "On the train", bodyMd: "Notes", labels: ["travel"]))
+        _ = try await articles.createComment(articleId: created.id, CreateCommentRequest(bodyMd: "Next thought"))
+        let reopened = OfflineFirstArticleDataSource(database: database, remote: UnreachableArticleRemote())
+        let list = try await reopened.listArticles(queryItems: [URLQueryItem(name: "origin", value: "manual")])
+        XCTAssertEqual(list.data.map(\.id), [created.id])
+        XCTAssertEqual(list.data.first?.labels, ["travel"])
+        let comments = try await reopened.listComments(articleId: created.id)
+        XCTAssertEqual(comments.map(\.bodyMd), ["Next thought"])
+        let ops = try await database.dbWriter.read { db in
+            try PendingOperationRecord.fetchAll(db, sql: "SELECT * FROM pending_operations ORDER BY id")
+        }
+        XCTAssertEqual(ops.map(\.entity), ["article", "issue_label", "comment"])
+        XCTAssertEqual(ops.last?.issueUuid, ops.first?.targetUuid)
+    }
 
     func testArticlesFallBackToLocalWithMetaAndRefuseDeleteOffline() async throws {
         try await seedArticleRow()

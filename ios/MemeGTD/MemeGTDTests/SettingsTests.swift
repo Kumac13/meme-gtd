@@ -18,6 +18,21 @@ final class SettingsTests: XCTestCase {
         defaults.removePersistentDomain(forName: suiteName)
     }
 
+    func testSwitchingServerKeepsLegacyQueueAndCursorWithOriginalEndpoint() throws {
+        let settings = Settings(userDefaults: defaults)
+        settings.apiUrl = "https://a.example"
+        let a = settings.databaseFilename
+        let transportA = APISyncTransport(client: APIClient(baseUrl: settings.effectiveApiUrl))
+        settings.apiUrl = "https://b.example"
+        XCTAssertEqual(a, "local.sqlite")
+        XCTAssertNotEqual(settings.databaseFilename, a)
+        XCTAssertEqual(transportA.client.baseUrl, "https://a.example")
+        let restarted = Settings(userDefaults: defaults)
+        XCTAssertEqual(restarted.databaseFilename, settings.databaseFilename)
+        restarted.apiUrl = "https://a.example"
+        XCTAssertEqual(restarted.databaseFilename, a)
+    }
+
     func testFreshInstallResolvesToStandaloneAndPersists() {
         let settings = Settings(userDefaults: defaults)
 

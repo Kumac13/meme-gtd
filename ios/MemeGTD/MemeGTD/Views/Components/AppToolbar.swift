@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AppToolbar<Trailing: View, SearchBarAction: View>: ToolbarContent {
+    let showsPending: Bool?
     let title: String
     let onMenuTap: () -> Void
     var titleLineLimit: Int? = nil
@@ -23,11 +24,13 @@ struct AppToolbar<Trailing: View, SearchBarAction: View>: ToolbarContent {
     // Init without search
     init(
         title: String,
+        showsPending: Bool? = nil,
         onMenuTap: @escaping () -> Void,
         titleLineLimit: Int? = nil,
         @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() },
         @ViewBuilder searchBarAction: @escaping () -> SearchBarAction = { EmptyView() }
     ) {
+        self.showsPending = showsPending
         self.title = title
         self.onMenuTap = onMenuTap
         self.titleLineLimit = titleLineLimit
@@ -39,6 +42,7 @@ struct AppToolbar<Trailing: View, SearchBarAction: View>: ToolbarContent {
     // Init with search
     init(
         title: String,
+        showsPending: Bool? = nil,
         onMenuTap: @escaping () -> Void,
         isSearching: Binding<Bool>,
         searchQuery: Binding<String>,
@@ -47,6 +51,7 @@ struct AppToolbar<Trailing: View, SearchBarAction: View>: ToolbarContent {
         @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() },
         @ViewBuilder searchBarAction: @escaping () -> SearchBarAction = { EmptyView() }
     ) {
+        self.showsPending = showsPending
         self.title = title
         self.onMenuTap = onMenuTap
         self.titleLineLimit = nil
@@ -114,7 +119,9 @@ struct AppToolbar<Trailing: View, SearchBarAction: View>: ToolbarContent {
                     .modifier(PillSurface(radius: 22))
                     .transition(.move(edge: .trailing).combined(with: .opacity))
                 } else {
-                    if let lineLimit = titleLineLimit {
+                    if let showsPending {
+                        SyncTitle(title: title, lineLimit: titleLineLimit, waiting: showsPending)
+                    } else if let lineLimit = titleLineLimit {
                         Text(title)
                             .font(.headline)
                             .lineLimit(lineLimit)

@@ -50,9 +50,16 @@ nonisolated final class OfflineFirstProjectDataSource: ProjectDataSource {
     }
 
     func listIssueProjects(issueId: Int) async throws -> [Project] {
-        // Negative ids are local-only rows (created offline); they cannot
-        // belong to any server-side project yet.
-        guard issueId > 0 else { return [] }
+        let pending = try await database.dbWriter.read { db in
+            let column = issueId < 0 ? "rowid" : "server_id"
+            let rows = try ProjectRecord.fetchAll(db, sql: """
+                SELECT p.* FROM projects p JOIN pending_memberships m ON m.project_id = p.id
+                JOIN issues i ON i.uuid = m.issue_uuid WHERE i.\(column) = ? AND m.needs_review = 0
+                ORDER BY p.created_at DESC
+                """, arguments: [abs(issueId)])
+            return rows.map(Self.project(from:))
+        }
+        guard issueId > 0 else { return pending }
         do {
             let projects = try await remote.listIssueProjects(issueId: issueId)
             try await database.dbWriter.write { db in
@@ -62,6 +69,7 @@ nonisolated final class OfflineFirstProjectDataSource: ProjectDataSource {
                     sql: "DELETE FROM project_items WHERE issue_id = ?",
                     arguments: [issueId]
                 )
+                try db.execute(sql: "UPDATE issues SET memberships_known = 1 WHERE server_id = ?", arguments: [issueId])
                 for project in projects {
                     try ProjectItemRecord(
                         projectId: Int64(project.id),
@@ -70,7 +78,7 @@ nonisolated final class OfflineFirstProjectDataSource: ProjectDataSource {
                     try Self.record(from: project).upsert(db)
                 }
             }
-            return projects
+            return projects + pending.filter { project in !projects.contains { $0.id == project.id } }
         } catch where OfflineFirstSupport.isNetworkError(error) {
             return try await database.dbWriter.read { db in
                 let records = try ProjectRecord.fetchAll(
@@ -83,7 +91,35 @@ nonisolated final class OfflineFirstProjectDataSource: ProjectDataSource {
                         """,
                     arguments: [issueId]
                 )
-                return records.map(Self.project(from:))
+                let cached = records.map(Self.project(from:))
+                return cached + pending.filter { project in !cached.contains { $0.id == project.id } }
+            }
+        }
+    }
+
+    static func flushMemberships(database: AppDatabase, remote: ProjectDataSource = RemoteProjectDataSource()) async throws {
+        let memberships = try await database.dbWriter.read { db in
+            try Row.fetchAll(db, sql: """
+                SELECT m.issue_uuid, m.project_id, i.server_id FROM pending_memberships m
+                JOIN issues i ON i.uuid = m.issue_uuid
+                WHERE i.server_id IS NOT NULL AND i.is_deleted = 0 AND m.needs_review = 0
+                """).map { ($0["issue_uuid"] as String, $0["project_id"] as Int, $0["server_id"] as Int) }
+        }
+        for (uuid, project, issue) in memberships {
+            do {
+                _ = try await remote.addProjectItem(projectId: project, AddProjectItemRequest(issueId: issue))
+            } catch APIError.serverError(409, _) {
+                let confirmed = try await remote.listIssueProjects(issueId: issue)
+                guard confirmed.contains(where: { $0.id == project }) else { throw APIError.serverError(409, nil) }
+            } catch APIError.serverError(404, _) {
+                try await database.dbWriter.write { db in
+                    try db.execute(sql: "UPDATE pending_memberships SET needs_review = 1 WHERE issue_uuid = ? AND project_id = ?", arguments: [uuid, project])
+                }
+                continue
+            }
+            try await database.dbWriter.write { db in
+                try ProjectItemRecord(projectId: Int64(project), issueId: Int64(issue)).upsert(db)
+                try db.execute(sql: "DELETE FROM pending_memberships WHERE issue_uuid = ? AND project_id = ?", arguments: [uuid, project])
             }
         }
     }

@@ -16,6 +16,10 @@ nonisolated extension LocalArticleStore {
     struct ListQuery {
         var limit: Int?
         var offset = 0
+        var projects = ProjectFilter(nil)
+        var labels: [String] = []
+        var bookmarked = false
+        var origin: String?
         var search: String?
 
         init(queryItems: [URLQueryItem]) {
@@ -25,6 +29,10 @@ nonisolated extension LocalArticleStore {
                     limit = item.value.flatMap(Int.init)
                 case "offset":
                     offset = item.value.flatMap(Int.init) ?? 0
+                case "projectId": projects = ProjectFilter(item.value)
+                case "label": labels = (item.value ?? "").split(separator: ",").map(String.init)
+                case "bookmarked": bookmarked = item.value == "true"
+                case "origin": origin = item.value
                 case "search":
                     search = item.value
                 default:
@@ -43,6 +51,17 @@ nonisolated extension LocalArticleStore {
         var conditions = ["i.type = 'article'", "i.is_deleted = 0"]
         var arguments: [DatabaseValueConvertible] = []
 
+        query.projects.append(to: &conditions, arguments: &arguments)
+        if query.bookmarked { conditions.append("i.is_bookmarked = 1") }
+        if !query.labels.isEmpty {
+            let parameters = query.labels.map { _ in "?" }.joined(separator: ",")
+            conditions.append("i.uuid IN (SELECT issue_uuid FROM issue_labels WHERE label_name IN (\(parameters)))")
+            arguments += query.labels
+        }
+        if let origin = query.origin {
+            conditions.append("COALESCE(i.origin, CASE WHEN json_extract(i.meta, '$.originalUrl') IS NULL THEN 'manual' ELSE 'web' END) = ?")
+            arguments.append(origin)
+        }
         if let search = query.search, !search.isEmpty {
             conditions.append("(i.title LIKE ? OR i.body_md LIKE ?)")
             let pattern = "%\(search)%"
@@ -118,12 +137,13 @@ nonisolated extension LocalArticleStore {
             arguments: [uuid]
         )
         let meta = articleMeta(from: row["meta"])
+        let storedOrigin: String? = row["origin"]
         return Article(
             id: serverId ?? -Int(rowid),
             type: row["type"],
             title: row["title"] ?? "",
             bodyMd: row["body_md"],
-            origin: meta?.originalUrl == nil ? .manual : .web,
+            origin: storedOrigin.flatMap(ArticleOrigin.init(rawValue:)) ?? (meta?.originalUrl == nil ? .manual : .web),
             meta: meta,
             createdAt: row["created_at"],
             updatedAt: row["updated_at"],

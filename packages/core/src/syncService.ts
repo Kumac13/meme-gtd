@@ -642,7 +642,7 @@ export class SyncService {
           };
         }
         const parent = op.issueUuid ? findIssueByUuid(this.db, op.issueUuid) : null;
-        if (!parent) {
+        if (!parent || parent.isDeleted) {
           return { opId: op.opId, status: 'skipped', uuid: op.uuid };
         }
         const comment = this.memoService.addCommentFromSync(

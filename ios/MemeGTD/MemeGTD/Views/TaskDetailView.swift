@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TaskDetailView: View {
+    @State private var delivery = ThreadDelivery()
     let taskId: Int
     let initialTitle: String?
     let onMenuTap: () -> Void
@@ -80,6 +81,7 @@ struct TaskDetailView: View {
                             bodyMd: task.bodyMd,
                             createdAt: task.createdAt,
                             updatedAt: task.updatedAt,
+                            pending: delivery.parentPending,
                             emptyText: "No description provided.",
                             mutationsDisabled: isOfflineReadOnly,
                             onEdit: {
@@ -96,9 +98,14 @@ struct TaskDetailView: View {
                         )
 
                         // === Timeline: Comments + Activities interleaved ===
+                        if !delivery.historyAvailable {
+                            Text("Earlier replies have not been downloaded.")
+                                .font(.footnote).foregroundStyle(.secondary)
+                        }
                         IssueTimeline(
                             entries: viewModel.timelineEntries,
                             issueId: taskId,
+                            pendingComments: delivery.pendingComments,
                             mutationsDisabled: isOfflineReadOnly,
                             onEditComment: { comment in
                                 viewModel.replyBody = comment.bodyMd
@@ -130,6 +137,7 @@ struct TaskDetailView: View {
                         HapticManager.impact(.medium)
 
                         let start = Date()
+                        let sync = await dataSources.syncScheduler?.refresh()
                         let result = await viewModel.fetchTask()
 
                         let elapsed = Date().timeIntervalSince(start)
@@ -141,7 +149,7 @@ struct TaskDetailView: View {
                         if let (task, comments, activities) = result {
                             viewModel.applyTask(task, comments: comments, activities: activities)
                         }
-                        HapticManager.notification(.success)
+                        HapticManager.notification(result == nil || sync?.errors.isEmpty == false ? .error : .success)
                         continuation.resume()
                     }
                 }
@@ -150,7 +158,7 @@ struct TaskDetailView: View {
                 FloatingComposer(
                     text: $viewModel.replyBody,
                     placeholder: composerPlaceholder,
-                    disabled: viewModel.isLoading || isOfflineReadOnly,
+                    disabled: viewModel.task == nil || (editingMode != .none && isOfflineReadOnly),
                     submitting: viewModel.isSubmittingReply,
                     notice: composerNotice,
                     onDismissNotice: {
@@ -166,19 +174,19 @@ struct TaskDetailView: View {
                         switch editingMode {
                         case .title:
                             Task {
-                                await viewModel.updateTask(title: viewModel.replyBody)
+                                guard await viewModel.updateTask(title: viewModel.replyBody) else { return }
                                 editingMode = .none
                                 viewModel.replyBody = ""
                             }
                         case .body:
                             Task {
-                                await viewModel.updateTask(bodyMd: viewModel.replyBody)
+                                guard await viewModel.updateTask(bodyMd: viewModel.replyBody) else { return }
                                 editingMode = .none
                                 viewModel.replyBody = ""
                             }
                         case .comment(let commentId):
                             Task {
-                                await viewModel.updateComment(commentId, bodyMd: viewModel.replyBody)
+                                guard await viewModel.updateComment(commentId, bodyMd: viewModel.replyBody) else { return }
                                 editingMode = .none
                                 viewModel.replyBody = ""
                             }
@@ -195,11 +203,13 @@ struct TaskDetailView: View {
                 .padding(.bottom, 10)
             }
         }
+        } // GeometryReader
         .enableSwipeBack()
         .navigationBarBackButtonHidden(true)
         .toolbar {
             AppToolbar(
                 title: toolbarTitle,
+                showsPending: delivery.hasPending,
                 onMenuTap: onMenuTap,
                 titleLineLimit: 1,
                 trailing: {
@@ -214,6 +224,10 @@ struct TaskDetailView: View {
                 }
             )
         }
+        .alert("Could not complete the action", isPresented: Binding(
+            get: { viewModel.error != nil },
+            set: { if !$0 { viewModel.error = nil } }
+        )) { Button("OK") { viewModel.error = nil } } message: { Text(viewModel.error ?? "") }
         .navigationBarTitleDisplayMode(.inline)
         .sheet(
             isPresented: $linkedIssueNavigation.isPresented,
@@ -334,12 +348,15 @@ struct TaskDetailView: View {
                 message: "Loading..."
             )
         }
+        .observeThread(id: taskId) { snapshot in
+            delivery = snapshot
+            viewModel.comments = snapshot.comments
+        }
         .task {
             viewModel.taskStore = taskStore
             viewModel.dataSources = dataSources
             await viewModel.loadTask()
         }
-        } // GeometryReader
     }
 
     private func performConversion(_ target: String) {
@@ -360,7 +377,7 @@ struct TaskDetailView: View {
     private var toolbarTitle: String {
         // Negative ids are device-local rows with no server identity — not a
         // number to surface.
-        let title = viewModel.task?.title ?? initialTitle ?? (taskId > 0 ? "#\(taskId)" : "")
+        let title = viewModel.task?.title ?? initialTitle.flatMap { $0.isEmpty ? nil : $0 } ?? (taskId > 0 ? "#\(taskId)" : "Task")
         return title
     }
 

@@ -10,11 +10,13 @@ protocol SearchDataSource {
 
 /// Server-backed implementation: a thin wrapper around `APIClient`.
 struct RemoteSearchDataSource: SearchDataSource {
+    var client = APIClient.shared
+
     func keywordSearch(queryItems: [URLQueryItem]) async throws -> KeywordSearchResponse {
-        try await APIClient.shared.get(path: "/api/search/keyword", queryItems: queryItems)
+        try await client.get(path: "/api/search/keyword", queryItems: queryItems)
     }
 
     func exportSearchResults(_ request: SearchExportRequest) async throws -> String {
-        try await APIClient.shared.postReturningJSONString(path: "/api/search/export", body: request)
+        try await client.postReturningJSONString(path: "/api/search/export", body: request)
     }
 }

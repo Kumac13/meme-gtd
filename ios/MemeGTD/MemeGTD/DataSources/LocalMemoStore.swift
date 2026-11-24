@@ -45,6 +45,7 @@ nonisolated enum LocalMemoStore {
         var search: String?
         var createdFrom: String?
         var createdTo: String?
+        var projects = ProjectFilter(nil)
         var hasProjectFilter = false
 
         init(queryItems: [URLQueryItem]) {
@@ -71,6 +72,7 @@ nonisolated enum LocalMemoStore {
                     createdTo = item.value
                 case "projectId":
                     hasProjectFilter = true
+                    projects = ProjectFilter(item.value)
                 default:
                     break
                 }
@@ -93,6 +95,7 @@ nonisolated enum LocalMemoStore {
         var conditions = ["i.type = 'memo'", "i.is_deleted = 0"]
         var arguments: [DatabaseValueConvertible] = []
 
+        query.projects.append(to: &conditions, arguments: &arguments)
         if query.bookmarked {
             conditions.append("i.is_bookmarked = 1")
         }

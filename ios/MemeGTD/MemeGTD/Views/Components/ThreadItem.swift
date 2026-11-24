@@ -4,6 +4,7 @@ import SwiftUI
 /// Timestamps and date bucket headers are rendered externally in MemoDetailView.
 struct ThreadItem: View {
     let bodyMd: String
+    var pending = false
     var labels: [String]?
     var showMenu: Bool = true
     var onEdit: (() -> Void)?
@@ -15,6 +16,7 @@ struct ThreadItem: View {
     var body: some View {
         HStack(alignment: .top, spacing: 4) {
             MemoBody(bodyMd: bodyMd, labels: labels, onIssueTap: onIssueTap, onTodoToggle: onTodoToggle)
+                .pendingSyncDot(pending)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             if showMenu {

@@ -31,9 +31,21 @@ nonisolated final class AppDatabase {
 
     /// Shared production database stored in the App Group container at
     /// `Library/Application Support/MemeGTD/local.sqlite`.
-    static let shared = makeShared()
+    private static let poolLock = NSLock()
+    private static var pools: [String: AppDatabase] = [:]
 
-    private static func makeShared() -> AppDatabase {
+    static var shared: AppDatabase {
+        poolLock.lock()
+        defer { poolLock.unlock() }
+        let settings = Settings.shared
+        let filename = settings.databaseFilename
+        if let database = pools[filename] { return database }
+        let database = makeShared(filename: filename)
+        pools[filename] = database
+        return database
+    }
+
+    private static func makeShared(filename: String) -> AppDatabase {
         do {
             guard let containerURL = FileManager.default.containerURL(
                 forSecurityApplicationGroupIdentifier: appGroupIdentifier
@@ -50,7 +62,7 @@ nonisolated final class AppDatabase {
                 at: directoryURL,
                 withIntermediateDirectories: true
             )
-            let databaseURL = directoryURL.appendingPathComponent("local.sqlite")
+            let databaseURL = directoryURL.appendingPathComponent(filename)
             let dbPool = try DatabasePool(path: databaseURL.path)
             let database = try AppDatabase(dbPool)
             logger.info("Opened local database at \(databaseURL.path, privacy: .public)")
@@ -59,6 +71,8 @@ nonisolated final class AppDatabase {
             fatalError("Failed to open local database: \(error)")
         }
     }
+
+    var hasCompletedPull: Bool { (try? syncMetaValue(for: "initial_pull_complete")) == "1" }
 
     /// In-memory database for unit tests.
     static func makeInMemory() throws -> AppDatabase {
@@ -253,6 +267,26 @@ nonisolated final class AppDatabase {
                 """)
         }
 
+        migrator.registerMigration("004_offline_capture") { db in
+            try db.execute(sql: "ALTER TABLE issues ADD COLUMN origin TEXT")
+            try db.execute(sql: """
+                UPDATE issues SET origin = CASE WHEN json_extract(meta, '$.originalUrl') IS NULL
+                    THEN 'manual' ELSE 'web' END WHERE type = 'article' AND json_valid(coalesce(meta, '{}'))
+                """)
+            try db.execute(sql: """
+                CREATE TABLE pending_memberships (
+                    issue_uuid TEXT NOT NULL,
+                    project_id INTEGER NOT NULL,
+                    needs_review INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY(issue_uuid, project_id)
+                )
+                """)
+        }
+        migrator.registerMigration("005_thread_sync_state") { db in
+            try db.execute(sql: "ALTER TABLE pending_operations ADD COLUMN review_reason TEXT")
+            try db.execute(sql: "ALTER TABLE issues ADD COLUMN memberships_known INTEGER NOT NULL DEFAULT 0")
+            try db.execute(sql: "UPDATE issues SET memberships_known = 1 WHERE server_id IS NULL")
+        }
         return migrator
     }
 

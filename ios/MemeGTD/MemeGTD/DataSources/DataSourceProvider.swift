@@ -8,9 +8,27 @@ import Foundation
 /// Offline Sync setting is on, so the OFF path never builds any sync objects.
 @MainActor
 private enum SharedSync {
-    static let scheduler = SyncScheduler(
-        engine: SyncEngine(database: AppDatabase.shared, transport: APISyncTransport())
-    )
+    private static var active: SyncScheduler?
+    private static var schedulers: [String: SyncScheduler] = [:]
+    static func scheduler(for database: AppDatabase) -> SyncScheduler {
+        let client = APIClient.shared
+        if let cached = schedulers[client.baseUrl] {
+            if active !== cached {
+                active?.stop()
+                active = cached
+            }
+            return cached
+        }
+        active?.stop()
+        let projects = RemoteProjectDataSource(client: client)
+        let scheduler = SyncScheduler(engine: SyncEngine(database: database, transport: APISyncTransport(client: client),
+            syncMemberships: {
+                try await OfflineFirstProjectDataSource.flushMemberships(database: database, remote: projects)
+            }, refreshProjects: { try await projects.refreshMembershipSnapshot(database) }))
+        schedulers[client.baseUrl] = scheduler
+        active = scheduler
+        return scheduler
+    }
 }
 
 /// Assembles the concrete data source implementations the ViewModels consume.
@@ -20,11 +38,7 @@ private enum SharedSync {
 /// The implementations follow the Storage Mode setting (offline support plan
 /// Phase 8):
 ///
-/// - `.server`: always offline-capable and synced. `memos` is the
-///   offline-first read/write implementation backed by the local GRDB mirror
-///   (outbox + push/pull), and `tasks` / `articles` / `projects` are offline
-///   READ-ONLY caches (remote first, local fallback when unreachable). There
-///   is no separate offline-sync setting — syncing IS Server mode.
+/// - Serverモードはメモ・手動記事の作成と各スレッドへのコメントを端末に保存し、自動同期する。
 /// - `.standalone`: memos, tasks, articles, keyword search, labels and issue
 ///   relations are fully local (`LocalMemoDataSource` / `LocalTaskDataSource`
 ///   / `LocalArticleDataSource` / `LocalSearchDataSource` /
@@ -90,20 +104,22 @@ final class DataSourceProvider: ObservableObject {
         labels = RemoteLabelDataSource()
         issueRelations = RemoteIssueRelationsDataSource()
         templates = RemoteTemplateDataSource()
-        let scheduler = SharedSync.scheduler
+        let scheduler = SharedSync.scheduler(for: AppDatabase.shared)
         syncScheduler = scheduler
         memos = OfflineFirstMemoDataSource(
             database: AppDatabase.shared,
             remote: RemoteMemoDataSource(),
-            onLocalWrite: { scheduler.requestSync() }
+            onLocalWrite: { Task { @MainActor in scheduler.requestSync(refreshProjects: false) } }
         )
         tasks = OfflineFirstTaskDataSource(
             database: AppDatabase.shared,
-            remote: RemoteTaskDataSource()
+            remote: RemoteTaskDataSource(),
+            onLocalWrite: { Task { @MainActor in scheduler.requestSync(refreshProjects: false) } }
         )
         articles = OfflineFirstArticleDataSource(
             database: AppDatabase.shared,
-            remote: RemoteArticleDataSource()
+            remote: RemoteArticleDataSource(),
+            onLocalWrite: { Task { @MainActor in scheduler.requestSync(refreshProjects: false) } }
         )
         projects = OfflineFirstProjectDataSource(
             database: AppDatabase.shared,

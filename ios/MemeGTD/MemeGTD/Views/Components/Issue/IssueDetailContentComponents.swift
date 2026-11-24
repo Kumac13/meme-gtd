@@ -39,6 +39,7 @@ struct IssueContentCard: View {
     let bodyMd: String
     let createdAt: String
     let updatedAt: String
+    var pending = false
     let emptyText: String
     var copyText: String? = nil
     var mutationsDisabled = false
@@ -72,12 +73,14 @@ struct IssueContentCard: View {
                         .font(.system(size: 14))
                         .foregroundColor(.textSecondary)
                         .italic()
+                        .pendingSyncDot(pending)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 10)
                         .padding(.horizontal, 16)
                 } else {
                     ThreadItem(
                         bodyMd: bodyMd,
+                        pending: pending,
                         labels: nil,
                         showMenu: false,
                         onIssueTap: onIssueTap,
@@ -92,6 +95,7 @@ struct IssueContentCard: View {
 struct IssueTimeline: View {
     let entries: [TimelineEntry]
     let issueId: Int
+    var pendingComments: Set<Int> = []
     var mutationsDisabled = false
     let onEditComment: (Comment) -> Void
     let onDeleteComment: (Comment) -> Void
@@ -108,6 +112,7 @@ struct IssueTimeline: View {
                     bodyMd: comment.bodyMd,
                     createdAt: comment.createdAt,
                     updatedAt: comment.updatedAt,
+                    pending: pendingComments.contains(comment.id),
                     emptyText: "No comment provided.",
                     mutationsDisabled: mutationsDisabled,
                     onEdit: { onEditComment(comment) },

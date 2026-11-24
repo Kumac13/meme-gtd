@@ -2,11 +2,12 @@ import SwiftUI
 
 struct ArticleCell: View {
     let article: Article
+    var pending = false
     var snippet: String? = nil
     var searchQuery: String? = nil
 
     var body: some View {
-        IssueCellLayout(title: article.title, snippet: snippet, searchQuery: searchQuery) {
+        IssueCellLayout(title: article.title, pending: pending, snippet: snippet, searchQuery: searchQuery) {
                 if let siteName = siteDisplayName {
                     Text(siteName)
                         .font(.system(size: 11))

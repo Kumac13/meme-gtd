@@ -16,8 +16,10 @@ nonisolated protocol SyncTransport: Sendable {
 
 /// Production transport: a thin wrapper around the shared APIClient.
 nonisolated struct APISyncTransport: SyncTransport {
+    var client = APIClient.shared
+
     func fetchChanges(since: Int, limit: Int) async throws -> SyncChangesResponse {
-        try await APIClient.shared.get(
+        try await client.get(
             path: "/api/sync/changes",
             queryItems: [
                 URLQueryItem(name: "since", value: String(since)),
@@ -27,6 +29,6 @@ nonisolated struct APISyncTransport: SyncTransport {
     }
 
     func push(_ request: SyncPushRequest) async throws -> SyncPushResponse {
-        try await APIClient.shared.post(path: "/api/sync/push", body: request)
+        try await client.post(path: "/api/sync/push", body: request)
     }
 }

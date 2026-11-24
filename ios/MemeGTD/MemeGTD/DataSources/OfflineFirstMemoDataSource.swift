@@ -1,36 +1,9 @@
 import Foundation
 import GRDB
 
-/// Offline-first `MemoDataSource` (offline support plan S2, Phase 5), active
-/// only while the "Offline Sync (Beta)" setting is on.
-///
-/// READS come from the local GRDB mirror. WRITES apply locally and enqueue a
-/// pending operation in the outbox within the SAME transaction, then poke the
-/// scheduler so the SyncEngine pushes when connectivity allows.
-///
-/// The local CRUD itself (reads, writes, filters, Row → model conversion and
-/// integer-id resolution) lives in `LocalMemoStore`, shared with the
-/// Standalone-mode `LocalMemoDataSource` (Phase 8). This class composes that
-/// store with the outbox bookkeeping and the remote delegation below.
-///
-/// Comments (Phase 6) follow the same local-write + outbox path as memos:
-/// entity='comment' operations carry the parent memo's uuid in `issue_uuid`,
-/// and FIFO push order guarantees the parent memo's create op (smaller outbox
-/// id) reaches the server before any of its comments.
-///
-/// Delegated to the wrapped remote implementation (server-only in this phase):
-/// - promotePreview (server-side logic is never duplicated on clients)
-/// - reads/writes on a memo that is not mirrored locally yet (e.g. opened
-///   before the initial pull finished) — server ids can be answered by the
-///   server directly
-/// - list requests with a projectId filter (project tables have no local
-///   mirror until Phase 7); offline, such a request returns an empty page
-///   rather than silently ignoring the filter
-/// - keyword search endpoints are a different data source entirely
-///   (SearchDataSource) and are untouched by this class; the plain `search`
-///   query item on the list endpoint IS served locally with LIKE, mirroring
-///   the server's behavior
+/// Serverモードでメモとコメントを端末に保存し、同じトランザクションで再送を予約する。
 nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
+    private let threads: OfflineThreadStore
     private let database: AppDatabase
     private let remote: MemoDataSource
     private let onLocalWrite: () -> Void
@@ -40,6 +13,7 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
         remote: MemoDataSource,
         onLocalWrite: @escaping () -> Void = {}
     ) {
+        self.threads = OfflineThreadStore(database: database, onLocalWrite: onLocalWrite)
         self.database = database
         self.remote = remote
         self.onLocalWrite = onLocalWrite
@@ -49,17 +23,6 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
 
     func listMemos(queryItems: [URLQueryItem]) async throws -> MemoListResponse {
         let query = LocalMemoStore.ListQuery(queryItems: queryItems)
-
-        // Project membership is not mirrored locally in this phase: serve the
-        // filter from the server while online; offline, an empty page is the
-        // honest answer (ignoring the filter would show wrong contents).
-        if query.hasProjectFilter {
-            do {
-                return try await remote.listMemos(queryItems: queryItems)
-            } catch {
-                return query.emptyPage
-            }
-        }
 
         return try await database.dbWriter.read { db in
             try LocalMemoStore.listMemos(db, query: query)
@@ -77,7 +40,7 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
         // Not mirrored locally yet (e.g. opened before the initial pull
         // finished). Server ids can be answered by the server directly.
         if id > 0 {
-            return try await remote.getMemo(id: id)
+            return try await threads.loadBeforeInitialPull(kind: "memo", id: id) { try await remote.getMemo(id: id) }
         }
         throw LocalMemoError.memoNotFound
     }
@@ -91,6 +54,7 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
         let memo: Memo = try await database.dbWriter.write { db in
             try LocalMemoStore.insertMemo(db, uuid: uuid, bodyMd: request.bodyMd, now: now)
 
+            try OfflineThreadStore.saveProjects(db, ids: request.projectIds ?? [], uuid: uuid)
             try Self.enqueue(
                 db,
                 opType: "create",
@@ -215,6 +179,7 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
                     sql: "DELETE FROM pending_operations WHERE target_uuid = ? OR issue_uuid = ?",
                     arguments: [uuid, uuid]
                 )
+                try db.execute(sql: "DELETE FROM pending_memberships WHERE issue_uuid = ?", arguments: [uuid])
                 try LocalMemoStore.hardDeleteMemoWithComments(db, uuid: uuid)
             } else {
                 // Soft-delete locally (mirroring the server) and enqueue the
@@ -253,64 +218,11 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
     // MARK: - Comments
 
     func listComments(memoId: Int) async throws -> [Comment] {
-        let local: [Comment]? = try await database.dbWriter.read { db in
-            guard let memoRow = try LocalMemoStore.fetchMemoRow(db, id: memoId) else { return nil }
-            let memoUuid: String = memoRow["uuid"]
-            return try LocalMemoStore.listComments(db, memoUuid: memoUuid, memoId: memoId)
-        }
-        if let local { return local }
-        // The memo is not mirrored locally yet (e.g. opened before the
-        // initial pull finished): consistent with getMemo, let the server
-        // answer for server ids.
-        if memoId > 0 {
-            return try await remote.listComments(memoId: memoId)
-        }
-        throw LocalMemoError.memoNotFound
+        try await threads.comments(id: memoId) { try await remote.listComments(memoId: memoId) }
     }
 
     func createComment(memoId: Int, _ request: CreateCommentRequest) async throws -> Comment {
-        let uuid = UUIDv7.generate()
-        let now = ISO8601Millis.now()
-
-        let local: Comment? = try await database.dbWriter.write { db in
-            guard let memoRow = try LocalMemoStore.fetchMemoRow(db, id: memoId) else { return nil }
-            let memoUuid: String = memoRow["uuid"]
-
-            try LocalMemoStore.insertComment(
-                db,
-                uuid: uuid,
-                memoUuid: memoUuid,
-                bodyMd: request.bodyMd,
-                now: now
-            )
-
-            // The op carries the PARENT memo's uuid: the server resolves the
-            // comment's issue through it, and FIFO guarantees the memo's own
-            // create op (a smaller outbox id) lands first.
-            try Self.enqueue(
-                db,
-                entity: "comment",
-                opType: "create",
-                targetUuid: uuid,
-                issueUuid: memoUuid,
-                payload: SyncPushPayload(bodyMd: request.bodyMd, createdAt: now),
-                baseUpdatedAt: nil,
-                now: now
-            )
-
-            guard let row = try LocalMemoStore.fetchCommentRow(db, uuid: uuid) else {
-                throw LocalMemoError.commentNotFound
-            }
-            return LocalMemoStore.comment(from: row, memoId: memoId)
-        }
-        if let local {
-            onLocalWrite()
-            return local
-        }
-        if memoId > 0 {
-            return try await remote.createComment(memoId: memoId, request)
-        }
-        throw LocalMemoError.memoNotFound
+        try await threads.add(id: memoId, body: request.bodyMd)
     }
 
     func updateComment(memoId: Int, commentId: Int, _ request: UpdateCommentRequest) async throws -> Comment {

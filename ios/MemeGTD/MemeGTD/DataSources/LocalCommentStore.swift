@@ -25,7 +25,7 @@ nonisolated enum LocalCommentStore {
             db,
             sql: commentSelect + """
                  WHERE c.issue_uuid = ? AND c.is_deleted = 0
-                ORDER BY c.created_at ASC
+                ORDER BY c.created_at ASC, c.rowid ASC
                 """,
             arguments: [issueUuid]
         )

@@ -70,6 +70,48 @@ final class SyncEngineTests: XCTestCase {
 
     // MARK: - Outbox behavior (writes through the offline-first data source)
 
+    func testProjectMemoSurvivesParentAcknowledgementBeforeMembershipIsSent() async throws {
+        let memo = try await dataSource.createMemo(CreateMemoRequest(projectIds: [7], bodyMd: "on the train"))
+        let unassigned = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "loose"))
+        try await database.dbWriter.write { db in
+            try db.execute(sql: "UPDATE issues SET server_id = 41 WHERE rowid = ?", arguments: [-memo.id])
+            try db.execute(sql: "DELETE FROM pending_operations WHERE target_uuid = (SELECT uuid FROM issues WHERE server_id = 41)")
+        }
+        for (value, ids) in [("7", [41]), ("none", [unassigned.id]), ("none,7", [41, unassigned.id])] {
+            let response = try await dataSource.listMemos(queryItems: [URLQueryItem(name: "projectId", value: value)])
+            XCTAssertEqual(Set(response.data.map(\.id)), Set(ids))
+        }
+    }
+
+    func testPartialThreadAndConfirmedEmptyHistoryAreDifferent() async throws {
+        let issue = issueChange(seq: 81, uuid: "parent", body: "parent")
+        try await database.dbWriter.write { db in
+            _ = try SyncChangeApplier.apply([issue], skippingUuids: [], in: db)
+        }
+        let before = try await database.dbWriter.read { db in try ThreadDelivery.read(db, id: 81, endpoint: "A") }
+        XCTAssertFalse(before.historyAvailable)
+        _ = await engine.syncNow()
+        let after = try await database.dbWriter.read { db in try ThreadDelivery.read(db, id: 81, endpoint: "A") }
+        XCTAssertTrue(after.historyAvailable)
+        XCTAssertTrue(after.comments.isEmpty)
+    }
+
+    func testThreadShowsPendingThenAcceptedReplyOnSameRoute() async throws {
+        let memo = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "parent"))
+        _ = try await dataSource.createComment(memoId: memo.id, CreateCommentRequest(bodyMd: "reply"))
+        let before = try await database.dbWriter.read { db in try ThreadDelivery.read(db, id: memo.id, endpoint: "A") }
+        XCTAssertTrue(before.parentPending)
+        XCTAssertEqual(before.pendingComments, Set(before.comments.map(\.id)))
+        let list = try await database.dbWriter.read { try ThreadDelivery.pendingThreadIDs($0, kind: "memo", endpoint: "A") }
+        XCTAssertEqual(list, [memo.id])
+        XCTAssertEqual(before.comments.map(\.bodyMd), ["reply"])
+        _ = await engine.syncNow()
+        let after = try await database.dbWriter.read { db in try ThreadDelivery.read(db, id: memo.id, endpoint: "A") }
+        XCTAssertFalse(after.hasPending)
+        XCTAssertEqual(after.comments.map(\.bodyMd), ["reply"])
+        XCTAssertGreaterThan(try XCTUnwrap(after.serverID), 0)
+    }
+
     func testWritesEnqueueInFIFOOrderAndUpdatesMerge() async throws {
         let memo = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "first"))
         _ = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "second"))
@@ -107,6 +149,33 @@ final class SyncEngineTests: XCTestCase {
     }
 
     // MARK: - Push result handling
+
+    func testPushSplits501OperationsInOrder() async throws {
+        try await database.dbWriter.write { db in
+            for index in 0..<501 {
+                try OfflineThreadStore.enqueue(db, entity: .memo, uuid: "memo-\(index)",
+                    payload: SyncPushPayload(bodyMd: "memo"), now: ISO8601Millis.now())
+            }
+        }
+        let summary = await engine.syncNow()
+        XCTAssertTrue(summary.errors.isEmpty)
+        XCTAssertEqual(transport.pushedRequests.map { $0.operations.count }, [500, 1])
+        XCTAssertEqual(summary.remainingOutboxCount, 0)
+        XCTAssertEqual(transport.pushedRequests.last?.operations.first?.uuid, "memo-500")
+    }
+
+    func testUnmirroredReplyResolvesParentAfterPull() async throws {
+        _ = try await dataSource.createComment(memoId: 71, CreateCommentRequest(bodyMd: "still here"))
+        transport.changePages = [SyncChangesResponse(changes: [SyncChange(serverSeq: 1, entity: .issue,
+            op: .upsert, data: ["id": .number(71), "uuid": .string("parent-71"), "type": .string("memo")])],
+            latestSeq: 1, hasMore: false)]
+        _ = await engine.syncNow()
+        XCTAssertTrue(transport.pushedRequests.isEmpty)
+        let replies = try await dataSource.listComments(memoId: 71)
+        XCTAssertEqual(replies.map(\.bodyMd), ["still here"])
+        _ = await engine.syncNow()
+        XCTAssertEqual(transport.pushedRequests.first?.operations.first?.issueUuid, "parent-71")
+    }
 
     func testAppliedPushClearsOutboxAndStoresServerIdentity() async throws {
         let memo = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "to push"))

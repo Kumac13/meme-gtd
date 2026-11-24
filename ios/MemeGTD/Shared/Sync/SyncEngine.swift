@@ -60,9 +60,15 @@ actor SyncEngine {
 
     private let database: AppDatabase
     private let transport: SyncTransport
+    private let syncMemberships: @Sendable () async throws -> Void
+    private let refreshProjects: @Sendable () async throws -> Void
     private let pullPageSize: Int
 
-    init(database: AppDatabase, transport: SyncTransport, pullPageSize: Int = 500) {
+    init(database: AppDatabase, transport: SyncTransport, pullPageSize: Int = 500,
+         syncMemberships: @escaping @Sendable () async throws -> Void = {},
+         refreshProjects: @escaping @Sendable () async throws -> Void = {}) {
+        self.refreshProjects = refreshProjects
+        self.syncMemberships = syncMemberships
         self.database = database
         self.transport = transport
         self.pullPageSize = pullPageSize
@@ -72,19 +78,24 @@ actor SyncEngine {
     /// transport error aborts the run (no retry within the same run — the
     /// scheduler triggers again later, which acts as the backoff).
     @discardableResult
-    func syncNow() async -> SyncSummary {
+    func syncNow(refreshProjectSnapshot: Bool = true) async -> SyncSummary {
         var summary = SyncSummary()
         do {
-            let push = try await pushOutbox()
-            summary.pushedCount = push.resolved
-            summary.conflictCopiedCount = push.conflictCopied
+            while true {
+                let push = try await pushOutbox()
+                summary.pushedCount += push.resolved
+                summary.conflictCopiedCount += push.conflictCopied
+                if push.resolved < 500 { break }
+            }
             summary.pulledCount = try await pullChanges()
+            try await syncMemberships()
+            if refreshProjectSnapshot { try await refreshProjects() }
         } catch {
             summary.errors.append(error.localizedDescription)
             logger.error("syncNow failed: \(error.localizedDescription, privacy: .public)")
         }
         summary.remainingOutboxCount = (try? await database.dbWriter.read { db in
-            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM pending_operations") ?? 0
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM pending_operations WHERE state != 'review'") ?? 0
         }) ?? 0
         if summary.didChangeData {
             var userInfo: [AnyHashable: Any]?
@@ -103,7 +114,7 @@ actor SyncEngine {
 
     // MARK: - Push
 
-    /// Sends all outbox operations as one batch, FIFO by id. Returns the
+    /// Sends up to 500 operations in FIFO order. Returns the
     /// number of operations the server resolved (they leave the outbox) and
     /// how many of them produced a conflicted copy.
     private func pushOutbox() async throws -> (resolved: Int, conflictCopied: Int) {
@@ -114,10 +125,14 @@ actor SyncEngine {
         let ops: [PendingOperationRecord] = try await database.dbWriter.write { db in
             let records = try PendingOperationRecord.fetchAll(
                 db,
-                sql: "SELECT * FROM pending_operations ORDER BY id"
+                sql: """
+                        SELECT * FROM pending_operations
+                        WHERE state != 'review' AND (issue_uuid IS NULL OR issue_uuid NOT LIKE 'server-id:%')
+                        ORDER BY id LIMIT 500
+                        """
             )
-            if !records.isEmpty {
-                try db.execute(sql: "UPDATE pending_operations SET state = 'inflight'")
+            for op in records {
+                try db.execute(sql: "UPDATE pending_operations SET state = 'inflight' WHERE id = ?", arguments: [op.id])
             }
             return records
         }
@@ -194,7 +209,10 @@ actor SyncEngine {
                 case .skipped:
                     // Server state wins; the pull that follows restores the
                     // server row.
-                    break
+                    if op.opType == "create", op.entity == "comment" || op.entity == "issue_label" || op.entity == "article" {
+                        try db.execute(sql: "UPDATE pending_operations SET state = 'review', review_reason = ? WHERE op_id = ?", arguments: [result.reason ?? (op.entity == "comment" ? "Parent is unavailable on the server." : "Server could not apply this change."), op.opId])
+                        continue
+                    }
                 }
 
                 try db.execute(
@@ -252,6 +270,13 @@ actor SyncEngine {
                         skippingUuids: pendingUuids,
                         in: db
                     )
+                    for change in page.changes where change.entity == .issue {
+                        guard case let .number(value) = change.data["id"], let id = Int(exactly: value),
+                              case let .string(uuid) = change.data["uuid"] else { continue }
+                        let placeholder = "server-id:\(id)"
+                        try db.execute(sql: "UPDATE comments SET issue_uuid = ? WHERE issue_uuid = ?", arguments: [uuid, placeholder])
+                        try db.execute(sql: "UPDATE pending_operations SET issue_uuid = ? WHERE issue_uuid = ?", arguments: [uuid, placeholder])
+                    }
                     // Advance past everything in this page, including skipped
                     // entries — pending uuids re-converge on the pull that
                     // follows their push (the push bumps their server_seq).
@@ -267,7 +292,10 @@ actor SyncEngine {
                 }
                 pulled += applied
             }
-            if !page.hasMore { break }
+            if !page.hasMore {
+                if !database.hasCompletedPull { try database.setSyncMetaValue("1", for: "initial_pull_complete") }
+                break
+            }
         }
         return pulled
     }
