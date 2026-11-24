@@ -76,7 +76,7 @@ struct ActivityItemView: View {
         return HStack(spacing: 7) {
             Image(systemName: symbol).foregroundStyle(Color.accentDark)
             Text(verbatim: "#\(id)").font(.caption.monospacedDigit()).fixedSize()
-            Text(title).font(.system(size: 13, weight: .medium)).lineLimit(1)
+            Text(title).font(.system(size: 13)).lineLimit(1)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 9)
@@ -94,7 +94,10 @@ struct ActivityItemView: View {
             Image(systemName: iconName)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundColor(Color(.systemGray2))
-                .frame(width: 48, alignment: .center)
+                // 背景の接続線がグリフを透過しないよう、線の上に不透明な円を敷く
+                .frame(width: 18, height: 18)
+                .background(Color(.systemBackground), in: Circle())
+                .frame(width: 50, alignment: .center)
 
             // Description
             descriptionView
