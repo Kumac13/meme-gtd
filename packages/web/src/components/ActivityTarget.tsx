@@ -22,7 +22,7 @@ export function ActivityTarget({ id, type, title, to }: ActivityTargetProps) {
       <path d={symbols[type] ?? 'M4 3h12v14H4z'} />
     </svg>
     {id != null && <span className="shrink-0 text-xs">#{id}</span>}
-    <span className="truncate font-medium">{title}</span>
+    <span className="truncate">{title}</span>
   </>;
   return to
     ? <Link to={to} aria-label={label} title={label} className={style}>{content}</Link>
