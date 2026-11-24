@@ -23,6 +23,13 @@
 * Routing for repo knowledge starts at the root `CLAUDE.md` document-routing table; the document catalog and update rules live in `docs/CLAUDE.md`.
 * Preventive rules go where the mistake happens: the auto-loaded context of the directory being edited (nested `CLAUDE.md`) or the always-loaded root rules. A rule that is only read at a late stage (e.g. release time) does not prevent anything.
 
+## Development flow (Codex)
+
+* When the user shares a meme-gtd Task (pasted Task JSON or a Task ID), follow the `dev-flow` skill (`.codex/skills/dev-flow/SKILL.md`). It is the source of truth for consideration, planning, implementation, PR, and review.
+* A shared Task is not an implementation request by itself. Change files only after the user says 実装 or answers that implementation should start.
+* The main thread is the only one that talks to the user. Planning, implementation, and review each run in a subagent spawned with `fork_turns="none"`, so earlier assumptions are not carried over.
+* The user decides what the product should be (behavior, appearance, names, scope). Do not fill those in by guessing, and do not decide on your own which points need a decision. Everything else in the flow proceeds without asking.
+
 ## Release and commit discipline
 
 * Never stack implementation commits after the version bump commit; the bump commit is always the branch tip. If more commits are needed after the bump, update the CHANGELOG, re-stack the bump at the tip, and re-point the unpushed tag (procedure: release skill).
