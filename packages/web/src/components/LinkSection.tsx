@@ -48,6 +48,7 @@ interface ParentTaskInfo {
 }
 
 interface LinkSectionProps {
+  onIssueLinksChanged?: () => void;
   /** ID of the issue (task, memo, or article) */
   itemId: number;
   /** Type of the issue */
@@ -67,7 +68,7 @@ interface LinkSectionProps {
   refreshKey?: number;
 }
 
-export default function LinkSection({ itemId, itemType: _itemType, onItemClick, onBeforeNavigate, parentTask, onChildTaskCreated: _onChildTaskCreated, refreshKey }: LinkSectionProps) {
+export default function LinkSection({ itemId, itemType: _itemType, onItemClick, onBeforeNavigate, parentTask, onChildTaskCreated: _onChildTaskCreated, refreshKey, onIssueLinksChanged }: LinkSectionProps) {
   const [links, setLinks] = useState<LinkDisplayItem[]>([]);
   const [urlLinks, setUrlLinks] = useState<UrlLinkDisplayItem[]>([]);
   // Child task creation state
@@ -136,7 +137,8 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
     try {
       await LinksService.deleteLink(String(linkId));
       // Refresh links after deletion
-      await fetchAllLinks();
+      if (onIssueLinksChanged) onIssueLinksChanged();
+      else await fetchAllLinks();
     } catch (err) {
       console.error('Failed to delete link:', err);
       alert('Failed to delete link. Please try again.');
@@ -230,7 +232,8 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
       });
 
       // 5. Refresh links and reset form
-      await fetchAllLinks();
+      if (onIssueLinksChanged) onIssueLinksChanged();
+      else await fetchAllLinks();
       setChildTitle('');
       setIsAddingChild(false);
     } catch (err) {
@@ -255,7 +258,8 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
         linkType,
       });
       // Refresh links after creation
-      await fetchAllLinks();
+      if (onIssueLinksChanged) onIssueLinksChanged();
+      else await fetchAllLinks();
       // Close form and reset state
       setCreationState({
         isAdding: false,

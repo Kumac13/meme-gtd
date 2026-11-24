@@ -1,3 +1,4 @@
+import { memoPreviewTitle } from 'meme-gtd-shared';
 /**
  * Activity Log helpers for Web UI
  */
@@ -593,7 +594,7 @@ export function getPrimaryEntityTitle(activity: ActivityLogEntry): string | null
     }
     const memoBody = extractString(payload.body) || extractString(payload.body_preview);
     if (!memoBody) return null;
-    return getFirstLineTruncated(memoBody, 40);
+    return memoPreviewTitle(memoBody);
   }
 
   // Article events
@@ -649,7 +650,7 @@ function getEntityInfo(activity: ActivityLogEntry): EntityInfo | null {
     let title: string;
     if (type === 'memo') {
       const memoBody = extractString(payload.body) || extractString(payload.body_preview);
-      title = memoBody ? getFirstLineTruncated(memoBody, 20) : `#${issueId}`;
+      title = memoBody ? memoPreviewTitle(memoBody) : `#${issueId}`;
     } else {
       title = extractString(payload.title) || extractString(payload.issue_title) || `#${issueId}`;
     }

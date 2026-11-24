@@ -46,6 +46,12 @@ describe('shared component boundaries (web)', () => {
     expectOwnedBy(webSrc, files, 'fixed inset-0', ['components/ActionMenu.tsx', 'components/SidePanel.tsx']);
   });
 
+  it('uses the shared activity target in the feed and detail timeline', () => {
+    for (const name of ['ActivityCard', 'ActivityTimelineItem']) {
+      expect(source(webSrc, `components/${name}.tsx`)).toContain('<ActivityTarget');
+    }
+  });
+
   it('keeps template fetching behind TemplateCreationFlow / template screens', () => {
     expectOwnedBy(
       webSrc,

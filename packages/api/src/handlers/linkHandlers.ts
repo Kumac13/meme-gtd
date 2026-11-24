@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { LinkService } from 'meme-gtd-core';
-import type { IssueType } from 'meme-gtd-shared';
+import { memoPreviewTitle, type IssueType } from 'meme-gtd-shared';
 import { NotFoundError, ValidationError } from '../errors/index.js';
 import type {
   CreateLinkRequest,
@@ -81,7 +81,7 @@ export async function listLinksHandler(
         SELECT
           id,
           type as issue_type,
-          COALESCE(title, SUBSTR(body_md, 1, 100)) as title,
+          CASE WHEN type = 'memo' THEN body_md ELSE COALESCE(title, SUBSTR(body_md, 1, 100)) END as title,
           status
         FROM issues
         WHERE id IN (${placeholders}) AND is_deleted = 0
@@ -98,7 +98,7 @@ export async function listLinksHandler(
       rows.forEach((row) => {
         issueInfoMap.set(row.id, {
           type: row.issue_type,
-          title: row.title,
+          title: row.issue_type === 'memo' ? memoPreviewTitle(row.title ?? '') : row.title,
           status: row.status,
         });
       });

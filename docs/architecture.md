@@ -168,6 +168,8 @@ Task / Memo / Article / Template一覧は`ListPageLayout`で検索、作成導�
 
 Markdown画像のpaste / drop / upload / cursor挿入は`MarkdownTextarea`が所有する。Issue form、comment、editable content、Project formは本文Bindingだけを渡す。実行前の確認モーダルは`ConfirmationModal`を使い、native dialogのフォーカス制御・背景操作の抑止・キャンセル・処理中の多重実行防止・エラー表示を一箇所で所有する。呼び出し側は確認内容と実行callbackだけを渡す。DetailのCopy Allは`useCopyItemContent`、overflow操作は`ActionMenu`と`InlineDeleteConfirmation`を使い、画面ごとにclipboard feedback timerやbackdropを複製しない。
 
+Activity一覧と詳細タイムラインは、種別アイコン・ID・タイトルを1行に収める `ActivityTarget` を共有する。メモのリンクタイトルは本文を1行に整えた先頭30文字を使う。
+
 Label / Project管理欄は`ManagementSection`、Task / Projectの編集可能な日付cardは`EditableSectionCard`、Taskの作成・詳細日時入力は`ScheduleDateTimeFields`を使う。Link追加は保存済みIssueと作成待ちTaskの両方で`LinkCreationEditor`を使い、永続化と重複検証だけをadapter callbackに残す。
 
 Calendarを含むIssue詳細の右パネルは`ItemDetailPanel`を単一の正とし、リソース別の専用Detail panelを増やさない。

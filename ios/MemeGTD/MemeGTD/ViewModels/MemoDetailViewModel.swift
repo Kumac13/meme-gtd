@@ -6,6 +6,7 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
     var issueTypeLabel: String { "memo" }
     var isBookmarked: Bool { memo?.isBookmarked ?? false }
     var issueLabels: [String] { memo?.labels ?? [] }
+    @Published var activityLogs: [ActivityLogEntry] = []
     @Published var memo: Memo?
     @Published var comments: [Comment] = []
     @Published var isLoading: Bool = false
@@ -55,7 +56,8 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
         async let metadataResult: () = loadMetadataOptions()
         async let linksResult: () = loadIssueLinks()
         async let urlLinksResult: () = loadUrlLinks()
-        _ = await (metadataResult, linksResult, urlLinksResult)
+        async let activityResult: () = relationDidChange()
+        _ = await (metadataResult, linksResult, urlLinksResult, activityResult)
     }
 
     // MARK: - Fetch without UI update (for pull-to-refresh)
@@ -64,6 +66,7 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
         do {
             let memo: Memo = try await dataSources.memos.getMemo(id: memoId)
             let commentList: [Comment] = try await dataSources.memos.listComments(memoId: memoId)
+            await relationDidChange()
             return (memo, commentList)
         } catch {
             self.error = error.localizedDescription
@@ -76,7 +79,11 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
         if dataSources.syncScheduler == nil { self.comments = comments }
     }
 
-    func relationDidChange() async {}
+    func relationDidChange() async {
+        if let logs = try? await dataSources.issueRelations.listActivityLog(issueId: memoId) {
+            activityLogs = logs.filter { $0.eventType == "link.created" || $0.eventType == "link.deleted" }
+        }
+    }
 
     // MARK: - Promote
 
@@ -126,7 +133,7 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
             replyBody = ""
             HapticManager.notification(.success)
             // Server may have created relates links from `#id` mentions.
-            Task { await loadIssueLinks() }
+            Task { await loadIssueLinks(); await relationDidChange() }
             isSubmittingReply = false
             return true
         } catch {
@@ -148,7 +155,7 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
             if let index = comments.firstIndex(where: { $0.id == commentId }) {
                 comments[index] = updated
             }
-            Task { await loadIssueLinks() }
+            Task { await loadIssueLinks(); await relationDidChange() }
             return true
         } catch {
             self.error = error.localizedDescription
@@ -168,7 +175,7 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
             memo = updated
             memoStore?.updateItem(updated)
             HapticManager.notification(.success)
-            Task { await loadIssueLinks() }
+            Task { await loadIssueLinks(); await relationDidChange() }
             return true
         } catch {
             self.error = error.localizedDescription

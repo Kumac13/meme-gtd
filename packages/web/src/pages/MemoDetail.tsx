@@ -1,3 +1,5 @@
+import { ActivityRow } from '../components/CommentSection';
+import type { ActivityLogEntry } from '../utils/activityLogHelpers';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import type { IssueType } from 'meme-gtd-shared';
@@ -164,6 +166,8 @@ export default function MemoDetail() {
   const [bookmarking, setBookmarking] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{ id: number; type: IssueType } | null>(null);
   const { copiedFormat, copy: copyItemContent, copyWithJSON } = useCopyItemContent();
+  const [threadRevision, setThreadRevision] = useState(0);
+  const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
   const [threadComments, setThreadComments] = useState<MemoComment[]>([]);
   const [replyBody, setReplyBody] = useState('');
   const [replySubmitting, setReplySubmitting] = useState(false);
@@ -261,6 +265,7 @@ export default function MemoDetail() {
     if (!id || !memo) return;
     const updated = await MemosService.updateMemo(id, { bodyMd });
     setMemo(updated as Memo);
+    setThreadRevision(value => value + 1);
   }, [id, memo]);
 
   const handleReplySubmit = useCallback(async () => {
@@ -271,6 +276,7 @@ export default function MemoDetail() {
       const created = await CommentsService.createMemoComment(id, { bodyMd: replyBody.trim() });
       setThreadComments((prev) => [...prev, created as MemoComment]);
       setReplyBody('');
+      setThreadRevision(value => value + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add reply');
       console.error('Error creating reply:', err);
@@ -285,6 +291,7 @@ export default function MemoDetail() {
     setThreadComments((prev) => prev.map((comment) => (
       comment.id === commentId ? (updated as MemoComment) : comment
     )));
+    setThreadRevision(value => value + 1);
   }, [id]);
 
   const handleReplyDelete = useCallback(async (commentId: number) => {
@@ -306,6 +313,11 @@ export default function MemoDetail() {
   if (error || !memo) {
     return <ErrorState error={error || 'Memo not found'} title="Error loading memo" />;
   }
+
+  const thread = [
+    ...threadComments.map(comment => ({ time: comment.createdAt, comment, activity: null })),
+    ...activities.map(activity => ({ time: activity.occurredAt, activity, comment: null })),
+  ].sort((left, right) => left.time.localeCompare(right.time));
 
   return (
     <div className="relative">
@@ -345,8 +357,14 @@ export default function MemoDetail() {
           </div>
 
           <div className="pt-0.5">
-            {threadComments.map((comment, index) => {
-              const prevCreatedAt = index > 0 ? threadComments[index - 1].createdAt : memo.createdAt;
+            {thread.map(({ comment, activity }, index) => {
+              if (activity) return (
+                <div key={`activity-${activity.id}`} className="relative">
+                  <span className="absolute inset-y-0 left-[31px] w-0.5 bg-gray-300" />
+                  <ActivityRow activity={activity} issueId={memo.id} />
+                </div>
+              );
+              const prevCreatedAt = index > 0 ? thread[index - 1].time : memo.createdAt;
               return (
                 <div key={comment.id}>
                   {shouldShowGapTimestamp(prevCreatedAt, comment.createdAt) && (
@@ -448,6 +466,8 @@ export default function MemoDetail() {
             </>
           )}
           onItemClick={handleItemClick}
+          threadRevision={threadRevision}
+          onActivitiesLoaded={setActivities}
           onCommentsLoaded={handleCommentsLoaded}
         />
         <ItemDetailPanel

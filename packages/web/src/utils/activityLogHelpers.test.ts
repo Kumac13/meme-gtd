@@ -1887,7 +1887,7 @@ describe('activityLogHelpers - getPrimaryEntityTitle', () => {
   });
 
   describe('Memo Events', () => {
-    it('memo.created returns first line of body (truncated to 40 chars)', () => {
+    it('memo.created returns a short body as the title', () => {
       const activity = createActivity({
         eventType: 'memo.created',
         payload: { body: 'Short memo content' },
@@ -1901,7 +1901,7 @@ describe('activityLogHelpers - getPrimaryEntityTitle', () => {
         eventType: 'memo.created',
         payload: { body: longBody },
       });
-      expect(getPrimaryEntityTitle(activity)).toBe('A'.repeat(40) + '...');
+      expect(getPrimaryEntityTitle(activity)).toBe('A'.repeat(30) + '…');
     });
 
     it('memo.promoted returns promoted_task.title', () => {

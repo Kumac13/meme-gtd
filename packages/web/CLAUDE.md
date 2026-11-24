@@ -66,6 +66,7 @@ await fetch(`/api/tasks/${id}`, { method: 'PATCH', ... });
 | Label / Project の管理欄 | `ManagementSection` |
 | 編集可能な日付カード | `EditableSectionCard` |
 | 日時・終日入力 | `ScheduleDateTimeFields` |
+| Activity のリンク対象ブロック | `ActivityTarget` |
 | Issue / URL リンク追加エディタ | `LinkCreationEditor` |
 
 ## 大型ファイルの注意
