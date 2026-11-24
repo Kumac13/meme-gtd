@@ -55,7 +55,6 @@ struct TaskDetailView: View {
     }
 
     var body: some View {
-        GeometryReader { geo in
         IssueDetailScrollShell(
             policy: IssueDetailScrollPolicy(initialPosition: .top),
             isContentReady: viewModel.task != nil
@@ -63,7 +62,7 @@ struct TaskDetailView: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     if let task = viewModel.task {
-                        // === Title Area (glass, extends to top of screen) ===
+                        // === Title Area (glass) ===
                         IssueAreaCard {
                             TaskTitleSection(
                                 title: task.title,
@@ -71,7 +70,6 @@ struct TaskDetailView: View {
                                 isReadOnly: viewModel.isConverting,
                                 onStatusTap: { showStatusPicker = true }
                             )
-                            .padding(.top, geo.safeAreaInsets.top)
                         }
 
                         // --- Connector line ---
@@ -129,7 +127,6 @@ struct TaskDetailView: View {
             }
             .background(Color.menuBackground)
             .scrollDismissesKeyboard(.immediately)
-            .ignoresSafeArea(edges: .top)
             .scrollEdgeEffectStyle(.soft, for: .vertical)
             .refreshable {
                 await withCheckedContinuation { continuation in
@@ -203,7 +200,6 @@ struct TaskDetailView: View {
                 .padding(.bottom, 10)
             }
         }
-        } // GeometryReader
         .enableSwipeBack()
         .navigationBarBackButtonHidden(true)
         .toolbar {

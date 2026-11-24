@@ -41,7 +41,6 @@ struct ArticleDetailView: View {
     }
 
     var body: some View {
-        GeometryReader { geo in
         IssueDetailScrollShell(
             policy: IssueDetailScrollPolicy(initialPosition: .top),
             isContentReady: viewModel.article != nil
@@ -102,7 +101,7 @@ struct ArticleDetailView: View {
                                 }
                             }
                             .padding(.horizontal, 16)
-                            .padding(.top, geo.safeAreaInsets.top + 8)
+                            .padding(.top, 8)
                             .padding(.bottom, 12)
                         }
 
@@ -159,7 +158,6 @@ struct ArticleDetailView: View {
             }
             .background(Color.menuBackground)
             .scrollDismissesKeyboard(.immediately)
-            .ignoresSafeArea(edges: .top)
             .scrollEdgeEffectStyle(.soft, for: .vertical)
             .refreshable {
                 await withCheckedContinuation { continuation in
@@ -216,7 +214,6 @@ struct ArticleDetailView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 10)
             }
-        }
         }
         .enableSwipeBack()
         .navigationBarBackButtonHidden(true)
