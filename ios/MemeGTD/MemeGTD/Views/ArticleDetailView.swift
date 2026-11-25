@@ -41,6 +41,12 @@ struct ArticleDetailView: View {
     }
 
     var body: some View {
+        GeometryReader { geometry in
+            detail(topInset: geometry.safeAreaInsets.top)
+        }
+    }
+
+    private func detail(topInset: CGFloat) -> some View {
         IssueDetailScrollShell(
             policy: IssueDetailScrollPolicy(initialPosition: .top),
             isContentReady: viewModel.article != nil
@@ -49,7 +55,7 @@ struct ArticleDetailView: View {
                 LazyVStack(spacing: 0) {
                     if let article = viewModel.article {
                         // === Header Area (glass card): Title + Meta ===
-                        IssueAreaCard {
+                        IssueAreaCard(glassTopExtension: topInset) {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(article.title)
                                     .font(.system(size: 18, weight: .semibold))

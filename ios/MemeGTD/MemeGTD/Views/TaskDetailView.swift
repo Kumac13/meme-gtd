@@ -55,6 +55,12 @@ struct TaskDetailView: View {
     }
 
     var body: some View {
+        GeometryReader { geometry in
+            detail(topInset: geometry.safeAreaInsets.top)
+        }
+    }
+
+    private func detail(topInset: CGFloat) -> some View {
         IssueDetailScrollShell(
             policy: IssueDetailScrollPolicy(initialPosition: .top),
             isContentReady: viewModel.task != nil
@@ -63,7 +69,7 @@ struct TaskDetailView: View {
                 LazyVStack(spacing: 0) {
                     if let task = viewModel.task {
                         // === Title Area (glass) ===
-                        IssueAreaCard {
+                        IssueAreaCard(glassTopExtension: topInset) {
                             TaskTitleSection(
                                 title: task.title,
                                 status: task.status,
