@@ -1,97 +1,59 @@
 # Task への読み書き
 
-開発フローが meme-gtd の Task を読み、記録するための固定手順。API の仕様を毎回調べ直さず、ここにあるコマンドだけを使う（調べ直しながら叩くと、同じリンクを二重に作るなどの誤操作が起きるため）。
+開発フローが meme-gtd の Task を読み、記録するときは `scripts/task.mjs` だけを使う。`curl` で API に直接書き込まない（表示名 `PR` の付け忘れや、`#数字` による意図しない関連リンクを防ぐ処理が、スクリプトにまとめてあるため）。
+
+```bash
+node .codex/skills/dev-flow/scripts/task.mjs help
+```
 
 ## 接続先
 
-ユーザーが起票する Task は本番（ポート3000）にある。`test-env` スキルの「ポート3000へのアクセス禁止」は検証・テストの話で、Task の記録は対象外。ただし本番に対して行ってよいのは、このファイルにある操作だけ。`mgtd` の直接実行は引き続き禁止。
+ユーザーが起票する Task は本番（ポート3000）にある。`test-env` スキルの「ポート3000へのアクセス禁止」は検証・テストの話で、Task の記録は対象外。ただし、本番に対して行ってよいのは `task.mjs` の操作だけ。`mgtd` の直接実行は引き続き禁止。
 
-```bash
-API="${MGTD_API_URL:-http://localhost:3000}"
-```
-
-手順自体を試すときは `MGTD_API_URL=http://localhost:3001` を設定し、テスト環境に向ける。
-
-リクエスト本文は `jq -n` で組み立てる（日本語・引用符・改行を含む本文を安全に送るため）。
+スクリプト自体を試すときは、`MGTD_API_URL=http://localhost:3001` を設定してテスト環境に向ける。
 
 ## MemeGTD の ID と GitHub の PR 番号
 
-- `TASK_ID` は MemeGTD Task の `id`。MemeGTD API のパスにはこの ID を渡す。
-- GitHub の PR はリポジトリと PR 番号で特定する。MemeGTD には完全な PR URL（例 `https://github.com/Kumac13/meme-gtd/pull/270`）を渡す。
-- MemeGTD は `bodyMd` の `#270` のような記述を内部 Issue ID として解決する。`PR #270` と書いても、同じ ID の Issue が存在すれば内部リンクに変換され、`relates` が作られる。
-- `bodyMd` を送る前に、`#数字` が意図した MemeGTD Issue への参照であることを確認する。GitHub PR への言及は `GitHub PR 270` または `[GitHub PR 270](https://github.com/Kumac13/meme-gtd/pull/270)` と書く。
-- 送信結果の `bodyMd` に意図しない内部リンクがあれば、再投稿せず対象のリンクを確認する。コメントを編集しても作成済みの `relates` は残るので、訂正時はコメントと関連リンクの両方を確認する。
+- `TaskID` は MemeGTD Task の `id`。
+- GitHub の PR は完全な URL（例 `https://github.com/Kumac13/meme-gtd/pull/270`）で扱う。本文では `GitHub PR 270` と書く。
+- MemeGTD は本文中の `#数字` を Issue への参照に変換し、関連リンクを作る。`task.mjs` は、本文の `#数字` をすべて `\#数字` に置き換えて送る（コード部分は除く）。MemeGTD の Issue を参照したいときは `Task 2109` と書く。
 
-## 読む
+## 操作
 
-```bash
-curl -fsS "$API/api/tasks/$TASK_ID"
-curl -fsS "$API/api/tasks/$TASK_ID/comments"
-curl -fsS "$API/api/issues/$TASK_ID/links"
-curl -fsS "$API/api/issues/$TASK_ID/url-links"
-```
+| やること | コマンド |
+|---|---|
+| 読む | `task.mjs read <TaskID>` |
+| 状態表を作る | `task.mjs status <TaskID> init` |
+| ご指摘を追加する | `task.mjs status <TaskID> add --words "<原文>" --from "<出典（例: チャット 11/25 10:52、Task コメント 2636）>"` |
+| 状態を更新する | `task.mjs status <TaskID> set --row <番号> --state <状態> --evidence "<根拠>" --next "<次>"` |
+| コメントを投稿する | `task.mjs comment <TaskID> --kind <種類> --file <path>`（窓口は `--body`） |
+| PR を登録する | `task.mjs link-pr <TaskID> --url <PR URL>` |
+| 起票する | `task.mjs create --title <題名> --file <path>`（サブ Task は `--parent <親の TaskID>`） |
 
-## コメントを追加する
+起票は、ユーザーが指示したときと、計画で粒度を分けたときだけ行う。
 
-```bash
-jq -n --arg b "$BODY" '{bodyMd:$b}' \
-  | curl -fsS -X POST "$API/api/tasks/$TASK_ID/comments" -H 'Content-Type: application/json' -d @-
-```
+## 状態表
 
-コメントに書くもの:
+- コメント `## 指摘一覧` の1件だけを、編集し続ける。新しく作り直さない。
+- 行を消す操作はない。ご指摘の原文は変更できない。
+- 状態: `未着手`（まだ）/ `対応中`（作業中）/ `確認済み`（実操作の証拠か自動テストがある。`--evidence` が必須）/ `未確認`（実装したが確認できていない）/ `対象外`（ユーザーが対象外と決めた）
 
-- 計画: 粒度の一覧、または分割しない場合のゴールと確認基準
-- 実装中: 着手、ユーザーに確認して決まったこと、確認基準ごとの検証結果、未確認の項目とその理由
-- レビュー: 指摘と対応
+## コメントの種類
 
-1件を短く保ち、調査の全文や長い計画は書かない。
+状態表以外のコメントは、次の種類のどれかにする。見出しが欠けている、または順番が違う場合、スクリプトは投稿を拒否する。
 
-## Task を起票する
+| 種類 | 書く人 | 見出し（この順） |
+|---|---|---|
+| `plan` | 計画役 | `## 計画` / `### ゴール` / `### 確認基準` / `### 触る範囲` / `### 合意` |
+| `start` | 実装役 | `## 着手` / `### 何のために` / `### 何をする` |
+| `decision` | 窓口 | `## 決定` / `### 問い` / `### 決まったこと` |
+| `verify` | 確認役 | `## 検証結果` / `### 確認一覧` / `### 結果` / `### 未確認` |
+| `review` | レビュー役 | `## レビュー結果` / `### 指摘` / `### 対応` |
 
-ユーザーが起票を指示したときに使う。
-
-```bash
-jq -n --arg t "$TITLE" --arg b "$BODY" '{title:$t,bodyMd:$b}' \
-  | curl -fsS -X POST "$API/api/tasks" -H 'Content-Type: application/json' -d @-
-```
-
-## サブ Task を作る
-
-親 Task の既存リンクを先に読み、同じ粒度のサブ Task が無いことを確かめてから作る。
-
-```bash
-curl -fsS "$API/api/issues/$PARENT_ID/links"
-
-CHILD_ID=$(jq -n --arg t "$TITLE" --arg b "$BODY" '{title:$t,bodyMd:$b}' \
-  | curl -fsS -X POST "$API/api/tasks" -H 'Content-Type: application/json' -d @- | jq .id)
-
-jq -n --argjson s "$CHILD_ID" --argjson t "$PARENT_ID" '{sourceIssueId:$s,targetIssueId:$t,linkType:"parent"}' \
-  | curl -fsS -X POST "$API/api/links" -H 'Content-Type: application/json' -d @-
-```
-
-リンクは「子が source、親が target、`linkType` は `parent`」の1件だけ作る。
-
-サブ Task の Body の形:
-
-```markdown
-## ゴール
-- 何がどうできているか
-
-## 確認基準
-- 何が確認できれば、できていると言えるか
-```
-
-## PR を外部リンクとして登録する
-
-`TASK_ID` に記録先の MemeGTD Task ID、`PR_URL` に GitHub の完全な PR URL を設定する。既存の外部リンクを先に読み、同じ URL が無いときだけ登録する。
-
-```bash
-curl -fsS "$API/api/issues/$TASK_ID/url-links"
-
-jq -n --arg u "$PR_URL" --arg t "$PR_TITLE" '{url:$u,title:$t}' \
-  | curl -fsS -X POST "$API/api/issues/$TASK_ID/url-links" -H 'Content-Type: application/json' -d @-
-```
+- `decision` の「決まったこと」には、ユーザーの回答を原文で書く。
+- テストの件数だけを並べない。何を確かめたテストかを書く。
+- 1件を短く保ち、調査の全文や長い計画は書かない。
 
 ## 行わない操作
 
-Task の Body の更新、status の変更、Task・コメント・リンクの削除は、ユーザーの指示があるときだけ行う。
+Task の Body の更新、status の変更、Task・コメント・リンクの削除は、ユーザーの指示があるときだけ行う（`task.mjs` にもこれらの操作はない）。

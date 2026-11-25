@@ -50,36 +50,42 @@ agent-browser close
 
 ## iOS（シミュレーター）
 
-`xcodebuild` と `xcrun simctl` は、`.codex/skills/ios-deploy/SKILL.md` の Codex execution rule のとおり、最初から escalated で実行する。
+`xcodebuild`・`xcrun simctl`・`xcrun devicectl`・`axe` は、`.codex/rules/dev-flow.rules` の許可ルールで、承認なしにサンドボックスの外で実行される。ルールに一致させるため、次を守る。
+
+- 変数（`$UDID` など）・リダイレクト（`2>&1`、`> file`）・コマンド置換（`$(...)`）・パイプ（`| grep`）を使わず、値を直接書いた単純なコマンドにする。`xcodebuild` の出力は `-quiet` で絞る。
+- escalated（`sandbox_permissions`）を付けない。ルールに一致しない形で呼ぶと承認待ちになり、ユーザーが張り付く必要が出る。
+- それ以外のコマンド（`set`・`git`・`cat`・`rg` など）は、サンドボックス内でそのまま実行する。
+
+以下の例の `<UDID>` や `<OUT_DIR>` は、最初に決めた値を直接書く。
 
 同じ名前の「iPhone 17」が iOS のバージョンごとに複数あり、同時に起動していることがある。名前で指定すると、コマンドごとに別の端末へ届くことがあるため、最初に UDID を1つ決めて、ビルド・インストール・起動・操作・撮影のすべてで同じ UDID を使う。
 
+一覧から、Task が指定する iOS バージョンの iPhone 17 の UDID を選ぶ。指定が無ければ、一覧にある最新の iOS バージョンのものを選ぶ。
+
 ```bash
 xcrun simctl list devices available
-UDID=<Task が指定する iOS バージョンの iPhone 17 の UDID。指定が無ければ、一覧にある最新の iOS バージョンのもの>
-xcrun simctl bootstatus "$UDID" -b
+xcrun simctl bootstatus <UDID> -b
 ```
 
-ビルドとインストールは `ios/MemeGTD/` で行う。scheme と Bundle ID は `ios-deploy` スキルの Configuration と同じ。ビルド出力先は worktree ごとに変わるため、その場で取得する。
+ビルドとインストールは、確認する worktree の `ios/MemeGTD/` で行う。scheme と Bundle ID は `ios-deploy` スキルの Configuration と同じ。ビルド出力先は `-derivedDataPath` で worktree 内の `ios/MemeGTD/build`（git の管理外）に固定し、出力先を調べ直さない。`<WORKTREE>` は worktree の絶対パスを直接書く。
 
 ```bash
-xcodebuild -scheme MemeGTD -destination "platform=iOS Simulator,id=$UDID" build 2>&1 | grep -E '(error:|BUILD|FAILED)'
-BUILD_DIR=$(xcodebuild -scheme MemeGTD -destination "platform=iOS Simulator,id=$UDID" -showBuildSettings 2>/dev/null | grep -E '\bBUILD_DIR =' | sed 's/.*= //')
-xcrun simctl install "$UDID" "$BUILD_DIR/Debug-iphonesimulator/MemeGTD.app"
+xcodebuild -quiet -scheme MemeGTD -destination "platform=iOS Simulator,id=<UDID>" -derivedDataPath <WORKTREE>/ios/MemeGTD/build build
+xcrun simctl install <UDID> <WORKTREE>/ios/MemeGTD/build/Build/Products/Debug-iphonesimulator/MemeGTD.app
 ```
 
 起動時の引数で接続先をテスト用サーバーに向ける。引数はその起動にだけ効き、アプリの保存済み設定は変わらない。
 
 ```bash
-xcrun simctl launch --terminate-running-process "$UDID" name.kumac.MemeGTD -appMode server -apiUrl http://127.0.0.1:3002
+xcrun simctl launch --terminate-running-process <UDID> name.kumac.MemeGTD -appMode server -apiUrl http://127.0.0.1:3002
 ```
 
 画面の操作は `axe`、撮影は `simctl` で行う。
 
 ```bash
-axe describe-ui --udid "$UDID"
-axe tap --label "<画面上の文言>" --wait-timeout 8 --udid "$UDID"
-xcrun simctl io "$UDID" screenshot "$OUT_DIR/ios-thread.png"
+axe describe-ui --udid <UDID>
+axe tap --label "<画面上の文言>" --wait-timeout 8 --udid <UDID>
+xcrun simctl io <UDID> screenshot <OUT_DIR>/ios-thread.png
 ```
 
 `axe describe-ui` がホーム画面の要素を返す場合は、UDID が起動先と食い違っている。

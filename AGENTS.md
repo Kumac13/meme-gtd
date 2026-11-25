@@ -27,7 +27,10 @@
 
 * When the user shares a meme-gtd Task (pasted Task JSON or a Task ID), follow the `dev-flow` skill (`.codex/skills/dev-flow/SKILL.md`). It is the source of truth for consideration, planning, implementation, PR, and review.
 * A shared Task is not an implementation request by itself. Change files only when the request asks for implementation (実装, 直して, and the like) or the user answers that implementation should start.
-* The main thread is the only one that talks to the user. Planning, implementation, and review each run in a subagent spawned with `fork_turns="none"`, so earlier assumptions are not carried over.
+* The main thread is the only one that talks to the user. Planning, implementation, verification, and review each run in a subagent spawned with `fork_turns="none"`, so earlier assumptions are not carried over. The verifier is spawned with `agent_type="verifier"` (`.codex/agents/verifier.toml`).
+* The main thread may run only read-only commands and the dev-flow scripts; `.codex/hooks/orchestrator-guard.mjs` denies everything else. Delegate the work instead of retrying.
+* Record every user-reported issue verbatim in the Task's status table (`task.mjs status add`) before acting on it, and report in that table's shape.
+* Read and write meme-gtd Tasks only through `.codex/skills/dev-flow/scripts/task.mjs`, never with `curl`.
 * The user decides what the product should be (behavior, appearance, names, scope). Do not fill those in by guessing, and do not decide on your own which points need a decision. Everything else in the flow proceeds without asking.
 
 ## Release and commit discipline

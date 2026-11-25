@@ -1,0 +1,47 @@
+# dev-flow で使う定型コマンドを、承認なしでサンドボックス外で実行させる。
+# Xcode とシミュレーターは Codex のサンドボックス内では動かないため（Seatbelt が CoreSimulator への接続を許さない）。
+# ルールに一致するのは、変数展開・リダイレクト・コマンド置換を含まない単純なコマンドだけ。
+# 確認: codex execpolicy check --pretty --rules .codex/rules/dev-flow.rules -- <コマンド>
+
+prefix_rule(
+    pattern = ["xcodebuild"],
+    decision = "allow",
+    justification = "iOS のビルドとテスト",
+    match = [["xcodebuild", "-scheme", "MemeGTD", "build"]],
+)
+
+prefix_rule(
+    pattern = ["xcrun", ["simctl", "devicectl"]],
+    decision = "allow",
+    justification = "シミュレーターと実機の操作",
+    match = [["xcrun", "simctl", "list", "devices"], ["xcrun", "devicectl", "list", "devices"]],
+    not_match = [["xcrun", "notarytool"]],
+)
+
+prefix_rule(
+    pattern = ["axe"],
+    decision = "allow",
+    justification = "シミュレーターの画面操作",
+    match = [["axe", "describe-ui", "--udid", "X"]],
+)
+
+prefix_rule(
+    pattern = ["gh", "pr"],
+    decision = "allow",
+    justification = "PR の作成と参照",
+    match = [["gh", "pr", "create", "--fill"], ["gh", "pr", "view", "277"]],
+)
+
+prefix_rule(
+    pattern = ["git", "push"],
+    decision = "allow",
+    justification = "作業ブランチの push",
+    match = [["git", "push", "-u", "origin", "fix/2109-project-offline"]],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "origin", ["main", "HEAD:main"]],
+    decision = "forbidden",
+    justification = "main への直接 push は禁止。作業ブランチから PR を作る",
+    match = [["git", "push", "origin", "main"]],
+)
