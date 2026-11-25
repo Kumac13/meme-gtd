@@ -349,9 +349,10 @@ struct TaskDetailView: View {
             )
         }
         .observeThread(id: taskId) { snapshot in
+            let justSynced = taskId < 0 && delivery.serverID == nil && snapshot.serverID != nil
             delivery = snapshot
             viewModel.comments = snapshot.comments
-            if taskId < 0, snapshot.serverID != nil, viewModel.task?.id == taskId {
+            if justSynced, viewModel.task != nil {
                 Task { await viewModel.loadTask() }
             }
         }

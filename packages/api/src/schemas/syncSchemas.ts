@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { iso8601DatetimeRegex } from './taskSchemas.js';
 
 /**
  * Query schema for GET /api/sync/changes — pull the change feed after a cursor.
@@ -96,8 +97,8 @@ export const SyncPushOperationSchema = z
         scheduledEnd: z.string().optional().describe('Scheduled end, ISO 8601 datetime (task create only)'),
         isAllDay: z.boolean().optional().describe('All-day flag (task create only)'),
         scheduledOn: z.string().optional().describe('Deprecated scheduled date YYYY-MM-DD (task create only, backward compatibility)'),
-        actualStart: z.string().optional().describe('Execution start stamp to preserve, ISO 8601 datetime (task create only)'),
-        actualEnd: z.string().optional().describe('Execution end stamp to preserve, ISO 8601 datetime (task create only)'),
+        actualStart: z.string().optional().describe('Execution start stamp, ISO 8601 datetime (task create or update to next)'),
+        actualEnd: z.string().optional().describe('Execution end stamp, ISO 8601 datetime (task create or update to done)'),
         labels: z.array(z.string().min(1)).optional().describe('Label names to attach on task create'),
         projectIds: z.array(z.number().int().positive()).optional().describe('Projects to attach on task create'),
         links: z.array(z.object({
@@ -135,8 +136,18 @@ export const SyncPushOperationSchema = z
   })
   .superRefine((op, ctx) => {
     if (op.entity === 'task' && op.type === 'update') {
-      if (!op.payload?.status || Object.keys(op.payload).some((key) => key !== 'status')) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['payload'], message: 'Task update requires only payload.status' });
+      const status = op.payload?.status;
+      const allowed = new Set(['status']);
+      if (status === 'next') allowed.add('actualStart');
+      if (status === 'done') allowed.add('actualEnd');
+      if (!status || Object.keys(op.payload ?? {}).some((key) => !allowed.has(key))) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['payload'], message: 'Task update requires status and accepts only its associated execution stamp' });
+      }
+      for (const field of ['actualStart', 'actualEnd'] as const) {
+        const value = op.payload?.[field];
+        if (value !== undefined && !iso8601DatetimeRegex.test(value)) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['payload', field], message: 'Invalid datetime format (YYYY-MM-DDTHH:MM:SS)' });
+        }
       }
       return;
     }

@@ -317,15 +317,23 @@ export class SyncService {
   }
 
   private applyTaskStatus(op: SyncPushOperation): SyncPushOperationResult {
-    const status = op.payload?.status;
-    if (!status || Object.keys(op.payload ?? {}).some((key) => key !== 'status')) {
-      return { opId: op.opId, status: 'skipped', uuid: op.uuid, reason: 'Task update requires only payload.status' };
+    const { status, actualStart, actualEnd } = op.payload ?? {};
+    const allowed = new Set(['status']);
+    if (status === 'next') allowed.add('actualStart');
+    if (status === 'done') allowed.add('actualEnd');
+    if (!status || Object.keys(op.payload ?? {}).some((key) => !allowed.has(key))) {
+      return { opId: op.opId, status: 'skipped', uuid: op.uuid, reason: 'Task update requires status and accepts only its associated execution stamp' };
     }
     const task = this.resolveIssue(op.uuid);
     if (!task || task.type !== 'task') {
       return { opId: op.opId, status: 'skipped', uuid: op.uuid, reason: 'Task was not found' };
     }
-    const updated = this.taskService.edit({ id: task.id, status });
+    const updated = this.taskService.edit({
+      id: task.id,
+      status,
+      actualStart,
+      actualEnd: actualStart === undefined ? actualEnd : null
+    });
     return { opId: op.opId, status: 'applied', uuid: op.uuid, serverId: task.id, updatedAt: updated.updatedAt };
   }
 

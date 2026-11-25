@@ -45,7 +45,7 @@ export async function syncRoutes(app: FastifyInstance) {
         summary: 'Apply client operations',
         description:
           'Apply a batch of offline operations in order. Memo and comment support create, update, and delete. ' +
-          'Task supports create and status-only update. Task creation applies labels, projects, issue links, and URL links in the same transaction. ' +
+          'Task supports create and status-only update with its offline execution stamp. Task creation applies labels, projects, issue links, and URL links in the same transaction. ' +
           'Article, label, issue_label, and link support create. For bulk migration, send labels, issues, issue_labels and comments, then links. ' +
           'Each operation is idempotent via opId and applies in its own transaction (partial success). ' +
           'Replays are also detected without the opId ledger for task and article creates by UUID, labels by name, and issue_label and link by the existing pair. ' +

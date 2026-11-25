@@ -232,7 +232,7 @@ iOSのオフライン対応（Phase 2で導入）。iOS側はローカルDB + �
   - 順序の正は `server_seq` のみ。`updatedAt` は**等値比較のみ**（大小比較禁止 — クロックスキューと秒/ミリ秒精度差を回避）
   - レコード単位 LWW。ただし**メモ本文の同時編集**はサーバー版を温存し、クライアント版を「conflicted copy」メモとして新規作成（Joplin方式・データ消失ゼロ）
   - **edit-beats-delete（双方向）**: 削除済み行への update は復活させて適用、編集済み行への stale な delete は `skipped`
-  - コメントと Task の status は LWW。削除済み Task の status 更新は要確認として端末に保持する。
+  - コメントと Task の status は LWW。Task の実行時刻には status を変更した端末上の時刻を使う。status が送信待ちでもサーバーのタイトルと本文、削除は反映し、削除済み Task の status 更新は要確認として端末に保持する。
   - ブックマークのみの差分は LWW でクライアント値を適用
 - クライアントは push 結果の `updatedAt` を次回編集の `baseUpdatedAt` として保存する
 

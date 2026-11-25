@@ -62,7 +62,7 @@ export class SyncService {
     }
     /**
      * Apply client operations
-     * Apply a batch of offline operations in order. Memo and comment support create, update, and delete. Task supports create and status-only update. Task creation applies labels, projects, issue links, and URL links in the same transaction. Article, label, issue_label, and link support create. For bulk migration, send labels, issues, issue_labels and comments, then links. Each operation is idempotent via opId and applies in its own transaction (partial success). Replays are also detected without the opId ledger for task and article creates by UUID, labels by name, and issue_label and link by the existing pair. Operations with unresolvable references are skipped with a reason. Memo and comment use last-write-wins per record and edits beat deletes in both directions. Concurrent memo body edits keep the server version and save the client body as a conflicted copy.
+     * Apply a batch of offline operations in order. Memo and comment support create, update, and delete. Task supports create and status-only update with its offline execution stamp. Task creation applies labels, projects, issue links, and URL links in the same transaction. Article, label, issue_label, and link support create. For bulk migration, send labels, issues, issue_labels and comments, then links. Each operation is idempotent via opId and applies in its own transaction (partial success). Replays are also detected without the opId ledger for task and article creates by UUID, labels by name, and issue_label and link by the existing pair. Operations with unresolvable references are skipped with a reason. Memo and comment use last-write-wins per record and edits beat deletes in both directions. Concurrent memo body edits keep the server version and save the client body as a conflicted copy.
      * @param requestBody
      * @returns any Default Response
      * @throws ApiError
@@ -150,11 +150,11 @@ export class SyncService {
                      */
                     scheduledOn?: string;
                     /**
-                     * Execution start stamp to preserve, ISO 8601 datetime (task create only)
+                     * Execution start stamp, ISO 8601 datetime (task create or update to next)
                      */
                     actualStart?: string;
                     /**
-                     * Execution end stamp to preserve, ISO 8601 datetime (task create only)
+                     * Execution end stamp, ISO 8601 datetime (task create or update to done)
                      */
                     actualEnd?: string;
                     /**

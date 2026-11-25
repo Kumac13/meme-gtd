@@ -191,13 +191,14 @@ class CreateTaskViewModel: ObservableObject {
         pendingLinks.removeAll { $0.id == link.id }
     }
 
-    func addPendingLink(targetIssueId: Int, linkType: LinkType, title: String) {
+    func addPendingLink(targetIssueId: Int, linkType: LinkType, title: String, targetType: String) {
         // Avoid duplicates
         guard !pendingLinks.contains(where: { $0.targetIssueId == targetIssueId }) else { return }
         pendingLinks.append(PendingLink(
             targetIssueId: targetIssueId,
             linkType: linkType,
-            title: title
+            title: title,
+            targetType: targetType
         ))
     }
 

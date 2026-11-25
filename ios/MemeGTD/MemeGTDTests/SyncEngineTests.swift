@@ -119,6 +119,23 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertGreaterThan(try XCTUnwrap(after.serverID), 0)
     }
 
+    func testQueuedTaskStatusMarksHeaderWithoutMarkingUnchangedBody() async throws {
+        try await database.dbWriter.write { db in
+            _ = try SyncChangeApplier.apply([
+                self.issueChange(seq: 41, uuid: "status-parent", type: "task", body: "Unchanged")
+            ], skippingUuids: [], in: db)
+        }
+        let tasks = OfflineFirstTaskDataSource(database: database, remote: RemoteTaskDataSource())
+        _ = try await tasks.updateTask(id: 41, UpdateTaskRequest(title: nil, bodyMd: nil, status: "waiting"))
+        let delivery = try await database.dbWriter.read { db in
+            try ThreadDelivery.read(db, id: 41, endpoint: "test")
+        }
+        XCTAssertTrue(delivery.hasPending)
+        XCTAssertTrue(delivery.statusPending)
+        XCTAssertFalse(delivery.parentPending)
+        XCTAssertTrue(delivery.pendingComments.isEmpty)
+    }
+
     func testOfflineTaskAndEditedRepliesSurviveReopenAndPartialDelivery() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

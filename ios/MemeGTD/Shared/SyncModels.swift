@@ -112,6 +112,8 @@ nonisolated struct SyncPushTaskLink: Codable {
     var targetUuid: String?
     var targetId: Int?
     let linkType: String
+    var targetTitle: String?
+    var targetType: String?
 }
 
 nonisolated struct SyncPushTaskURL: Codable {

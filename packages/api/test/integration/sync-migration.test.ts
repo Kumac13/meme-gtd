@@ -196,6 +196,29 @@ describe('Sync push bulk migration (POST /api/sync/push)', () => {
       assert.strictEqual((await push([{ ...op, payload: { status: 'done', bodyMd: 'unsupported' } }])).statusCode, 400);
     });
 
+    it('preserves status execution times when an offline transition arrives later', async () => {
+      const uuid = nextUuid();
+      const created = await pushOne({
+        opId: nextOpId(), entity: 'task', type: 'create', uuid,
+        payload: { title: 'Offline execution stamps', status: 'done', actualEnd: '2025-11-09T09:00:00' },
+      });
+      const start = { opId: nextOpId(), entity: 'task', type: 'update', uuid,
+        payload: { status: 'next', actualStart: '2026-01-12T11:15:00' } };
+      const finish = { opId: nextOpId(), entity: 'task', type: 'update', uuid,
+        payload: { status: 'done', actualEnd: '2026-01-12T11:28:00' } };
+
+      assert.strictEqual((await pushOne(start)).status, 'applied');
+      let task = await getJson(`/api/tasks/${created.serverId}`);
+      assert.strictEqual(task.actualStart, start.payload.actualStart);
+      assert.strictEqual(task.actualEnd, null);
+      assert.strictEqual((await pushOne(finish)).status, 'applied');
+      assert.strictEqual((await pushOne(finish)).status, 'alreadyApplied');
+      task = await getJson(`/api/tasks/${created.serverId}`);
+      assert.strictEqual(task.actualStart, start.payload.actualStart);
+      assert.strictEqual(task.actualEnd, finish.payload.actualEnd);
+      assert.strictEqual((await push([{ ...finish, payload: { status: 'done', actualStart: '2026-01-12T11:15:00' } }])).statusCode, 400);
+    });
+
     it('applies queued comment edits on Task and Article once per operation', async () => {
       const parents = [
         { entity: 'task', route: 'tasks', payload: { title: 'Task thread' } },

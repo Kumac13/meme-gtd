@@ -82,7 +82,8 @@ nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
             }
             let pendingLinks = try links.map { link in
                 if link.targetIssueId > 0 {
-                    return SyncPushTaskLink(targetId: link.targetIssueId, linkType: link.linkType.rawValue)
+                    return SyncPushTaskLink(targetId: link.targetIssueId, linkType: link.linkType.rawValue,
+                        targetTitle: link.title, targetType: link.targetType)
                 }
                 guard let target = try String.fetchOne(db, sql: "SELECT uuid FROM issues WHERE rowid = ? AND is_deleted = 0", arguments: [-link.targetIssueId]) else {
                     throw OfflineThreadStore.PendingIdentity.awaitingSync
@@ -123,9 +124,14 @@ nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
             let now = ISO8601Millis.now()
             try LocalTaskStore.updateTaskFields(db, uuid: uuid, currentStatus: row["status"],
                                                 title: nil, bodyMd: nil, status: status, now: now)
-            try OfflineThreadStore.enqueue(db, entity: .task, type: .update, uuid: uuid,
-                payload: SyncPushPayload(status: status), baseUpdatedAt: row["server_updated_at"], now: now)
             guard let updated = try LocalTaskStore.fetchTaskRow(db, uuid: uuid) else { throw LocalTaskError.taskNotFound }
+            let previousStatus: String? = row["status"]
+            let changed = previousStatus != status
+            try OfflineThreadStore.enqueue(db, entity: .task, type: .update, uuid: uuid,
+                payload: SyncPushPayload(status: status,
+                    actualStart: changed && status == "next" ? updated["actual_start"] : nil,
+                    actualEnd: changed && status == "done" ? updated["actual_end"] : nil),
+                baseUpdatedAt: row["server_updated_at"], now: now)
             return try LocalTaskStore.taskItem(from: updated, db: db)
         }
         if let task {

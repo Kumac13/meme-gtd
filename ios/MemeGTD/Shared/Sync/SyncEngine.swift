@@ -274,6 +274,11 @@ actor SyncEngine {
         var payload: SyncPushPayload?
         if let raw = record.payload, let data = raw.data(using: .utf8) {
             payload = try JSONDecoder().decode(SyncPushPayload.self, from: data)
+            if let links = payload?.links {
+                payload?.links = links.map {
+                    SyncPushTaskLink(targetUuid: $0.targetUuid, targetId: $0.targetId, linkType: $0.linkType)
+                }
+            }
         }
         return SyncPushOperation(
             opId: record.opId,
@@ -304,11 +309,28 @@ actor SyncEngine {
                     try Self.resolveCachedIDs(page.changes, in: db)
                     let pendingUuids = try Set(String.fetchAll(
                         db,
-                        sql: "SELECT DISTINCT target_uuid FROM pending_operations"
+                        sql: """
+                            SELECT DISTINCT target_uuid FROM pending_operations
+                            WHERE NOT (entity = 'task' AND op_type = 'update')
+                            """
                     ))
+                    let statusRows = try Row.fetchAll(db, sql: """
+                        SELECT target_uuid,
+                            MAX(json_extract(payload, '$.status') = 'next') AS keeps_start,
+                            MAX(json_extract(payload, '$.status') IN ('next', 'done')) AS keeps_end
+                        FROM pending_operations
+                        WHERE entity = 'task' AND op_type = 'update' AND state != 'review'
+                        GROUP BY target_uuid
+                        """)
+                    let pendingTaskStatuses = Dictionary(uniqueKeysWithValues: statusRows.map { row in
+                        (row["target_uuid"] as String, SyncChangeApplier.PendingTaskStatus(
+                            keepsActualStart: row["keeps_start"], keepsActualEnd: row["keeps_end"]
+                        ))
+                    })
                     let count = try SyncChangeApplier.apply(
                         page.changes,
                         skippingUuids: pendingUuids,
+                        preservingTaskStatus: pendingTaskStatuses,
                         in: db
                     )
                     // Advance past everything in this page, including skipped

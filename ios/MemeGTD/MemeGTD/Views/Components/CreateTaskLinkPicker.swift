@@ -33,7 +33,8 @@ struct CreateTaskLinkPicker: View {
                 viewModel.addPendingLink(
                     targetIssueId: item.id,
                     linkType: type,
-                    title: item.title
+                    title: item.title,
+                    targetType: item.type
                 )
             },
             removeIssue: { selection in
