@@ -34,7 +34,7 @@ nonisolated final class LocalTaskDataSource: TaskDataSource {
 
     func listTasks(queryItems: [URLQueryItem]) async throws -> TaskListResponse {
         let query = LocalTaskStore.ListQuery(queryItems: queryItems)
-        if query.hasProjectFilter {
+        if query.projects != nil {
             return query.emptyPage
         }
         return try await database.dbWriter.read { db in

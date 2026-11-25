@@ -164,20 +164,23 @@ final class OfflineFirstReadCacheTests: XCTestCase {
         XCTAssertEqual(page.total, 2)
     }
 
-    func testListTasksWithProjectFilterReturnsEmptyPageOffline() async throws {
+    func testListTasksUsesPendingAndCachedProjectMembershipOffline() async throws {
         try await seedTaskRows()
-        let dataSource = OfflineFirstTaskDataSource(
-            database: database,
-            remote: UnreachableTaskRemote()
-        )
+        let dataSource = OfflineFirstTaskDataSource(database: database, remote: UnreachableTaskRemote())
+        let request = CreateTaskRequest(title: "Pending", bodyMd: nil, status: "inbox", taskKind: nil,
+            scheduledStart: nil, scheduledEnd: nil, isAllDay: nil)
+        let assigned = try await dataSource.createTask(request, labels: [], projectIDs: [1], links: [], urls: [])
+        let unassigned = try await dataSource.createTask(request, labels: [], projectIDs: [], links: [], urls: [])
+        try await database.dbWriter.write { db in
+            try ProjectItemRecord(projectId: 1, issueId: 101).insert(db)
+        }
 
-        // Project membership has no full local mirror: offline, the honest
-        // answer is an empty page (same rule as memos).
-        let filtered = try await dataSource.listTasks(queryItems: [
-            URLQueryItem(name: "projectId", value: "1"),
-        ])
-        XCTAssertTrue(filtered.data.isEmpty)
-        XCTAssertEqual(filtered.total, 0)
+        for (filter, expected) in [("1", [assigned.id, 101]), ("2", []),
+                                   ("none", [unassigned.id]), ("none,1", [assigned.id, unassigned.id, 101])] {
+            let page = try await dataSource.listTasks(queryItems: [.init(name: "projectId", value: filter)])
+            XCTAssertEqual(Set(page.data.map(\.id)), Set(expected), "filter: \(filter)")
+            XCTAssertEqual(page.total, expected.count)
+        }
     }
 
     func testGetTaskAndCommentsFallBackToLocal() async throws {

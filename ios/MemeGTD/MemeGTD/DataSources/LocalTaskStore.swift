@@ -41,7 +41,7 @@ nonisolated enum LocalTaskStore {
         var search: String?
         var scheduledFrom: String?
         var scheduledTo: String?
-        var hasProjectFilter = false
+        var projects: ProjectFilter?
 
         init(queryItems: [URLQueryItem]) {
             for item in queryItems {
@@ -66,15 +66,14 @@ nonisolated enum LocalTaskStore {
                 case "scheduledTo":
                     scheduledTo = item.value
                 case "projectId":
-                    hasProjectFilter = true
+                    projects = ProjectFilter(item.value)
                 default:
                     break
                 }
             }
         }
 
-        /// The empty page a caller answers when the project filter cannot be
-        /// served (project membership has no full local mirror).
+        /// Standalone does not support project filters.
         var emptyPage: TaskListResponse {
             TaskListResponse(data: [], total: 0, limit: limit ?? 100, offset: offset)
         }
@@ -90,6 +89,7 @@ nonisolated enum LocalTaskStore {
         var conditions = ["i.type = 'task'", "i.is_deleted = 0"]
         var arguments: [DatabaseValueConvertible] = []
 
+        query.projects?.append(to: &conditions, arguments: &arguments)
         if let status = query.status {
             conditions.append("i.status = ?")
             arguments.append(status)

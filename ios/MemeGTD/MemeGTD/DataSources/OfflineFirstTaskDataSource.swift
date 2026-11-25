@@ -196,16 +196,6 @@ nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
 
     private func localListTasks(queryItems: [URLQueryItem]) async throws -> TaskListResponse {
         let query = LocalTaskStore.ListQuery(queryItems: queryItems)
-
-        // Project membership is only cached per opened issue (see
-        // OfflineFirstProjectDataSource), never for the whole task list, so a
-        // projectId filter cannot be answered correctly offline. An empty
-        // page is the honest answer (same rule as OfflineFirstMemoDataSource;
-        // ignoring the filter would show wrong contents).
-        if query.hasProjectFilter {
-            return query.emptyPage
-        }
-
         return try await database.dbWriter.read { db in
             try LocalTaskStore.listTasks(db, query: query)
         }

@@ -54,11 +54,7 @@ nonisolated final class OfflineFirstProjectDataSource: ProjectDataSource {
             let column = issueId < 0 ? "rowid" : "server_id"
             let rows = try ProjectRecord.fetchAll(db, sql: """
                 WITH pending(issue_uuid, project_id) AS (
-                    SELECT issue_uuid, project_id FROM pending_memberships WHERE needs_review = 0
-                    UNION
-                    SELECT o.target_uuid, j.value FROM pending_operations o,
-                        json_each(o.payload, '$.projectIds') j
-                    WHERE o.entity = 'task' AND o.op_type = 'create'
+                    SELECT DISTINCT issue_uuid, project_id FROM (\(ProjectFilter.pendingMembershipsSQL))
                 )
                 SELECT p.* FROM projects p JOIN pending m ON m.project_id = p.id
                 JOIN issues i ON i.uuid = m.issue_uuid WHERE i.\(column) = ?
