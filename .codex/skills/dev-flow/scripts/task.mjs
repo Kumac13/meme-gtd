@@ -87,6 +87,8 @@ export function checkTemplate(kind, body) {
   const headings = TEMPLATES[kind];
   if (!headings) fail(`種類は ${Object.keys(TEMPLATES).join(' / ')} のどれかです: ${kind}`);
   const lines = body.split('\n').map((l) => l.trim());
+  // iOS アプリは Markdown の表を表示できず、記号がそのまま見えてしまう。
+  if (lines.some((l) => /^\|.*\|$/.test(l))) fail('Task のコメントに Markdown の表は使えません（iOS アプリで表示できないため）。見出しと箇条書きで書いてください');
   let cursor = -1;
   for (const heading of headings) {
     const index = lines.indexOf(heading);
@@ -98,10 +100,13 @@ export function checkTemplate(kind, body) {
 
 // ---- 状態表 ----
 
+// iOS アプリの Markdown 表示は表に対応していないため、状態表は見出しと箇条書きで書く。
+// 1件 = 「### 番号. 【状態】ご指摘の原文」＋「- 根拠: 」「- 次: 」。
 function cell(text) {
-  return String(text).replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
+  return String(text).replace(/\r?\n/g, ' ').trim();
 }
 
+// 旧形式（Markdown の表）の行。読み込みだけ対応し、保存時は新形式に書き換える。
 function splitRow(line) {
   const cells = [];
   let current = '';
@@ -122,10 +127,24 @@ function splitRow(line) {
 
 export function parseStatus(body) {
   const rows = [];
-  for (const line of body.split('\n')) {
-    if (!/^\|\s*\d+\s*\|/.test(line)) continue;
-    const [no, words, state, evidence, next] = splitRow(line.trim());
-    rows.push({ no: Number(no), words, state, evidence, next });
+  let current = null;
+  for (const raw of body.split('\n')) {
+    const line = raw.trim();
+    const item = line.match(/^###\s+(\d+)\.\s+【([^】]+)】\s*(.*)$/);
+    if (item) {
+      current = { no: Number(item[1]), state: item[2], words: item[3], evidence: '—', next: '—' };
+      rows.push(current);
+      continue;
+    }
+    const detail = line.match(/^-\s+(根拠|次):\s*(.*)$/);
+    if (detail && current) {
+      current[detail[1] === '根拠' ? 'evidence' : 'next'] = detail[2] || '—';
+      continue;
+    }
+    if (/^\|\s*\d+\s*\|/.test(line)) {
+      const [no, words, state, evidence, next] = splitRow(line).map((c) => c.replace(/\\\|/g, '|').replace(/<br>/g, ' '));
+      rows.push({ no: Number(no), words, state, evidence, next });
+    }
   }
   return rows;
 }
@@ -134,12 +153,11 @@ export function renderStatus(rows) {
   const lines = [
     STATUS_HEADING,
     '',
-    'ご指摘は1件1行。行は消さず、状態・根拠・次だけを更新する（dev-flow の task.mjs で更新）。',
-    '',
-    '| # | ご指摘（原文） | 状態 | 根拠 | 次 |',
-    '|---|---|---|---|---|',
-    ...rows.map((r) => `| ${r.no} | ${r.words} | ${r.state} | ${r.evidence} | ${r.next} |`),
+    'ご指摘は1件ずつ。項目は消さず、状態・根拠・次だけを更新する（dev-flow の task.mjs で更新）。',
   ];
+  for (const r of rows) {
+    lines.push('', `### ${r.no}. 【${r.state}】${r.words}`, `- 根拠: ${r.evidence}`, `- 次: ${r.next}`);
+  }
   return lines.join('\n');
 }
 
