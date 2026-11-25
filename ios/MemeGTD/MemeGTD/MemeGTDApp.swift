@@ -35,12 +35,12 @@ private struct ServerSessionView: View {
             .environmentObject(templateStore)
             .environmentObject(dataSources)
             .task {
-                if Settings.shared.appMode == .server { _ = try? await ArticleTemplateCache.shared.refresh() }
+                if Settings.shared.appMode == .server { await CreationTemplateCache.shared.refreshAll() }
             }
             .onReceive(ConnectivityMonitor.shared.$state.removeDuplicates().dropFirst()) { state in
                 if state == .available, let scheduler = dataSources.syncScheduler {
                     scheduler.requestSync()
-                    Task { _ = try? await ArticleTemplateCache.shared.refresh() }
+                    Task { await CreationTemplateCache.shared.refreshAll() }
                 }
             }
             .preferredColorScheme(.light)
