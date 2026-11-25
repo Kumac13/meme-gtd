@@ -9,7 +9,11 @@ The deploy procedure and all configuration values (scheme, simulator, device ID,
 
 ## Codex execution rule
 
-In this Codex sandbox, commands that use `xcodebuild`, `xcrun simctl`, or `xcrun devicectl` must be run with escalated execution. Do not try them in the sandbox first.
+`xcodebuild`, `xcrun simctl`, `xcrun devicectl`, and `axe` cannot run inside the Codex sandbox. `.codex/rules/dev-flow.rules` allows them to run outside the sandbox without an approval prompt, but only when the command matches the rule:
+
+- Write each command as one plain command with literal values. Do not add `2>&1`, `2>/dev/null`, `|| true`, pipes, variables, or `$(...)`; any of these makes the rule miss and turns the command into an approval prompt the user has to answer. Use `xcodebuild -quiet` instead of piping to `grep`.
+- Do not request escalated execution (`sandbox_permissions`) for these commands.
+- Run every other command (`set`, `git`, `cat`, `rg`, and so on) inside the sandbox as usual. Never escalate them.
 
 ## Failure boundary
 
