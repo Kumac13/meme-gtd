@@ -27,12 +27,11 @@ enum APIError: Error, LocalizedError {
 }
 
 extension Notification.Name {
-    /// Posted (from an arbitrary thread) each time an APIClient request gets
-    /// an HTTP response back from the server. 4xx/5xx answers count too:
-    /// they prove the server can be REACHED, which is all this signal means.
-    /// ConnectivityMonitor (app target) folds these into the offline
-    /// read-only state — the Shared target cannot reference it directly.
+    /// Posted when an API request receives an HTTP response below status 500.
     nonisolated static let apiServerReachable = Notification.Name("APIClientServerReachable")
+
+    /// A request returned 5xx. Probe health to determine server-wide availability.
+    nonisolated static let apiRequestServerError = Notification.Name("APIRequestServerError")
 
     /// Health probe results determine server-wide availability.
     nonisolated static let apiHealthReady = Notification.Name("APIHealthReady")
@@ -68,7 +67,12 @@ class APIClient {
     }
 
     private func report(_ response: URLResponse) {
-        if response is HTTPURLResponse { noteServerReachable(true) }
+        guard let http = response as? HTTPURLResponse else { return }
+        if http.statusCode >= 500 {
+            NotificationCenter.default.post(name: .apiRequestServerError, object: baseUrl)
+        } else {
+            noteServerReachable(true)
+        }
     }
 
     /// A cancelled request (screen navigated away, task cancelled) proves
