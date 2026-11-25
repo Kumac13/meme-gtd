@@ -41,7 +41,12 @@ struct ArticleDetailView: View {
     }
 
     var body: some View {
-        GeometryReader { geo in
+        GeometryReader { geometry in
+            detail(topInset: geometry.safeAreaInsets.top)
+        }
+    }
+
+    private func detail(topInset: CGFloat) -> some View {
         IssueDetailScrollShell(
             policy: IssueDetailScrollPolicy(initialPosition: .top),
             isContentReady: viewModel.article != nil
@@ -50,7 +55,7 @@ struct ArticleDetailView: View {
                 LazyVStack(spacing: 0) {
                     if let article = viewModel.article {
                         // === Header Area (glass card): Title + Meta ===
-                        IssueAreaCard {
+                        IssueAreaCard(glassTopExtension: topInset) {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(article.title)
                                     .font(.system(size: 18, weight: .semibold))
@@ -102,7 +107,7 @@ struct ArticleDetailView: View {
                                 }
                             }
                             .padding(.horizontal, 16)
-                            .padding(.top, geo.safeAreaInsets.top + 8)
+                            .padding(.top, 8)
                             .padding(.bottom, 12)
                         }
 
@@ -159,7 +164,6 @@ struct ArticleDetailView: View {
             }
             .background(Color.menuBackground)
             .scrollDismissesKeyboard(.immediately)
-            .ignoresSafeArea(edges: .top)
             .scrollEdgeEffectStyle(.soft, for: .vertical)
             .refreshable {
                 await withCheckedContinuation { continuation in
@@ -216,7 +220,6 @@ struct ArticleDetailView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 10)
             }
-        }
         }
         .enableSwipeBack()
         .navigationBarBackButtonHidden(true)

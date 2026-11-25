@@ -71,12 +71,30 @@ struct IssueTypeBadge: View {
 
 /// 詳細画面を構成する全幅のLiquid Glassカード。
 struct IssueAreaCard<Content: View>: View {
+    var glassTopExtension: CGFloat = 0
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        content()
-            .frame(maxWidth: .infinity)
-            .glassEffect(.regular, in: Rectangle())
+        let card = content().frame(maxWidth: .infinity)
+        if glassTopExtension > 0 {
+            card.glassEffect(.regular, in: ExtendedGlass(topExtension: glassTopExtension))
+        } else {
+            card.glassEffect(.regular, in: Rectangle())
+        }
+    }
+
+    private struct ExtendedGlass: Shape {
+        let topExtension: CGFloat
+
+        func path(in rect: CGRect) -> Path {
+            // タイトルのレイアウトは維持し、ガラスの縁だけ画面の上端まで延ばす。
+            Path(CGRect(
+                x: rect.minX,
+                y: rect.minY - topExtension,
+                width: rect.width,
+                height: rect.height + topExtension
+            ))
+        }
     }
 }
 
