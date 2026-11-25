@@ -14,6 +14,14 @@ API="${MGTD_API_URL:-http://localhost:3000}"
 
 リクエスト本文は `jq -n` で組み立てる（日本語・引用符・改行を含む本文を安全に送るため）。
 
+## MemeGTD の ID と GitHub の PR 番号
+
+- `TASK_ID` は MemeGTD Task の `id`。MemeGTD API のパスにはこの ID を渡す。
+- GitHub の PR はリポジトリと PR 番号で特定する。MemeGTD には完全な PR URL（例 `https://github.com/Kumac13/meme-gtd/pull/270`）を渡す。
+- MemeGTD は `bodyMd` の `#270` のような記述を内部 Issue ID として解決する。`PR #270` と書いても、同じ ID の Issue が存在すれば内部リンクに変換され、`relates` が作られる。
+- `bodyMd` を送る前に、`#数字` が意図した MemeGTD Issue への参照であることを確認する。GitHub PR への言及は `GitHub PR 270` または `[GitHub PR 270](https://github.com/Kumac13/meme-gtd/pull/270)` と書く。
+- 送信結果の `bodyMd` に意図しない内部リンクがあれば、再投稿せず対象のリンクを確認する。コメントを編集しても作成済みの `relates` は残るので、訂正時はコメントと関連リンクの両方を確認する。
+
 ## 読む
 
 ```bash
@@ -75,7 +83,7 @@ jq -n --argjson s "$CHILD_ID" --argjson t "$PARENT_ID" '{sourceIssueId:$s,target
 
 ## PR を外部リンクとして登録する
 
-既存の外部リンクを先に読み、同じ URL が無いときだけ登録する。
+`TASK_ID` に記録先の MemeGTD Task ID、`PR_URL` に GitHub の完全な PR URL を設定する。既存の外部リンクを先に読み、同じ URL が無いときだけ登録する。
 
 ```bash
 curl -fsS "$API/api/issues/$TASK_ID/url-links"

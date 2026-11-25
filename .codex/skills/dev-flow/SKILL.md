@@ -1,6 +1,7 @@
 ---
 name: dev-flow
-description: Use when the user shares a meme-gtd Task (pasted Task JSON or a Task ID), or says 検討 / 調査 / 計画 / 実装 / レビュー / pr / merged for meme-gtd work. Runs consideration, planning, implementation, PR, and review as one serial flow: the main thread is the only one that talks to the user, and planning, implementation, and review each run in a fresh subagent context. Logs progress to the meme-gtd Task.
+description: >-
+  Use when the user shares a meme-gtd Task (pasted Task JSON or a Task ID), or says 検討 / 調査 / 計画 / 実装 / レビュー / pr / merged for meme-gtd work. Runs consideration, planning, implementation, PR, and review as one serial flow: the main thread is the only one that talks to the user, and planning, implementation, and review each run in a fresh subagent context. Logs progress to the meme-gtd Task.
 ---
 
 # 開発フロー（Codex）
@@ -22,7 +23,7 @@ meme-gtd の Task を起点に、検討 → 計画 → 実装 → PR → レビ�
 - 報告は最初の1文を結論にする。検討中は、追加の指摘に答えるときも、最初の問いへの結論を先頭に置く（指摘された点だけを答えると問いが失われるため）。
 - 画像は `![説明](絶対パス)` でインライン表示する。ユーザーはリモートから見ていることが多く、ファイルへのリンクは開けない。
 - 作業を止めるときは、止める理由と再開に必要なものを書く。
-- Task への読み書きは `references/task-log.md` の手順だけを使う。Task の Body と status は、ユーザーの指示があるときだけ変更する。
+- Task への読み書きは `references/task-log.md` の手順に従う。投稿前に、同手順の「MemeGTD の ID と GitHub の PR 番号」を確認する。Task の Body と status は、ユーザーの指示があるときだけ変更する。
 - 作業の途中でユーザーが起票を指示したら、`references/task-log.md` の手順で Task を起票する。
 - 依頼にない表示・機能・設定変更を足さない。必要だと考えたら、変更せずに窓口経由でユーザーに聞く。
 
