@@ -53,7 +53,7 @@ xcodebuild test -project MemeGTD.xcodeproj -scheme MemeGTD -destination 'platfor
 - GRDBマイグレーションは `001_initial` 形式の番号で `DatabaseMigrator` に登録。登録済みマイグレーションは変更せず追加のみ（サーバー `schema/` と同じ規約）
 - ID規約: ViewModel が扱う整数IDは、同期済み行 = `server_id`、未同期ローカル行 = `-rowid`（負数）。UI層にこの区別を持ち込まない
 - Standalone のキーワード検索はサーバーと同じ LIKE 部分一致。FTS5 にしない（unicode61 が日本語の単語境界を扱えず、サーバー側も同じ理由で LIKE を採用 — `packages/db/CLAUDE.md`）
-- Serverモードの保存・再送範囲は `docs/architecture.md` の「iOS ローカル DB」を参照。コメント入力と手動Article作成を読み取り専用判定で無効にしない。
+- Serverモードの保存・再送範囲は `docs/architecture.md` の「iOS ローカル DB」を参照。通常の Task 作成と status 更新、手動 Article 作成、コメントの入力と編集を読み取り専用判定で無効にしない。
 - オンライン専用操作の可否は `ConnectivityMonitor.isOfflineReadOnly` に従う。端末経路は表示と再送のきっかけに使い、サーバー到達性は実リクエストとhealthの応答で判定する。
 
 ## 記事抽出バンドル

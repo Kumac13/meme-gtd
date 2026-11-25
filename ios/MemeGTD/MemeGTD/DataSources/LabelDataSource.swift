@@ -11,9 +11,15 @@ protocol LabelDataSource {
 /// Server-backed implementation: a thin wrapper around `APIClient`.
 struct RemoteLabelDataSource: LabelDataSource {
     var client = APIClient.shared
+    var localFallback: LocalLabelDataSource?
 
     func listLabels() async throws -> [IssueLabel] {
-        try await client.get(path: "/api/labels")
+        do {
+            return try await client.get(path: "/api/labels")
+        } catch where OfflineFirstSupport.isNetworkError(error) {
+            guard let localFallback else { throw error }
+            return try await localFallback.listLabels()
+        }
     }
 
     func createLabel(_ request: CreateLabelRequest) async throws -> IssueLabel {

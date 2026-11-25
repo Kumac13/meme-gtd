@@ -8,6 +8,7 @@ protocol TaskDataSource {
     func searchTasks(queryItems: [URLQueryItem]) async throws -> SearchTasksResponse
     func getTask(id: Int) async throws -> TaskItem
     func createTask(_ request: CreateTaskRequest) async throws -> TaskItem
+    func createOnlineTask(_ request: CreateTaskRequest) async throws -> TaskItem
     func updateTask(id: Int, _ request: UpdateTaskRequest) async throws -> TaskItem
     func deleteTask(id: Int) async throws
     func archiveToArticle(id: Int) async throws -> Int
@@ -20,6 +21,12 @@ protocol TaskDataSource {
     func createComment(taskId: Int, _ request: CreateCommentRequest) async throws -> Comment
     func updateComment(taskId: Int, commentId: Int, _ request: UpdateCommentRequest) async throws -> Comment
     func deleteComment(taskId: Int, commentId: Int) async throws
+}
+
+extension TaskDataSource {
+    func createOnlineTask(_ request: CreateTaskRequest) async throws -> TaskItem {
+        try await createTask(request)
+    }
 }
 
 /// Server-backed implementation: a thin wrapper around `APIClient`.

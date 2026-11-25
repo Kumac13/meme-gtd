@@ -53,8 +53,11 @@ nonisolated final class OfflineFirstProjectDataSource: ProjectDataSource {
         let pending = try await database.dbWriter.read { db in
             let column = issueId < 0 ? "rowid" : "server_id"
             let rows = try ProjectRecord.fetchAll(db, sql: """
-                SELECT p.* FROM projects p JOIN pending_memberships m ON m.project_id = p.id
-                JOIN issues i ON i.uuid = m.issue_uuid WHERE i.\(column) = ? AND m.needs_review = 0
+                WITH pending(issue_uuid, project_id) AS (
+                    SELECT DISTINCT issue_uuid, project_id FROM (\(ProjectFilter.pendingMembershipsSQL))
+                )
+                SELECT p.* FROM projects p JOIN pending m ON m.project_id = p.id
+                JOIN issues i ON i.uuid = m.issue_uuid WHERE i.\(column) = ?
                 ORDER BY p.created_at DESC
                 """, arguments: [abs(issueId)])
             return rows.map(Self.project(from:))

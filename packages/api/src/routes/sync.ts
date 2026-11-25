@@ -44,7 +44,14 @@ export async function syncRoutes(app: FastifyInstance) {
         tags: ['Sync'],
         summary: 'Apply client operations',
         description:
-          'Apply a batch of offline operations in order. memo/comment support create/update/delete; task/article/label/issue_label/link support create only (iOS Standalone -> Server bulk migration; send in dependency order: labels, then issues, then issue_labels/comments, then links). Each operation is idempotent via opId and applies in its own transaction (partial success). Replays are also detected without the opId ledger: task/article on uuid, label on name, issue_label/link on the existing pair — all reported as alreadyApplied. Operations with unresolvable references are skipped with a reason. Conflict rules for memo/comment: last-write-wins per record; concurrent memo body edits keep the server version and save the client body as a conflicted-copy memo; edits beat deletes in both directions.',
+          'Apply a batch of offline operations in order. Memo and comment support create, update, and delete. ' +
+          'Task supports create and status-only update with its offline execution stamp. Task creation applies labels, projects, issue links, and URL links in the same transaction. ' +
+          'Article, label, issue_label, and link support create. For bulk migration, send labels, issues, issue_labels and comments, then links. ' +
+          'Each operation is idempotent via opId and applies in its own transaction (partial success). ' +
+          'Replays are also detected without the opId ledger for task and article creates by UUID, labels by name, and issue_label and link by the existing pair. ' +
+          'Operations with unresolvable references are skipped with a reason. ' +
+          'Memo and comment use last-write-wins per record and edits beat deletes in both directions. ' +
+          'Concurrent memo body edits keep the server version and save the client body as a conflicted copy.',
         operationId: 'pushSyncOperations',
         body: SyncPushRequestSchema,
         response: {

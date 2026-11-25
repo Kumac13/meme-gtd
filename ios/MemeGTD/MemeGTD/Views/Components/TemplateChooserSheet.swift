@@ -65,14 +65,21 @@ struct TemplateChooserSheet: View {
         }
         .background(Color(.systemBackground))
         .task {
-            if target == .article, Settings.shared.appMode == .server {
-                let cache = ArticleTemplateCache.shared
-                if let saved = cache.cached {
+            if Settings.shared.appMode == .server {
+                let endpoint = Settings.shared.effectiveApiUrl
+                let cache = CreationTemplateCache.shared
+                if let saved = cache.cached(target, endpoint: endpoint) {
                     templates = saved
                     isLoading = false
                 }
-                do { templates = try await cache.refresh() }
-                catch { unavailable = cache.cached == nil }
+                do {
+                    let refreshed = try await cache.refresh(target)
+                    guard Settings.shared.effectiveApiUrl == endpoint else { return }
+                    templates = refreshed
+                    unavailable = false
+                } catch {
+                    unavailable = cache.cached(target, endpoint: endpoint) == nil
+                }
                 isLoading = false
                 return
             }

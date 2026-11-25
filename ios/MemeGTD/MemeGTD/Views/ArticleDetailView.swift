@@ -33,6 +33,13 @@ struct ArticleDetailView: View {
         self._viewModel = StateObject(wrappedValue: ArticleDetailViewModel(articleId: articleId))
     }
 
+    private var isEditingOnlineOnly: Bool {
+        switch viewModel.editingMode {
+        case .none, .comment: false
+        default: isOfflineReadOnly
+        }
+    }
+
     var body: some View {
         GeometryReader { geo in
         IssueDetailScrollShell(
@@ -133,7 +140,7 @@ struct ArticleDetailView: View {
                             entries: viewModel.timelineEntries,
                             issueId: viewModel.articleId,
                             pendingComments: delivery.pendingComments,
-                            mutationsDisabled: isOfflineReadOnly,
+                            deletionDisabled: isOfflineReadOnly,
                             onEditComment: { comment in
                                 viewModel.replyBody = comment.bodyMd
                                 viewModel.editingMode = .comment(comment.id)
@@ -181,7 +188,7 @@ struct ArticleDetailView: View {
                 FloatingComposer(
                     text: $viewModel.replyBody,
                     placeholder: viewModel.editingMode == .none ? "Add a comment..." : "Edit...",
-                    disabled: viewModel.article == nil || (viewModel.editingMode != .none && isOfflineReadOnly),
+                    disabled: viewModel.article == nil || isEditingOnlineOnly,
                     submitting: viewModel.isSubmittingReply,
                     notice: viewModel.editingMode == .none ? nil : "Editing",
                     onDismissNotice: {

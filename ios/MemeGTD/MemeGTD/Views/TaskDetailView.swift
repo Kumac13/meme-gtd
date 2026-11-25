@@ -27,11 +27,8 @@ struct TaskDetailView: View {
     @StateObject private var imageAttachment = ImageAttachmentCoordinator()
     @ObservedObject private var connectivity = ConnectivityMonitor.shared
 
-    /// Server mode + Offline Sync ON + offline: the task is served from the
-    /// local read cache and cannot be edited (offline support plan Phase 7).
-    /// Never true in Standalone (tasks are fully local there).
     private var isOfflineReadOnly: Bool {
-        connectivity.isOfflineReadOnly
+        connectivity.isOfflineReadOnly || (Settings.shared.appMode == .server && taskId < 0 && delivery.serverID == nil)
     }
 
     enum EditingMode: Equatable {
@@ -50,6 +47,13 @@ struct TaskDetailView: View {
         self._viewModel = StateObject(wrappedValue: TaskDetailViewModel(taskId: taskId))
     }
 
+    private var isEditingOnlineOnly: Bool {
+        switch editingMode {
+        case .none, .comment: false
+        default: isOfflineReadOnly
+        }
+    }
+
     var body: some View {
         GeometryReader { geo in
         IssueDetailScrollShell(
@@ -64,11 +68,8 @@ struct TaskDetailView: View {
                             TaskTitleSection(
                                 title: task.title,
                                 status: task.status,
-                                isReadOnly: isOfflineReadOnly || viewModel.isConverting,
-                                onStatusTap: {
-                                    guard !isOfflineReadOnly else { return }
-                                    showStatusPicker = true
-                                }
+                                isReadOnly: viewModel.isConverting,
+                                onStatusTap: { showStatusPicker = true }
                             )
                             .padding(.top, geo.safeAreaInsets.top)
                         }
@@ -106,7 +107,7 @@ struct TaskDetailView: View {
                             entries: viewModel.timelineEntries,
                             issueId: taskId,
                             pendingComments: delivery.pendingComments,
-                            mutationsDisabled: isOfflineReadOnly,
+                            deletionDisabled: isOfflineReadOnly,
                             onEditComment: { comment in
                                 viewModel.replyBody = comment.bodyMd
                                 editingMode = .comment(comment.id)
@@ -118,7 +119,6 @@ struct TaskDetailView: View {
                                 onNavigateToLinkedIssue?(id, type, "")
                             },
                             onTodoToggle: { comment, todoIndex, _ in
-                                guard !isOfflineReadOnly else { return }
                                 Task { await viewModel.toggleCommentTodo(commentId: comment.id, todoIndex: todoIndex) }
                             }
                         )
@@ -158,7 +158,7 @@ struct TaskDetailView: View {
                 FloatingComposer(
                     text: $viewModel.replyBody,
                     placeholder: composerPlaceholder,
-                    disabled: viewModel.task == nil || (editingMode != .none && isOfflineReadOnly),
+                    disabled: viewModel.task == nil || isEditingOnlineOnly,
                     submitting: viewModel.isSubmittingReply,
                     notice: composerNotice,
                     onDismissNotice: {
@@ -349,8 +349,12 @@ struct TaskDetailView: View {
             )
         }
         .observeThread(id: taskId) { snapshot in
+            let justSynced = taskId < 0 && delivery.serverID == nil && snapshot.serverID != nil
             delivery = snapshot
             viewModel.comments = snapshot.comments
+            if justSynced, viewModel.task != nil {
+                Task { await viewModel.loadTask() }
+            }
         }
         .task {
             viewModel.taskStore = taskStore

@@ -19,6 +19,8 @@ import {
 } from 'meme-gtd-db';
 import { ArticleService, LabelService, MemoService, TaskService } from './index.js';
 import { LinkService } from './linkService.js';
+import { ProjectService } from './projectService.js';
+import { UrlLinkService } from './urlLinkService.js';
 
 export interface SyncServiceOptions {
   config?: MgtdConfig;
@@ -62,6 +64,14 @@ export interface SyncPushOperation {
     scheduledOn?: string;
     actualStart?: string;
     actualEnd?: string;
+    labels?: string[];
+    projectIds?: number[];
+    links?: Array<{
+      targetUuid?: string;
+      targetId?: number;
+      linkType: SyncPushLinkType;
+    }>;
+    urlLinks?: Array<{ url: string; title?: string }>;
     // article
     origin?: 'web' | 'manual';
     meta?: {
@@ -115,7 +125,8 @@ export interface SyncPushResult {
  *   the recorded result (applied -> alreadyApplied).
  *
  * Bulk-migration entities (iOS Standalone -> Server one-way migration):
- * - task / article / label / issue_label / link accept CREATE operations only.
+ * - article / label / issue_label / link accept CREATE operations only.
+ * - task also accepts status-only updates.
  * - Idempotency beyond the opId ledger: task/article replay on uuid, label on
  *   its natural key (name), issue_label / link on the existing pair — all
  *   reported as alreadyApplied so re-runs are safe.
@@ -135,6 +146,8 @@ export class SyncService {
   private readonly articleService: ArticleService;
   private readonly labelService: LabelService;
   private readonly linkService: LinkService;
+  private readonly projectService: ProjectService;
+  private readonly urlLinkService: UrlLinkService;
 
   constructor(options: SyncServiceOptions) {
     if (options.db) {
@@ -149,6 +162,8 @@ export class SyncService {
     this.articleService = new ArticleService({ db: this.db, sourceType: options.sourceType });
     this.labelService = new LabelService({ db: this.db, sourceType: options.sourceType });
     this.linkService = new LinkService({ db: this.db, sourceType: options.sourceType });
+    this.projectService = new ProjectService({ db: this.db, sourceType: options.sourceType });
+    this.urlLinkService = new UrlLinkService({ db: this.db, sourceType: options.sourceType });
   }
 
   public listChanges(since: number, limit: number): SyncChangesPage {
@@ -186,7 +201,9 @@ export class SyncService {
       case 'comment':
         return this.applyCommentOp(op);
       case 'task':
-        return this.applyCreateOnly(op, () => this.applyTaskCreate(op));
+        return op.type === 'update'
+          ? this.applyTaskStatus(op)
+          : this.applyCreateOnly(op, () => this.applyTaskCreate(op));
       case 'article':
         return this.applyCreateOnly(op, () => this.applyArticleCreate(op));
       case 'label':
@@ -238,28 +255,86 @@ export class SyncService {
       };
     }
 
-    const task = this.taskService.createFromSync({
-      uuid: op.uuid,
-      title: op.payload.title,
-      bodyMd: op.payload.bodyMd,
-      status: op.payload.status,
-      taskKind: op.payload.taskKind,
-      scheduledStart: op.payload.scheduledStart,
-      scheduledEnd: op.payload.scheduledEnd,
-      isAllDay: op.payload.isAllDay,
-      scheduledOn: op.payload.scheduledOn,
-      actualStart: op.payload.actualStart,
-      actualEnd: op.payload.actualEnd,
-      createdAt: op.payload.createdAt,
-      updatedAt: op.payload.updatedAt
+    const { payload } = op;
+    try {
+      return this.db.transaction(() => {
+        const task = this.taskService.createFromSync({
+          uuid: op.uuid,
+          title: payload.title!,
+          bodyMd: payload.bodyMd,
+          status: payload.status,
+          taskKind: payload.taskKind,
+          scheduledStart: payload.scheduledStart,
+          scheduledEnd: payload.scheduledEnd,
+          isAllDay: payload.isAllDay,
+          scheduledOn: payload.scheduledOn,
+          actualStart: payload.actualStart,
+          actualEnd: payload.actualEnd,
+          createdAt: payload.createdAt,
+          updatedAt: payload.updatedAt
+        });
+        for (const name of new Set(payload.labels)) {
+          const label = getLabelByName(this.db, name);
+          if (!label) throw new Error(`Label '${name}' was not found`);
+          this.labelService.assignToIssue(task.id, label.id);
+        }
+        for (const projectId of new Set(payload.projectIds)) {
+          this.projectService.addItem(projectId, { issueId: task.id });
+        }
+        for (const { targetUuid, targetId, linkType } of payload.links ?? []) {
+          const byId = targetUuid === undefined && targetId !== undefined
+            ? this.db.prepare<[number], { uuid: string }>('SELECT uuid FROM issues WHERE id = ?').get(targetId)
+            : undefined;
+          const uuid = targetUuid ?? byId?.uuid;
+          const target = uuid ? this.resolveIssue(uuid) : null;
+          if (!target) throw new Error(`Linked issue '${targetUuid ?? targetId}' was not found`);
+          this.linkService.createOrIgnore(task.id, target.id, linkType);
+        }
+        for (const { url, title } of payload.urlLinks ?? []) {
+          try {
+            new URL(url);
+          } catch {
+            throw new Error(`Invalid URL: ${url}`);
+          }
+          this.urlLinkService.create(task.id, url, title);
+        }
+        return {
+          opId: op.opId,
+          status: 'applied' as const,
+          uuid: op.uuid,
+          serverId: task.id,
+          updatedAt: task.updatedAt
+        };
+      })();
+    } catch (error) {
+      return {
+        opId: op.opId,
+        status: 'skipped',
+        uuid: op.uuid,
+        reason: error instanceof Error ? error.message : 'Task creation failed'
+      };
+    }
+  }
+
+  private applyTaskStatus(op: SyncPushOperation): SyncPushOperationResult {
+    const { status, actualStart, actualEnd } = op.payload ?? {};
+    const allowed = new Set(['status']);
+    if (status === 'next') allowed.add('actualStart');
+    if (status === 'done') allowed.add('actualEnd');
+    if (!status || Object.keys(op.payload ?? {}).some((key) => !allowed.has(key))) {
+      return { opId: op.opId, status: 'skipped', uuid: op.uuid, reason: 'Task update requires status and accepts only its associated execution stamp' };
+    }
+    const task = this.resolveIssue(op.uuid);
+    if (!task || task.type !== 'task') {
+      return { opId: op.opId, status: 'skipped', uuid: op.uuid, reason: 'Task was not found' };
+    }
+    const updated = this.taskService.edit({
+      id: task.id,
+      status,
+      actualStart,
+      actualEnd: actualStart === undefined ? actualEnd : null
     });
-    return {
-      opId: op.opId,
-      status: 'applied',
-      uuid: op.uuid,
-      serverId: task.id,
-      updatedAt: task.updatedAt
-    };
+    return { opId: op.opId, status: 'applied', uuid: op.uuid, serverId: task.id, updatedAt: updated.updatedAt };
   }
 
   private applyArticleCreate(op: SyncPushOperation): SyncPushOperationResult {
@@ -661,7 +736,7 @@ export class SyncService {
       case 'update': {
         const row = findCommentByUuid(this.db, op.uuid);
         if (!row) {
-          return { opId: op.opId, status: 'skipped', uuid: op.uuid };
+          return { opId: op.opId, status: 'skipped', uuid: op.uuid, reason: 'Comment was not found' };
         }
         // Edit beats delete; beyond that comments are plain LWW (no
         // conflicted copies — short texts, low collision odds).

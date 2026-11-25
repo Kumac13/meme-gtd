@@ -4,41 +4,51 @@ import GRDB
 @testable import MemeGTD
 
 /// The HTTP boundary is exercised with URLSession. No request can reach a configured server.
-private final class ServerFixtureProtocol: URLProtocol {
+private class ServerFixtureProtocol: URLProtocol {
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
         guard let url = request.url else { return }
-        let status: Int
-        let body: String
-        switch (url.host, url.path, request.httpMethod) {
-        case ("a.test", "/api/articles/42", "PATCH"):
-            status = 200
-            body = #"{"id":42,"type":"article","title":"Edited","bodyMd":"changed","origin":"manual","createdAt":"now","updatedAt":"now","isBookmarked":false,"isDeleted":false}"#
-        case ("a.test", "/api/health", "GET"), ("b.test", "/api/articles", "GET"):
-            status = 200
-            body = "{}"
-        case ("b.test", "/api/health", "GET"):
-            status = 500
-            body = "{}"
-        default:
-            status = 404
-            body = "{}"
-        }
+        let (status, body) = response(for: url)
         let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: nil, headerFields: nil)!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: Data(body.utf8))
         client?.urlProtocolDidFinishLoading(self)
     }
 
+    func response(for url: URL) -> (Int, String) {
+        switch (url.host, url.path, request.httpMethod) {
+        case ("a.test", "/api/projects", "GET"):
+            return (200, #"[{"id":7,"name":"Sample","status":"active","createdAt":"now"}]"#)
+        case ("a.test", "/api/projects/7", "GET"):
+            return (500, #"{"error":"Project detail failed"}"#)
+        case ("a.test", "/api/tasks/42", "PATCH"):
+            return (200, #"{"id":42,"type":"task","title":"Edited","bodyMd":"changed","status":"open","taskKind":"action","isAllDay":false,"isBookmarked":false,"isDeleted":false,"createdAt":"now","updatedAt":"now","labels":[]}"#)
+        case ("a.test", "/api/articles/42", "PATCH"):
+            return (200, #"{"id":42,"type":"article","title":"Edited","bodyMd":"changed","origin":"manual","createdAt":"now","updatedAt":"now","isBookmarked":false,"isDeleted":false}"#)
+        case ("a.test", "/api/health", "GET"), ("b.test", "/api/articles", "GET"):
+            return (200, "{}")
+        case ("b.test", "/api/health", "GET"):
+            return (500, "{}")
+        default:
+            return (404, "{}")
+        }
+    }
+
     override func stopLoading() {}
 }
 
+private final class UnavailableProxyFixtureProtocol: ServerFixtureProtocol {
+    override func response(for url: URL) -> (Int, String) {
+        (503, #"{"error":"Upstream unavailable"}"#)
+    }
+}
+
 final class OfflineServerBoundaryTests: XCTestCase {
-    private func client(_ host: String) -> APIClient {
+    private func client(_ host: String, protocolClass: URLProtocol.Type = ServerFixtureProtocol.self) -> APIClient {
         let configuration = URLSessionConfiguration.ephemeral
-        configuration.protocolClasses = [ServerFixtureProtocol.self]
+        configuration.protocolClasses = [protocolClass]
         return APIClient(baseUrl: "https://" + host, session: URLSession(configuration: configuration))
     }
 
@@ -76,6 +86,68 @@ final class OfflineServerBoundaryTests: XCTestCase {
         XCTAssertTrue(healthy)
         let healthyB = await candidate.probeServerReachability()
         XCTAssertFalse(healthyB)
+    }
+
+    @MainActor
+    func testProjectDetailFailureKeepsTaskEditsAvailable() async throws {
+        let api = client("a.test")
+        let endpoint = api.baseUrl
+        let reachable = expectation(forNotification: .apiServerReachable, object: nil) { note in
+            note.object as? String == endpoint
+        }
+        reachable.expectedFulfillmentCount = 2
+        let projectError = expectation(forNotification: .apiRequestServerError, object: nil) { note in
+            note.object as? String == endpoint
+        }
+        let healthError = expectation(forNotification: .apiHealthError, object: nil) { note in
+            note.object as? String == endpoint
+        }
+        healthError.isInverted = true
+
+        let database = try AppDatabase.makeInMemory()
+        let projects = RemoteProjectDataSource(client: api)
+        do {
+            try await projects.refreshMembershipSnapshot(database)
+            XCTFail("Expected the project detail request to fail")
+        } catch APIError.serverError(500, _) {
+            // The project request surfaces its own HTTP error.
+        }
+
+        let healthy = await api.probeServerReachability()
+        XCTAssertTrue(healthy)
+        let tasks = RemoteTaskDataSource(client: api)
+        let updated = try await tasks.updateTask(id: 42, UpdateTaskRequest(title: "Edited", bodyMd: "changed", status: nil))
+        XCTAssertEqual(updated.title, "Edited")
+        await fulfillment(of: [reachable, projectError, healthError], timeout: 0.5)
+    }
+
+    func testProxyFailureRequestsHealthCheckAndHealthConfirmsRecovery() async throws {
+        let unavailable = client("a.test", protocolClass: UnavailableProxyFixtureProtocol.self)
+        let recovered = client("a.test")
+        let endpoint = unavailable.baseUrl
+        let requestError = expectation(forNotification: .apiRequestServerError, object: nil) { note in
+            note.object as? String == endpoint
+        }
+        let healthError = expectation(forNotification: .apiHealthError, object: nil) { note in
+            note.object as? String == endpoint
+        }
+        let healthReady = expectation(forNotification: .apiHealthReady, object: nil) { note in
+            note.object as? String == endpoint
+        }
+
+        do {
+            let _: [Project] = try await unavailable.get(path: "/api/projects")
+            XCTFail("Expected the proxy to return HTTP 503")
+        } catch APIError.serverError(503, _) {
+            // The request keeps its own HTTP status.
+        }
+
+        let healthyWhileDown = await unavailable.probeServerReachability()
+        XCTAssertFalse(healthyWhileDown)
+        let healthyAfterRecovery = await recovered.probeServerReachability()
+        XCTAssertTrue(healthyAfterRecovery)
+
+        await fulfillment(of: [requestError, healthError, healthReady], timeout: 0.5, enforceOrder: true)
     }
 
     func testReopeningServerKeepsItsQueuedParentRepliesAndCursor() async throws {

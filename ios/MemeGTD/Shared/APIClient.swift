@@ -27,19 +27,18 @@ enum APIError: Error, LocalizedError {
 }
 
 extension Notification.Name {
-    /// Posted (from an arbitrary thread) each time an APIClient request gets
-    /// an HTTP response back from the server. 4xx/5xx answers count too:
-    /// they prove the server can be REACHED, which is all this signal means.
-    /// ConnectivityMonitor (app target) folds these into the offline
-    /// read-only state — the Shared target cannot reference it directly.
+    /// Posted when an API request receives an HTTP response below status 500.
     nonisolated static let apiServerReachable = Notification.Name("APIClientServerReachable")
 
-    /// Posted (from an arbitrary thread) each time an APIClient request dies
-    /// at the transport level (DNS, no route, timeout) without an HTTP
-    /// response — the server could not be reached.
+    /// A request returned 5xx. Probe health to determine server-wide availability.
+    nonisolated static let apiRequestServerError = Notification.Name("APIRequestServerError")
+
+    /// Health probe results determine server-wide availability.
     nonisolated static let apiHealthReady = Notification.Name("APIHealthReady")
     nonisolated static let apiHealthUnreachable = Notification.Name("APIHealthUnreachable")
-    nonisolated static let apiServerError = Notification.Name("APIClientServerError")
+    nonisolated static let apiHealthError = Notification.Name("APIHealthError")
+
+    /// Posted when an API request fails at the transport level without an HTTP response.
     nonisolated static let apiServerUnreachable = Notification.Name("APIClientServerUnreachable")
 }
 
@@ -68,8 +67,9 @@ class APIClient {
     }
 
     private func report(_ response: URLResponse) {
-        if let http = response as? HTTPURLResponse, http.statusCode >= 500 {
-            NotificationCenter.default.post(name: .apiServerError, object: baseUrl)
+        guard let http = response as? HTTPURLResponse else { return }
+        if http.statusCode >= 500 {
+            NotificationCenter.default.post(name: .apiRequestServerError, object: baseUrl)
         } else {
             noteServerReachable(true)
         }
@@ -109,7 +109,7 @@ class APIClient {
             let (_, response) = try await session.data(for: request)
             let healthy = (response as? HTTPURLResponse).map { (200..<300).contains($0.statusCode) } ?? false
             if healthy { NotificationCenter.default.post(name: .apiHealthReady, object: baseUrl) }
-            else { NotificationCenter.default.post(name: .apiServerError, object: baseUrl) }
+            else { NotificationCenter.default.post(name: .apiHealthError, object: baseUrl) }
             return healthy
         } catch {
             if !isCancellation(error) { NotificationCenter.default.post(name: .apiHealthUnreachable, object: baseUrl) }

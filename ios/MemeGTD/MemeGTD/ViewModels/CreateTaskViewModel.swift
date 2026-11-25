@@ -117,51 +117,13 @@ class CreateTaskViewModel: ObservableObject {
                 scheduledEnd: scheduledEnd.map { Self.isoFormatter.string(from: $0) },
                 isAllDay: isAllDay ? true : nil
             )
-            let task: TaskItem = try await dataSources.tasks.createTask(request)
-
-            let dataSources = dataSources
-            await withTaskGroup(of: Void.self) { group in
-                for name in selectedLabelNames {
-                    if let label = allLabels.first(where: { $0.name == name }) {
-                        group.addTask {
-                            let _: AssignLabelResponse? = try? await dataSources.labels.assignLabel(
-                                issueId: task.id,
-                                AssignLabelRequest(labelId: label.id)
-                            )
-                        }
-                    }
-                }
-
-                for projectId in selectedProjectIds {
-                    group.addTask {
-                        let _: ProjectItem? = try? await dataSources.projects.addProjectItem(
-                            projectId: projectId,
-                            AddProjectItemRequest(issueId: task.id)
-                        )
-                    }
-                }
-
-                for link in pendingLinks {
-                    group.addTask {
-                        let _: CreateLinkResponse? = try? await dataSources.issueRelations.createLink(
-                            CreateLinkRequest(
-                                sourceIssueId: task.id,
-                                targetIssueId: link.targetIssueId,
-                                linkType: link.linkType,
-                                isPromotion: link.isPromotion ? true : nil
-                            )
-                        )
-                    }
-                }
-
-                for urlLink in pendingUrlLinks {
-                    group.addTask {
-                        let _: UrlLink? = try? await dataSources.issueRelations.createUrlLink(
-                            issueId: task.id,
-                            CreateUrlLinkRequest(url: urlLink.url, title: urlLink.title)
-                        )
-                    }
-                }
+            let task: TaskItem
+            if case .standard = mode, let source = dataSources.tasks as? OfflineFirstTaskDataSource {
+                task = try await source.createTask(request, labels: selectedLabelNames.sorted(),
+                    projectIDs: selectedProjectIds.sorted(), links: pendingLinks, urls: pendingUrlLinks)
+            } else {
+                task = try await dataSources.tasks.createOnlineTask(request)
+                await attachMetadata(to: task)
             }
 
             createdTask = task
@@ -176,19 +138,67 @@ class CreateTaskViewModel: ObservableObject {
         }
     }
 
+    private func attachMetadata(to task: TaskItem) async {
+        let dataSources = dataSources
+        await withTaskGroup(of: Void.self) { group in
+            for name in selectedLabelNames {
+                if let label = allLabels.first(where: { $0.name == name }) {
+                    group.addTask {
+                        let _: AssignLabelResponse? = try? await dataSources.labels.assignLabel(
+                            issueId: task.id,
+                            AssignLabelRequest(labelId: label.id)
+                        )
+                    }
+                }
+            }
+
+            for projectId in selectedProjectIds {
+                group.addTask {
+                    let _: ProjectItem? = try? await dataSources.projects.addProjectItem(
+                        projectId: projectId,
+                        AddProjectItemRequest(issueId: task.id)
+                    )
+                }
+            }
+
+            for link in pendingLinks {
+                group.addTask {
+                    let _: CreateLinkResponse? = try? await dataSources.issueRelations.createLink(
+                        CreateLinkRequest(
+                            sourceIssueId: task.id,
+                            targetIssueId: link.targetIssueId,
+                            linkType: link.linkType,
+                            isPromotion: link.isPromotion ? true : nil
+                        )
+                    )
+                }
+            }
+
+            for urlLink in pendingUrlLinks {
+                group.addTask {
+                    let _: UrlLink? = try? await dataSources.issueRelations.createUrlLink(
+                        issueId: task.id,
+                        CreateUrlLinkRequest(url: urlLink.url, title: urlLink.title)
+                    )
+                }
+            }
+        }
+    }
+
     // MARK: - Pending Links
 
     func removePendingLink(_ link: PendingLink) {
         pendingLinks.removeAll { $0.id == link.id }
     }
 
-    func addPendingLink(targetIssueId: Int, linkType: LinkType, title: String) {
+    func addPendingLink(targetIssueId: Int, linkType: LinkType, title: String, targetType: String) {
         // Avoid duplicates
         guard !pendingLinks.contains(where: { $0.targetIssueId == targetIssueId }) else { return }
         pendingLinks.append(PendingLink(
             targetIssueId: targetIssueId,
             linkType: linkType,
-            title: title
+            title: title,
+            targetType: targetType
         ))
     }
 

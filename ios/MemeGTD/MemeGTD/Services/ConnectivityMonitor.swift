@@ -26,18 +26,23 @@ final class ConnectivityMonitor: ObservableObject {
     private let recheckInterval: TimeInterval = 30
 
     private init() {
-        for name in [Notification.Name.apiServerReachable, .apiServerUnreachable, .apiServerError, .apiHealthUnreachable, .apiHealthReady] {
+        let signals: [Notification.Name] = [
+            .apiServerReachable, .apiServerUnreachable, .apiRequestServerError,
+            .apiHealthReady, .apiHealthUnreachable, .apiHealthError,
+        ]
+        for name in signals {
             observers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { note in
                 let endpoint = note.object as? String
                 Task { @MainActor [weak self] in
                     guard let self, endpoint == Settings.shared.effectiveApiUrl else { return }
                     switch name {
                     case .apiHealthUnreachable: self.setState(.unreachable)
-                    case .apiServerError: self.setState(.serverError)
+                    case .apiHealthError: self.setState(.serverError)
+                    case .apiRequestServerError: self.probeHealth()
                     case .apiServerUnreachable:
                         if self.state == .checking || self.state == .unreachable {
                             self.setState(.unreachable)
-                        } else { self.pathDidChange() }
+                        } else { self.probeHealth() }
                     case .apiHealthReady: self.setState(.available)
                     default:
                         if self.state == .serverError { break }
@@ -53,7 +58,7 @@ final class ConnectivityMonitor: ObservableObject {
         pathProbeTask?.cancel()
         pathProbeTask = nil
         state = .checking
-        pathDidChange()
+        probeHealth()
     }
 
     private func setState(_ value: State) {
@@ -94,14 +99,14 @@ final class ConnectivityMonitor: ObservableObject {
             let disconnected = path.status == .unsatisfied
             Task { @MainActor [weak self] in
                 self?.hasNoNetworkPath = disconnected
-                self?.pathDidChange()
+                self?.probeHealth()
             }
         }
         monitor.start(queue: DispatchQueue.global(qos: .utility))
         pathMonitor = monitor
     }
 
-    private func pathDidChange() {
+    private func probeHealth() {
         guard Settings.shared.appMode == .server else { return }
         guard pathProbeTask == nil else { return }
         pathProbeTask = Task { [weak self] in

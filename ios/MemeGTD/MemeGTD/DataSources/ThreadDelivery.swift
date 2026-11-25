@@ -4,20 +4,22 @@ import Foundation
 nonisolated struct ThreadDelivery {
     var historyAvailable = true
     var parentPending = false
+    var statusPending = false
     var pendingComments: Set<Int> = []
-    var hasPending: Bool { parentPending || !pendingComments.isEmpty }
+    var hasPending: Bool { parentPending || statusPending || !pendingComments.isEmpty }
     var serverID: Int?
     var comments: [Comment] = []
 
     // Include metadata changes on their owning issue. Reviewed operations are
     // retained in Settings and are no longer awaiting automatic delivery.
     private static let pendingChanges = """
-        WITH pending(owner, comment) AS (
+        WITH pending(owner, comment, task_status) AS (
           SELECT coalesce(issue_uuid, json_extract(payload, '$.issueUuid'), target_uuid),
-                 CASE WHEN entity = 'comment' THEN target_uuid END
+                 CASE WHEN entity = 'comment' THEN target_uuid END,
+                 entity = 'task' AND op_type = 'update'
           FROM pending_operations WHERE state != 'review'
           UNION ALL
-          SELECT issue_uuid, NULL FROM pending_memberships WHERE needs_review = 0
+          SELECT issue_uuid, NULL, 0 FROM pending_memberships WHERE needs_review = 0
         )
         """
 
@@ -49,19 +51,27 @@ nonisolated struct ThreadDelivery {
             comments = history.filter { !ids.contains($0.id) } + comments
         }
         let pending = try Row.fetchAll(db, sql: pendingChanges + """
-             SELECT p.comment, c.rowid AS local_id, c.server_id
+             SELECT p.comment, p.task_status, c.rowid AS local_id, c.server_id
              FROM pending p LEFT JOIN comments c ON c.uuid = p.comment
              WHERE p.owner IN (?, ?)
             """, arguments: [uuid, "server-id:\(serverID ?? id)"])
         var parentPending = false
+        var statusPending = false
         var pendingComments = Set<Int>()
         for row in pending {
-            if row["comment"] as String? == nil { parentPending = true }
-            if let local: Int = row["local_id"] { pendingComments.insert(-local) }
-            if let remote: Int = row["server_id"] { pendingComments.insert(remote) }
+            if row["task_status"] as Bool {
+                statusPending = true
+            } else if row["comment"] as String? == nil {
+                parentPending = true
+            }
+            if let remote: Int = row["server_id"] {
+                pendingComments.insert(remote)
+            } else if let local: Int = row["local_id"] {
+                pendingComments.insert(-local)
+            }
         }
         return ThreadDelivery(historyAvailable: id < 0 || history != nil || (parent != nil && complete),
-                              parentPending: parentPending, pendingComments: pendingComments,
+                              parentPending: parentPending, statusPending: statusPending, pendingComments: pendingComments,
                               serverID: serverID ?? (id > 0 ? id : nil), comments: comments)
     }
 }

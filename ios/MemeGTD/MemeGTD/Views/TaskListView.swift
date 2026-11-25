@@ -21,15 +21,6 @@ struct TaskListView: View {
     @State private var dateTo: Date?
     @StateObject private var creation = CreationPresentationCoordinator<CreateTaskModeKind>()
     @State private var showCopyDialog: Bool = false
-    @ObservedObject private var connectivity = ConnectivityMonitor.shared
-
-    /// Server mode + Offline Sync ON + offline: tasks are served from the
-    /// local read cache and cannot be edited (offline support plan Phase 7).
-    /// Never true in Standalone (tasks are fully local there).
-    private var isOfflineReadOnly: Bool {
-        connectivity.isOfflineReadOnly
-    }
-
     private var hasActiveFilters: Bool {
         !viewModel.searchQuery.isEmpty ||
         !viewModel.labelFilters.isEmpty ||
@@ -115,7 +106,7 @@ struct TaskListView: View {
             }
         }
         .safeAreaBar(edge: .bottom) {
-            IssueListCreateBar(isSearching: isSearching, disabled: isOfflineReadOnly) {
+            IssueListCreateBar(isSearching: isSearching) {
                 creation.beginChoosing()
             }
         }

@@ -19,6 +19,11 @@ import GRDB
 ///   arrive as `op: delete` tombstones. Issues/comments soft-delete via
 ///   `isDeleted` upserts instead.
 nonisolated enum SyncChangeApplier {
+    nonisolated struct PendingTaskStatus {
+        let keepsActualStart: Bool
+        let keepsActualEnd: Bool
+    }
+
     /// Applies the changes inside the caller's transaction. `pendingUuids` is
     /// the set of `target_uuid`s that still have outbox rows (any state:
     /// queued, inflight, or failed — all represent un-pushed local intent).
@@ -26,6 +31,7 @@ nonisolated enum SyncChangeApplier {
     static func apply(
         _ changes: [SyncChange],
         skippingUuids pendingUuids: Set<String>,
+        preservingTaskStatus pendingTaskStatuses: [String: PendingTaskStatus] = [:],
         in db: Database
     ) throws -> Int {
         var appliedCount = 0
@@ -33,7 +39,8 @@ nonisolated enum SyncChangeApplier {
             let applied: Bool
             switch (change.entity, change.op) {
             case (.issue, .upsert):
-                applied = try applyIssueUpsert(change, pendingUuids: pendingUuids, db: db)
+                applied = try applyIssueUpsert(change, pendingUuids: pendingUuids,
+                                               pendingTaskStatus: pendingTaskStatuses[string(change.data, "uuid") ?? ""], db: db)
             case (.comment, .upsert):
                 applied = try applyCommentUpsert(change, pendingUuids: pendingUuids, db: db)
             case (.label, .upsert):
@@ -61,6 +68,7 @@ nonisolated enum SyncChangeApplier {
     private static func applyIssueUpsert(
         _ change: SyncChange,
         pendingUuids: Set<String>,
+        pendingTaskStatus: PendingTaskStatus?,
         db: Database
     ) throws -> Bool {
         let data = change.data
@@ -69,6 +77,7 @@ nonisolated enum SyncChangeApplier {
         if pendingUuids.contains(uuid) { return false }
 
         let updatedAt = string(data, "updatedAt") ?? string(data, "createdAt") ?? ""
+        let pending = string(data, "type") == "task" && !bool(data, "isDeleted") ? pendingTaskStatus : nil
         try db.execute(
             sql: """
                 INSERT INTO issues (
@@ -89,13 +98,13 @@ nonisolated enum SyncChangeApplier {
                   type = excluded.type,
                   title = excluded.title,
                   body_md = excluded.body_md,
-                  status = excluded.status,
+                  status = CASE WHEN :keepTaskStatus THEN issues.status ELSE excluded.status END,
                   scheduled_on = excluded.scheduled_on,
                   scheduled_start = excluded.scheduled_start,
                   scheduled_end = excluded.scheduled_end,
                   is_all_day = excluded.is_all_day,
-                  actual_start = excluded.actual_start,
-                  actual_end = excluded.actual_end,
+                  actual_start = CASE WHEN :keepActualStart THEN issues.actual_start ELSE excluded.actual_start END,
+                  actual_end = CASE WHEN :keepActualEnd THEN issues.actual_end ELSE excluded.actual_end END,
                   start_time = excluded.start_time,
                   end_time = excluded.end_time,
                   end_date = excluded.end_date,
@@ -112,6 +121,9 @@ nonisolated enum SyncChangeApplier {
                 """,
             arguments: [
                 "uuid": uuid,
+                "keepTaskStatus": pending != nil,
+                "keepActualStart": pending?.keepsActualStart ?? false,
+                "keepActualEnd": pending?.keepsActualEnd ?? false,
                 "serverId": int(data, "id"),
                 "type": string(data, "type") ?? "memo",
                 "title": string(data, "title"),

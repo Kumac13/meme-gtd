@@ -20,11 +20,18 @@ protocol IssueRelationsDataSource {
 /// Server-backed implementation: a thin wrapper around `APIClient`.
 struct RemoteIssueRelationsDataSource: IssueRelationsDataSource {
     var client = APIClient.shared
+    var localPendingTasks: LocalIssueRelationsDataSource?
 
     // MARK: - Issue links
 
     func listLinks(issueId: Int) async throws -> [IssueLink] {
-        try await client.get(path: "/api/issues/\(issueId)/links")
+        if let localPendingTasks {
+            let relations = try await localPendingTasks.pendingTaskRelations(id: issueId)
+            if let links = relations.links { return links }
+            guard let id = relations.serverID else { return [] }
+            return try await client.get(path: "/api/issues/\(id)/links")
+        }
+        return try await client.get(path: "/api/issues/\(issueId)/links")
     }
 
     func createLink(_ request: CreateLinkRequest) async throws -> CreateLinkResponse {
@@ -38,7 +45,13 @@ struct RemoteIssueRelationsDataSource: IssueRelationsDataSource {
     // MARK: - URL links
 
     func listUrlLinks(issueId: Int) async throws -> [UrlLink] {
-        try await client.get(path: "/api/issues/\(issueId)/url-links")
+        if let localPendingTasks {
+            let relations = try await localPendingTasks.pendingTaskRelations(id: issueId)
+            if let urls = relations.urls { return urls }
+            guard let id = relations.serverID else { return [] }
+            return try await client.get(path: "/api/issues/\(id)/url-links")
+        }
+        return try await client.get(path: "/api/issues/\(issueId)/url-links")
     }
 
     func createUrlLink(issueId: Int, _ request: CreateUrlLinkRequest) async throws -> UrlLink {

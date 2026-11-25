@@ -62,7 +62,7 @@ export class SyncService {
     }
     /**
      * Apply client operations
-     * Apply a batch of offline operations in order. memo/comment support create/update/delete; task/article/label/issue_label/link support create only (iOS Standalone -> Server bulk migration; send in dependency order: labels, then issues, then issue_labels/comments, then links). Each operation is idempotent via opId and applies in its own transaction (partial success). Replays are also detected without the opId ledger: task/article on uuid, label on name, issue_label/link on the existing pair — all reported as alreadyApplied. Operations with unresolvable references are skipped with a reason. Conflict rules for memo/comment: last-write-wins per record; concurrent memo body edits keep the server version and save the client body as a conflicted-copy memo; edits beat deletes in both directions.
+     * Apply a batch of offline operations in order. Memo and comment support create, update, and delete. Task supports create and status-only update with its offline execution stamp. Task creation applies labels, projects, issue links, and URL links in the same transaction. Article, label, issue_label, and link support create. For bulk migration, send labels, issues, issue_labels and comments, then links. Each operation is idempotent via opId and applies in its own transaction (partial success). Replays are also detected without the opId ledger for task and article creates by UUID, labels by name, and issue_label and link by the existing pair. Operations with unresolvable references are skipped with a reason. Memo and comment use last-write-wins per record and edits beat deletes in both directions. Concurrent memo body edits keep the server version and save the client body as a conflicted copy.
      * @param requestBody
      * @returns any Default Response
      * @throws ApiError
@@ -82,7 +82,7 @@ export class SyncService {
                  */
                 opId: string;
                 /**
-                 * Entity kind this operation targets. memo/comment support create/update/delete; task/article/label/issue_label/link support create only (bulk migration).
+                 * Entity kind this operation targets. memo/comment support create/update/delete; task supports create and status-only update; article/label/issue_label/link support create only.
                  */
                 entity: 'memo' | 'comment' | 'task' | 'article' | 'label' | 'issue_label' | 'link';
                 /**
@@ -126,7 +126,7 @@ export class SyncService {
                      */
                     title?: string;
                     /**
-                     * Task status (task create only; default inbox)
+                     * Task status (create default inbox; required for task update)
                      */
                     status?: 'inbox' | 'open' | 'next' | 'waiting' | 'scheduled' | 'someday' | 'done' | 'canceled';
                     /**
@@ -150,13 +150,39 @@ export class SyncService {
                      */
                     scheduledOn?: string;
                     /**
-                     * Execution start stamp to preserve, ISO 8601 datetime (task create only)
+                     * Execution start stamp, ISO 8601 datetime (task create or update to next)
                      */
                     actualStart?: string;
                     /**
-                     * Execution end stamp to preserve, ISO 8601 datetime (task create only)
+                     * Execution end stamp, ISO 8601 datetime (task create or update to done)
                      */
                     actualEnd?: string;
+                    /**
+                     * Label names to attach on task create
+                     */
+                    labels?: Array<string>;
+                    /**
+                     * Projects to attach on task create
+                     */
+                    projectIds?: Array<number>;
+                    /**
+                     * Issue links to attach on task create
+                     */
+                    links?: Array<{
+                        targetUuid?: string;
+                        targetId?: number;
+                        linkType: 'parent' | 'child' | 'relates' | 'derived_from';
+                    }>;
+                    /**
+                     * URL links to attach on task create
+                     */
+                    urlLinks?: Array<{
+                        /**
+                         * Absolute URL; validated when applying the operation
+                         */
+                        url: string;
+                        title?: string;
+                    }>;
                     /**
                      * Article origin; defaults to web for legacy clients
                      */

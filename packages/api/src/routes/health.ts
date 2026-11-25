@@ -30,7 +30,7 @@ export async function healthRoutes(app: FastifyInstance) {
         tags: ['System'],
         summary: 'Health check',
         description:
-          'Report server and database health. Returns 200 when healthy, 503 when the database is unreachable.',
+          'Report server and database health and sync capabilities. Returns 200 when healthy, 503 when the database is unreachable.',
         operationId: 'getHealth',
         response: {
           200: HealthResponseSchema,
@@ -54,6 +54,7 @@ export async function healthRoutes(app: FastifyInstance) {
       const payload: HealthResponse = {
         status: dbStatus,
         version: VERSION,
+        supportsTaskSyncWrites: true,
         uptimeSeconds: Math.round(process.uptime()),
         timestamp: new Date().toISOString(),
         db: { status: dbStatus, schemaVersion },

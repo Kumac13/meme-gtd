@@ -360,6 +360,56 @@ describe('Project Management Operations', () => {
       assert.strictEqual(projectDetail.items[0].issue.type, 'task');
     });
 
+    it('should return project work items when a template presets the same project', async () => {
+      const createdProject = await app.inject({
+        method: 'POST',
+        url: '/api/projects',
+        payload: createProjectFixture(),
+      });
+      assert.strictEqual(createdProject.statusCode, 201);
+      const { id: projectId } = createdProject.json<{ id: number }>();
+
+      const fixtures = [
+        ['task', '/api/tasks', createTaskFixture()],
+        ['memo', '/api/memos', createMemoFixture()],
+        ['article', '/api/articles', { title: 'Test Article', bodyMd: 'Test article body' }],
+      ] as const;
+      const expectedItems = [];
+      for (const [type, url, payload] of fixtures) {
+        const createdIssue = await app.inject({ method: 'POST', url, payload });
+        assert.strictEqual(createdIssue.statusCode, 201);
+        const { id } = createdIssue.json<{ id: number }>();
+        const addedItem = await app.inject({
+          method: 'POST',
+          url: `/api/projects/${projectId}/items`,
+          payload: { issueId: id },
+        });
+        assert.strictEqual(addedItem.statusCode, 201);
+        expectedItems.push({ id, type });
+      }
+
+      const createdTemplate = await app.inject({
+        method: 'POST',
+        url: '/api/templates',
+        payload: { title: 'Test Template', bodyMd: 'Default body', templateTarget: 'task', projectIds: [projectId] },
+      });
+      assert.strictEqual(createdTemplate.statusCode, 201);
+      const { id: templateId } = createdTemplate.json<{ id: number }>();
+
+      const projects = await app.inject({ method: 'GET', url: '/api/projects' });
+      assert.strictEqual(projects.statusCode, 200);
+      assert.deepStrictEqual(projects.json<Array<{ id: number }>>().map(({ id }) => id), [projectId]);
+
+      const detail = await app.inject({ method: 'GET', url: `/api/projects/${projectId}` });
+      assert.strictEqual(detail.statusCode, 200);
+      const { items } = detail.json<{ items: Array<{ issue: { id: number; type: string } }> }>();
+      assert.deepStrictEqual(items.map(({ issue: { id, type } }) => ({ id, type })), expectedItems);
+
+      const template = await app.inject({ method: 'GET', url: `/api/templates/${templateId}` });
+      assert.strictEqual(template.statusCode, 200);
+      assert.deepStrictEqual(template.json<{ projectIds: number[] }>().projectIds, [projectId]);
+    });
+
     it('should get empty project (no items)', async () => {
       const projectResponse = await app.inject({
         method: 'POST',

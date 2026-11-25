@@ -81,8 +81,14 @@ actor SyncEngine {
     func syncNow(refreshProjectSnapshot: Bool = true) async -> SyncSummary {
         var summary = SyncSummary()
         do {
+            let needsTaskSupport = try await database.dbWriter.read { db in
+                try Bool.fetchOne(db, sql: "SELECT EXISTS (SELECT 1 FROM pending_operations WHERE state != 'review' AND (\(Self.extendedTaskWrite)))") ?? false
+            }
+            // Default to the legacy-safe subset when the queue only contains
+            // compatible operations, including if a new Task arrives mid-sync.
+            let supportsTaskWrites = needsTaskSupport ? try await transport.supportsTaskSyncWrites() : false
             while true {
-                let push = try await pushOutbox()
+                let push = try await pushOutbox(supportsTaskWrites: supportsTaskWrites)
                 summary.pushedCount += push.resolved
                 summary.conflictCopiedCount += push.conflictCopied
                 if push.resolved < 500 { break }
@@ -114,10 +120,22 @@ actor SyncEngine {
 
     // MARK: - Push
 
+    // The basic Task create payload already worked for Standalone migration.
+    // Older servers silently ignore these new attachments and reject status edits.
+    private static let extendedTaskWrite = """
+        entity = 'task' AND (
+            op_type = 'update'
+            OR coalesce(json_array_length(payload, '$.labels'), 0) > 0
+            OR coalesce(json_array_length(payload, '$.projectIds'), 0) > 0
+            OR coalesce(json_array_length(payload, '$.links'), 0) > 0
+            OR coalesce(json_array_length(payload, '$.urlLinks'), 0) > 0
+        )
+        """
+
     /// Sends up to 500 operations in FIFO order. Returns the
     /// number of operations the server resolved (they leave the outbox) and
     /// how many of them produced a conflicted copy.
-    private func pushOutbox() async throws -> (resolved: Int, conflictCopied: Int) {
+    private func pushOutbox(supportsTaskWrites: Bool) async throws -> (resolved: Int, conflictCopied: Int) {
         // Load every state: 'queued' is the normal case, 'failed' rows are
         // the ones this trigger retries, and 'inflight' rows are stale
         // leftovers from a crash mid-push — resending any of them is safe
@@ -126,10 +144,21 @@ actor SyncEngine {
             let records = try PendingOperationRecord.fetchAll(
                 db,
                 sql: """
+                        WITH blocked_tasks AS (
+                            SELECT target_uuid FROM pending_operations
+                            WHERE NOT ? AND state != 'review' AND (\(Self.extendedTaskWrite))
+                              AND op_type = 'create'
+                        )
                         SELECT * FROM pending_operations
-                        WHERE state != 'review' AND (issue_uuid IS NULL OR issue_uuid NOT LIKE 'server-id:%')
+                        WHERE state != 'review' AND target_uuid NOT LIKE 'server-id:%'
+                          AND (issue_uuid IS NULL OR issue_uuid NOT LIKE 'server-id:%')
+                          AND (? OR (NOT (\(Self.extendedTaskWrite)) AND NOT EXISTS (
+                              SELECT 1 FROM blocked_tasks
+                              WHERE blocked_tasks.target_uuid = pending_operations.issue_uuid
+                          )))
                         ORDER BY id LIMIT 500
-                        """
+                        """,
+                arguments: [supportsTaskWrites, supportsTaskWrites]
             )
             for op in records {
                 try db.execute(sql: "UPDATE pending_operations SET state = 'inflight' WHERE id = ?", arguments: [op.id])
@@ -195,6 +224,14 @@ actor SyncEngine {
                             sql: "UPDATE \(table) SET server_id = ? WHERE uuid = ?",
                             arguments: [serverId, op.targetUuid]
                         )
+                        if op.entity == "task", op.opType == "create" {
+                            try db.execute(sql: """
+                                INSERT OR IGNORE INTO project_items(project_id, issue_id)
+                                SELECT value, ? FROM json_each(?, '$.projectIds')
+                                """, arguments: [serverId, op.payload])
+                            try db.execute(sql: "UPDATE issues SET memberships_known = 1 WHERE uuid = ?",
+                                           arguments: [op.targetUuid])
+                        }
                     }
                     if let updatedAt = result.updatedAt {
                         try db.execute(
@@ -209,7 +246,10 @@ actor SyncEngine {
                 case .skipped:
                     // Server state wins; the pull that follows restores the
                     // server row.
-                    if op.opType == "create", op.entity == "comment" || op.entity == "issue_label" || op.entity == "article" {
+                    let needsReview = op.entity == "task"
+                        || (op.entity == "comment" && op.opType != "delete")
+                        || (op.opType == "create" && (op.entity == "issue_label" || op.entity == "article"))
+                    if needsReview {
                         try db.execute(sql: "UPDATE pending_operations SET state = 'review', review_reason = ? WHERE op_id = ?", arguments: [result.reason ?? (op.entity == "comment" ? "Parent is unavailable on the server." : "Server could not apply this change."), op.opId])
                         continue
                     }
@@ -234,6 +274,11 @@ actor SyncEngine {
         var payload: SyncPushPayload?
         if let raw = record.payload, let data = raw.data(using: .utf8) {
             payload = try JSONDecoder().decode(SyncPushPayload.self, from: data)
+            if let links = payload?.links {
+                payload?.links = links.map {
+                    SyncPushTaskLink(targetUuid: $0.targetUuid, targetId: $0.targetId, linkType: $0.linkType)
+                }
+            }
         }
         return SyncPushOperation(
             opId: record.opId,
@@ -259,24 +304,35 @@ actor SyncEngine {
             let page = try await transport.fetchChanges(since: since, limit: pullPageSize)
             if !page.changes.isEmpty {
                 let applied: Int = try await database.dbWriter.write { db in
-                    // Uuids with outbox rows keep their local state until
-                    // pushed (sync-loop prevention).
+                    // Resolve REST-cached identities in FIFO order as their change-feed
+                    // entries arrive, keeping optimistic state until delivery.
+                    try Self.resolveCachedIDs(page.changes, in: db)
                     let pendingUuids = try Set(String.fetchAll(
                         db,
-                        sql: "SELECT DISTINCT target_uuid FROM pending_operations"
+                        sql: """
+                            SELECT DISTINCT target_uuid FROM pending_operations
+                            WHERE NOT (entity = 'task' AND op_type = 'update')
+                            """
                     ))
+                    let statusRows = try Row.fetchAll(db, sql: """
+                        SELECT target_uuid,
+                            MAX(json_extract(payload, '$.status') = 'next') AS keeps_start,
+                            MAX(json_extract(payload, '$.status') IN ('next', 'done')) AS keeps_end
+                        FROM pending_operations
+                        WHERE entity = 'task' AND op_type = 'update' AND state != 'review'
+                        GROUP BY target_uuid
+                        """)
+                    let pendingTaskStatuses = Dictionary(uniqueKeysWithValues: statusRows.map { row in
+                        (row["target_uuid"] as String, SyncChangeApplier.PendingTaskStatus(
+                            keepsActualStart: row["keeps_start"], keepsActualEnd: row["keeps_end"]
+                        ))
+                    })
                     let count = try SyncChangeApplier.apply(
                         page.changes,
                         skippingUuids: pendingUuids,
+                        preservingTaskStatus: pendingTaskStatuses,
                         in: db
                     )
-                    for change in page.changes where change.entity == .issue {
-                        guard case let .number(value) = change.data["id"], let id = Int(exactly: value),
-                              case let .string(uuid) = change.data["uuid"] else { continue }
-                        let placeholder = "server-id:\(id)"
-                        try db.execute(sql: "UPDATE comments SET issue_uuid = ? WHERE issue_uuid = ?", arguments: [uuid, placeholder])
-                        try db.execute(sql: "UPDATE pending_operations SET issue_uuid = ? WHERE issue_uuid = ?", arguments: [uuid, placeholder])
-                    }
                     // Advance past everything in this page, including skipped
                     // entries — pending uuids re-converge on the pull that
                     // follows their push (the push bumps their server_seq).
@@ -298,6 +354,24 @@ actor SyncEngine {
             }
         }
         return pulled
+    }
+
+    private static func resolveCachedIDs(_ changes: [SyncChange], in db: Database) throws {
+        for change in changes where change.entity == .issue || change.entity == .comment {
+            guard case let .number(value) = change.data["id"], let id = Int(exactly: value),
+                  case let .string(uuid) = change.data["uuid"] else { continue }
+            let placeholder = "server-id:\(id)"
+            if change.entity == .issue {
+                try db.execute(sql: "UPDATE issues SET uuid = ? WHERE uuid = ?", arguments: [uuid, placeholder])
+                try db.execute(sql: "UPDATE issue_labels SET issue_uuid = ? WHERE issue_uuid = ?", arguments: [uuid, placeholder])
+                try db.execute(sql: "UPDATE comments SET issue_uuid = ? WHERE issue_uuid = ?", arguments: [uuid, placeholder])
+                try db.execute(sql: "UPDATE pending_operations SET issue_uuid = ? WHERE issue_uuid = ?", arguments: [uuid, placeholder])
+                try db.execute(sql: "UPDATE pending_operations SET target_uuid = ? WHERE entity = 'task' AND target_uuid = ?", arguments: [uuid, placeholder])
+            } else {
+                try db.execute(sql: "UPDATE comments SET uuid = ? WHERE uuid = ?", arguments: [uuid, placeholder])
+                try db.execute(sql: "UPDATE pending_operations SET target_uuid = ? WHERE entity = 'comment' AND target_uuid = ?", arguments: [uuid, placeholder])
+            }
+        }
     }
 
     private func currentCursor() throws -> Int {

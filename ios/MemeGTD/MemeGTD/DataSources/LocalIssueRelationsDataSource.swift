@@ -94,6 +94,55 @@ nonisolated final class LocalIssueRelationsDataSource: IssueRelationsDataSource 
         return row.map(issueRef(from:))
     }
 
+    nonisolated struct PendingTaskRelations {
+        let serverID: Int?
+        let links: [IssueLink]?
+        let urls: [UrlLink]?
+    }
+
+    // The Task create operation owns the complete offline relation draft.
+    // Once acknowledged it disappears and reads use ordinary server relations.
+    func pendingTaskRelations(id: Int) async throws -> PendingTaskRelations {
+        try await database.dbWriter.read { db in
+            guard let issue = try Self.fetchIssue(db, id: id) else {
+                return PendingTaskRelations(serverID: id > 0 ? id : nil, links: nil, urls: nil)
+            }
+            let serverID = issue.id > 0 ? issue.id : nil
+            guard issue.type == "task", let op = try PendingOperationRecord.fetchOne(db, sql: """
+                SELECT * FROM pending_operations
+                WHERE entity = 'task' AND op_type = 'create' AND target_uuid = ?
+                """, arguments: [issue.uuid]), let data = op.payload?.data(using: .utf8) else {
+                return PendingTaskRelations(serverID: serverID, links: nil, urls: nil)
+            }
+            let payload = try JSONDecoder().decode(SyncPushPayload.self, from: data)
+            let links = try (payload.links ?? []).enumerated().compactMap { (index, link) -> IssueLink? in
+                guard let linkType = LinkType(rawValue: link.linkType) else { return nil }
+                let target: IssueRef?
+                if let targetUuid = link.targetUuid {
+                    target = try Self.fetchIssue(db, uuid: targetUuid)
+                } else if let targetId = link.targetId {
+                    target = try Self.fetchIssue(db, id: targetId)
+                } else {
+                    target = nil
+                }
+                let display: TargetIssue
+                if let target {
+                    display = TargetIssue(id: target.id, type: target.type, title: target.title, status: target.status)
+                } else if let targetId = link.targetId, let type = link.targetType, let title = link.targetTitle {
+                    display = TargetIssue(id: targetId, type: type, title: title, status: nil)
+                } else {
+                    return nil
+                }
+                return IssueLink(id: -index - 1, sourceIssueId: issue.id, targetIssueId: display.id,
+                    linkType: linkType, createdAt: op.createdAt, direction: .outgoing, targetIssue: display)
+            }
+            let urls = (payload.urlLinks ?? []).enumerated().map { (index, link) in
+                UrlLink(id: -index - 1, issueId: issue.id, url: link.url, title: link.title, createdAt: op.createdAt)
+            }
+            return PendingTaskRelations(serverID: serverID, links: links, urls: urls)
+        }
+    }
+
     // MARK: - Issue links
 
     func listLinks(issueId: Int) async throws -> [IssueLink] {

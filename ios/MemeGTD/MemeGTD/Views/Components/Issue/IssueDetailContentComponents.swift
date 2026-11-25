@@ -5,6 +5,7 @@ struct IssueItemMenu: View {
     var onEdit: (() -> Void)?
     var onDelete: (() -> Void)?
     var mutationsDisabled = false
+    var deletionDisabled = false
 
     var body: some View {
         Menu {
@@ -23,7 +24,7 @@ struct IssueItemMenu: View {
                 Button(role: .destructive, action: onDelete) {
                     Label("Delete", systemImage: "trash")
                 }
-                .disabled(mutationsDisabled)
+                .disabled(mutationsDisabled || deletionDisabled)
             }
         } label: {
             Image(systemName: "ellipsis")
@@ -43,6 +44,7 @@ struct IssueContentCard: View {
     let emptyText: String
     var copyText: String? = nil
     var mutationsDisabled = false
+    var deletionDisabled = false
     var onEdit: (() -> Void)?
     var onDelete: (() -> Void)?
     var onIssueTap: ((Int, String) -> Void)?
@@ -61,7 +63,8 @@ struct IssueContentCard: View {
                         },
                         onEdit: onEdit,
                         onDelete: onDelete,
-                        mutationsDisabled: mutationsDisabled
+                        mutationsDisabled: mutationsDisabled,
+                        deletionDisabled: deletionDisabled
                     )
                 }
                 .padding(.horizontal, 16)
@@ -96,7 +99,7 @@ struct IssueTimeline: View {
     let entries: [TimelineEntry]
     let issueId: Int
     var pendingComments: Set<Int> = []
-    var mutationsDisabled = false
+    var deletionDisabled = false
     let onEditComment: (Comment) -> Void
     let onDeleteComment: (Comment) -> Void
     var onIssueTap: ((Int, String) -> Void)?
@@ -114,7 +117,7 @@ struct IssueTimeline: View {
                     updatedAt: comment.updatedAt,
                     pending: pendingComments.contains(comment.id),
                     emptyText: "No comment provided.",
-                    mutationsDisabled: mutationsDisabled,
+                    deletionDisabled: deletionDisabled,
                     onEdit: { onEditComment(comment) },
                     onDelete: { onDeleteComment(comment) },
                     onIssueTap: onIssueTap,

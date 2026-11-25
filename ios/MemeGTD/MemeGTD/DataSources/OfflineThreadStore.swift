@@ -77,11 +77,64 @@ nonisolated struct OfflineThreadStore {
         return comment
     }
 
-    static func enqueue(_ db: Database, entity: SyncPushEntity, uuid: String, parent: String? = nil,
-                        payload: SyncPushPayload, now: String) throws {
+    func edit(id: Int, commentID: Int, body: String) async throws -> Comment {
+        let comment = try await database.dbWriter.write { db in
+            let key = try parent(db, id: id)
+            let now = ISO8601Millis.now()
+            if try LocalCommentStore.fetchCommentRow(db, issueUuid: key, id: commentID) == nil,
+               commentID > 0, id > 0,
+               let cached = try cachedValue(db, kind: "comments", id: id, as: [Comment].self)?
+                    .first(where: { $0.id == commentID && $0.issueId == id }),
+               try Int.fetchOne(db, sql: "SELECT 1 FROM comments WHERE server_id = ?", arguments: [commentID]) == nil {
+                // A REST-cached comment has a server ID before its sync UUID arrives.
+                // Keep the edited row visible and hold delivery until pull rekeys it.
+                try CommentRecord(uuid: "server-id:\(commentID)", serverId: Int64(commentID),
+                    issueUuid: key, bodyMd: cached.bodyMd, createdAt: cached.createdAt,
+                    updatedAt: cached.updatedAt, serverUpdatedAt: cached.updatedAt).insert(db)
+            }
+            guard let row = try LocalCommentStore.fetchCommentRow(db, issueUuid: key, id: commentID) else {
+                throw LocalMemoError.commentNotFound
+            }
+            let uuid: String = row["uuid"]
+            try LocalCommentStore.updateCommentBody(db, uuid: uuid, bodyMd: body, now: now)
+
+            if var queued = try PendingOperationRecord.fetchOne(db, sql: """
+                SELECT * FROM pending_operations WHERE entity = 'comment' AND target_uuid = ?
+                  AND state = 'queued' AND op_type IN ('create', 'update')
+                ORDER BY id DESC LIMIT 1
+                """, arguments: [uuid]) {
+                let raw = queued.payload.map { Data($0.utf8) }
+                var payload = try raw.map { try JSONDecoder().decode(SyncPushPayload.self, from: $0) } ?? SyncPushPayload()
+                payload.bodyMd = body
+                queued.payload = String(decoding: try JSONEncoder().encode(payload), as: UTF8.self)
+                try queued.update(db)
+            } else {
+                try Self.enqueue(db, entity: .comment, type: .update, uuid: uuid, parent: key,
+                    payload: SyncPushPayload(bodyMd: body), baseUpdatedAt: row["server_updated_at"], now: now)
+            }
+            guard let updated = try LocalCommentStore.fetchCommentRow(db, uuid: uuid) else {
+                throw LocalMemoError.commentNotFound
+            }
+            return LocalCommentStore.comment(from: updated, issueId: id)
+        }
+        onLocalWrite()
+        return comment
+    }
+
+    func cachedValue<T: Decodable>(_ db: Database, kind: String, id: Int, as type: T.Type) throws -> T? {
+        let key = "thread.\(endpoint).\(kind).\(id)"
+        guard let saved = try String.fetchOne(db, sql: "SELECT value FROM sync_meta WHERE key = ?", arguments: [key]),
+              let data = Data(base64Encoded: saved) else { return nil }
+        return try JSONDecoder().decode(type, from: data)
+    }
+
+    static func enqueue(_ db: Database, entity: SyncPushEntity, type: SyncPushOpType = .create,
+                        uuid: String, parent: String? = nil, payload: SyncPushPayload,
+                        baseUpdatedAt: String? = nil, now: String) throws {
         var op = PendingOperationRecord(opId: UUID().uuidString.lowercased(), entity: entity.rawValue,
-            opType: "create", targetUuid: uuid, issueUuid: parent,
-            payload: String(decoding: try JSONEncoder().encode(payload), as: UTF8.self), createdAt: now)
+            opType: type.rawValue, targetUuid: uuid, issueUuid: parent,
+            payload: String(decoding: try JSONEncoder().encode(payload), as: UTF8.self),
+            baseUpdatedAt: baseUpdatedAt, createdAt: now)
         try op.insert(db)
     }
 

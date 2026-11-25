@@ -164,20 +164,23 @@ final class OfflineFirstReadCacheTests: XCTestCase {
         XCTAssertEqual(page.total, 2)
     }
 
-    func testListTasksWithProjectFilterReturnsEmptyPageOffline() async throws {
+    func testListTasksUsesPendingAndCachedProjectMembershipOffline() async throws {
         try await seedTaskRows()
-        let dataSource = OfflineFirstTaskDataSource(
-            database: database,
-            remote: UnreachableTaskRemote()
-        )
+        let dataSource = OfflineFirstTaskDataSource(database: database, remote: UnreachableTaskRemote())
+        let request = CreateTaskRequest(title: "Pending", bodyMd: nil, status: "inbox", taskKind: nil,
+            scheduledStart: nil, scheduledEnd: nil, isAllDay: nil)
+        let assigned = try await dataSource.createTask(request, labels: [], projectIDs: [1], links: [], urls: [])
+        let unassigned = try await dataSource.createTask(request, labels: [], projectIDs: [], links: [], urls: [])
+        try await database.dbWriter.write { db in
+            try ProjectItemRecord(projectId: 1, issueId: 101).insert(db)
+        }
 
-        // Project membership has no full local mirror: offline, the honest
-        // answer is an empty page (same rule as memos).
-        let filtered = try await dataSource.listTasks(queryItems: [
-            URLQueryItem(name: "projectId", value: "1"),
-        ])
-        XCTAssertTrue(filtered.data.isEmpty)
-        XCTAssertEqual(filtered.total, 0)
+        for (filter, expected) in [("1", [assigned.id, 101]), ("2", []),
+                                   ("none", [unassigned.id]), ("none,1", [assigned.id, unassigned.id, 101])] {
+            let page = try await dataSource.listTasks(queryItems: [.init(name: "projectId", value: filter)])
+            XCTAssertEqual(Set(page.data.map(\.id)), Set(expected), "filter: \(filter)")
+            XCTAssertEqual(page.total, expected.count)
+        }
     }
 
     func testGetTaskAndCommentsFallBackToLocal() async throws {
@@ -216,7 +219,7 @@ final class OfflineFirstReadCacheTests: XCTestCase {
 
     // MARK: - Task writes offline
 
-    func testTaskWritesThrowOfflineReadOnlyErrorOffline() async throws {
+    func testTaskOnlineOnlyWritesThrowOfflineReadOnlyError() async throws {
         try await seedTaskRows()
         let dataSource = OfflineFirstTaskDataSource(
             database: database,
@@ -224,8 +227,8 @@ final class OfflineFirstReadCacheTests: XCTestCase {
         )
 
         do {
-            _ = try await dataSource.createTask(CreateTaskRequest(
-                title: "new", bodyMd: nil, status: nil, taskKind: nil,
+            _ = try await dataSource.createOnlineTask(CreateTaskRequest(
+                title: "Special flow", bodyMd: nil, status: nil, taskKind: nil,
                 scheduledStart: nil, scheduledEnd: nil, isAllDay: nil
             ))
             XCTFail("Expected OfflineReadOnlyError")
@@ -233,7 +236,7 @@ final class OfflineFirstReadCacheTests: XCTestCase {
 
         do {
             _ = try await dataSource.updateTask(id: 101, UpdateTaskRequest(
-                title: nil, bodyMd: nil, status: "done"
+                title: nil, bodyMd: "online-only", status: nil
             ))
             XCTFail("Expected OfflineReadOnlyError")
         } catch is OfflineReadOnlyError {}
@@ -264,7 +267,7 @@ final class OfflineFirstReadCacheTests: XCTestCase {
     @MainActor
     func testArticleTemplatePagesKeepAllCreationDefaults() async throws {
         var offsets: [Int] = []
-        let templates = try await ArticleTemplateCache.fetchAll { offset in
+        let templates = try await CreationTemplateCache.fetchAll { offset in
             offsets.append(offset)
             let template = Template(id: offset + 1, type: "template", templateTarget: "article", title: "Entry",
                 bodyMd: "Draft \(offset)", createdAt: "", updatedAt: "", isBookmarked: false, isDeleted: false,
@@ -274,6 +277,36 @@ final class OfflineFirstReadCacheTests: XCTestCase {
         XCTAssertEqual(offsets, [0, 1])
         XCTAssertEqual(IssueCreationDefaults(template: templates[1]),
                        IssueCreationDefaults(bodyMd: "Draft 1", labelNames: ["reading"], projectIds: [42]))
+    }
+
+    @MainActor
+    func testTaskTemplatesSurviveOfflineRefreshAndReopening() async throws {
+        let suite = "CreationTemplateCacheTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let cache = CreationTemplateCache(defaults: defaults)
+        let endpoint = "https://first.test"
+        let template = Template(id: 5, type: "template", templateTarget: "task", title: "Offline template",
+            bodyMd: "Task draft", createdAt: "", updatedAt: "", isBookmarked: false, isDeleted: false,
+            labels: ["work"], projectIds: [42])
+        _ = try await cache.refresh(.task, endpoint: endpoint) { offset in
+            TemplateListResponse(data: [template], total: 1, limit: 100, offset: offset)
+        }
+        let reopened = CreationTemplateCache(defaults: defaults)
+        do {
+            _ = try await reopened.refresh(.task, endpoint: endpoint) { _ in
+                throw URLError(.notConnectedToInternet)
+            }
+            XCTFail("Expected the offline fetch to fail")
+        } catch let error as URLError {
+            XCTAssertEqual(error.code, .notConnectedToInternet)
+        }
+        let saved = try XCTUnwrap(reopened.cached(.task, endpoint: endpoint)?.first)
+        XCTAssertEqual(saved.title, "Offline template")
+        XCTAssertEqual(IssueCreationDefaults(template: saved),
+                       IssueCreationDefaults(bodyMd: "Task draft", labelNames: ["work"], projectIds: [42]))
+        XCTAssertNil(reopened.cached(.article, endpoint: endpoint))
+        XCTAssertNil(reopened.cached(.task, endpoint: "https://other.test"))
     }
 
     func testArticleFiltersApplyToPendingAndCachedRows() async throws {

@@ -6,6 +6,7 @@ import { z } from 'zod';
 export const HealthResponseSchema = z.object({
   status: z.enum(['ok', 'error']).describe('Overall server health'),
   version: z.string().describe('API server version'),
+  supportsTaskSyncWrites: z.boolean().describe('Supports status-only updates and metadata-bearing Task creates in sync push'),
   uptimeSeconds: z.number().describe('Process uptime in seconds'),
   timestamp: z.string().describe('Current server time (ISO 8601)'),
   db: z
