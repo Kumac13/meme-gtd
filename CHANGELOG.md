@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.57.5 - 2026-11-26
+
+### Bug Fixes
+
+- Web・iOSのMemo・Task・Articleの詳細では、解除したリンクの追加・解除履歴を両方の項目から非表示にする。全体のActivity Logには両方の履歴を残す。
+
 ## 0.57.4 - 2026-11-25
 
 ### Bug Fixes
