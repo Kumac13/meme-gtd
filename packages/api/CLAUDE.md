@@ -8,7 +8,7 @@
 ## sync API の規約
 
 - push は op ごとに独立トランザクションで、部分成功が仕様。バッチ全体を1つのトランザクションで包まない（1件の conflict/skip が他の op を巻き込まない設計）
-- create 専用エンティティ（task / article / label / issue_label / link）の制約は `src/schemas/syncSchemas.ts` の superRefine と `packages/core/src/syncService.ts` の applyCreateOnly の2箇所に実装がある。変更時は両方更新する
+- create 専用エンティティ（article / label / issue_label / link）と task の status 専用更新の制約は `src/schemas/syncSchemas.ts` の superRefine と `packages/core/src/syncService.ts` の applyCreateOnly / applyTaskStatus の2箇所に実装がある。変更時は両方更新する
 - 冪等化は opId 台帳 + 自然キー再検出の二段構え。競合ルールとプロトコル全体は `docs/architecture.md`「同期アーキテクチャ」が正
 
 ## テスト

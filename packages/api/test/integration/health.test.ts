@@ -25,6 +25,7 @@ describe('Health Check', () => {
 
     assert.strictEqual(response.statusCode, 200);
     const body = JSON.parse(response.body);
+    assert.strictEqual(body.supportsTaskSyncWrites, true);
     assert.strictEqual(body.status, 'ok');
     assert.strictEqual(typeof body.version, 'string');
     assert.strictEqual(typeof body.uptimeSeconds, 'number');

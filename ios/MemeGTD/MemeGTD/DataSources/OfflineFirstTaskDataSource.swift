@@ -65,34 +65,99 @@ nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
         try await threads.comments(id: taskId) { try await remote.listComments(taskId: taskId) }
     }
 
-    // MARK: - Writes (online only)
+    // MARK: - Writes
 
     func createTask(_ request: CreateTaskRequest) async throws -> TaskItem {
+        try await createTask(request, labels: [], projectIDs: [], links: [], urls: [])
+    }
+
+    func createTask(_ request: CreateTaskRequest, labels: [String], projectIDs: [Int],
+                    links: [PendingLink], urls: [PendingUrlLink]) async throws -> TaskItem {
+        let task = try await database.dbWriter.write { db in
+            let uuid = UUIDv7.generate()
+            let now = ISO8601Millis.now()
+            try LocalTaskStore.insertTask(db, uuid: uuid, request: request, now: now)
+            for label in Set(labels).sorted() {
+                try db.execute(sql: "INSERT INTO issue_labels(issue_uuid, label_name) VALUES (?, ?)", arguments: [uuid, label])
+            }
+            let pendingLinks = try links.map { link in
+                if link.targetIssueId > 0 {
+                    return SyncPushTaskLink(targetId: link.targetIssueId, linkType: link.linkType.rawValue)
+                }
+                guard let target = try String.fetchOne(db, sql: "SELECT uuid FROM issues WHERE rowid = ? AND is_deleted = 0", arguments: [-link.targetIssueId]) else {
+                    throw OfflineThreadStore.PendingIdentity.awaitingSync
+                }
+                return SyncPushTaskLink(targetUuid: target, linkType: link.linkType.rawValue)
+            }
+            guard let row = try LocalTaskStore.fetchTaskRow(db, uuid: uuid) else { throw LocalTaskError.taskNotFound }
+            try OfflineThreadStore.enqueue(db, entity: .task, uuid: uuid,
+                payload: SyncPushPayload(bodyMd: request.bodyMd, createdAt: now, updatedAt: now,
+                    title: request.title, status: request.status, taskKind: request.taskKind,
+                    scheduledStart: request.scheduledStart, scheduledEnd: request.scheduledEnd, isAllDay: request.isAllDay,
+                    actualStart: row["actual_start"], labels: labels, projectIds: projectIDs,
+                    links: pendingLinks, urlLinks: urls.map { SyncPushTaskURL(url: $0.url, title: $0.title) }), now: now)
+            return try LocalTaskStore.taskItem(from: row, db: db)
+        }
+        onLocalWrite()
+        return task
+    }
+
+    func createOnlineTask(_ request: CreateTaskRequest) async throws -> TaskItem {
         try await onlineOnly { try await self.remote.createTask(request) }
     }
 
     func updateTask(id: Int, _ request: UpdateTaskRequest) async throws -> TaskItem {
-        try await onlineOnly { try await self.remote.updateTask(id: id, request) }
+        guard let status = request.status, request.title == nil, request.bodyMd == nil else {
+            let resolved = try await threads.serverIssueID(id)
+            return try await onlineOnly { try await self.remote.updateTask(id: resolved, request) }
+        }
+
+        let task = try await database.dbWriter.write { db -> TaskItem? in
+            if try LocalTaskStore.fetchTaskRow(db, id: id) == nil, id > 0,
+               let cached = try self.threads.cachedValue(db, kind: "task", id: id, as: TaskItem.self),
+               try Int.fetchOne(db, sql: "SELECT 1 FROM issues WHERE server_id = ?", arguments: [id]) == nil {
+                try LocalTaskStore.insertCachedTask(db, task: cached, uuid: "server-id:\(id)")
+            }
+            guard let row = try LocalTaskStore.fetchTaskRow(db, id: id) else { return nil }
+            let uuid: String = row["uuid"]
+            let now = ISO8601Millis.now()
+            try LocalTaskStore.updateTaskFields(db, uuid: uuid, currentStatus: row["status"],
+                                                title: nil, bodyMd: nil, status: status, now: now)
+            try OfflineThreadStore.enqueue(db, entity: .task, type: .update, uuid: uuid,
+                payload: SyncPushPayload(status: status), baseUpdatedAt: row["server_updated_at"], now: now)
+            guard let updated = try LocalTaskStore.fetchTaskRow(db, uuid: uuid) else { throw LocalTaskError.taskNotFound }
+            return try LocalTaskStore.taskItem(from: updated, db: db)
+        }
+        if let task {
+            onLocalWrite()
+            return task
+        }
+        return try await onlineOnly { try await self.remote.updateTask(id: id, request) }
     }
 
     func archiveToArticle(id: Int) async throws -> Int {
-        try await onlineOnly { try await self.remote.archiveToArticle(id: id) }
+        let resolved = try await threads.serverIssueID(id)
+        return try await onlineOnly { try await self.remote.archiveToArticle(id: resolved) }
     }
 
     func transferToMemo(id: Int) async throws -> Int {
-        try await onlineOnly { try await self.remote.transferToMemo(id: id) }
+        let resolved = try await threads.serverIssueID(id)
+        return try await onlineOnly { try await self.remote.transferToMemo(id: resolved) }
     }
 
     func deleteTask(id: Int) async throws {
-        try await onlineOnly { try await self.remote.deleteTask(id: id) }
+        let resolved = try await threads.serverIssueID(id)
+        return try await onlineOnly { try await self.remote.deleteTask(id: resolved) }
     }
 
     func bookmarkTask(id: Int) async throws -> TaskItem {
-        try await onlineOnly { try await self.remote.bookmarkTask(id: id) }
+        let resolved = try await threads.serverIssueID(id)
+        return try await onlineOnly { try await self.remote.bookmarkTask(id: resolved) }
     }
 
     func unbookmarkTask(id: Int) async throws -> TaskItem {
-        try await onlineOnly { try await self.remote.unbookmarkTask(id: id) }
+        let resolved = try await threads.serverIssueID(id)
+        return try await onlineOnly { try await self.remote.unbookmarkTask(id: resolved) }
     }
 
     func createComment(taskId: Int, _ request: CreateCommentRequest) async throws -> Comment {
@@ -100,9 +165,7 @@ nonisolated final class OfflineFirstTaskDataSource: TaskDataSource {
     }
 
     func updateComment(taskId: Int, commentId: Int, _ request: UpdateCommentRequest) async throws -> Comment {
-        let parent = try await threads.serverIssueID(taskId)
-        let resolved = try await threads.serverCommentID(commentId, parentID: parent)
-        return try await onlineOnly { try await self.remote.updateComment(taskId: parent, commentId: resolved, request) }
+        try await threads.edit(id: taskId, commentID: commentId, body: request.bodyMd)
     }
 
     func deleteComment(taskId: Int, commentId: Int) async throws {

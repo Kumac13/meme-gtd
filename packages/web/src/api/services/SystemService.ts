@@ -8,7 +8,7 @@ import { request as __request } from '../core/request';
 export class SystemService {
     /**
      * Health check
-     * Report server and database health. Returns 200 when healthy, 503 when the database is unreachable.
+     * Report server and database health and sync capabilities. Returns 200 when healthy, 503 when the database is unreachable.
      * @returns any Default Response
      * @throws ApiError
      */
@@ -21,6 +21,10 @@ export class SystemService {
          * API server version
          */
         version: string;
+        /**
+         * Supports status-only updates and metadata-bearing Task creates in sync push
+         */
+        supportsTaskSyncWrites: boolean;
         /**
          * Process uptime in seconds
          */

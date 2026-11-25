@@ -12,7 +12,7 @@ paths:
       summary: Health check
       tags:
         - System
-      description: Report server and database health. Returns 200 when healthy, 503 when the database is unreachable.
+      description: Report server and database health and sync capabilities. Returns 200 when healthy, 503 when the database is unreachable.
       responses:
         "200":
           description: Default Response
@@ -30,6 +30,9 @@ paths:
                   version:
                     type: string
                     description: API server version
+                  supportsTaskSyncWrites:
+                    type: boolean
+                    description: Supports status-only updates and metadata-bearing Task creates in sync push
                   uptimeSeconds:
                     type: number
                     description: Process uptime in seconds
@@ -57,6 +60,7 @@ paths:
                 required:
                   - status
                   - version
+                  - supportsTaskSyncWrites
                   - uptimeSeconds
                   - timestamp
                   - db
@@ -77,6 +81,9 @@ paths:
                   version:
                     type: string
                     description: API server version
+                  supportsTaskSyncWrites:
+                    type: boolean
+                    description: Supports status-only updates and metadata-bearing Task creates in sync push
                   uptimeSeconds:
                     type: number
                     description: Process uptime in seconds
@@ -104,6 +111,7 @@ paths:
                 required:
                   - status
                   - version
+                  - supportsTaskSyncWrites
                   - uptimeSeconds
                   - timestamp
                   - db
@@ -7476,7 +7484,7 @@ paths:
       summary: Apply client operations
       tags:
         - Sync
-      description: "Apply a batch of offline operations in order. memo/comment support create/update/delete; task/article/label/issue_label/link support create only (iOS Standalone -> Server bulk migration; send in dependency order: labels, then issues, then issue_labels/comments, then links). Each operation is idempotent via opId and applies in its own transaction (partial success). Replays are also detected without the opId ledger: task/article on uuid, label on name, issue_label/link on the existing pair — all reported as alreadyApplied. Operations with unresolvable references are skipped with a reason. Conflict rules for memo/comment: last-write-wins per record; concurrent memo body edits keep the server version and save the client body as a conflicted-copy memo; edits beat deletes in both directions."
+      description: Apply a batch of offline operations in order. Memo and comment support create, update, and delete. Task supports create and status-only update. Task creation applies labels, projects, issue links, and URL links in the same transaction. Article, label, issue_label, and link support create. For bulk migration, send labels, issues, issue_labels and comments, then links. Each operation is idempotent via opId and applies in its own transaction (partial success). Replays are also detected without the opId ledger for task and article creates by UUID, labels by name, and issue_label and link by the existing pair. Operations with unresolvable references are skipped with a reason. Memo and comment use last-write-wins per record and edits beat deletes in both directions. Concurrent memo body edits keep the server version and save the client body as a conflicted copy.
       requestBody:
         content:
           application/json:
@@ -7508,7 +7516,7 @@ paths:
                           - label
                           - issue_label
                           - link
-                        description: Entity kind this operation targets. memo/comment support create/update/delete; task/article/label/issue_label/link support create only (bulk migration).
+                        description: Entity kind this operation targets. memo/comment support create/update/delete; task supports create and status-only update; article/label/issue_label/link support create only.
                       type:
                         type: string
                         enum:
@@ -7560,7 +7568,7 @@ paths:
                               - someday
                               - done
                               - canceled
-                            description: Task status (task create only; default inbox)
+                            description: Task status (create default inbox; required for task update)
                           taskKind:
                             type: string
                             enum:
@@ -7585,6 +7593,58 @@ paths:
                           actualEnd:
                             type: string
                             description: Execution end stamp to preserve, ISO 8601 datetime (task create only)
+                          labels:
+                            type: array
+                            items:
+                              type: string
+                              minLength: 1
+                            description: Label names to attach on task create
+                          projectIds:
+                            type: array
+                            items:
+                              type: integer
+                              exclusiveMinimum: true
+                              minimum: 0
+                            description: Projects to attach on task create
+                          links:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                targetUuid:
+                                  type: string
+                                  minLength: 1
+                                  maxLength: 128
+                                targetId:
+                                  type: integer
+                                  exclusiveMinimum: true
+                                  minimum: 0
+                                linkType:
+                                  type: string
+                                  enum:
+                                    - parent
+                                    - child
+                                    - relates
+                                    - derived_from
+                              required:
+                                - linkType
+                              additionalProperties: false
+                            description: Issue links to attach on task create
+                          urlLinks:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                                  minLength: 1
+                                  description: Absolute URL; validated when applying the operation
+                                title:
+                                  type: string
+                              required:
+                                - url
+                              additionalProperties: false
+                            description: URL links to attach on task create
                           origin:
                             type: string
                             enum:

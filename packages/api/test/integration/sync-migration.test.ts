@@ -12,7 +12,7 @@ let uuidCounter = 0;
 const nextUuid = () => `00000000-0000-7000-9000-${String(++uuidCounter).padStart(12, '0')}`;
 
 // Bulk-migration entities of POST /api/sync/push (iOS Standalone -> Server
-// one-way migration): create-only task / article / label / issue_label / link.
+// one-way migration) and Task/Article offline writes.
 describe('Sync push bulk migration (POST /api/sync/push)', () => {
   let app: FastifyInstance;
   let cleanup: () => Promise<void>;
@@ -121,6 +121,100 @@ describe('Sync push bulk migration (POST /api/sync/push)', () => {
       assert.strictEqual(task.status, 'inbox');
       assert.strictEqual(task.taskKind, 'action');
       assert.strictEqual(task.bodyMd, '');
+    });
+
+    it('creates a standard task with selected metadata and replays without duplicates', async () => {
+      const target = await pushOne({
+        opId: nextOpId(), entity: 'memo', type: 'create', uuid: nextUuid(), payload: { bodyMd: 'Link target' },
+      });
+      const label = await pushOne({
+        opId: nextOpId(), entity: 'label', type: 'create', uuid: nextUuid(), payload: { name: 'selected' },
+      });
+      assert.strictEqual(label.status, 'applied');
+      const projectResponse = await app.inject({ method: 'POST', url: '/api/projects', payload: { name: 'Selected project' } });
+      assert.strictEqual(projectResponse.statusCode, 201);
+      const projectId = JSON.parse(projectResponse.body).id;
+
+      const create = {
+        opId: nextOpId(), entity: 'task', type: 'create', uuid: nextUuid(),
+        payload: {
+          title: 'Offline task',
+          bodyMd: 'Saved offline',
+          labels: ['selected'],
+          projectIds: [projectId],
+          links: [{ targetId: target.serverId, linkType: 'relates' }],
+          urlLinks: [{ url: 'https://example.com/selected', title: 'Reference' }],
+        },
+      };
+      const created = await pushOne(create);
+      assert.strictEqual(created.status, 'applied');
+      assert.strictEqual((await pushOne(create)).status, 'alreadyApplied');
+      assert.strictEqual((await pushOne({ ...create, opId: nextOpId() })).status, 'alreadyApplied');
+      const issueId = created.serverId;
+      assert.deepStrictEqual((await getJson(`/api/tasks/${issueId}`)).labels, ['selected']);
+      assert.deepStrictEqual((await getJson('/api/tasks')).data.find((row: { id: number }) => row.id === issueId).projectIds, [projectId]);
+      const links = await getJson(`/api/issues/${issueId}/links`);
+      assert.strictEqual(links.length, 1);
+      assert.strictEqual(links[0].targetIssue.id, target.serverId);
+      const urls = await getJson(`/api/issues/${issueId}/url-links`);
+      assert.strictEqual(urls.length, 1);
+      assert.strictEqual(urls[0].url, 'https://example.com/selected');
+      assert.strictEqual(urls[0].title, 'Reference');
+    });
+
+    it('rolls back creation when a selected attachment is missing and continues the batch', async () => {
+      const payload = { title: 'Task needing review', projectIds: [9999] };
+      const rejected = { opId: nextOpId(), entity: 'task', type: 'create', uuid: nextUuid(), payload };
+      const next = { ...rejected, opId: nextOpId(), uuid: nextUuid(), payload: { title: 'Next task' } };
+      const response = await push([rejected, next]);
+      assert.strictEqual(response.statusCode, 200);
+      const results = JSON.parse(response.body).results;
+      assert.strictEqual(results[0].status, 'skipped');
+      assert.match(results[0].reason, /Project.*not found/);
+      assert.strictEqual(results[1].status, 'applied');
+      assert.deepStrictEqual(await pushOne(rejected), results[0]);
+      assert.deepStrictEqual((await getJson('/api/tasks')).data.map((row: { title: string }) => row.title), ['Next task']);
+    });
+
+    it('applies and replays a task status-only update without changing the body', async () => {
+      const uuid = nextUuid();
+      const created = await pushOne({
+        opId: nextOpId(), entity: 'task', type: 'create', uuid,
+        payload: { title: 'Status transition', bodyMd: 'Preserve this', status: 'inbox' },
+      });
+      const op = { opId: nextOpId(), entity: 'task', type: 'update', uuid, payload: { status: 'next' } };
+      const updated = await pushOne(op);
+      assert.strictEqual(updated.status, 'applied');
+      const replay = await pushOne(op);
+      assert.strictEqual(replay.status, 'alreadyApplied');
+      assert.strictEqual(replay.updatedAt, updated.updatedAt);
+      const task = await getJson(`/api/tasks/${created.serverId}`);
+      assert.strictEqual(task.status, 'next');
+      assert.strictEqual(task.bodyMd, 'Preserve this');
+      assert.ok(task.actualStart);
+      assert.strictEqual((await activityLogEventTypes(created.serverId)).filter((event) => event === 'task.status_changed').length, 1);
+      assert.strictEqual((await push([{ ...op, payload: { status: 'done', bodyMd: 'unsupported' } }])).statusCode, 400);
+    });
+
+    it('applies queued comment edits on Task and Article once per operation', async () => {
+      const parents = [
+        { entity: 'task', route: 'tasks', payload: { title: 'Task thread' } },
+        { entity: 'article', route: 'articles', payload: { title: 'Article thread', origin: 'manual', bodyMd: 'Content' } },
+      ];
+      for (const { entity, route, payload } of parents) {
+        const issueUuid = nextUuid();
+        const parent = await pushOne({ opId: nextOpId(), entity, type: 'create', uuid: issueUuid, payload });
+        const uuid = nextUuid();
+        const create = {
+          opId: nextOpId(), entity: 'comment', type: 'create', uuid, issueUuid, payload: { bodyMd: 'Original' },
+        };
+        await pushOne(create);
+        const edit = { ...create, opId: nextOpId(), type: 'update', payload: { bodyMd: 'Edited after disconnecting' } };
+        assert.strictEqual((await pushOne(edit)).status, 'applied');
+        assert.strictEqual((await pushOne(edit)).status, 'alreadyApplied');
+        const comments = await getJson(`/api/${route}/${parent.serverId}/comments`);
+        assert.deepStrictEqual(comments.map((comment: { bodyMd: string }) => comment.bodyMd), ['Edited after disconnecting']);
+      }
     });
 
     it('rejects a task create without title (400)', async () => {

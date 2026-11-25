@@ -4,9 +4,7 @@ import Foundation
 /// projects) when a WRITE is attempted without connectivity. Kept separate
 /// from `APIError` so exhaustive switches over API errors stay untouched.
 ///
-/// Tasks, articles and projects are read-only offline (offline support plan
-/// Phase 7): unlike memos they have no outbox path, so a write that cannot
-/// reach the server is refused instead of being queued.
+/// Writes outside the outbox's supported set need a reachable server.
 nonisolated struct OfflineReadOnlyError: Error, LocalizedError {
     var errorDescription: String? {
         "Offline — this action requires a connection."

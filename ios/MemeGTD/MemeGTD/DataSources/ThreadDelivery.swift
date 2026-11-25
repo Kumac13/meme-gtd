@@ -57,8 +57,11 @@ nonisolated struct ThreadDelivery {
         var pendingComments = Set<Int>()
         for row in pending {
             if row["comment"] as String? == nil { parentPending = true }
-            if let local: Int = row["local_id"] { pendingComments.insert(-local) }
-            if let remote: Int = row["server_id"] { pendingComments.insert(remote) }
+            if let remote: Int = row["server_id"] {
+                pendingComments.insert(remote)
+            } else if let local: Int = row["local_id"] {
+                pendingComments.insert(-local)
+            }
         }
         return ThreadDelivery(historyAvailable: id < 0 || history != nil || (parent != nil && complete),
                               parentPending: parentPending, pendingComments: pendingComments,

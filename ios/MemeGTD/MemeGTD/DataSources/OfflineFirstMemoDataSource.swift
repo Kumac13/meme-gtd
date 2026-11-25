@@ -226,62 +226,15 @@ nonisolated final class OfflineFirstMemoDataSource: MemoDataSource {
     }
 
     func updateComment(memoId: Int, commentId: Int, _ request: UpdateCommentRequest) async throws -> Comment {
-        let now = ISO8601Millis.now()
-
-        let local: Comment? = try await database.dbWriter.write { db in
-            guard let memoRow = try LocalMemoStore.fetchMemoRow(db, id: memoId) else { return nil }
-            let memoUuid: String = memoRow["uuid"]
-            guard let row = try LocalMemoStore.fetchCommentRow(db, memoUuid: memoUuid, id: commentId) else {
-                throw LocalMemoError.commentNotFound
+        do {
+            return try await threads.edit(id: memoId, commentID: commentId, body: request.bodyMd)
+        } catch LocalMemoError.commentNotFound where memoId > 0 {
+            let hasLocalParent = try await database.dbWriter.read { db in
+                try LocalMemoStore.fetchMemoRow(db, id: memoId) != nil
             }
-            let uuid: String = row["uuid"]
-            let serverUpdatedAt: String? = row["server_updated_at"]
-
-            try LocalMemoStore.updateCommentBody(db, uuid: uuid, bodyMd: request.bodyMd, now: now)
-
-            // Outbox compression, same rules as memo updates: merge into the
-            // newest un-sent op for this comment (a queued create absorbs the
-            // edit; consecutive queued updates collapse into one).
-            if var queued = try PendingOperationRecord.fetchOne(
-                db,
-                sql: """
-                    SELECT * FROM pending_operations
-                    WHERE target_uuid = ? AND entity = 'comment' AND state = 'queued'
-                      AND op_type IN ('create', 'update')
-                    ORDER BY id DESC LIMIT 1
-                    """,
-                arguments: [uuid]
-            ) {
-                var payload = try Self.decodePayload(queued.payload) ?? SyncPushPayload()
-                payload.bodyMd = request.bodyMd
-                queued.payload = try Self.encodePayload(payload)
-                try queued.update(db)
-            } else {
-                try Self.enqueue(
-                    db,
-                    entity: "comment",
-                    opType: "update",
-                    targetUuid: uuid,
-                    issueUuid: memoUuid,
-                    payload: SyncPushPayload(bodyMd: request.bodyMd),
-                    baseUpdatedAt: serverUpdatedAt,
-                    now: now
-                )
-            }
-
-            guard let updated = try LocalMemoStore.fetchCommentRow(db, uuid: uuid) else {
-                throw LocalMemoError.commentNotFound
-            }
-            return LocalMemoStore.comment(from: updated, memoId: memoId)
-        }
-        if let local {
-            onLocalWrite()
-            return local
-        }
-        if memoId > 0 {
+            guard !hasLocalParent else { throw LocalMemoError.commentNotFound }
             return try await remote.updateComment(memoId: memoId, commentId: commentId, request)
         }
-        throw LocalMemoError.memoNotFound
     }
 
     func deleteComment(memoId: Int, commentId: Int) async throws {

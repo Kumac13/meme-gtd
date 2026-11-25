@@ -101,7 +101,7 @@ final class DataSourceProvider: ObservableObject {
 
         // Server mode: always synced and offline-capable.
         search = RemoteSearchDataSource()
-        labels = RemoteLabelDataSource()
+        labels = RemoteLabelDataSource(localFallback: LocalLabelDataSource(database: AppDatabase.shared))
         issueRelations = RemoteIssueRelationsDataSource()
         templates = RemoteTemplateDataSource()
         let scheduler = SharedSync.scheduler(for: AppDatabase.shared)

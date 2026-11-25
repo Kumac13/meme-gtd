@@ -17,9 +17,8 @@ nonisolated enum LocalTaskError: Error, LocalizedError {
 }
 
 /// Local (GRDB) reads and writes for tasks, shared by
-/// `OfflineFirstTaskDataSource` (read-only fallback while Offline Sync is on)
-/// and `LocalTaskDataSource` (Standalone mode) — offline support plan Phase 9
-/// extracted the read side out of the offline-first source unchanged.
+/// Server mode's `OfflineFirstTaskDataSource` and Standalone mode's
+/// `LocalTaskDataSource`.
 ///
 /// This type knows NOTHING about the outbox or the network: every function
 /// operates on a `Database` handle inside the caller's transaction.
@@ -240,7 +239,7 @@ nonisolated enum LocalTaskStore {
         )
     }
 
-    // MARK: - Writes (Standalone only; semantics mirror taskRepository.ts)
+    // MARK: - Writes (semantics mirror taskRepository.ts)
 
     /// Current local wall-clock time in the "YYYY-MM-DDTHH:mm:00" shape the
     /// server writes into actual_start / actual_end (taskRepository
@@ -278,6 +277,21 @@ nonisolated enum LocalTaskStore {
             record.actualStart = localDateTimeString()
         }
         try record.insert(db)
+    }
+
+    // A REST-cached task can be edited before the change feed supplies its UUID.
+    static func insertCachedTask(_ db: Database, task: TaskItem, uuid: String) throws {
+        let record = IssueRecord(uuid: uuid, serverId: Int64(task.id), type: task.type,
+            title: task.title, bodyMd: task.bodyMd, status: task.status, scheduledOn: task.scheduledOn,
+            scheduledStart: task.scheduledStart, scheduledEnd: task.scheduledEnd, isAllDay: task.isAllDay,
+            actualStart: task.actualStart, actualEnd: task.actualEnd, startTime: task.startTime,
+            endTime: task.endTime, endDate: task.endDate, duration: task.duration, taskKind: task.taskKind,
+            isBookmarked: task.isBookmarked, isDeleted: task.isDeleted, createdAt: task.createdAt,
+            updatedAt: task.updatedAt, serverUpdatedAt: task.updatedAt)
+        try record.insert(db)
+        for label in Set(task.labels) {
+            try db.execute(sql: "INSERT INTO issue_labels(issue_uuid, label_name) VALUES (?, ?)", arguments: [uuid, label])
+        }
     }
 
     /// Applies the partial update semantics of taskRepository.updateTask for

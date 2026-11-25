@@ -59,7 +59,7 @@ export type SyncChangesResponse = z.infer<typeof SyncChangesResponseSchema>;
  * Entities that only accept create operations through push (iOS Standalone ->
  * Server one-way bulk migration).
  */
-const CREATE_ONLY_ENTITIES = ['task', 'article', 'label', 'issue_label', 'link'] as const;
+const CREATE_ONLY_ENTITIES = ['article', 'label', 'issue_label', 'link'] as const;
 
 /**
  * One client-side pending operation to apply on the server.
@@ -70,7 +70,7 @@ export const SyncPushOperationSchema = z
     entity: z
       .enum(['memo', 'comment', 'task', 'article', 'label', 'issue_label', 'link'])
       .describe(
-        'Entity kind this operation targets. memo/comment support create/update/delete; task/article/label/issue_label/link support create only (bulk migration).'
+        'Entity kind this operation targets. memo/comment support create/update/delete; task supports create and status-only update; article/label/issue_label/link support create only.'
       ),
     type: z.enum(['create', 'update', 'delete']).describe('Operation type'),
     uuid: z.string().min(1).max(128).describe('Sync identity of the target row (client-minted UUIDv7 for offline-created rows). Echoed back for entities without a server uuid column (label / issue_label / link).'),
@@ -90,7 +90,7 @@ export const SyncPushOperationSchema = z
         status: z
           .enum(['inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled'])
           .optional()
-          .describe('Task status (task create only; default inbox)'),
+          .describe('Task status (create default inbox; required for task update)'),
         taskKind: z.enum(['event', 'action']).optional().describe('Task kind (task create only; default action)'),
         scheduledStart: z.string().optional().describe('Scheduled start, ISO 8601 datetime (task create only)'),
         scheduledEnd: z.string().optional().describe('Scheduled end, ISO 8601 datetime (task create only)'),
@@ -98,6 +98,18 @@ export const SyncPushOperationSchema = z
         scheduledOn: z.string().optional().describe('Deprecated scheduled date YYYY-MM-DD (task create only, backward compatibility)'),
         actualStart: z.string().optional().describe('Execution start stamp to preserve, ISO 8601 datetime (task create only)'),
         actualEnd: z.string().optional().describe('Execution end stamp to preserve, ISO 8601 datetime (task create only)'),
+        labels: z.array(z.string().min(1)).optional().describe('Label names to attach on task create'),
+        projectIds: z.array(z.number().int().positive()).optional().describe('Projects to attach on task create'),
+        links: z.array(z.object({
+          targetUuid: z.string().min(1).max(128).optional(),
+          targetId: z.number().int().positive().optional(),
+          linkType: z.enum(['parent', 'child', 'relates', 'derived_from']),
+        }).refine(({ targetUuid, targetId }) => (targetUuid === undefined) !== (targetId === undefined),
+          'Exactly one link target is required')).optional().describe('Issue links to attach on task create'),
+        urlLinks: z.array(z.object({
+          url: z.string().min(1).describe('Absolute URL; validated when applying the operation'),
+          title: z.string().optional(),
+        })).optional().describe('URL links to attach on task create'),
         origin: z.enum(['web', 'manual']).optional().describe('Article origin; defaults to web for legacy clients'),
         meta: z
           .object({
@@ -122,11 +134,18 @@ export const SyncPushOperationSchema = z
       .describe('Operation payload; omitted for delete. Which fields apply depends on entity.'),
   })
   .superRefine((op, ctx) => {
-    if ((CREATE_ONLY_ENTITIES as readonly string[]).includes(op.entity) && op.type !== 'create') {
+    if (op.entity === 'task' && op.type === 'update') {
+      if (!op.payload?.status || Object.keys(op.payload).some((key) => key !== 'status')) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['payload'], message: 'Task update requires only payload.status' });
+      }
+      return;
+    }
+    if ((op.entity === 'task' || (CREATE_ONLY_ENTITIES as readonly string[]).includes(op.entity)) && op.type !== 'create') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['type'],
-        message: `entity '${op.entity}' only supports create operations`,
+        message: op.entity === 'task' ? 'task only supports create and status-only update operations'
+          : `entity '${op.entity}' only supports create operations`,
       });
       return;
     }

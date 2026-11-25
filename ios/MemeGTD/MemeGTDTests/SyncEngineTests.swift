@@ -10,6 +10,7 @@ private final class MockTransport: SyncTransport, @unchecked Sendable {
     var changePages: [SyncChangesResponse] = []
     var pushResponder: (@Sendable (SyncPushRequest) -> SyncPushResponse)?
     var pushError: Error?
+    var taskSyncWritesSupported = true
 
     private(set) var pushedRequests: [SyncPushRequest] = []
     private(set) var fetchedSinces: [Int] = []
@@ -22,6 +23,12 @@ private final class MockTransport: SyncTransport, @unchecked Sendable {
             return SyncChangesResponse(changes: [], latestSeq: since, hasMore: false)
         }
         return changePages.removeFirst()
+    }
+
+    func supportsTaskSyncWrites() async throws -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return taskSyncWritesSupported
     }
 
     func push(_ request: SyncPushRequest) async throws -> SyncPushResponse {
@@ -110,6 +117,181 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertFalse(after.hasPending)
         XCTAssertEqual(after.comments.map(\.bodyMd), ["reply"])
         XCTAssertGreaterThan(try XCTUnwrap(after.serverID), 0)
+    }
+
+    func testOfflineTaskAndEditedRepliesSurviveReopenAndPartialDelivery() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let path = directory.appendingPathComponent("offline.sqlite").path
+        let taskID: Int
+        let articleID: Int
+        do {
+            let disk = try AppDatabase(DatabaseQueue(path: path))
+            let tasks = OfflineFirstTaskDataSource(database: disk, remote: RemoteTaskDataSource())
+            let articles = OfflineFirstArticleDataSource(database: disk, remote: RemoteArticleDataSource())
+            let request = CreateTaskRequest(title: "Offline task", bodyMd: "Task body", status: "inbox",
+                taskKind: "event", scheduledStart: nil, scheduledEnd: nil, isAllDay: false)
+            let task = try await tasks.createTask(request, labels: ["selected"], projectIDs: [7],
+                links: [PendingLink(targetIssueId: 44, linkType: .relates, title: "Existing issue")],
+                urls: [PendingUrlLink(url: "https://example.com", title: "Reference")])
+            taskID = task.id
+            XCTAssertLessThan(taskID, 0)
+            let updated = try await tasks.updateTask(id: taskID, UpdateTaskRequest(title: nil, bodyMd: nil, status: "next"))
+            XCTAssertEqual(updated.status, "next")
+            let reply = try await tasks.createComment(taskId: taskID, CreateCommentRequest(bodyMd: "Task draft"))
+            _ = try await tasks.updateComment(taskId: taskID, commentId: reply.id, UpdateCommentRequest(bodyMd: "Task edited"))
+            let article = try await articles.createArticle(CreateManualArticleRequest(title: "Offline article", bodyMd: "Body", labels: nil))
+            articleID = article.id
+            let articleReply = try await articles.createComment(articleId: articleID, CreateCommentRequest(bodyMd: "Article draft"))
+            _ = try await articles.updateComment(articleId: articleID, commentId: articleReply.id, UpdateCommentRequest(bodyMd: "Article edited"))
+        }
+
+        let disk = try AppDatabase(DatabaseQueue(path: path))
+        let tasks = OfflineFirstTaskDataSource(database: disk, remote: RemoteTaskDataSource())
+        let task = try await tasks.getTask(id: taskID)
+        XCTAssertEqual(task.status, "next")
+        XCTAssertEqual(task.labels, ["selected"])
+        let before = try await disk.dbWriter.read { db in try ThreadDelivery.read(db, id: taskID, endpoint: "test") }
+        XCTAssertTrue(before.parentPending)
+        XCTAssertEqual(before.pendingComments, Set(before.comments.map(\.id)))
+        XCTAssertEqual(before.comments.map(\.bodyMd), ["Task edited"])
+
+        transport.pushResponder = { request in
+            let accepted = request.operations.filter { $0.payload?.bodyMd != "Article edited" }
+            return SyncPushResponse(results: accepted.map { op in
+                let id = op.entity == .task ? 41 : op.entity == .article ? 42 : 43
+                return SyncPushOperationResult(opId: op.opId, status: .applied, uuid: op.uuid,
+                    serverId: id, updatedAt: nil, conflictCopyUuid: nil)
+            }, latestSeq: 0)
+        }
+        let sync = SyncEngine(database: disk, transport: transport)
+        let partial = await sync.syncNow()
+        XCTAssertEqual(partial.remainingOutboxCount, 1)
+        let request = try XCTUnwrap(transport.pushedRequests.first)
+        let created = try XCTUnwrap(request.operations.first)
+        XCTAssertEqual(created.payload?.labels, ["selected"])
+        XCTAssertEqual(created.payload?.projectIds, [7])
+        XCTAssertEqual(created.payload?.links?.first?.targetId, 44)
+        XCTAssertEqual(created.payload?.urlLinks?.first?.title, "Reference")
+        XCTAssertEqual(request.operations.filter { $0.entity == .task }.map(\.type), [.create, .update])
+        XCTAssertEqual(request.operations.filter { $0.entity == .comment }.map { $0.payload?.bodyMd }, ["Task edited", "Article edited"])
+        let taskDelivered = try await disk.dbWriter.read { db in try ThreadDelivery.read(db, id: taskID, endpoint: "test") }
+        let articlePartial = try await disk.dbWriter.read { db in try ThreadDelivery.read(db, id: articleID, endpoint: "test") }
+        XCTAssertFalse(taskDelivered.hasPending)
+        XCTAssertTrue(articlePartial.hasPending)
+        XCTAssertEqual(articlePartial.comments.map(\.bodyMd), ["Article edited"])
+
+        transport.pushResponder = nil
+        let complete = await sync.syncNow()
+        XCTAssertEqual(complete.remainingOutboxCount, 0)
+        let articleDelivered = try await disk.dbWriter.read { db in try ThreadDelivery.read(db, id: articleID, endpoint: "test") }
+        XCTAssertFalse(articleDelivered.hasPending)
+        XCTAssertEqual(articleDelivered.comments.map(\.bodyMd), ["Article edited"])
+        XCTAssertEqual(transport.pushedRequests.last?.operations.first?.opId, request.operations.last?.opId)
+    }
+
+    func testEditOfRESTCachedCommentWaitsForUUIDWithoutLosingDraft() async throws {
+        let id = 80
+        let commentID = 91
+        let cached = Comment(id: commentID, issueId: id, bodyMd: "From REST", createdAt: "start", updatedAt: "start")
+        let endpoint = "cached-thread"
+        let threads = OfflineThreadStore(database: database, onLocalWrite: {}, endpoint: endpoint)
+        let initial = try await threads.comments(id: id) { [cached] }
+        XCTAssertEqual(initial.map(\.id), [commentID])
+        let changed = try await threads.edit(id: id, commentID: commentID, body: "Edit after disconnect")
+        XCTAssertEqual(changed.id, commentID)
+        let before = try await database.dbWriter.read { db in try ThreadDelivery.read(db, id: id, endpoint: endpoint) }
+        XCTAssertEqual(before.pendingComments, [commentID])
+        XCTAssertEqual(before.comments.map(\.bodyMd), ["Edit after disconnect"])
+
+        transport.changePages = [SyncChangesResponse(changes: [
+            issueChange(seq: id, uuid: "parent-uuid", type: "task", body: "Parent"),
+            SyncChange(serverSeq: 81, entity: .comment, op: .upsert, data: [
+                "uuid": .string("comment-uuid"), "id": .number(Double(commentID)), "issueUuid": .string("parent-uuid"),
+                "issueId": .number(Double(id)), "bodyMd": .string("From REST"), "createdAt": .string("start"),
+                "updatedAt": .string("start"),
+            ]),
+        ], latestSeq: 81, hasMore: false)]
+        let pulled = await engine.syncNow()
+        XCTAssertEqual(pulled.remainingOutboxCount, 1)
+        XCTAssertTrue(transport.pushedRequests.isEmpty)
+        let afterPull = try await database.dbWriter.read { db in try ThreadDelivery.read(db, id: id, endpoint: endpoint) }
+        XCTAssertEqual(afterPull.comments.map(\.bodyMd), ["Edit after disconnect"])
+        XCTAssertEqual(afterPull.pendingComments, [commentID])
+
+        transport.pushResponder = { request in
+            SyncPushResponse(results: request.operations.map { op in
+                SyncPushOperationResult(opId: op.opId, status: .applied, uuid: op.uuid,
+                    serverId: commentID, updatedAt: nil, conflictCopyUuid: nil)
+            }, latestSeq: 81)
+        }
+        let delivered = await engine.syncNow()
+        XCTAssertEqual(delivered.remainingOutboxCount, 0)
+        let operation = try XCTUnwrap(transport.pushedRequests.first?.operations.first)
+        XCTAssertEqual(operation.uuid, "comment-uuid")
+        XCTAssertEqual(operation.issueUuid, "parent-uuid")
+        XCTAssertEqual(operation.payload?.bodyMd, "Edit after disconnect")
+    }
+
+    func testLegacyServerKeepsExtendedTaskWritesAndDependentCommentWhileSyncingMemo() async throws {
+        transport.taskSyncWritesSupported = false
+        let tasks = OfflineFirstTaskDataSource(database: database, remote: RemoteTaskDataSource())
+        let request = CreateTaskRequest(title: "Pending Task", bodyMd: "Task body", status: "inbox",
+            taskKind: nil, scheduledStart: nil, scheduledEnd: nil, isAllDay: nil)
+        let task = try await tasks.createTask(request, labels: ["kept"], projectIDs: [],
+            links: [], urls: [PendingUrlLink(url: "https://example.com/keep", title: nil)])
+        _ = try await tasks.updateTask(id: task.id, UpdateTaskRequest(title: nil, bodyMd: nil, status: "next"))
+        _ = try await tasks.createComment(taskId: task.id, CreateCommentRequest(bodyMd: "Wait for parent"))
+        _ = try await dataSource.createMemo(CreateMemoRequest(bodyMd: "Sync on the legacy server"))
+
+        let legacy = await engine.syncNow()
+        XCTAssertTrue(legacy.errors.isEmpty)
+        XCTAssertEqual(legacy.pushedCount, 1)
+        XCTAssertEqual(legacy.remainingOutboxCount, 3)
+        XCTAssertEqual(transport.pushedRequests.first?.operations.map(\.entity), [.memo])
+
+        transport.taskSyncWritesSupported = true
+        transport.pushResponder = { request in
+            SyncPushResponse(results: request.operations.map { op in
+                SyncPushOperationResult(opId: op.opId, status: .applied, uuid: op.uuid,
+                    serverId: op.entity == .task ? 80 : 81, updatedAt: nil, conflictCopyUuid: nil)
+            }, latestSeq: 0)
+        }
+        let upgraded = await engine.syncNow()
+        XCTAssertEqual(upgraded.pushedCount, 3)
+        XCTAssertEqual(upgraded.remainingOutboxCount, 0)
+        let operations = try XCTUnwrap(transport.pushedRequests.last?.operations)
+        XCTAssertEqual(operations.map(\.entity), [.task, .task, .comment])
+        XCTAssertEqual(operations[0].payload?.labels, ["kept"])
+        XCTAssertEqual(operations[0].payload?.urlLinks?.first?.url, "https://example.com/keep")
+        XCTAssertEqual(operations[1].payload?.status, "next")
+    }
+
+    func testRejectedTaskCreationKeepsSelectedMetadataForReview() async throws {
+        let tasks = OfflineFirstTaskDataSource(database: database, remote: RemoteTaskDataSource())
+        let request = CreateTaskRequest(title: "Needs review", bodyMd: "Original draft", status: nil,
+            taskKind: nil, scheduledStart: nil, scheduledEnd: nil, isAllDay: nil)
+        let task = try await tasks.createTask(request, labels: ["removed-label"], projectIDs: [7],
+            links: [], urls: [PendingUrlLink(url: "https://example.com/keep", title: nil)])
+        transport.pushResponder = { request in
+            SyncPushResponse(results: request.operations.map { op in
+                SyncPushOperationResult(opId: op.opId, status: .skipped, uuid: op.uuid,
+                    serverId: nil, updatedAt: nil, conflictCopyUuid: nil, reason: "Label removed")
+            }, latestSeq: 0)
+        }
+        let result = await engine.syncNow()
+        XCTAssertEqual(result.remainingOutboxCount, 0)
+        let review = try await database.dbWriter.read { db in
+            try PendingOperationRecord.fetchOne(db, sql: "SELECT * FROM pending_operations WHERE state = 'review'")
+        }
+        let payload = try JSONDecoder().decode(SyncPushPayload.self, from: Data(try XCTUnwrap(review?.payload).utf8))
+        XCTAssertEqual(payload.bodyMd, "Original draft")
+        XCTAssertEqual(payload.labels, ["removed-label"])
+        XCTAssertEqual(payload.projectIds, [7])
+        XCTAssertEqual(payload.urlLinks?.first?.url, "https://example.com/keep")
+        let saved = try await tasks.getTask(id: task.id)
+        XCTAssertEqual(saved.bodyMd, "Original draft")
     }
 
     func testWritesEnqueueInFIFOOrderAndUpdatesMerge() async throws {

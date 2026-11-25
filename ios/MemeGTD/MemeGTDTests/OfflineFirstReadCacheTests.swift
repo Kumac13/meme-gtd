@@ -216,7 +216,7 @@ final class OfflineFirstReadCacheTests: XCTestCase {
 
     // MARK: - Task writes offline
 
-    func testTaskWritesThrowOfflineReadOnlyErrorOffline() async throws {
+    func testTaskOnlineOnlyWritesThrowOfflineReadOnlyError() async throws {
         try await seedTaskRows()
         let dataSource = OfflineFirstTaskDataSource(
             database: database,
@@ -224,8 +224,8 @@ final class OfflineFirstReadCacheTests: XCTestCase {
         )
 
         do {
-            _ = try await dataSource.createTask(CreateTaskRequest(
-                title: "new", bodyMd: nil, status: nil, taskKind: nil,
+            _ = try await dataSource.createOnlineTask(CreateTaskRequest(
+                title: "Special flow", bodyMd: nil, status: nil, taskKind: nil,
                 scheduledStart: nil, scheduledEnd: nil, isAllDay: nil
             ))
             XCTFail("Expected OfflineReadOnlyError")
@@ -233,7 +233,7 @@ final class OfflineFirstReadCacheTests: XCTestCase {
 
         do {
             _ = try await dataSource.updateTask(id: 101, UpdateTaskRequest(
-                title: nil, bodyMd: nil, status: "done"
+                title: nil, bodyMd: "online-only", status: nil
             ))
             XCTFail("Expected OfflineReadOnlyError")
         } catch is OfflineReadOnlyError {}

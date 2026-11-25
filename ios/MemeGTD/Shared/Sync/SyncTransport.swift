@@ -9,9 +9,17 @@ nonisolated protocol SyncTransport: Sendable {
     /// by serverSeq.
     func fetchChanges(since: Int, limit: Int) async throws -> SyncChangesResponse
 
+    /// Whether this server accepts the additional Task write payloads.
+    func supportsTaskSyncWrites() async throws -> Bool
+
     /// POST /api/sync/push — applies the client's pending operations (FIFO,
     /// idempotent per opId).
     func push(_ request: SyncPushRequest) async throws -> SyncPushResponse
+}
+
+extension SyncTransport {
+    // Test transports that exercise the current contract support Task writes.
+    func supportsTaskSyncWrites() async throws -> Bool { true }
 }
 
 /// Production transport: a thin wrapper around the shared APIClient.
@@ -26,6 +34,18 @@ nonisolated struct APISyncTransport: SyncTransport {
                 URLQueryItem(name: "limit", value: String(limit)),
             ]
         )
+    }
+
+    func supportsTaskSyncWrites() async throws -> Bool {
+        struct HealthCapabilities: Decodable {
+            let supportsTaskSyncWrites: Bool?
+        }
+        do {
+            let health: HealthCapabilities = try await client.get(path: "/api/health")
+            return health.supportsTaskSyncWrites == true
+        } catch APIError.serverError(404, _) {
+            return false
+        }
     }
 
     func push(_ request: SyncPushRequest) async throws -> SyncPushResponse {

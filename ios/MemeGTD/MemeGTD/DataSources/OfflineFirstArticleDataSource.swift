@@ -60,7 +60,7 @@ nonisolated final class OfflineFirstArticleDataSource: ArticleDataSource {
         return try await threads.loadBeforeInitialPull(kind: "article", id: id) { try await remote.getArticle(id: id) }
     }
 
-    // MARK: - Writes (online only)
+    // MARK: - Writes
 
     func createArticle(_ request: CreateManualArticleRequest) async throws -> Article {
         let article = try await database.dbWriter.write { db in
@@ -109,9 +109,7 @@ nonisolated final class OfflineFirstArticleDataSource: ArticleDataSource {
     }
 
     func updateComment(articleId: Int, commentId: Int, _ request: UpdateCommentRequest) async throws -> Comment {
-        let parent = try await threads.serverIssueID(articleId)
-        let resolved = try await threads.serverCommentID(commentId, parentID: parent)
-        return try await onlineWrite { try await remote.updateComment(articleId: parent, commentId: resolved, request) }
+        try await threads.edit(id: articleId, commentID: commentId, body: request.bodyMd)
     }
 
     func deleteComment(articleId: Int, commentId: Int) async throws {

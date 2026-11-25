@@ -44,8 +44,8 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
     var issueLabels: [String] { task?.labels ?? [] }
 
     let taskId: Int
-    var metadataIssueId: Int { taskId }
-    var relationIssueId: Int { taskId }
+    var metadataIssueId: Int { task?.id ?? taskId }
+    var relationIssueId: Int { task?.id ?? taskId }
     var taskStore: TaskStore?
 
     /// Data source seam. Views overwrite this with the app-wide provider from
@@ -85,7 +85,7 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
         do {
             let task: TaskItem = try await dataSources.tasks.getTask(id: taskId)
             let commentList: [Comment] = try await dataSources.tasks.listComments(taskId: taskId)
-            let activities = (try? await dataSources.issueRelations.listActivityLog(issueId: taskId)) ?? activityLogs
+            let activities = (try? await dataSources.issueRelations.listActivityLog(issueId: relationIssueId)) ?? activityLogs
             return (task, commentList, activities)
         } catch {
             self.error = error.localizedDescription
@@ -103,7 +103,7 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
 
     private func loadActivityLog() async {
         do {
-            activityLogs = try await dataSources.issueRelations.listActivityLog(issueId: taskId)
+            activityLogs = try await dataSources.issueRelations.listActivityLog(issueId: relationIssueId)
         } catch {
             // Non-critical
         }
@@ -153,7 +153,11 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
             } else {
                 taskStore?.updateItem(updated)
             }
-            await loadActivityLog()
+            if status != nil, title == nil, bodyMd == nil, dataSources.syncScheduler != nil {
+                Task { await loadActivityLog() }
+            } else {
+                await loadActivityLog()
+            }
             if bodyMd != nil {
                 await loadIssueLinks()
             }
@@ -208,7 +212,7 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
             if let index = comments.firstIndex(where: { $0.id == commentId }) {
                 comments[index] = updated
             }
-            await loadIssueLinks()
+            Task { await loadIssueLinks() }
             return true
         } catch {
             self.error = error.localizedDescription

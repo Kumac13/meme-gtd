@@ -83,9 +83,8 @@ nonisolated struct SyncChangesResponse: Codable {
     let hasMore: Bool
 }
 
-/// memo / comment support create/update/delete; the bulk-migration entities
-/// (task / article / label / issueLabel / link) support create only
-/// (iOS Standalone -> Server one-way migration, Phase 12).
+/// Memo and comment support create, update, and delete. Task supports create
+/// and status-only update. Article, label, issueLabel, and link support create.
 nonisolated enum SyncPushEntity: String, Codable {
     case memo
     case comment
@@ -109,6 +108,17 @@ nonisolated struct SyncPushArticleMeta: Codable {
     var archivedAt: String?
 }
 
+nonisolated struct SyncPushTaskLink: Codable {
+    var targetUuid: String?
+    var targetId: Int?
+    let linkType: String
+}
+
+nonisolated struct SyncPushTaskURL: Codable {
+    let url: String
+    let title: String?
+}
+
 /// Union of the per-entity payload shapes; which fields apply depends on
 /// the operation's entity (see syncSchemas.ts for the required sets).
 nonisolated struct SyncPushPayload: Codable {
@@ -128,6 +138,10 @@ nonisolated struct SyncPushPayload: Codable {
     var scheduledOn: String?
     var actualStart: String?
     var actualEnd: String?
+    var labels: [String]?
+    var projectIds: [Int]?
+    var links: [SyncPushTaskLink]?
+    var urlLinks: [SyncPushTaskURL]?
     // article
     var origin: String?
     var meta: SyncPushArticleMeta?
