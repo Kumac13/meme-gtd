@@ -109,7 +109,7 @@ export const createProjectItem = (
 };
 
 /**
- * List all project items for a project with issue information
+ * List project work items with issue information. Template links store creation defaults.
  * Ordered by position (ascending)
  * @param db Database instance
  * @param projectId Project ID
@@ -142,6 +142,7 @@ export const listProjectItems = (
     FROM project_items pi
     JOIN issues i ON pi.issue_id = i.id
     WHERE pi.project_id = ? AND i.is_deleted = 0
+      AND i.type IN ('task', 'memo', 'article')
     ORDER BY pi.position ASC
   `);
 

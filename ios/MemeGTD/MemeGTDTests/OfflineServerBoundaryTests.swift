@@ -13,6 +13,15 @@ private final class ServerFixtureProtocol: URLProtocol {
         let status: Int
         let body: String
         switch (url.host, url.path, request.httpMethod) {
+        case ("a.test", "/api/projects", "GET"):
+            status = 200
+            body = #"[{"id":7,"name":"Sample","status":"active","createdAt":"now"}]"#
+        case ("a.test", "/api/projects/7", "GET"):
+            status = 500
+            body = #"{"error":"Project detail failed"}"#
+        case ("a.test", "/api/tasks/42", "PATCH"):
+            status = 200
+            body = #"{"id":42,"type":"task","title":"Edited","bodyMd":"changed","status":"open","taskKind":"action","isAllDay":false,"isBookmarked":false,"isDeleted":false,"createdAt":"now","updatedAt":"now","labels":[]}"#
         case ("a.test", "/api/articles/42", "PATCH"):
             status = 200
             body = #"{"id":42,"type":"article","title":"Edited","bodyMd":"changed","origin":"manual","createdAt":"now","updatedAt":"now","isBookmarked":false,"isDeleted":false}"#
@@ -76,6 +85,36 @@ final class OfflineServerBoundaryTests: XCTestCase {
         XCTAssertTrue(healthy)
         let healthyB = await candidate.probeServerReachability()
         XCTAssertFalse(healthyB)
+    }
+
+    @MainActor
+    func testProjectDetailFailureKeepsTaskEditsAvailable() async throws {
+        let api = client("a.test")
+        let endpoint = api.baseUrl
+        let reachable = expectation(forNotification: .apiServerReachable, object: nil) { note in
+            note.object as? String == endpoint
+        }
+        reachable.expectedFulfillmentCount = 3
+        let healthError = expectation(forNotification: .apiHealthError, object: nil) { note in
+            note.object as? String == endpoint
+        }
+        healthError.isInverted = true
+
+        let healthy = await api.probeServerReachability()
+        XCTAssertTrue(healthy)
+        let database = try AppDatabase.makeInMemory()
+        let projects = RemoteProjectDataSource(client: api)
+        do {
+            try await projects.refreshMembershipSnapshot(database)
+            XCTFail("Expected the project detail request to fail")
+        } catch APIError.serverError(500, _) {
+            // The project request surfaces its own HTTP error.
+        }
+
+        let tasks = RemoteTaskDataSource(client: api)
+        let updated = try await tasks.updateTask(id: 42, UpdateTaskRequest(title: "Edited", bodyMd: "changed", status: nil))
+        XCTAssertEqual(updated.title, "Edited")
+        await fulfillment(of: [reachable, healthError], timeout: 0.5)
     }
 
     func testReopeningServerKeepsItsQueuedParentRepliesAndCursor() async throws {

@@ -26,14 +26,14 @@ final class ConnectivityMonitor: ObservableObject {
     private let recheckInterval: TimeInterval = 30
 
     private init() {
-        for name in [Notification.Name.apiServerReachable, .apiServerUnreachable, .apiServerError, .apiHealthUnreachable, .apiHealthReady] {
+        for name in [Notification.Name.apiServerReachable, .apiServerUnreachable, .apiHealthError, .apiHealthUnreachable, .apiHealthReady] {
             observers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { note in
                 let endpoint = note.object as? String
                 Task { @MainActor [weak self] in
                     guard let self, endpoint == Settings.shared.effectiveApiUrl else { return }
                     switch name {
                     case .apiHealthUnreachable: self.setState(.unreachable)
-                    case .apiServerError: self.setState(.serverError)
+                    case .apiHealthError: self.setState(.serverError)
                     case .apiServerUnreachable:
                         if self.state == .checking || self.state == .unreachable {
                             self.setState(.unreachable)
