@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 // dev-flow から meme-gtd の Task を読み書きする唯一の入口。
-// 表示名 `PR`、`#数字` の扱い、状態表の行を消さないことなどをここで固定する。
+// 表示名 `PR`、`#数字` の扱い、指摘一覧の行を消さないことなどをここで固定する。
 // 使い方は `node .codex/skills/dev-flow/scripts/task.mjs help`。
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 
 const API = (process.env.MGTD_API_URL || 'http://localhost:3000').replace(/\/$/, '');
 const STATUS_HEADING = '## 指摘一覧';
-const STATES = ['未着手', '対応中', '確認済み', '未確認', '対象外'];
+const KINDS = ['行動', '制約'];
+const ACTION_STATES = ['未着手', '対応中', '完了', '対象外'];
+const RULE_STATES = ['有効', '解除'];
 
 // コメントの種類ごとに必須の見出し。本文はこの順で書く。
 const TEMPLATES = {
@@ -24,12 +26,19 @@ const HELP = `task.mjs — dev-flow 用の meme-gtd Task 操作（接続先: ${A
   comment <taskId> --kind <種類> (--file <path> | --body <本文>)
                                               テンプレートに沿ったコメントを投稿
                                               種類: ${Object.keys(TEMPLATES).join(' / ')}
-  status <taskId> init                        指摘一覧（状態表）のコメントを作る（既にあれば何もしない）
-  status <taskId> show                        状態表を表示
-  status <taskId> add --words <原文> [--from <出典>]
-                                              ご指摘を1行追加（原文のまま。行は消せない）
-  status <taskId> set --row <番号> --state <状態> [--evidence <根拠>] [--next <次>]
-                                              状態: ${STATES.join(' / ')}（確認済みは根拠が必須）
+  status <taskId> init                        指摘一覧のコメントを作る（既にあれば何もしない）
+  status <taskId> show                        指摘一覧と、有効な制約・未完了の行動を表示
+  status <taskId> add --kind <行動|制約> --scene <場面> --words <原文> --do <やること|以降守ること> [--done-when <完了の条件>]
+                                              ご指摘を1行追加（行は消せない）
+                                              場面 = 直前に窓口が何を出し、何をしたか
+                                              行動 = この指摘に対してやること（--done-when が必須）
+                                              制約 = 以降ずっと守ること
+  status <taskId> again --row <番号> --scene <場面> --words <原文>
+                                              同じ指摘の繰り返しを、その行に再発として記録（完了済みの行動は対応中に戻る）
+  status <taskId> set --row <番号> --state <状態> [--evidence <証拠>]
+                                              行動: ${ACTION_STATES.join(' / ')}（完了は証拠が必須）
+                                              制約: ${RULE_STATES.join(' / ')}
+  add / again / set / show は、有効な制約と未完了の行動を毎回表示する。次の操作と報告の前に照らす。
   link-pr <taskId> --url <GitHub PR の URL>    外部リンクを表示名 PR で登録（重複しない）
   create --title <題名> (--file <path> | --body <本文>) [--parent <taskId>]
                                               Task を起票（--parent でサブ Task）
@@ -98,12 +107,15 @@ export function checkTemplate(kind, body) {
   }
 }
 
-// ---- 状態表 ----
+// ---- 指摘一覧 ----
 
-// iOS アプリの Markdown 表示は表に対応していないため、状態表は見出しと箇条書きで書く。
-// 1件 = 「### 番号. 【状態】ご指摘の原文」＋「- 根拠: 」「- 次: 」。
+// ご指摘は、場面（直前に窓口が出したもの）と、それに対する行動か、以降の行動の制約として記録する。
+// Task 2122 では、発言を1件1行で写すだけの一覧になり、やることも場面も残らず、状態の表示だけが書き換えられた。
+// iOS アプリの Markdown 表示は表に対応していないため、見出しと箇条書きで書く。
+// 行動 = 「### 番号. 【行動・状態】やること」＋ 場面・指摘・完了の条件・証拠。
+// 制約 = 「### 番号. 【制約・状態】以降守ること」＋ 場面・指摘。
 function cell(text) {
-  return String(text).replace(/\r?\n/g, ' ').trim();
+  return String(text).replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 // 旧形式（Markdown の表）の行。読み込みだけ対応し、保存時は新形式に書き換える。
@@ -125,25 +137,45 @@ function splitRow(line) {
   return cells;
 }
 
+// 旧形式（1発言1行、状態・根拠・次）の行は、やることと場面が無い行動として読み込む。
+const LEGACY_TITLE = '（旧形式の行: やることが未記入）';
+const LEGACY_SCENE = '記録なし（旧形式の行）';
+function legacyRow(no, state, words, evidence) {
+  // 旧形式の状態は、完了の条件なしに付けられたものなので引き継がない（対象外だけはユーザーの決定なので残す）。
+  const mapped = state === '対象外' ? '対象外' : '未着手';
+  const old = evidence && evidence !== '—' ? `—（旧形式での状態「${state}」、根拠「${evidence}」）` : `—（旧形式での状態「${state}」）`;
+  return { no, kind: '行動', state: mapped, title: LEGACY_TITLE, scene: LEGACY_SCENE, words, doneWhen: '—', evidence: old, again: [] };
+}
+
+const DETAIL_KEYS = { 場面: 'scene', 指摘: 'words', 完了の条件: 'doneWhen', 証拠: 'evidence', 根拠: 'evidence' };
+
 export function parseStatus(body) {
   const rows = [];
   let current = null;
   for (const raw of body.split('\n')) {
     const line = raw.trim();
-    const item = line.match(/^###\s+(\d+)\.\s+【([^】]+)】\s*(.*)$/);
+    const item = line.match(/^###\s+(\d+)\.\s+【(行動|制約)・([^】]+)】\s*(.*)$/);
     if (item) {
-      current = { no: Number(item[1]), state: item[2], words: item[3], evidence: '—', next: '—' };
+      current = { no: Number(item[1]), kind: item[2], state: item[3], title: item[4], scene: '—', words: '—', doneWhen: '—', evidence: '—', again: [] };
       rows.push(current);
       continue;
     }
-    const detail = line.match(/^-\s+(根拠|次):\s*(.*)$/);
+    const legacy = line.match(/^###\s+(\d+)\.\s+【([^】]+)】\s*(.*)$/);
+    if (legacy) {
+      current = legacyRow(Number(legacy[1]), legacy[2], legacy[3], '—');
+      rows.push(current);
+      continue;
+    }
+    const detail = line.match(/^-\s+(場面|指摘|完了の条件|証拠|根拠|再発|次):\s*(.*)$/);
     if (detail && current) {
-      current[detail[1] === '根拠' ? 'evidence' : 'next'] = detail[2] || '—';
+      if (detail[1] === '再発') current.again.push(detail[2]);
+      else if (DETAIL_KEYS[detail[1]]) current[DETAIL_KEYS[detail[1]]] = detail[2] || '—';
       continue;
     }
     if (/^\|\s*\d+\s*\|/.test(line)) {
-      const [no, words, state, evidence, next] = splitRow(line).map((c) => c.replace(/\\\|/g, '|').replace(/<br>/g, ' '));
-      rows.push({ no: Number(no), words, state, evidence, next });
+      const [no, words, state, evidence] = splitRow(line).map((c) => c.replace(/\\\|/g, '|').replace(/<br>/g, ' '));
+      current = legacyRow(Number(no), state, words, evidence);
+      rows.push(current);
     }
   }
   return rows;
@@ -153,11 +185,25 @@ export function renderStatus(rows) {
   const lines = [
     STATUS_HEADING,
     '',
-    'ご指摘は1件ずつ。項目は消さず、状態・根拠・次だけを更新する（dev-flow の task.mjs で更新）。',
+    'ご指摘は、場面と、それに対する行動か、以降の行動の制約として記録する。行は消さない（dev-flow の task.mjs で更新）。',
   ];
   for (const r of rows) {
-    lines.push('', `### ${r.no}. 【${r.state}】${r.words}`, `- 根拠: ${r.evidence}`, `- 次: ${r.next}`);
+    lines.push('', `### ${r.no}. 【${r.kind}・${r.state}】${r.title}`, `- 場面: ${r.scene}`, `- 指摘: ${r.words}`);
+    if (r.kind === '行動') lines.push(`- 完了の条件: ${r.doneWhen}`, `- 証拠: ${r.evidence}`);
+    for (const a of r.again) lines.push(`- 再発: ${a}`);
   }
+  return lines.join('\n');
+}
+
+// 記録・更新のたびに、有効な制約と未完了の行動を窓口へ出し直す。
+// 一覧に書いただけでは以降の行動に効かないため、操作の直後（次の行動の直前）に必ず読ませる。
+export function renderActive(rows) {
+  const rules = rows.filter((r) => r.kind === '制約' && r.state === '有効');
+  const open = rows.filter((r) => r.kind === '行動' && (r.state === '未着手' || r.state === '対応中'));
+  const lines = [`== 以降の行動の制約（有効 ${rules.length} 件）: 次の操作と報告の前に、全件に照らす ==`];
+  for (const r of rules) lines.push(`${r.no}. ${r.title}${r.again.length ? `（再発 ${r.again.length} 回）` : ''}`, `   場面: ${r.scene}`);
+  lines.push(`== 未完了の行動（${open.length} 件）==`);
+  for (const r of open) lines.push(`${r.no}. 【${r.state}】${r.title}`, `   完了の条件: ${r.doneWhen}`);
   return lines.join('\n');
 }
 
@@ -172,46 +218,75 @@ async function saveStatus(taskId, comment, rows) {
   await api('PATCH', `/api/tasks/${taskId}/comments/${comment.id}`, { bodyMd });
 }
 
+function required(flags, name, what) {
+  const value = cell(flags[name] ?? '');
+  if (!value) fail(`--${name} に${what}を渡してください`);
+  return value;
+}
+
 async function status(taskId, action, flags) {
   if (action === 'init') {
     const existing = await findStatusComment(taskId);
     if (existing) {
-      console.log(`状態表は既にあります（コメント ${existing.id}）`);
+      console.log(`指摘一覧は既にあります（コメント ${existing.id}）`);
       return;
     }
     const created = await api('POST', `/api/tasks/${taskId}/comments`, { bodyMd: renderStatus([]) });
-    console.log(`状態表を作りました（コメント ${created.id ?? '?'}）`);
+    console.log(`指摘一覧を作りました（コメント ${created.id ?? '?'}）`);
     return;
   }
   const comment = await findStatusComment(taskId);
-  if (!comment) fail(`Task ${taskId} に状態表がありません。先に status ${taskId} init を実行してください`);
+  if (!comment) fail(`Task ${taskId} に指摘一覧がありません。先に status ${taskId} init を実行してください`);
   const rows = parseStatus(comment.bodyMd);
   if (action === 'show') {
-    console.log(renderStatus(rows));
+    console.log(`${renderStatus(rows)}\n\n${renderActive(rows)}`);
     return;
   }
   if (action === 'add') {
-    if (!flags.words) fail('--words にご指摘の原文を渡してください');
-    const words = flags.from ? `${flags.words}（${flags.from}）` : flags.words;
+    if (!KINDS.includes(flags.kind)) fail(`--kind は ${KINDS.join(' / ')} のどちらかです（行動 = この指摘に対してやること、制約 = 以降ずっと守ること）: ${flags.kind}`);
+    const scene = required(flags, 'scene', '場面（直前に窓口が何を出し、何をしたか。Task 本文からの要求なら「Task 本文 What」など）');
+    const words = required(flags, 'words', 'ご指摘の原文');
+    const title = required(flags, 'do', flags.kind === '行動' ? 'やること' : '以降守ること');
+    if (scene === words) fail('--scene にご指摘の原文をそのまま渡さないでください。直前に窓口が何を出し、何をしたかを書きます');
+    if (title === words) fail('--do にご指摘の原文をそのまま渡さないでください。この指摘を受けて何をするか（制約なら以降何を守るか）を書きます');
+    const doneWhen = flags.kind === '行動' ? required(flags, 'done-when', '完了の条件（何が出来ていれば完了か）') : '—';
     const no = rows.reduce((max, r) => Math.max(max, r.no), 0) + 1;
-    rows.push({ no, words: cell(words), state: '未着手', evidence: '—', next: '—' });
+    rows.push({ no, kind: flags.kind, state: flags.kind === '行動' ? '未着手' : '有効', title, scene, words, doneWhen, evidence: '—', again: [] });
     await saveStatus(taskId, comment, rows);
-    console.log(`${no} 行目を追加しました`);
+    console.log(`${no} 行目に${flags.kind}として追加しました\n\n${renderActive(rows)}`);
+    return;
+  }
+  const row = rows.find((r) => r.no === Number(flags.row));
+  if (!row) fail(`${flags.row} 行目はありません`);
+  if (action === 'again') {
+    const scene = required(flags, 'scene', '場面（今回、直前に窓口が何を出し、何をしたか）');
+    const words = required(flags, 'words', 'ご指摘の原文');
+    row.again.push(`場面「${scene}」指摘「${words}」`);
+    if (row.kind === '行動' && row.state !== '対応中') {
+      row.state = '対応中';
+      row.evidence = '—';
+    }
+    await saveStatus(taskId, comment, rows);
+    console.log(`${row.no} 行目に再発（${row.again.length} 回目）を記録しました${row.kind === '行動' ? '。状態は「対応中」です' : ''}\n\n${renderActive(rows)}`);
     return;
   }
   if (action === 'set') {
-    const row = rows.find((r) => r.no === Number(flags.row));
-    if (!row) fail(`${flags.row} 行目はありません`);
-    if (!STATES.includes(flags.state)) fail(`状態は ${STATES.join(' / ')} のどれかです: ${flags.state}`);
-    if (flags.state === '確認済み' && !flags.evidence) fail('確認済みにするには --evidence（スクショのパス・コミット・テスト名など）が必要です');
+    const states = row.kind === '行動' ? ACTION_STATES : RULE_STATES;
+    if (!states.includes(flags.state)) fail(`${row.no} 行目は${row.kind}です。状態は ${states.join(' / ')} のどれかです: ${flags.state}`);
+    if (flags.state === '完了' && !flags.evidence) fail('完了にするには --evidence（完了の条件を満たした証拠: チャットでの報告、スクショのパス、テスト名、コミットなど）が必要です');
+    if (row.title === LEGACY_TITLE && !flags.do) fail(`${row.no} 行目は旧形式で、やることが未記入です。--do と --scene を合わせて渡してください`);
     row.state = flags.state;
     if (flags.evidence) row.evidence = cell(flags.evidence);
-    if (flags.next) row.next = cell(flags.next);
+    if (row.title === LEGACY_TITLE) {
+      row.title = cell(flags.do);
+      if (flags.scene) row.scene = cell(flags.scene);
+      if (flags['done-when']) row.doneWhen = cell(flags['done-when']);
+    }
     await saveStatus(taskId, comment, rows);
-    console.log(`${row.no} 行目を「${row.state}」にしました`);
+    console.log(`${row.no} 行目を「${row.state}」にしました\n\n${renderActive(rows)}`);
     return;
   }
-  fail(`status の操作は init / show / add / set のどれかです: ${action}`);
+  fail(`status の操作は init / show / add / again / set のどれかです: ${action}`);
 }
 
 // ---- その他の操作 ----
@@ -223,6 +298,10 @@ async function read(taskId) {
     api('GET', `/api/issues/${taskId}/links`),
     api('GET', `/api/issues/${taskId}/url-links`),
   ]);
+  // 担当役も Task を読むたびに、有効な制約と未完了の行動を最初に受け取る。
+  const list = Array.isArray(comments) ? comments : comments.items ?? comments.comments ?? [];
+  const statusComment = list.find((c) => c.bodyMd.startsWith(STATUS_HEADING));
+  if (statusComment) console.log(`${renderActive(parseStatus(statusComment.bodyMd))}\n`);
   console.log(JSON.stringify({ task, comments, links, urlLinks }, null, 2));
 }
 
