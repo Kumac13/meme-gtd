@@ -1,8 +1,18 @@
 {
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/user-prompt.mjs\""
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
-        "matcher": "^(Bash|apply_patch)$",
+        "matcher": ".*",
         "hooks": [
           {
             "type": "command",

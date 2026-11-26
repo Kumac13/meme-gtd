@@ -1,29 +1,34 @@
 #!/usr/bin/env node
-// PreToolUse フック: 窓口（サブエージェントではないスレッド）が実行できるのを、
-// 読み取り系のコマンドと dev-flow の task.mjs / checklist.mjs に限る。
-// 窓口が自分で作業して文脈を膨らませるのを防ぐため（dev-flow「分担」）。
+// PreToolUse フック: 窓口（サブエージェントではないスレッド）の操作を、
+// ユーザーとの会話・Task の読み書き・担当役の起動と待機に限る。
+// Task 2107 では窓口が自分でブラウザーを操作して撮影し、60秒の待機を52回繰り返した。
 // サブエージェントは agent_id 付きで呼ばれるので、この制限を受けない。
+// フックは、ユーザーが Codex の Settings > Hooks（CLI は /hooks）で信頼するまで実行されない。
+// 定義を変えると信頼は外れる。有効かどうかは HOOK_CHECK のコマンドで確かめる（SKILL.md「最初に」）。
 import { fileURLToPath } from 'node:url';
-import { readFileSync } from 'node:fs';
+import { appendFileSync, readFileSync } from 'node:fs';
 
-const READ_ONLY = {
-  git: (args) => {
-    const sub = args[0];
-    if (['status', 'diff', 'log', 'show', 'rev-parse', 'ls-files', 'blame', 'grep'].includes(sub)) return true;
-    if (sub === 'branch') return !args.some((a) => /^-(d|D|m|M|c|C|f)$|^--(delete|move|copy|force|set-upstream)/.test(a));
-    if (sub === 'worktree') return args[1] === 'list';
-    return false;
-  },
-  gh: (args) =>
-    (args[0] === 'pr' && ['view', 'diff', 'list', 'checks'].includes(args[1])) ||
-    (args[0] === 'issue' && ['view', 'list'].includes(args[1])),
-  sed: (args) => args.includes('-n') && !args.some((a) => a.startsWith('-i')),
-  find: (args) => !args.some((a) => ['-delete', '-exec', '-execdir', '-ok', '-fprint'].includes(a)),
-  node: (args) => /(^|\/)\.codex\/skills\/dev-flow\/scripts\/(task|checklist)\.mjs$/.test(args[0] ?? ''),
+export const HOOK_CHECK = 'echo dev-flow-hook-check';
+export const WAIT_TIMEOUT_MS = 3600000;
+
+const SKILL_FILE = /^(\.\/)?(\.codex\/(skills|agents|rules)\/|\.claude\/skills\/|AGENTS\.md$|CLAUDE\.md$)/;
+const onlySkillFiles = (args) => {
+  const files = args.filter((a) => !a.startsWith('-') && !/^\d+(,\d+)?p$/.test(a));
+  return files.length > 0 && files.every((a) => SKILL_FILE.test(a) && !a.includes('..'));
 };
-for (const name of ['rg', 'grep', 'ls', 'cat', 'head', 'tail', 'wc', 'jq', 'pwd', 'echo', 'date', 'which', 'cd', 'true']) {
-  READ_ONLY[name] = () => true;
-}
+
+// 窓口が実行できるコマンド: Task の読み書きと、スキル・ルールのファイルを読むことだけ。
+const ALLOWED = {
+  node: (args) => /^(\.\/)?\.codex\/skills\/dev-flow\/scripts\/task\.mjs$/.test(args[0] ?? ''),
+  cat: onlySkillFiles,
+  // パイプの後ろで出力を絞る（cat ... | head -20）。ファイルを指定するなら、スキル・ルールのファイルだけ。
+  head: (args) => args.every((a) => a.startsWith('-') || /^\d+$/.test(a)) || onlySkillFiles(args.filter((a) => !/^\d+$/.test(a))),
+  tail: (args) => args.every((a) => a.startsWith('-') || /^\d+$/.test(a)) || onlySkillFiles(args.filter((a) => !/^\d+$/.test(a))),
+  sed: (args) => args.includes('-n') && !args.some((a) => a.startsWith('-i')) && onlySkillFiles(args.filter((a) => a !== '-n')),
+};
+
+// 窓口が自分で行わない操作（調査・画面操作・撮影・画像の点検）。
+const WORK_TOOL = /^mcp__|(^|[^a-z])(view_image|web_search|js)$/;
 
 // 引用符の外にある && || ; | で区切る。
 export function splitCommands(command) {
@@ -85,16 +90,13 @@ export function denyReason(command) {
     const [name, ...args] = words(segment);
     if (!name) continue;
     const base = name.split('/').pop();
-    const allow = READ_ONLY[base];
+    const allow = ALLOWED[base];
     if (!allow || !allow(args)) return `「${segment}」は窓口では実行できません`;
   }
   return null;
 }
 
-function deny(reason) {
-  const message =
-    `${reason}。窓口が実行できるのは読み取り系のコマンドと dev-flow の task.mjs / checklist.mjs だけです。` +
-    '作業（編集・ビルド・テスト・シミュレーター・push・PR 作成）は計画役・実装役・確認役・レビュー役に spawn_agent で渡してください。';
+function deny(message) {
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: message },
@@ -102,13 +104,38 @@ function deny(reason) {
   );
 }
 
+const DELEGATE =
+  '窓口が行うのは、ユーザーとの会話、task.mjs による Task の読み書き、担当役の起動と待機だけです。' +
+  '調査・コードの読み取り・画面操作・撮影・画像の点検・編集・ビルド・テスト・push・PR 作成は、担当役に spawn_agent で渡してください。';
+
+// 拒否する文言を返す。許可なら null。
+export function decide(input) {
+  if (input.agent_id) return null; // サブエージェントは対象外
+  const tool = String(input.tool_name ?? '');
+  if (tool === 'apply_patch') return `ファイルの編集は窓口では行えません。${DELEGATE}`;
+  if (tool === 'Bash') {
+    const command = String(input.tool_input?.command ?? '').trim();
+    if (command === HOOK_CHECK) return 'dev-flow のフックは有効です。この拒否は確認用なので、そのまま手順を続けてください。';
+    const reason = denyReason(command);
+    return reason ? `${reason}。${DELEGATE}` : null;
+  }
+  if (/wait_agent$/.test(tool)) {
+    if (Number(input.tool_input?.timeout_ms) === WAIT_TIMEOUT_MS) return null;
+    return (
+      `wait_agent は timeout_ms=${WAIT_TIMEOUT_MS} で呼んでください。` +
+      '担当役の完了とユーザーの発言で待機は終わるので、短い間隔で待ち直す必要はありません（待ち直すたびに窓口の文脈全体が送り直されます）。'
+    );
+  }
+  if (WORK_TOOL.test(tool)) return `${tool} は窓口では使えません。${DELEGATE}`;
+  return null;
+}
+
 function main() {
   const input = JSON.parse(readFileSync(0, 'utf8'));
-  if (input.agent_id) return; // サブエージェントは対象外
-  if (input.tool_name === 'apply_patch') return deny('ファイルの編集');
-  if (input.tool_name !== 'Bash') return;
-  const reason = denyReason(String(input.tool_input?.command ?? ''));
-  if (reason) deny(reason);
+  // DEV_FLOW_HOOK_LOG にパスを入れると、受け取った入力を追記する（フックが実行されたか、ツール名が何かを確かめるため）。
+  if (process.env.DEV_FLOW_HOOK_LOG) appendFileSync(process.env.DEV_FLOW_HOOK_LOG, `${JSON.stringify(input)}\n`);
+  const message = decide(input);
+  if (message) deny(message);
 }
 
 if (fileURLToPath(import.meta.url) === process.argv[1]) main();
