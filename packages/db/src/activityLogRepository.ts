@@ -68,6 +68,12 @@ export const createActivityLog = (
 export const listActivityLog = (
   db: Database.Database,
   filters: ActivityLogFilters = {}
+): ActivityLogEntry[] => queryActivityLog(db, filters);
+
+const queryActivityLog = (
+  db: Database.Database,
+  filters: ActivityLogFilters,
+  options: { hideUnlinkedPairs?: boolean } = {}
 ): ActivityLogEntry[] => {
   const conditions: string[] = [];
   const params: Record<string, unknown> = {};
@@ -117,6 +123,21 @@ export const listActivityLog = (
   if (filters.to !== undefined) {
     conditions.push('occurred_at <= @to');
     params.to = filters.to;
+  }
+
+  if (options.hideUnlinkedPairs) {
+    // 対になる追加・解除は、表示件数を絞る前に履歴全体から照合する。
+    conditions.push(`(
+      event_type NOT IN ('link.created', 'link.deleted')
+      OR NOT EXISTS (
+        SELECT 1 FROM activity_log AS counterpart
+        WHERE counterpart.link_id = activity_log.link_id
+          AND counterpart.event_type = CASE activity_log.event_type
+            WHEN 'link.created' THEN 'link.deleted'
+            WHEN 'link.deleted' THEN 'link.created'
+          END
+      )
+    )`);
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -170,11 +191,11 @@ export const getByIssueId = (
   issueId: number,
   options: { limit?: number; order?: 'asc' | 'desc' } = {}
 ): ActivityLogEntry[] => {
-  return listActivityLog(db, {
-    issueId,
-    limit: options.limit,
-    order: options.order ?? 'asc',
-  });
+  return queryActivityLog(
+    db,
+    { issueId, limit: options.limit, order: options.order ?? 'asc' },
+    { hideUnlinkedPairs: true }
+  );
 };
 
 /**

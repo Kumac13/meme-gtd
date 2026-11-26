@@ -1,6 +1,8 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import type { FastifyInstance } from 'fastify';
+import { createActivityLog } from 'meme-gtd-db';
+import type { ActivityLogEntry } from '../../src/schemas/activityLogSchemas.js';
 import { createTestServer } from '../helpers/testServer.js';
 
 describe('Activity Log API', () => {
@@ -391,60 +393,113 @@ describe('Activity Log API', () => {
       assert.ok(targetLinkLog, 'Target issue should have link.created event');
     });
 
-    it('should return link.deleted events for both source and target issues', async () => {
-      // Create two tasks and a link
-      const task1Res = await app.inject({
+    it('should hide both events for an unlinked pair before limiting either issue history', async () => {
+      const taskRes = await app.inject({
         method: 'POST',
         url: '/api/tasks',
-        payload: { title: 'Task A', bodyMd: '' },
+        payload: { title: 'Source Task', bodyMd: '' },
       });
-      const task1 = JSON.parse(task1Res.body);
+      assert.equal(taskRes.statusCode, 201);
+      const taskId = taskRes.json<{ id: number }>().id;
 
-      const task2Res = await app.inject({
+      const memoRes = await app.inject({
         method: 'POST',
-        url: '/api/tasks',
-        payload: { title: 'Task B', bodyMd: '' },
+        url: '/api/memos',
+        payload: { bodyMd: 'Target Memo' },
       });
-      const task2 = JSON.parse(task2Res.body);
+      assert.equal(memoRes.statusCode, 201);
+      const memoId = memoRes.json<{ id: number }>().id;
 
-      const linkRes = await app.inject({
-        method: 'POST',
-        url: '/api/links',
-        payload: {
-          sourceIssueId: task1.id,
-          targetIssueId: task2.id,
-          linkType: 'relates',
-        },
-      });
-      const link = JSON.parse(linkRes.body);
+      const createLink = async () => {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/api/links',
+          payload: { sourceIssueId: taskId, targetIssueId: memoId, linkType: 'relates' },
+        });
+        assert.equal(response.statusCode, 201);
+        return response.json<{ id: number }>().id;
+      };
+      const removedLinkId = await createLink();
 
-      // Delete the link
+      const endpoints = [
+        { id: taskId, type: 'task', path: 'tasks' },
+        { id: memoId, type: 'memo', path: 'memos' },
+      ];
+      for (const { id, path } of endpoints) {
+        const commentRes = await app.inject({
+          method: 'POST',
+          url: `/api/${path}/${id}/comments`,
+          payload: { bodyMd: 'Keep this comment' },
+        });
+        assert.equal(commentRes.statusCode, 201);
+      }
+
       const deleteRes = await app.inject({
         method: 'DELETE',
-        url: `/api/links/${link.id}`,
+        url: `/api/links/${removedLinkId}`,
       });
-      assert.strictEqual(deleteRes.statusCode, 204);
+      assert.equal(deleteRes.statusCode, 204);
 
-      // Both issues should have link.deleted in their activity log
-      const sourceLogRes = await app.inject({
-        method: 'GET',
-        url: `/api/activity-log/issues/${task1.id}`,
-      });
-      const sourceLogs = JSON.parse(sourceLogRes.body);
-      const sourceDeleteLog = sourceLogs.find(
-        (log: { eventType: string }) => log.eventType === 'link.deleted'
-      );
-      assert.ok(sourceDeleteLog, 'Source issue should have link.deleted event');
+      for (const { id, type } of endpoints) {
+        const ascending = await app.inject({
+          url: `/api/activity-log/issues/${id}?order=asc&limit=2`,
+        });
+        assert.equal(ascending.statusCode, 200);
+        assert.deepEqual(
+          ascending.json<ActivityLogEntry[]>().map(entry => entry.eventType),
+          [`${type}.created`, 'comment.created']
+        );
 
-      const targetLogRes = await app.inject({
-        method: 'GET',
-        url: `/api/activity-log/issues/${task2.id}`,
+        const descending = await app.inject({
+          url: `/api/activity-log/issues/${id}?order=desc&limit=1`,
+        });
+        assert.equal(descending.statusCode, 200);
+        assert.deepEqual(
+          descending.json<ActivityLogEntry[]>().map(entry => entry.eventType),
+          ['comment.created']
+        );
+      }
+
+      const newLinkId = await createLink();
+      assert.notEqual(newLinkId, removedLinkId);
+      for (const { id } of endpoints) {
+        const issueLogs = await app.inject({ url: `/api/activity-log/issues/${id}` });
+        assert.equal(issueLogs.statusCode, 200);
+        const linkEvents = issueLogs.json<ActivityLogEntry[]>()
+          .filter(entry => entry.eventType.startsWith('link.'));
+        assert.deepEqual(
+          linkEvents.map(entry => [entry.eventType, entry.payload.link_id]),
+          [['link.created', newLinkId]]
+        );
+      }
+
+      const globalLogs = await app.inject({
+        url: `/api/activity-log?issueId=${taskId}&order=asc`,
       });
-      const targetLogs = JSON.parse(targetLogRes.body);
-      const targetDeleteLog = targetLogs.find(
-        (log: { eventType: string }) => log.eventType === 'link.deleted'
+      assert.equal(globalLogs.statusCode, 200);
+      assert.deepEqual(
+        globalLogs.json<ActivityLogEntry[]>()
+          .filter(entry => entry.payload.link_id === removedLinkId)
+          .map(entry => entry.eventType),
+        ['link.created', 'link.deleted']
       );
-      assert.ok(targetDeleteLog, 'Target issue should have link.deleted event');
+    });
+
+    it('should retain a historical unlink event without its matching creation', async () => {
+      const { id, payload } = createActivityLog(app.db, {
+        eventType: 'link.deleted',
+        sourceType: 'cli',
+        payload: { link_id: 10, source_issue_id: 20, target_issue_id: 30 },
+      });
+
+      for (const issueId of [20, 30]) {
+        const response = await app.inject({ url: `/api/activity-log/issues/${issueId}` });
+        assert.equal(response.statusCode, 200);
+        const [entry] = response.json<ActivityLogEntry[]>();
+        assert.equal(entry.id, id);
+        assert.equal(entry.eventType, 'link.deleted');
+        assert.deepEqual(entry.payload, payload);
+      }
     });
 
     it('link.deleted payload should include issue type fields', async () => {
@@ -483,7 +538,7 @@ describe('Activity Log API', () => {
       // Check payload has type fields
       const logRes = await app.inject({
         method: 'GET',
-        url: `/api/activity-log/issues/${task1.id}`,
+        url: '/api/activity-log?eventType=link.deleted',
       });
       const logs = JSON.parse(logRes.body);
       const deleteLog = logs.find(

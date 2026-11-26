@@ -28,7 +28,7 @@ describe('Link Operations', () => {
     const links = (await app.inject({ method: 'GET', url: `/api/issues/${task.id}/links` })).json();
     assert.equal(links[0].targetIssue.title, expected);
     await app.inject({ method: 'DELETE', url: `/api/links/${link.id}` });
-    const logs = async () => (await app.inject({ method: 'GET', url: `/api/activity-log/issues/${task.id}` })).json()
+    const logs = async () => (await app.inject({ method: 'GET', url: `/api/activity-log?issueId=${task.id}` })).json()
       .filter((event: { eventType: string }) => event.eventType.startsWith('link.'));
     const events = await logs();
     assert.equal(events.length, 2);
