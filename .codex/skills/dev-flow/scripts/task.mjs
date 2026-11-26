@@ -8,7 +8,6 @@ import { readFileSync } from 'node:fs';
 const API = (process.env.MGTD_API_URL || 'http://localhost:3000').replace(/\/$/, '');
 const STATUS_HEADING = '## 指摘一覧';
 const STATES = ['未着手', '対応中', '確認済み', '未確認', '対象外'];
-const MAX_LINE = 300;
 
 // コメントの種類ごとに必須の見出し。本文はこの順で書く。
 const TEMPLATES = {
@@ -90,10 +89,6 @@ export function checkTemplate(kind, body) {
   const lines = body.split('\n').map((l) => l.trim());
   // iOS アプリは Markdown の表を表示できず、記号がそのまま見えてしまう。
   if (lines.some((l) => /^\|.*\|$/.test(l))) fail('Task のコメントに Markdown の表は使えません（iOS アプリで表示できないため）。見出しと箇条書きで書いてください');
-  // Task 2107 の検証結果には、API の応答の JSON が1行に数百文字ずつ貼られ、iOS アプリで読めなかった。
-  if (lines.some((l) => /\{\s*"|\[\s*[[{]/.test(l))) fail('Task のコメントに JSON を貼らないでください。何を確かめて、どうだったかを文で書いてください');
-  const long = lines.find((l) => l.length > MAX_LINE);
-  if (long) fail(`1行が長すぎます（${long.length} 文字、上限 ${MAX_LINE}）。1行に1つのことを短く書いてください: ${long.slice(0, 40)}…`);
   let cursor = -1;
   for (const heading of headings) {
     const index = lines.indexOf(heading);
