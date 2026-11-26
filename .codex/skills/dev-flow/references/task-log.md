@@ -30,7 +30,7 @@ node .codex/skills/dev-flow/scripts/task.mjs help
 | PR を登録する | `task.mjs link-pr <TaskID> --url <PR URL>` |
 | 起票する | `task.mjs create --title <題名> --file <path>`（サブ Task は `--parent <親の TaskID>`） |
 
-起票は、ユーザーが指示したときと、計画で粒度を分けたときだけ行う。
+起票は、ユーザーが作るよう指示したときだけ行う。報告の項目や計画の粒度を、起票の単位に読み替えない（Task 2115 では、報告の依頼に対して子 Task を4件起票した）。
 
 ## 状態表
 

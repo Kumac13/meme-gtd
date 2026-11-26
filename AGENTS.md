@@ -26,12 +26,14 @@
 ## Development flow (Codex)
 
 * When the user shares a meme-gtd Task (pasted Task JSON or a Task ID), follow the `dev-flow` skill (`.codex/skills/dev-flow/SKILL.md`). It is the source of truth for consideration, planning, implementation, PR, and review.
-* A shared Task is not an implementation request by itself. Change files only when the request asks for implementation (実装, 直して, and the like) or the user answers that implementation should start.
-* The main thread is the only one that talks to the user. Planning, implementation, verification, and review each run in a subagent spawned with `fork_turns="none"`, so earlier assumptions are not carried over. The verifier is spawned with `agent_type="verifier"` (`.codex/agents/verifier.toml`).
-* The main thread may run only read-only commands and the dev-flow scripts; `.codex/hooks/orchestrator-guard.mjs` denies everything else. Delegate the work instead of retrying.
-* Record every user-reported issue verbatim in the Task's status table (`task.mjs status add`) before acting on it, and report in that table's shape.
-* Read and write meme-gtd Tasks only through `.codex/skills/dev-flow/scripts/task.mjs`, never with `curl`.
-* The user decides what the product should be (behavior, appearance, names, scope). Do not fill those in by guessing, and do not decide on your own which points need a decision. Everything else in the flow proceeds without asking.
+* The main thread does three things only: talk to the user, read and write the Task through `.codex/skills/dev-flow/scripts/task.mjs` (never `curl`), and start and wait for role agents (`spawn_agent` with `fork_turns="none"`; the verifier with `agent_type="verifier"`). Research, reading code, browser or simulator operation, screenshots, image inspection, edits, builds, tests, push, and PR creation all go to role agents. `.codex/hooks/orchestrator-guard.mjs` denies the rest once the user has trusted the hooks (Settings > Hooks, or `/hooks`); follow the same limits when the hooks are not trusted.
+* Wait for a role agent with `wait_agent` at `timeout_ms=3600000`. Do not re-wait on short timeouts and do not poll for progress.
+* Answer a question before doing anything else. Read 「は？」 and other short objections as an objection to your previous output: re-read that output and the original request, fix what missed, and continue the original request. Do not turn an objection into a cancellation or a new work order.
+* Do what was asked, within what was asked, and report as soon as it is done. Produce only the requested deliverable: a request to report is answered in the chat, not by creating Tasks. Create a Task only when the user says to create one.
+* Do not ask about what the Task body or the user's messages already state, or about what investigation can settle.
+* End a turn only when the requested work is complete or at the two agreement points the skill defines: the consideration result (before planning) and the plan (before implementation). At an agreement point, write what the user needs to judge in the chat (compared approaches, chosen approach and why, changed files, processing order, what is verified and by whom) and state what you are asking agreement for. A Task comment is a work log, not a report. Agreement on consideration or plan is separate from confirming the implemented result and from PR review.
+* A shared Task is not an implementation request by itself. Change files only when the request asks for implementation (実装, 直して, and the like) or the user agrees to the plan. After that, proceed through verification, PR, Task link, and review without stopping.
+* Record user-reported issues verbatim in the Task's status table (`task.mjs status add`) for Tasks run through this flow, and report in that table's shape.
 
 ## Release and commit discipline
 
