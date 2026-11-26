@@ -7,11 +7,15 @@ import { readFileSync } from 'node:fs';
 
 const API = (process.env.MGTD_API_URL || 'http://localhost:3000').replace(/\/$/, '');
 const STATUS_HEADING = '## 指摘一覧';
+const PLAN_HEADING = '## 計画';
+const PLAN_CHECK_HEADING = '## 計画チェック';
+const APPROVAL_HEADING = '## 承認';
 const STATES = ['未着手', '対応中', '確認済み', '未確認', '対象外'];
 
 // コメントの種類ごとに必須の見出し。本文はこの順で書く。
 const TEMPLATES = {
-  plan: ['## 計画', '### ゴール', '### 確認基準', '### 触る範囲', '### 合意'],
+  plan: ['## 計画', '### ゴール', '### 方式', '### 触る範囲', '### 確認基準', '### 反映先', '### 合意'],
+  'plan-check': ['## 計画チェック', '### 確認したこと', '### 指摘'],
   start: ['## 着手', '### 何のために', '### 何をする'],
   decision: ['## 決定', '### 問い', '### 決まったこと'],
   verify: ['## 検証結果', '### 確認一覧', '### 結果', '### 未確認'],
@@ -24,6 +28,8 @@ const HELP = `task.mjs — dev-flow 用の meme-gtd Task 操作（接続先: ${A
   comment <taskId> --kind <種類> (--file <path> | --body <本文>)
                                               テンプレートに沿ったコメントを投稿
                                               種類: ${Object.keys(TEMPLATES).join(' / ')}
+  approve <taskId> --words <ユーザーの承認の原文>
+                                              計画の承認を記録（最新の計画と、その後の計画チェックが必要）
   status <taskId> init                        指摘一覧（状態表）のコメントを作る（既にあれば何もしない）
   status <taskId> show                        状態表を表示
   status <taskId> add --words <原文> [--from <出典>]
@@ -33,6 +39,9 @@ const HELP = `task.mjs — dev-flow 用の meme-gtd Task 操作（接続先: ${A
   link-pr <taskId> --url <GitHub PR の URL>    外部リンクを表示名 PR で登録（重複しない）
   create --title <題名> (--file <path> | --body <本文>) [--parent <taskId>]
                                               Task を起票（--parent でサブ Task）
+
+記録の順番: plan → plan-check → approve → start。start は承認が無いと拒否、
+review は表示名 PR の外部リンクが無いと拒否する。
 
 本文中の #数字 は \\#数字 に置き換えて送る（Issue への自動リンクを作らないため）。
 MemeGTD の Issue を参照したいときは "Task 2109" と書く。`;
@@ -161,10 +170,47 @@ export function renderStatus(rows) {
   return lines.join('\n');
 }
 
-async function findStatusComment(taskId) {
+async function listComments(taskId) {
   const comments = await api('GET', `/api/tasks/${taskId}/comments`);
-  const list = Array.isArray(comments) ? comments : comments.items ?? comments.comments ?? [];
-  return list.find((c) => c.bodyMd.startsWith(STATUS_HEADING)) ?? null;
+  return Array.isArray(comments) ? comments : comments.items ?? comments.comments ?? [];
+}
+
+async function findStatusComment(taskId) {
+  return (await listComments(taskId)).find((c) => c.bodyMd.startsWith(STATUS_HEADING)) ?? null;
+}
+
+// ---- 計画の承認 ----
+
+// 見出しが一致する最新のコメント。`## 計画` が `## 計画チェック` に一致しないよう、1行目全体で比べる。
+function latestWith(comments, heading) {
+  return comments
+    .filter((c) => String(c.bodyMd ?? '').split('\n')[0].trim() === heading)
+    .reduce((latest, c) => (!latest || c.id > latest.id ? c : latest), null);
+}
+
+// 計画が承認まで進んでいるかを返す。コメントの ID は投稿順に増える。
+export function planGate(comments) {
+  const plan = latestWith(comments, PLAN_HEADING);
+  const check = latestWith(comments, PLAN_CHECK_HEADING);
+  const approval = latestWith(comments, APPROVAL_HEADING);
+  return {
+    plan,
+    checked: Boolean(plan && check && check.id > plan.id),
+    approved: Boolean(plan && approval && approval.id > plan.id),
+  };
+}
+
+async function approve(taskId, flags) {
+  const words = (flags.words ?? '').trim();
+  if (!words) fail('--words に、提示した計画に対するユーザーの承認の原文を渡してください');
+  const gate = planGate(await listComments(taskId));
+  if (!gate.plan) fail(`Task ${taskId} に計画（${PLAN_HEADING}）がありません。計画役に計画を記録させてください`);
+  if (!gate.checked) {
+    fail(`計画（コメント ${gate.plan.id}）の後に計画チェック（${PLAN_CHECK_HEADING}）がありません。レビュー役に計画チェックをさせ、結果を含めた計画をチャットに出してから承認を得てください`);
+  }
+  const body = [APPROVAL_HEADING, '### 承認した計画', `- コメント ${gate.plan.id}`, '### ユーザーの言葉', words].join('\n');
+  const created = await api('POST', `/api/tasks/${taskId}/comments`, { bodyMd: escapeIssueRefs(body) });
+  console.log(`計画（コメント ${gate.plan.id}）の承認を記録しました（コメント ${created.id ?? '?'}）`);
 }
 
 async function saveStatus(taskId, comment, rows) {
@@ -238,6 +284,17 @@ async function comment(taskId, flags) {
   if (!flags.kind) fail('--kind が必要です');
   const body = bodyOf(flags);
   checkTemplate(flags.kind, body);
+  if (flags.kind === 'start') {
+    const gate = planGate(await listComments(taskId));
+    if (!gate.plan) fail(`Task ${taskId} に計画（${PLAN_HEADING}）がありません。着手の前に、計画・計画チェック・ユーザーの承認が必要です。窓口に返してください`);
+    if (!gate.approved) {
+      fail(`計画（コメント ${gate.plan.id}）に対するユーザーの承認が記録されていません。実装を始めず、窓口に返してください。窓口は、計画の内容をチャットに出して承認を得てから task.mjs approve で記録します`);
+    }
+  }
+  if (flags.kind === 'review') {
+    const links = await api('GET', `/api/issues/${taskId}/url-links`);
+    if (!links.some((l) => l.title === 'PR')) fail(`Task ${taskId} に表示名 PR の外部リンクがありません。先に task.mjs link-pr ${taskId} --url <PR URL> で登録してください`);
+  }
   const created = await api('POST', `/api/tasks/${taskId}/comments`, { bodyMd: escapeIssueRefs(body) });
   console.log(`コメントを投稿しました（コメント ${created.id ?? '?'}）`);
 }
@@ -278,6 +335,8 @@ async function main() {
       return read(taskIdOf(first));
     case 'comment':
       return comment(taskIdOf(first), flags);
+    case 'approve':
+      return approve(taskIdOf(first), flags);
     case 'status':
       return status(taskIdOf(first), second, flags);
     case 'link-pr':

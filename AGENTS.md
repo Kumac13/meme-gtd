@@ -26,12 +26,16 @@
 ## Development flow (Codex)
 
 * When the user shares a meme-gtd Task (pasted Task JSON or a Task ID), follow the `dev-flow` skill (`.codex/skills/dev-flow/SKILL.md`). It is the source of truth for consideration, planning, implementation, PR, and review.
-* A shared Task is not an implementation request by itself. Change files only when the request asks for implementation (実装, 直して, and the like) or the user answers that implementation should start.
+* The flow has one fixed stop: the user's approval of the plan. Whatever the request says (検討, 実装, or just a shared Task), go through investigation, plan, and an independent plan check without stopping, then present the plan itself in the chat (chosen approach and rejected alternatives, files and processing to change, how it will be verified, where it takes effect, who checked what) and wait. Do not change files before the approval is recorded with `task.mjs approve`; do not end the turn before the plan is presented.
+* What the Task body states is already decided. Do not ask about it, and do not add targets or conditions the body does not contain.
+* A Task comment is a record, not a report. Everything the user needs in order to judge goes in the chat; never answer with only "recorded on the Task".
+* A one-off request in the chat (install on the device, restart the server) means exactly that: do it, report the result at once, and do not start checks nobody asked for.
+* Server-side changes (`packages/api`, `core`, `db`, `shared`, `web`) are visible on the web UI and on the device only after the port 3000 server is rebuilt and restarted from code that contains them (`.codex/skills/dev-flow/references/prod-server.md`). Reinstalling the iOS app does not show them.
 * The main thread is the only one that talks to the user. Planning, implementation, verification, and review each run in a subagent spawned with `fork_turns="none"`, so earlier assumptions are not carried over. The verifier is spawned with `agent_type="verifier"` (`.codex/agents/verifier.toml`).
 * The main thread may run only read-only commands and the dev-flow scripts; `.codex/hooks/orchestrator-guard.mjs` denies everything else. Delegate the work instead of retrying.
 * Record every user-reported issue verbatim in the Task's status table (`task.mjs status add`) before acting on it, and report in that table's shape.
 * Read and write meme-gtd Tasks only through `.codex/skills/dev-flow/scripts/task.mjs`, never with `curl`.
-* The user decides what the product should be (behavior, appearance, names, scope). Do not fill those in by guessing, and do not decide on your own which points need a decision. Everything else in the flow proceeds without asking.
+* The user decides what the product should be (behavior, appearance, names, scope). Ask only about points that the Task and the user's words leave open, that change what the user sees, and that investigation cannot settle; with no such point, ask nothing. How to implement it is for the planner to compare and decide, not a question for the user. Everything else in the flow proceeds without asking.
 
 ## Release and commit discipline
 

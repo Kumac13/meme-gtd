@@ -27,6 +27,7 @@ node .codex/skills/dev-flow/scripts/task.mjs help
 | ご指摘を追加する | `task.mjs status <TaskID> add --words "<原文>" --from "<出典（例: チャット 11/25 10:52、Task コメント 2636）>"` |
 | 状態を更新する | `task.mjs status <TaskID> set --row <番号> --state <状態> --evidence "<根拠>" --next "<次>"` |
 | コメントを投稿する | `task.mjs comment <TaskID> --kind <種類> --file <path>`（窓口は `--body`） |
+| 計画の承認を記録する | `task.mjs approve <TaskID> --words "<ユーザーの承認の原文>"`（窓口だけ。最新の計画と、その後の計画チェックが必要） |
 | PR を登録する | `task.mjs link-pr <TaskID> --url <PR URL>` |
 | 起票する | `task.mjs create --title <題名> --file <path>`（サブ Task は `--parent <親の TaskID>`） |
 
@@ -45,13 +46,19 @@ node .codex/skills/dev-flow/scripts/task.mjs help
 
 | 種類 | 書く人 | 見出し（この順） |
 |---|---|---|
-| `plan` | 計画役 | `## 計画` / `### ゴール` / `### 確認基準` / `### 触る範囲` / `### 合意` |
+| `plan` | 計画役 | `## 計画` / `### ゴール` / `### 方式` / `### 触る範囲` / `### 確認基準` / `### 反映先` / `### 合意` |
+| `plan-check` | レビュー役 | `## 計画チェック` / `### 確認したこと` / `### 指摘` |
 | `start` | 実装役 | `## 着手` / `### 何のために` / `### 何をする` |
 | `decision` | 窓口 | `## 決定` / `### 問い` / `### 決まったこと` |
 | `verify` | 確認役 | `## 検証結果` / `### 確認一覧` / `### 結果` / `### 未確認` |
 | `review` | レビュー役 | `## レビュー結果` / `### 指摘` / `### 対応` |
 
 - `decision` の「決まったこと」には、ユーザーの回答を原文で書く。
+- 記録の順番は `plan` → `plan-check` → 承認（`approve`）→ `start`。スクリプトが順番を検査する。
+  - `approve` は、最新の `plan` より後に `plan-check` が無いと拒否される。
+  - `start` は、最新の `plan` より後に承認（`## 承認`）が無いと拒否される。計画を記録し直すと、前の承認は効かなくなる。
+  - `review` は、Task に表示名 `PR` の外部リンクが無いと拒否される（先に `link-pr`）。
+- コメントは作業の記録で、ユーザーへの報告の代わりにはならない。ユーザーが判断に使う内容は、チャットにも書く（SKILL.md「報告の形」）。
 - Markdown の表は使わない。iOS アプリで表示できないので、`task.mjs` は表を含むコメントを拒否する。
 - テストの件数だけを並べない。何を確かめたテストかを書く。
 - 1件を短く保ち、調査の全文や長い計画は書かない。
