@@ -27,7 +27,7 @@ const HELP = `task.mjs — dev-flow 用の meme-gtd Task 操作（接続先: ${A
                                               テンプレートに沿ったコメントを投稿
                                               種類: ${Object.keys(TEMPLATES).join(' / ')}
   status <taskId> init                        指摘一覧のコメントを作る（既にあれば何もしない）
-  status <taskId> show                        指摘一覧と、有効な制約・未完了の行動を表示
+  status <taskId> show                        指摘一覧の全体を表示
   status <taskId> add --kind <行動|制約> --scene <場面> --words <原文> --do <やること|以降守ること> [--done-when <完了の条件>]
                                               ご指摘を1行追加（行は消せない）
                                               場面 = 直前に窓口が何を出し、何をしたか
@@ -38,7 +38,9 @@ const HELP = `task.mjs — dev-flow 用の meme-gtd Task 操作（接続先: ${A
   status <taskId> set --row <番号> --state <状態> [--evidence <証拠>]
                                               行動: ${ACTION_STATES.join(' / ')}（完了は証拠が必須）
                                               制約: ${RULE_STATES.join(' / ')}
-  add / again / set / show は、有効な制約と未完了の行動を毎回表示する。次の操作と報告の前に照らす。
+  add / again / set は、有効な制約（1行ずつ）と、前回の記録より後に付いた Task コメントを表示する。
+  次の操作と報告の前に制約に照らす。記録のたびに read を呼び直す必要はない。
+  場面は 120 文字、やること・守ることは 60 文字、完了の条件は 80 文字、証拠は 120 文字以内。
   link-pr <taskId> --url <GitHub PR の URL>    外部リンクを表示名 PR で登録（重複しない）
   create --title <題名> (--file <path> | --body <本文>) [--parent <taskId>]
                                               Task を起票（--parent でサブ Task）
@@ -195,21 +197,33 @@ export function renderStatus(rows) {
   return lines.join('\n');
 }
 
-// 記録・更新のたびに、有効な制約と未完了の行動を窓口へ出し直す。
+// 記録・更新のたびに、有効な制約を窓口へ出し直す。
 // 一覧に書いただけでは以降の行動に効かないため、操作の直後（次の行動の直前）に必ず読ませる。
+// 出力は会話に残って毎ターン送り直されるので、制約は1行ずつ、行動は件数だけにする（行動の一覧は show）。
 export function renderActive(rows) {
   const rules = rows.filter((r) => r.kind === '制約' && r.state === '有効');
   const open = rows.filter((r) => r.kind === '行動' && (r.state === '未着手' || r.state === '対応中'));
-  const lines = [`== 以降の行動の制約（有効 ${rules.length} 件）: 次の操作と報告の前に、全件に照らす ==`];
-  for (const r of rules) lines.push(`${r.no}. ${r.title}${r.again.length ? `（再発 ${r.again.length} 回）` : ''}`, `   場面: ${r.scene}`);
-  lines.push(`== 未完了の行動（${open.length} 件）==`);
-  for (const r of open) lines.push(`${r.no}. 【${r.state}】${r.title}`, `   完了の条件: ${r.doneWhen}`);
-  return lines.join('\n');
+  const lines = [`守る制約 ${rules.length} 件（次の操作と報告の前に照らす）`, ...rules.map((r) => `${r.no}. ${r.title}`)];
+  return [...lines, `未完了の行動 ${open.length} 件`].join('\n');
 }
 
+// 前回の記録より後に Task へ付いたコメントだけを返す。
+// 記録のたびに Task 全体を読み直さなくて済むようにする（Task 2122 では読み直しの出力が合計21万文字になった）。
+function newComments(statusComment, others) {
+  const since = statusComment.updatedAt ?? statusComment.createdAt ?? '';
+  const fresh = others.filter((c) => (c.createdAt ?? '') > since);
+  if (fresh.length === 0) return '';
+  return `\n前回の記録より後の Task コメント ${fresh.length} 件\n` + fresh.map((c) => `[${c.id}] ${c.bodyMd}`).join('\n');
+}
+
+function listOf(comments) {
+  return Array.isArray(comments) ? comments : comments.items ?? comments.comments ?? [];
+}
+
+let otherComments = [];
 async function findStatusComment(taskId) {
-  const comments = await api('GET', `/api/tasks/${taskId}/comments`);
-  const list = Array.isArray(comments) ? comments : comments.items ?? comments.comments ?? [];
+  const list = listOf(await api('GET', `/api/tasks/${taskId}/comments`));
+  otherComments = list.filter((c) => !c.bodyMd.startsWith(STATUS_HEADING));
   return list.find((c) => c.bodyMd.startsWith(STATUS_HEADING)) ?? null;
 }
 
@@ -218,8 +232,16 @@ async function saveStatus(taskId, comment, rows) {
   await api('PATCH', `/api/tasks/${taskId}/comments/${comment.id}`, { bodyMd });
 }
 
-function required(flags, name, what) {
+// 場面・やること・完了の条件・証拠は、一覧と毎回の表示に残り続けるので短く書かせる。原文（--words）には上限を付けない。
+const LIMITS = { scene: 120, do: 60, 'done-when': 80, evidence: 120 };
+function capped(flags, name) {
   const value = cell(flags[name] ?? '');
+  if (LIMITS[name] && value.length > LIMITS[name]) fail(`--${name} は ${LIMITS[name]} 文字以内で書いてください（いま ${value.length} 文字）`);
+  return value;
+}
+
+function required(flags, name, what) {
+  const value = capped(flags, name);
   if (!value) fail(`--${name} に${what}を渡してください`);
   return value;
 }
@@ -238,8 +260,9 @@ async function status(taskId, action, flags) {
   const comment = await findStatusComment(taskId);
   if (!comment) fail(`Task ${taskId} に指摘一覧がありません。先に status ${taskId} init を実行してください`);
   const rows = parseStatus(comment.bodyMd);
+  const tail = () => `${renderActive(rows)}${newComments(comment, otherComments)}`;
   if (action === 'show') {
-    console.log(`${renderStatus(rows)}\n\n${renderActive(rows)}`);
+    console.log(renderStatus(rows));
     return;
   }
   if (action === 'add') {
@@ -253,7 +276,7 @@ async function status(taskId, action, flags) {
     const no = rows.reduce((max, r) => Math.max(max, r.no), 0) + 1;
     rows.push({ no, kind: flags.kind, state: flags.kind === '行動' ? '未着手' : '有効', title, scene, words, doneWhen, evidence: '—', again: [] });
     await saveStatus(taskId, comment, rows);
-    console.log(`${no} 行目に${flags.kind}として追加しました\n\n${renderActive(rows)}`);
+    console.log(`${no} 行目に${flags.kind}として追加\n${tail()}`);
     return;
   }
   const row = rows.find((r) => r.no === Number(flags.row));
@@ -267,7 +290,7 @@ async function status(taskId, action, flags) {
       row.evidence = '—';
     }
     await saveStatus(taskId, comment, rows);
-    console.log(`${row.no} 行目に再発（${row.again.length} 回目）を記録しました${row.kind === '行動' ? '。状態は「対応中」です' : ''}\n\n${renderActive(rows)}`);
+    console.log(`${row.no} 行目に再発（${row.again.length} 回目）を記録${row.kind === '行動' ? '、状態は対応中' : ''}\n${tail()}`);
     return;
   }
   if (action === 'set') {
@@ -276,14 +299,14 @@ async function status(taskId, action, flags) {
     if (flags.state === '完了' && !flags.evidence) fail('完了にするには --evidence（完了の条件を満たした証拠: チャットでの報告、スクショのパス、テスト名、コミットなど）が必要です');
     if (row.title === LEGACY_TITLE && !flags.do) fail(`${row.no} 行目は旧形式で、やることが未記入です。--do と --scene を合わせて渡してください`);
     row.state = flags.state;
-    if (flags.evidence) row.evidence = cell(flags.evidence);
+    if (flags.evidence) row.evidence = capped(flags, 'evidence');
     if (row.title === LEGACY_TITLE) {
-      row.title = cell(flags.do);
-      if (flags.scene) row.scene = cell(flags.scene);
-      if (flags['done-when']) row.doneWhen = cell(flags['done-when']);
+      row.title = capped(flags, 'do');
+      if (flags.scene) row.scene = capped(flags, 'scene');
+      if (flags['done-when']) row.doneWhen = capped(flags, 'done-when');
     }
     await saveStatus(taskId, comment, rows);
-    console.log(`${row.no} 行目を「${row.state}」にしました\n\n${renderActive(rows)}`);
+    console.log(`${row.no} 行目を「${row.state}」に更新\n${tail()}`);
     return;
   }
   fail(`status の操作は init / show / add / again / set のどれかです: ${action}`);
@@ -291,6 +314,14 @@ async function status(taskId, action, flags) {
 
 // ---- その他の操作 ----
 
+// 値のある項目だけを1行で出す（null・false・空の項目と、別に出す本文を除く）。
+function compact(obj, skip = []) {
+  const kept = Object.entries(obj ?? {}).filter(([k, v]) => !skip.includes(k) && v !== null && v !== false && v !== '' && !(Array.isArray(v) && v.length === 0) && !(typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0));
+  return JSON.stringify(Object.fromEntries(kept));
+}
+
+// Task の現在の内容を、読むのに要る分だけ出す。JSON の全項目を整形して出すと、
+// 値の無い項目と字下げで出力が膨らみ、読むたびに会話へ残る。
 async function read(taskId) {
   const [task, comments, links, urlLinks] = await Promise.all([
     api('GET', `/api/tasks/${taskId}`),
@@ -298,11 +329,13 @@ async function read(taskId) {
     api('GET', `/api/issues/${taskId}/links`),
     api('GET', `/api/issues/${taskId}/url-links`),
   ]);
-  // 担当役も Task を読むたびに、有効な制約と未完了の行動を最初に受け取る。
-  const list = Array.isArray(comments) ? comments : comments.items ?? comments.comments ?? [];
-  const statusComment = list.find((c) => c.bodyMd.startsWith(STATUS_HEADING));
-  if (statusComment) console.log(`${renderActive(parseStatus(statusComment.bodyMd))}\n`);
-  console.log(JSON.stringify({ task, comments, links, urlLinks }, null, 2));
+  const item = task.item ?? task;
+  const out = [`# Task ${item.id}: ${item.title}`, compact(item, ['id', 'title', 'bodyMd', 'type', 'isDeleted', 'createdAt', 'updatedAt', 'commentCount']), '', item.bodyMd ?? ''];
+  for (const c of listOf(comments)) out.push('', `--- コメント ${c.id}（${(c.createdAt ?? '').slice(0, 16)}）`, c.bodyMd);
+  const linkList = Array.isArray(links) ? links : links.items ?? links.links ?? [];
+  if (linkList.length) out.push('', '--- リンク', ...linkList.map((l) => compact(l, ['createdAt', 'updatedAt'])));
+  if (urlLinks.length) out.push('', '--- 外部リンク', ...urlLinks.map((l) => compact(l, ['createdAt', 'updatedAt', 'issueId'])));
+  console.log(out.join('\n'));
 }
 
 // 本文は --file（実装役など）か --body（ファイルを書けない窓口）で受け取る。

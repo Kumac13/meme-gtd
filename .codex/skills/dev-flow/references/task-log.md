@@ -28,7 +28,7 @@ node .codex/skills/dev-flow/scripts/task.mjs help
 | ご指摘を追加する（制約） | `task.mjs status <TaskID> add --kind 制約 --scene "<場面>" --words "<原文>" --do "<以降守ること>"` |
 | 同じ指摘の繰り返しを記録する | `task.mjs status <TaskID> again --row <番号> --scene "<場面>" --words "<原文>"` |
 | 行動の状態を更新する | `task.mjs status <TaskID> set --row <番号> --state <状態> --evidence "<証拠>"` |
-| 指摘一覧と、有効な制約・未完了の行動を見る | `task.mjs status <TaskID> show` |
+| 指摘一覧の全体を見る | `task.mjs status <TaskID> show` |
 | コメントを投稿する | `task.mjs comment <TaskID> --kind <種類> --file <path>`（窓口は `--body`） |
 | PR を登録する | `task.mjs link-pr <TaskID> --url <PR URL>` |
 | 起票する | `task.mjs create --title <題名> --file <path>`（サブ Task は `--parent <親の TaskID>`） |
@@ -45,7 +45,8 @@ node .codex/skills/dev-flow/scripts/task.mjs help
 - 行を消す操作はない。場面・ご指摘の原文・やることは変更できない。
 - 行動の状態: `未着手` / `対応中` / `完了`（完了の条件を満たした証拠がある。`--evidence` が必須）/ `対象外`（ユーザーが対象外と決めた）
 - 制約の状態: `有効` / `解除`（ユーザーが外すと決めた）
-- `add`・`again`・`set`・`show`・`read` は、有効な制約と未完了の行動を毎回表示する。
+- `add`・`again`・`set` は、有効な制約（1行ずつ）と、前回の記録より後に付いた Task コメントを表示する。記録のたびに `read` を呼び直さない。
+- 場面は120文字、やること・守ることは60文字、完了の条件は80文字、証拠は120文字以内（超えると拒否される）。
 - iOS アプリは Markdown の表を表示できないため、見出しと箇条書きで書く。旧形式（1発言1行、状態・根拠・次）の行は、やることが未記入の行動として読み込まれる。`set` で更新するときに `--do` と `--scene` を合わせて渡す。
 
 ## コメントの種類
