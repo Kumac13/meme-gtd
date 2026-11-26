@@ -7,6 +7,7 @@
 // 定義を変えると信頼は外れる。有効かどうかは HOOK_CHECK のコマンドで確かめる（SKILL.md「最初に」）。
 import { fileURLToPath } from 'node:url';
 import { appendFileSync, readFileSync } from 'node:fs';
+import { markGuardSeen, rememberTask, taskIdIn } from './dev-flow-state.mjs';
 
 export const HOOK_CHECK = 'echo dev-flow-hook-check';
 export const WAIT_TIMEOUT_MS = 3600000;
@@ -134,6 +135,12 @@ function main() {
   const input = JSON.parse(readFileSync(0, 'utf8'));
   // DEV_FLOW_HOOK_LOG にパスを入れると、受け取った入力を追記する（フックが実行されたか、ツール名が何かを確かめるため）。
   if (process.env.DEV_FLOW_HOOK_LOG) appendFileSync(process.env.DEV_FLOW_HOOK_LOG, `${JSON.stringify(input)}\n`);
+  // task.mjs の呼び出しから、このスレッドが進めている Task を控える（制約を渡すフックが使う）。
+  const command = input.tool_name === 'Bash' ? String(input.tool_input?.command ?? '') : '';
+  if (command.includes('task.mjs')) {
+    markGuardSeen();
+    if (!input.agent_id) rememberTask(input.session_id, taskIdIn(command));
+  }
   const message = decide(input);
   if (message) deny(message);
 }

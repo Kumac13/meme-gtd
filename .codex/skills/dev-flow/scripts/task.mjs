@@ -4,6 +4,7 @@
 // 使い方は `node .codex/skills/dev-flow/scripts/task.mjs help`。
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
+import { guardSeenRecently } from '../../../hooks/dev-flow-state.mjs';
 
 const API = (process.env.MGTD_API_URL || 'http://localhost:3000').replace(/\/$/, '');
 const STATUS_HEADING = '## 指摘一覧';
@@ -38,8 +39,8 @@ const HELP = `task.mjs — dev-flow 用の meme-gtd Task 操作（接続先: ${A
   status <taskId> set --row <番号> --state <状態> [--evidence <証拠>]
                                               行動: ${ACTION_STATES.join(' / ')}（完了は証拠が必須）
                                               制約: ${RULE_STATES.join(' / ')}
-  add / again / set は、有効な制約（1行ずつ）と、前回の記録より後に付いた Task コメントを表示する。
-  次の操作と報告の前に制約に照らす。記録のたびに read を呼び直す必要はない。
+  有効な制約は、フックが発言ごと・圧縮後・担当役の起動時に渡す（フックが動いていないときだけ add / again / set が表示する）。
+  add / again / set は、前回の記録より後に付いた Task コメントも表示する。記録のたびに read を呼び直す必要はない。
   場面は 120 文字、やること・守ることは 60 文字、完了の条件は 80 文字、証拠は 120 文字以内。
   link-pr <taskId> --url <GitHub PR の URL>    外部リンクを表示名 PR で登録（重複しない）
   create --title <題名> (--file <path> | --body <本文>) [--parent <taskId>]
@@ -197,8 +198,8 @@ export function renderStatus(rows) {
   return lines.join('\n');
 }
 
-// 記録・更新のたびに、有効な制約を窓口へ出し直す。
-// 一覧に書いただけでは以降の行動に効かないため、操作の直後（次の行動の直前）に必ず読ませる。
+// 有効な制約は、フック（.codex/hooks/user-prompt.mjs・constraints.mjs）が発言ごと・圧縮後・担当役の起動時に渡す。
+// フックが動いていないとき（未信頼など）だけ、記録・更新のたびにここで出し直す。
 // 出力は会話に残って毎ターン送り直されるので、制約は1行ずつ、行動は件数だけにする（行動の一覧は show）。
 export function renderActive(rows) {
   const rules = rows.filter((r) => r.kind === '制約' && r.state === '有効');
@@ -260,7 +261,7 @@ async function status(taskId, action, flags) {
   const comment = await findStatusComment(taskId);
   if (!comment) fail(`Task ${taskId} に指摘一覧がありません。先に status ${taskId} init を実行してください`);
   const rows = parseStatus(comment.bodyMd);
-  const tail = () => `${renderActive(rows)}${newComments(comment, otherComments)}`;
+  const tail = () => `${guardSeenRecently() ? '' : renderActive(rows)}${newComments(comment, otherComments)}`.trim();
   if (action === 'show') {
     console.log(renderStatus(rows));
     return;
@@ -276,7 +277,7 @@ async function status(taskId, action, flags) {
     const no = rows.reduce((max, r) => Math.max(max, r.no), 0) + 1;
     rows.push({ no, kind: flags.kind, state: flags.kind === '行動' ? '未着手' : '有効', title, scene, words, doneWhen, evidence: '—', again: [] });
     await saveStatus(taskId, comment, rows);
-    console.log(`${no} 行目に${flags.kind}として追加\n${tail()}`);
+    console.log(`${no} 行目に${flags.kind}として追加\n${tail()}`.trim());
     return;
   }
   const row = rows.find((r) => r.no === Number(flags.row));
@@ -290,7 +291,9 @@ async function status(taskId, action, flags) {
       row.evidence = '—';
     }
     await saveStatus(taskId, comment, rows);
-    console.log(`${row.no} 行目に再発（${row.again.length} 回目）を記録${row.kind === '行動' ? '、状態は対応中' : ''}\n${tail()}`);
+    // 同じ指摘の繰り返しは、この Task の中だけの制約では防げていない。Task をまたいで効く場所へ上げる候補として報告させる。
+    const promote = '\n同じ指摘の繰り返しです。最後の報告に「AGENTS.md かスキルに上げる規則の候補」として、この行を挙げてください。';
+    console.log(`${row.no} 行目に再発（${row.again.length} 回目）を記録${row.kind === '行動' ? '、状態は対応中' : ''}${promote}\n${tail()}`.trim());
     return;
   }
   if (action === 'set') {
@@ -306,7 +309,7 @@ async function status(taskId, action, flags) {
       if (flags['done-when']) row.doneWhen = capped(flags, 'done-when');
     }
     await saveStatus(taskId, comment, rows);
-    console.log(`${row.no} 行目を「${row.state}」に更新\n${tail()}`);
+    console.log(`${row.no} 行目を「${row.state}」に更新\n${tail()}`.trim());
     return;
   }
   fail(`status の操作は init / show / add / again / set のどれかです: ${action}`);
