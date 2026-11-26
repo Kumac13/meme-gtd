@@ -237,6 +237,28 @@ curl "http://localhost:3001/api/memos?search=important&bookmarked=true"
 }
 ```
 
+## Links エンドポイント
+
+### GET /api/links/graph
+
+非削除の Task・Memo・Article と保存済みの Issue 間リンクを、同じ読み取り時点の1レスポンスで返す。起点を省略すると、孤立 Issue を含む全体から検索・フィルタを適用する。
+
+| パラメータ | 説明 |
+|---|---|
+| `rootId` | 起点の正の整数 ID。入出両方向にリンクをたどる |
+| `depth` | 起点からの最大距離。正の整数。省略すると全到達範囲 |
+| `q` | タイトル・Markdown 本文・非削除コメントへの部分一致（既存 keyword の LIKE と同じ） |
+| `label` | カンマ区切りのラベル名。複数は OR |
+| `projectId` | カンマ区切りの正の整数 ID または `none`（所属なし）。複数は OR |
+| `bookmarked` | `true` でブックマーク済みに絞る。省略または `false` で全件 |
+| `includeLabels` | `true` で返す Issue のラベル付与を含める。既定は `false` |
+
+検索・ラベル・プロジェクト・ブックマークは条件間を AND とする。起点ありでは到達範囲を確定した後に条件を適用し、起点は条件に合わなくても返す。途中の点が表示条件で落ちても、その先に到達していれば表示対象になる。辺は保存時の source・target と種別を保ち、返却する Issue を両端に持つ辺を含める。
+
+`rootId`・`depth` の省略値はレスポンスで `null`。空結果は 200 と空配列、不正な値や起点なしの `depth` は 400、存在しない・削除済み・対象外種別の起点は 404。成功レスポンスは `Cache-Control: no-store`。
+
+起点ありの Issue は起点、最短距離、ID の順、起点なしは更新日時の降順と ID の昇順。返却上限は `limits`（Issue 5,000、辺 20,000、ラベル 2,000、付与 20,000）で返す。上限を超えると `truncated: true`。返却中の Issue・ラベルを端点に持つ付与を返す。外部 URL と本文の閲覧には既存の個別詳細 API を使う。
+
 ## Sync エンドポイント（iOSオフライン同期）
 
 競合ルール・全体設計は `docs/architecture.md` の「同期アーキテクチャ」を参照。契約の正は `packages/api/docs/api/openapi.yaml`。

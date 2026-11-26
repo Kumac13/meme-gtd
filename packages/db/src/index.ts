@@ -113,6 +113,13 @@ export {
   findLink,
   findInverseParentChildLink,
   hasAncestor,
+  graphRootExists,
+  getGraphAdjacency,
+  getGraphNodes,
+  getGraphEdges,
+  getGraphLabels,
+  getGraphMemberships,
+  type LinkGraphFilters,
   type CreateLinkInput,
   type ListLinksFilters
 } from './linkRepository.js';

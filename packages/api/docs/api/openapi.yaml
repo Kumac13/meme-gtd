@@ -4383,6 +4383,284 @@ paths:
                   - error
                   - message
                 additionalProperties: false
+  /api/links/graph:
+    get:
+      operationId: getLinksGraph
+      summary: Get the issue link graph
+      tags:
+        - Links
+      description: Read the active issue graph in one snapshot. Reachability is computed before filters, and the root is always included.
+      parameters:
+        - schema:
+            type: integer
+            exclusiveMinimum: true
+            minimum: -9007199254740991
+            maximum: 9007199254740991
+          in: query
+          name: rootId
+          required: false
+          description: Start from this active Task, Memo or Article
+        - schema:
+            type: integer
+            exclusiveMinimum: true
+            minimum: -9007199254740991
+            maximum: 9007199254740991
+          in: query
+          name: depth
+          required: false
+          description: Maximum distance from rootId. Omit for all reachable issues
+        - schema:
+            type: string
+          in: query
+          name: q
+          required: false
+          description: Partial match in title, Markdown body or non-deleted comments
+        - schema:
+            type: string
+          in: query
+          name: label
+          required: false
+          description: Comma-separated label names (OR)
+        - schema:
+            type: string
+          in: query
+          name: projectId
+          required: false
+          description: Comma-separated positive project IDs or none (OR)
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          in: query
+          name: bookmarked
+          required: false
+          description: Filter to bookmarked issues
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          in: query
+          name: includeLabels
+          required: false
+          description: Include actual label memberships for the returned issues
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rootId:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    nullable: true
+                  depth:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    nullable: true
+                  nodes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                        type:
+                          type: string
+                          enum:
+                            - task
+                            - memo
+                            - article
+                        title:
+                          type: string
+                        status:
+                          type: string
+                          nullable: true
+                      required:
+                        - id
+                        - type
+                        - title
+                        - status
+                      additionalProperties: false
+                  edges:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                          description: Unique link ID
+                        sourceIssueId:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                          description: Source issue ID
+                        targetIssueId:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                          description: Target issue ID
+                        linkType:
+                          type: string
+                          enum:
+                            - parent
+                            - child
+                            - relates
+                            - derived_from
+                          description: Type of relationship
+                      required:
+                        - id
+                        - sourceIssueId
+                        - targetIssueId
+                        - linkType
+                      additionalProperties: false
+                  labels:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                        name:
+                          type: string
+                      required:
+                        - id
+                        - name
+                      additionalProperties: false
+                  memberships:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        issueId:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                        labelId:
+                          type: integer
+                          exclusiveMinimum: true
+                          minimum: 0
+                      required:
+                        - issueId
+                        - labelId
+                      additionalProperties: false
+                  truncated:
+                    type: boolean
+                  limits:
+                    type: object
+                    properties:
+                      issueNodes:
+                        type: integer
+                        exclusiveMinimum: true
+                        minimum: 0
+                      issueEdges:
+                        type: integer
+                        exclusiveMinimum: true
+                        minimum: 0
+                      labelNodes:
+                        type: integer
+                        exclusiveMinimum: true
+                        minimum: 0
+                      memberships:
+                        type: integer
+                        exclusiveMinimum: true
+                        minimum: 0
+                    required:
+                      - issueNodes
+                      - issueEdges
+                      - labelNodes
+                      - memberships
+                    additionalProperties: false
+                required:
+                  - rootId
+                  - depth
+                  - nodes
+                  - edges
+                  - labels
+                  - memberships
+                  - truncated
+                  - limits
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
   /api/links:
     post:
       operationId: createLink

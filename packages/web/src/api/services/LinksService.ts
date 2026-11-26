@@ -7,6 +7,89 @@ import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class LinksService {
     /**
+     * Get the issue link graph
+     * Read the active issue graph in one snapshot. Reachability is computed before filters, and the root is always included.
+     * @param rootId Start from this active Task, Memo or Article
+     * @param depth Maximum distance from rootId. Omit for all reachable issues
+     * @param q Partial match in title, Markdown body or non-deleted comments
+     * @param label Comma-separated label names (OR)
+     * @param projectId Comma-separated positive project IDs or none (OR)
+     * @param bookmarked Filter to bookmarked issues
+     * @param includeLabels Include actual label memberships for the returned issues
+     * @returns any Default Response
+     * @throws ApiError
+     */
+    public static getLinksGraph(
+        rootId?: number,
+        depth?: number,
+        q?: string,
+        label?: string,
+        projectId?: string,
+        bookmarked?: 'true' | 'false',
+        includeLabels?: 'true' | 'false',
+    ): CancelablePromise<{
+        rootId: number | null;
+        depth: number | null;
+        nodes: Array<{
+            id: number;
+            type: 'task' | 'memo' | 'article';
+            title: string;
+            status: string | null;
+        }>;
+        edges: Array<{
+            /**
+             * Unique link ID
+             */
+            id: number;
+            /**
+             * Source issue ID
+             */
+            sourceIssueId: number;
+            /**
+             * Target issue ID
+             */
+            targetIssueId: number;
+            /**
+             * Type of relationship
+             */
+            linkType: 'parent' | 'child' | 'relates' | 'derived_from';
+        }>;
+        labels: Array<{
+            id: number;
+            name: string;
+        }>;
+        memberships: Array<{
+            issueId: number;
+            labelId: number;
+        }>;
+        truncated: boolean;
+        limits: {
+            issueNodes: number;
+            issueEdges: number;
+            labelNodes: number;
+            memberships: number;
+        };
+    }> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/links/graph',
+            query: {
+                'rootId': rootId,
+                'depth': depth,
+                'q': q,
+                'label': label,
+                'projectId': projectId,
+                'bookmarked': bookmarked,
+                'includeLabels': includeLabels,
+            },
+            errors: {
+                400: `Default Response`,
+                404: `Default Response`,
+                500: `Default Response`,
+            },
+        });
+    }
+    /**
      * Create link
      * Create a link between two issues
      * @param requestBody

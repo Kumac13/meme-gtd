@@ -23,6 +23,7 @@
     "@schedule-x/react": "^3.4.0",
     "@schedule-x/theme-default": "^3.4.2",
     "@tailwindcss/typography": "^0.5.19",
+    "cytoscape": "3.35.0",
     "meme-gtd-shared": "workspace:^",
     "mermaid": "^11.12.2",
     "nuqs": "^2.8.1",

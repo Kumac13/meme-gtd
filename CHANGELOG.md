@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.58.0 - 2026-11-27
+
+### New Features
+
+- Web に Links タブを追加し、Task・Memo・Article の保存済みリンクをグラフでたどれるようにした。詳細の Show Links、起点と Depth、検索と絞り込み、ラベル付与の表示に対応。
+
 ## 0.57.5 - 2026-11-26
 
 ### Bug Fixes

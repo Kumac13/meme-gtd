@@ -1,3 +1,4 @@
+import ShowLinks from '../components/ShowLinks';
 import { ActivityRow } from '../components/CommentSection';
 import type { ActivityLogEntry } from '../utils/activityLogHelpers';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -139,7 +140,7 @@ function MobileThreadItem({
           </div>
         </div>
       ) : (
-        <div className="prose prose-sm prose-p:my-0 prose-li:my-0 prose-p:text-[13px] prose-p:leading-6 max-w-none break-words pr-8 text-gray-700">
+        <div className="prose prose-sm prose-p:my-0 prose-li:my-0 prose-p:text-[13px] prose-p:leading-6 max-w-none [overflow-wrap:anywhere] pr-8 text-gray-700">
           <MarkdownRenderer content={content} />
         </div>
       )}
@@ -412,6 +413,7 @@ export default function MemoDetail() {
             </svg>
             {copiedFormat === 'json' ? 'Copied!' : 'Copy All Contents with JSON'}
           </button>
+          <div className="mt-3"><ShowLinks id={memo.id} /></div>
         </div>
 
         <MobileFloatingComposer

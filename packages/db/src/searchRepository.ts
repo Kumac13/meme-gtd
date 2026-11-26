@@ -46,6 +46,12 @@ interface RawSearchRow {
   matched_text: string;
 }
 
+// SQL predicates shared by issue searches. Values are bound by each caller.
+export const keywordIssueMatch = (alias: 'i', placeholder: '?' | '@q') =>
+  `(${alias}.title LIKE ${placeholder} OR ${alias}.body_md LIKE ${placeholder})`;
+export const keywordCommentMatch = (alias: 'c', placeholder: '?' | '@q') =>
+  `${alias}.is_deleted = 0 AND ${alias}.body_md LIKE ${placeholder}`;
+
 export const searchByKeyword = (
   db: Database.Database,
   query: string,
@@ -87,7 +93,7 @@ export const searchByKeyword = (
              'issue' AS match_field, NULL AS match_comment_id,
              CASE WHEN i.title LIKE ? THEN i.title ELSE i.body_md END AS matched_text
       FROM issues i
-      WHERE i.is_deleted = 0 AND (i.title LIKE ? OR i.body_md LIKE ?)
+      WHERE i.is_deleted = 0 AND ${keywordIssueMatch('i', '?')}
       ${extraFilters}
 
       UNION ALL
@@ -98,8 +104,8 @@ export const searchByKeyword = (
              'comment' AS match_field, c.id AS match_comment_id,
              c.body_md AS matched_text
       FROM issues i
-      JOIN comments c ON c.issue_id = i.id AND c.is_deleted = 0
-      WHERE i.is_deleted = 0 AND c.body_md LIKE ?
+      JOIN comments c ON c.issue_id = i.id
+      WHERE i.is_deleted = 0 AND ${keywordCommentMatch('c', '?')}
       ${extraFilters}
     )
     ORDER BY updated_at ${order}

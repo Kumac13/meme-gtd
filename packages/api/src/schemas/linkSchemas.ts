@@ -79,3 +79,45 @@ export const ListLinksQuerySchema = z.object({
 });
 
 export type ListLinksQuery = z.infer<typeof ListLinksQuerySchema>;
+
+const PositiveIntegerQuerySchema = z.preprocess(
+  value => typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : NaN,
+  z.number().int().positive().safe(),
+);
+const BooleanQuerySchema = z.enum(['true', 'false']);
+
+export const LinksGraphQuerySchema = z.object({
+  rootId: PositiveIntegerQuerySchema.optional().describe('Start from this active Task, Memo or Article'),
+  depth: PositiveIntegerQuerySchema.optional().describe('Maximum distance from rootId. Omit for all reachable issues'),
+  q: z.string().optional().describe('Partial match in title, Markdown body or non-deleted comments'),
+  label: z.string().optional().describe('Comma-separated label names (OR)'),
+  projectId: z.string().optional().describe('Comma-separated positive project IDs or none (OR)'),
+  bookmarked: BooleanQuerySchema.optional().describe('Filter to bookmarked issues'),
+  includeLabels: BooleanQuerySchema.optional().describe('Include actual label memberships for the returned issues'),
+});
+
+export type LinksGraphQuery = z.infer<typeof LinksGraphQuerySchema>;
+
+export const LinksGraphSchema = z.object({
+  rootId: z.number().int().positive().nullable(),
+  depth: z.number().int().positive().nullable(),
+  nodes: z.array(z.object({
+    id: z.number().int().positive(),
+    type: z.enum(['task', 'memo', 'article']),
+    title: z.string(),
+    status: z.string().nullable(),
+  })),
+  edges: z.array(LinkSchema.omit({ createdAt: true })),
+  labels: z.array(z.object({ id: z.number().int().positive(), name: z.string() })),
+  memberships: z.array(z.object({
+    issueId: z.number().int().positive(),
+    labelId: z.number().int().positive(),
+  })),
+  truncated: z.boolean(),
+  limits: z.object({
+    issueNodes: z.number().int().positive(),
+    issueEdges: z.number().int().positive(),
+    labelNodes: z.number().int().positive(),
+    memberships: z.number().int().positive(),
+  }),
+});

@@ -52,6 +52,17 @@ describe('shared component boundaries (web)', () => {
     }
   });
 
+  it('shares the starting issue action across both issue detail action layouts', () => {
+    expectOwnedBy(webSrc, files, 'Show Links', ['components/ShowLinks.tsx']);
+    for (const path of ['components/ItemDetail.tsx', 'pages/MemoDetail.tsx']) {
+      expect(source(webSrc, path)).toContain('<ShowLinks');
+    }
+    const links = source(webSrc, 'pages/LinksPage.tsx');
+    for (const name of ['ListPageLayout', 'IssuePicker', 'ItemDetailPanel', 'LabelFilterDropdown', 'ProjectFilterDropdown']) {
+      expect(links).toContain(`<${name}`);
+    }
+  });
+
   it('keeps template fetching behind TemplateCreationFlow / template screens', () => {
     expectOwnedBy(
       webSrc,
