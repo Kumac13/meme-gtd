@@ -3,9 +3,12 @@
 // Task 2107・2115 では、質問に答えずに操作を始める、「は？」を取り下げや新しい作業指示に読み替える、
 // 報告の依頼で Task を起票する、といった取り違えが繰り返された。
 // スキル本文は会話が長くなると参照されなくなるため、間違いが起きる時点（発言の直後）で毎回渡す。
+// 続けて、そのスレッドが進めている Task の有効な制約（ユーザーのご指摘から記録したもの）を、前回渡した文面から変わったときだけ渡す。
 // 標準出力は、そのターンの開発者向け文脈として追加される。サブエージェントには渡さない。
 import { fileURLToPath } from 'node:url';
 import { appendFileSync, readFileSync } from 'node:fs';
+import { constraintsFor } from './constraints.mjs';
+import { alreadySent, markSent } from './dev-flow-state.mjs';
 
 export const REMINDER = `[dev-flow] この発言に応える前に確かめること（.codex/skills/dev-flow/SKILL.md「発言の受け取り方」）
 1. 質問・「答えろ」・「何やってる」には、最初に答える。答える前に操作しない（担当役の停止・調査・Task への記録も後）。
@@ -15,11 +18,14 @@ export const REMINDER = `[dev-flow] この発言に応える前に確かめる�
 5. ターンを終えてよいのは、依頼が完了したときか、スキルが定めた合意待ち（検討結果・計画）のときだけ。合意待ちでは、判断に必要な内容をこのチャットに書き、何への合意を求めているかを明記する。
 6. 報告や設問を直すときは、指摘された箇所だけを直す。項目・列・件数を減らさない。`;
 
-function main() {
+async function main() {
   const input = JSON.parse(readFileSync(0, 'utf8'));
   if (process.env.DEV_FLOW_HOOK_LOG) appendFileSync(process.env.DEV_FLOW_HOOK_LOG, `${JSON.stringify(input)}\n`);
   if (input.agent_id) return;
-  process.stdout.write(REMINDER);
+  const constraints = await constraintsFor(input.session_id);
+  if (!constraints || alreadySent(input.session_id, constraints)) return void process.stdout.write(REMINDER);
+  markSent(input.session_id, constraints);
+  process.stdout.write(`${REMINDER}\n\n${constraints}`);
 }
 
 if (fileURLToPath(import.meta.url) === process.argv[1]) main();

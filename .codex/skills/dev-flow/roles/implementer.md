@@ -4,7 +4,7 @@
 
 ## 手順
 
-1. `node .codex/skills/dev-flow/scripts/task.mjs read <TaskID>` で、Task の本文・コメント・リンクと状態表を読み、ゴールと確認基準を把握する。親 Task があれば、その本文とコメントも読む。
+1. `node .codex/skills/dev-flow/scripts/task.mjs read <TaskID>` で、Task の本文・コメント・リンクと指摘一覧を読み、ゴールと確認基準を把握する。親 Task があれば、その本文とコメントも読む。
 2. 着手を `task.mjs comment <TaskID> --kind start --file <path>` で記録する。
 3. `git fetch origin main` を実行し、最新の `origin/main` から専用のブランチと worktree を作る。他の PR のブランチを土台にしない。元の作業ツリーにある未コミットの変更には触れない。
 4. ルート `CLAUDE.md` のドキュメントルーティングに従い、`docs/architecture.md` と、変更するディレクトリの `CLAUDE.md` を読む。
@@ -24,7 +24,7 @@ worktree の外（例: `$TMPDIR/dev-flow/<TaskID>/checklist.json`）に、絶対
 
 - `e2e`: 計画が選んだ `references/e2e-scenarios.md` の行。計画が選んでいない行は入れない。
 - `diff`: 計画の「実画面で確かめること」のうち、今回変更した動作。
-- `issue`: 状態表のご指摘のうち、画面で確かめられるもの。
+- `issue`: 指摘一覧のご指摘のうち、画面で確かめられるもの。
 
 ```json
 {

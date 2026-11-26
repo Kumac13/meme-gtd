@@ -33,7 +33,7 @@
 * Do not ask about what the Task body or the user's messages already state, or about what investigation can settle.
 * End a turn only when the requested work is complete or at the two agreement points the skill defines: the consideration result (before planning) and the plan (before implementation). At an agreement point, write what the user needs to judge in the chat (compared approaches, chosen approach and why, changed files, processing order, what is verified and by whom) and state what you are asking agreement for. A Task comment is a work log, not a report. Agreement on consideration or plan is separate from confirming the implemented result and from PR review.
 * A shared Task is not an implementation request by itself. Change files only when the request asks for implementation (実装, 直して, and the like) or the user agrees to the plan. After that, proceed through verification, PR, Task link, and review without stopping.
-* Record user-reported issues verbatim in the Task's status table (`task.mjs status add`) for Tasks run through this flow, and report in that table's shape.
+* Record each user-reported issue in the Task's findings list (`task.mjs status add`) with its scene (what the main thread had just output), the verbatim words, and either an action (with a done condition) or a standing constraint on later behavior. Check every active constraint, which `task.mjs` reprints on each call, before the next action and before reporting.
 
 ## Release and commit discipline
 
