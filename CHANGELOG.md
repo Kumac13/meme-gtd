@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.60.0 - 2026-11-27
+
+### New Features
+
+- Web・iOS の Task・Memo・Article 詳細で、本文とコメントの内部番号リンクに Links と同じタイトルを表示する。Memo への参照は本文の短いプレビューを表示し、タイトルが不明な参照は番号で表示する。
+
 ## 0.59.0 - 2026-11-27
 
 ### New Features

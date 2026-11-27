@@ -1,3 +1,5 @@
+import { useDetailIssueLinks } from '../hooks/useDetailIssueLinks';
+import type { IssueReferenceTitles } from '../utils/issueReferenceTitles';
 import ShowLinks from '../components/ShowLinks';
 import { ActivityRow } from '../components/CommentSection';
 import type { ActivityLogEntry } from '../utils/activityLogHelpers';
@@ -41,6 +43,7 @@ interface MemoComment {
 }
 
 interface MobileThreadItemProps {
+  issueReferenceTitles: IssueReferenceTitles;
   content: string;
   createdAt: string;
   labels?: string[];
@@ -51,6 +54,7 @@ interface MobileThreadItemProps {
 }
 
 function MobileThreadItem({
+  issueReferenceTitles,
   content,
   createdAt,
   labels,
@@ -141,7 +145,7 @@ function MobileThreadItem({
         </div>
       ) : (
         <div className="prose prose-sm prose-p:my-0 prose-li:my-0 prose-p:text-[13px] prose-p:leading-6 max-w-none [overflow-wrap:anywhere] pr-8 text-gray-700">
-          <MarkdownRenderer content={content} />
+          <MarkdownRenderer content={content} issueReferenceTitles={issueReferenceTitles} />
         </div>
       )}
 
@@ -168,6 +172,8 @@ export default function MemoDetail() {
   const [selectedItem, setSelectedItem] = useState<{ id: number; type: IssueType } | null>(null);
   const { copiedFormat, copy: copyItemContent, copyWithJSON } = useCopyItemContent();
   const [threadRevision, setThreadRevision] = useState(0);
+  const isCurrentMemo = memo?.id === Number(id);
+  const issueLinks = useDetailIssueLinks(isCurrentMemo ? memo?.id : undefined, 'memo', threadRevision);
   const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
   const [threadComments, setThreadComments] = useState<MemoComment[]>([]);
   const [replyBody, setReplyBody] = useState('');
@@ -178,6 +184,7 @@ export default function MemoDetail() {
   useDocumentTitle(titleText);
 
   useEffect(() => {
+    let active = true;
     async function fetchMemo() {
       if (!id) {
         setError('Memo ID is required');
@@ -189,18 +196,21 @@ export default function MemoDetail() {
         setLoading(true);
         setError(null);
         const response = await MemosService.getMemo(id);
+        if (!active) return;
         setMemo(response as Memo);
         const commentResponse = await CommentsService.listMemoComments(id);
-        setThreadComments(commentResponse as MemoComment[]);
+        if (active) setThreadComments(commentResponse as MemoComment[]);
       } catch (err) {
+        if (!active) return;
         setError(err instanceof Error ? err.message : 'Failed to load memo');
         console.error('Error fetching memo:', err);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
 
     fetchMemo();
+    return () => { active = false; };
   }, [id]);
 
   const handleDelete = async () => {
@@ -307,7 +317,7 @@ export default function MemoDetail() {
     setMemo(refreshed as Memo);
   }, [id]);
 
-  if (loading) {
+  if (loading || (memo && !isCurrentMemo && !error)) {
     return <LoadingState message="Loading memo..." />;
   }
 
@@ -348,6 +358,7 @@ export default function MemoDetail() {
             </div>
             <MobileThreadItem
               content={memo.bodyMd}
+              issueReferenceTitles={issueLinks.titles}
               createdAt={memo.createdAt}
               labels={memo.labels}
               showInlineTime
@@ -373,6 +384,7 @@ export default function MemoDetail() {
                   )}
                   <MobileThreadItem
                     content={comment.bodyMd}
+                    issueReferenceTitles={issueLinks.titles}
                     createdAt={comment.createdAt}
                     showMenu
                     onSave={(bodyMd) => handleReplyUpdate(comment.id, bodyMd)}
@@ -469,6 +481,7 @@ export default function MemoDetail() {
           )}
           onItemClick={handleItemClick}
           threadRevision={threadRevision}
+          sharedIssueLinks={issueLinks}
           onActivitiesLoaded={setActivities}
           onCommentsLoaded={handleCommentsLoaded}
         />

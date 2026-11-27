@@ -43,6 +43,7 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
 
     // Links
     @Published var issueLinks: [IssueLink] = []
+    var issueLinksLoadID: UUID?
     @Published var urlLinks: [UrlLink] = []
 
     // Shared detail capabilities
@@ -168,6 +169,7 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
             )
             article = updated
             articleStore?.needsReload = true
+            if bodyMd != nil { Task { await loadIssueLinks() } }
             HapticManager.notification(.success)
             return true
         } catch {
@@ -198,6 +200,7 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
             )
             if dataSources.syncScheduler == nil { comments.append(comment) }
             replyBody = ""
+            Task { await loadIssueLinks() }
             HapticManager.notification(.success)
             return true
         } catch {
@@ -221,6 +224,7 @@ class ArticleDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRela
             if let index = comments.firstIndex(where: { $0.id == commentId }) {
                 comments[index] = updated
             }
+            Task { await loadIssueLinks() }
             return true
         } catch {
             self.error = error.localizedDescription

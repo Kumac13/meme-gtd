@@ -62,6 +62,36 @@ struct IssueLink: Identifiable, Codable {
     let targetIssue: TargetIssue
 }
 
+struct IssueReferenceTitles {
+    private struct Key: Hashable {
+        let id: Int
+        let type: String
+    }
+
+    private let titles: [Key: String]
+
+    init(links: [IssueLink] = []) {
+        var titles: [Key: String] = [:]
+        for link in links {
+            let target = link.targetIssue
+            let otherID = link.direction == .incoming ? link.sourceIssueId : link.targetIssueId
+            let title = target.displayTitle
+            guard target.id == otherID,
+                  !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  !target.title.contains("(deleted)"),
+                  !(target.status == nil && target.title == "Issue #\(otherID)") else { continue }
+            titles[Key(id: otherID, type: target.type)] = title
+        }
+        self.titles = titles
+    }
+
+    var isEmpty: Bool { titles.isEmpty }
+
+    subscript(id: Int, type: String) -> String? {
+        titles[Key(id: id, type: type)]
+    }
+}
+
 // MARK: - Create Link Request (POST /api/links)
 
 struct CreateLinkRequest: Codable {

@@ -1,3 +1,4 @@
+import { issueReferenceKey, type IssueReferenceTitles } from './issueReferenceTitles';
 /**
  * Markdown rendering utilities for meme-gtd Web UI
  */
@@ -391,7 +392,8 @@ interface IssueAnchorProps {
  * matching the LinkSection behavior). External URLs still open in a new tab.
  */
 function makeIssueAwareAnchor(
-  onIssueLinkClick: (id: number, type: IssueType) => void,
+  onIssueLinkClick?: (id: number, type: IssueType) => void,
+  issueReferenceTitles?: IssueReferenceTitles,
 ): (props: IssueAnchorProps) => ReactNode {
   return ({ href, children }) => {
     if (href) {
@@ -399,7 +401,24 @@ function makeIssueAwareAnchor(
       if (match) {
         const type = slugToIssueType[match[1]];
         const id = parseInt(match[2], 10);
-        if (type && Number.isFinite(id)) {
+        const numberLabel = `#${match[2]}`;
+        if (issueReferenceTitles && href === `/${match[1]}/${match[2]}` && children === numberLabel) {
+          const title = issueReferenceTitles.get(issueReferenceKey(type, id));
+          return (
+            <RouterLink
+              to={href}
+              onClick={onIssueLinkClick ? event => {
+                if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                onIssueLinkClick(id, type);
+              } : undefined}
+              className="text-github-green-600 hover:text-github-green-800 underline [overflow-wrap:anywhere]"
+            >
+              {title ? `${numberLabel}: ${title}` : children}
+            </RouterLink>
+          );
+        }
+        if (onIssueLinkClick && type && Number.isFinite(id)) {
           return (
             <button
               type="button"
@@ -449,6 +468,7 @@ interface MarkdownRendererProps {
   components?: Components;
   className?: string;
   interactiveTodos?: InteractiveTodosOptions;
+  issueReferenceTitles?: IssueReferenceTitles;
   /**
    * When supplied, internal issue links (`/memos/:id` etc.) render as a
    * button that calls this handler instead of navigating. Mirrors
@@ -482,6 +502,7 @@ export function MarkdownRenderer({
   components,
   className = '',
   interactiveTodos,
+  issueReferenceTitles,
   onIssueLinkClick,
 }: MarkdownRendererProps) {
   const counterRef = useRef(0);
@@ -526,8 +547,8 @@ export function MarkdownRenderer({
 
   const mergedComponents = useMemo<Components>(() => {
     const result: Components = { ...defaultComponents };
-    if (onIssueLinkClick) {
-      result.a = makeIssueAwareAnchor(onIssueLinkClick);
+    if (onIssueLinkClick || issueReferenceTitles) {
+      result.a = makeIssueAwareAnchor(onIssueLinkClick, issueReferenceTitles);
     }
     if (interactiveTodos?.enabled) {
       const onToggle = interactiveTodos.onToggle;
@@ -551,7 +572,7 @@ export function MarkdownRenderer({
     }
     if (components) Object.assign(result, components);
     return result;
-  }, [interactiveTodos?.enabled, interactiveTodos?.onToggle, sortable, onIssueLinkClick, components]);
+  }, [interactiveTodos?.enabled, interactiveTodos?.onToggle, sortable, onIssueLinkClick, issueReferenceTitles, components]);
 
   const body = (
     <ReactMarkdown

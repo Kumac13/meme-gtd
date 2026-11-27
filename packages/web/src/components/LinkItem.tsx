@@ -11,6 +11,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { LinkDisplayItem } from '../types/links';
 import type { IssueType } from 'meme-gtd-shared';
 import { getLinkIcon, getLinkLabel, getDirectionArrow } from '../utils/linkIcons';
+import { issueLinkDisplayTitle, isDeletedIssueLink } from '../utils/issueReferenceTitles';
 import { ActionMenu, InlineDeleteConfirmation } from './ActionMenu';
 
 // Status badge colors (same as ItemList)
@@ -41,17 +42,14 @@ interface LinkItemProps {
 export default function LinkItem({ link, onDelete, isDeleting = false, onItemClick, onBeforeNavigate }: LinkItemProps) {
   const navigate = useNavigate();
   const [showConfirm, setShowConfirm] = useState(false);
-  const isDeleted = link.targetIssue.title.includes('(deleted)');
+  const isDeleted = isDeletedIssueLink(link.targetIssue.title);
   const targetPath = link.targetIssue.type === 'memo'
     ? `/memos/${link.targetIssue.id}`
     : link.targetIssue.type === 'article'
     ? `/articles/${link.targetIssue.id}`
     : `/tasks/${link.targetIssue.id}`;
 
-  // Truncate title if too long
-  const displayTitle = link.targetIssue.title.length > 100
-    ? `${link.targetIssue.title.substring(0, 100)}...`
-    : link.targetIssue.title;
+  const displayTitle = issueLinkDisplayTitle(link.targetIssue.title);
 
   const handleDeleteClick = () => {
     setShowConfirm(true);

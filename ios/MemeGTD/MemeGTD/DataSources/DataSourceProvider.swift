@@ -59,7 +59,7 @@ final class DataSourceProvider: ObservableObject {
     /// scene-activation triggers and views can hook pull-to-refresh.
     private(set) var syncScheduler: SyncScheduler?
 
-    init() {
+    init(memos: MemoDataSource? = nil, issueRelations: IssueRelationsDataSource? = nil) {
         self.memos = RemoteMemoDataSource()
         self.tasks = RemoteTaskDataSource()
         self.articles = RemoteArticleDataSource()
@@ -69,6 +69,8 @@ final class DataSourceProvider: ObservableObject {
         self.issueRelations = RemoteIssueRelationsDataSource()
         self.templates = RemoteTemplateDataSource()
         rebuildDataSources()
+        if let memos { self.memos = memos }
+        if let issueRelations { self.issueRelations = issueRelations }
     }
 
     /// Called from SettingsView after the Storage Mode changes. Swaps the
