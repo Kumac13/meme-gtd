@@ -55,7 +55,7 @@ final class MarkdownTableTests: XCTestCase {
             switch block {
             case .text(let content): return content
             case .todoItem(let checked, let content, _, let index): return "\(index) \(checked) \(content)"
-            case .table(let table): return strings(table).flatMap { $0 }.joined(separator: ",")
+            case .table(let table, _, _): return strings(table).flatMap { $0 }.joined(separator: ",")
             default: return "Unexpected block"
             }
         }
@@ -135,9 +135,79 @@ final class MarkdownTableTests: XCTestCase {
     }
 
     @MainActor
+    func testNestedTablesKeepQuoteAndListPlacement() throws {
+        let markdown = """
+        > Before the table
+        >
+        > | Quote | Date |
+        > | --- | --- |
+        > | Quoted row | Friday |
+        >
+        > After the table
+
+        - Parent item
+
+          | List | Date |
+          | --- | --- |
+          | Child row | Friday |
+
+        3. | Ordered | Date |
+           | --- | --- |
+           | Ordered row | Friday |
+
+        - [ ] Final Todo
+        """
+        let blocks = parseBlocks(markdown)
+        let tables = blocks.compactMap { block -> (MarkdownTable, MarkdownTablePlacement)? in
+            guard case .table(let table, let placement, _) = block else { return nil }
+            return (table, placement)
+        }
+        XCTAssertEqual(tables.map { strings($0.0)[1][0] }, ["Quoted row", "Child row", "Ordered row"])
+        XCTAssertEqual(tables.map { $0.1.quoteDepth }, [1, 0, 0])
+        XCTAssertEqual(tables.map { $0.1.listDepth }, [0, 1, 1])
+        XCTAssertEqual(tables.map { $0.1.listMarker }, [nil, nil, "3."])
+        XCTAssertTrue(blocks.contains { if case .blockquote(let text) = $0 { text.contains("Before the table") } else { false } })
+        XCTAssertTrue(blocks.contains { if case .blockquote(let text) = $0 { text.contains("After the table") } else { false } })
+        XCTAssertTrue(blocks.contains { if case .listItem(content: "Parent item", indent: 0) = $0 { true } else { false } })
+        XCTAssertTrue(blocks.contains { if case .todoItem(checked: false, content: "Final Todo", indent: 0, todoIndex: 0) = $0 { true } else { false } })
+    }
+
+    @MainActor
+    func testLongBacktickFenceKeepsExampleAndFollowingTableAndTodosSeparate() throws {
+        let markdown = """
+        - [ ] First Todo
+
+        ````markdown
+        ```text
+        - [ ] This belongs to the example
+        ```
+        ````
+
+        | Header | Other |
+        | --- | --- |
+        | Visible table | Content |
+
+        - [ ] Last Todo
+        """
+        let blocks = parseBlocks(markdown)
+        XCTAssertEqual(blocks.compactMap { block -> String? in
+            guard case .codeBlock(language: "markdown", code: let code) = block else { return nil }
+            return code
+        }, ["```text\n- [ ] This belongs to the example\n```"])
+        XCTAssertEqual(strings(try table(in: markdown))[1][0], "Visible table")
+        XCTAssertEqual(blocks.compactMap { block -> Int? in
+            guard case .todoItem(_, _, _, let index) = block else { return nil }
+            return index
+        }, [0, 1])
+        let changed = try XCTUnwrap(TodoMarkdown.toggleTodo(markdown, at: 1))
+        XCTAssertTrue(changed.contains("- [x] Last Todo"))
+        XCTAssertTrue(changed.contains("- [ ] This belongs to the example"))
+    }
+
+    @MainActor
     private func table(in markdown: String) throws -> MarkdownTable {
         let table = parseBlocks(markdown).compactMap { block -> MarkdownTable? in
-            guard case .table(let table) = block else { return nil }
+            guard case .table(let table, _, _) = block else { return nil }
             return table
         }.first
         return try XCTUnwrap(table)

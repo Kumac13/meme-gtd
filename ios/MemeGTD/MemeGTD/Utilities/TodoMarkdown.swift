@@ -9,16 +9,13 @@ enum TodoMarkdown {
         let lineIndex: Int
         let indent: Int
         let checked: Bool
+        let content: String
     }
 
     private static let todoLineRegex: NSRegularExpression = {
         // (?<indent>^\s*)(?<marker>[-*+])(?<spaceAfterMarker>\s+)\[(?<box> |x|X)\](?<spaceAfterBox>\s+)
         // We compile the simpler non-named pattern.
         try! NSRegularExpression(pattern: #"^(\s*)([-*+])(\s+)\[([ xX])\](\s+)"#)
-    }()
-
-    private static let fenceRegex: NSRegularExpression = {
-        try! NSRegularExpression(pattern: #"^\s*(```|~~~)"#)
     }()
 
     private static let blockquoteRegex: NSRegularExpression = {
@@ -29,30 +26,22 @@ enum TodoMarkdown {
     /// code fences and blockquotes.
     static func enumerateTodos(_ md: String) -> [TodoItem] {
         let lines = md.components(separatedBy: "\n")
+        let sourceBlocks = MarkdownSourceBlocks(markdown: md, lines: lines, collectTables: false)
+        return enumerateTodos(lines: lines, excluding: sourceBlocks.fencedLines)
+    }
+
+    static func enumerateTodos(lines: [String], excluding fencedLines: IndexSet) -> [TodoItem] {
         var items: [TodoItem] = []
-        var inFence = false
-        var fenceMarker: String? = nil
 
         for (i, line) in lines.enumerated() {
+            if fencedLines.contains(i) { continue }
             let range = NSRange(line.startIndex..<line.endIndex, in: line)
-
-            if let m = fenceRegex.firstMatch(in: line, range: range), let r = Range(m.range(at: 1), in: line) {
-                let marker = String(line[r])
-                if !inFence {
-                    inFence = true
-                    fenceMarker = marker
-                } else if marker == fenceMarker {
-                    inFence = false
-                    fenceMarker = nil
-                }
-                continue
-            }
-            if inFence { continue }
             if blockquoteRegex.firstMatch(in: line, range: range) != nil { continue }
 
             if let m = todoLineRegex.firstMatch(in: line, range: range),
                let indentRange = Range(m.range(at: 1), in: line),
-               let boxRange = Range(m.range(at: 4), in: line) {
+               let boxRange = Range(m.range(at: 4), in: line),
+               let spacing = Range(m.range(at: 5), in: line) {
                 let indent = line.distance(from: indentRange.lowerBound, to: indentRange.upperBound)
                 let boxChar = line[boxRange]
                 let checked = boxChar == "x" || boxChar == "X"
@@ -61,6 +50,7 @@ enum TodoMarkdown {
                     lineIndex: i,
                     indent: indent,
                     checked: checked,
+                    content: String(line[spacing.upperBound...]),
                 ))
             }
         }

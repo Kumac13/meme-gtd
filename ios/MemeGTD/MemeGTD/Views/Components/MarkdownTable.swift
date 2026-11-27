@@ -5,19 +5,11 @@ struct MarkdownTable {
     let alignments: [Table.ColumnAlignment?]
     let rows: [[AttributedString]]
 
-    static func tablesByFirstLine(in markdown: String) -> [Int: (lastLine: Int, content: Self)] {
-        let document = Document(parsing: markdown, options: .disableSmartOpts)
-        var tables: [Int: (Int, Self)] = [:]
-        for case let table as Table in document.children {
-            guard let range = table.range, !table.columnAlignments.isEmpty else { continue }
-            let head = Array(table.head.cells).map { renderCell($0) }
-            let body = table.body.rows.map { row in Array(row.cells).map { renderCell($0) } }
-            tables[range.lowerBound.line - 1] = (
-                range.upperBound.line - 1,
-                Self(alignments: table.columnAlignments, rows: [head] + body)
-            )
-        }
-        return tables
+    init(_ table: Table) {
+        alignments = table.columnAlignments
+        let header = Array(table.head.cells).map { Self.renderCell($0) }
+        let body = table.body.rows.map { row in Array(row.cells).map { Self.renderCell($0) } }
+        rows = [header] + body
     }
 
     private static func renderCell(_ cell: Table.Cell) -> AttributedString {

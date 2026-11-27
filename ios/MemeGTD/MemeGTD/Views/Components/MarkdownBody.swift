@@ -70,8 +70,8 @@ struct MarkdownBody: View {
             todoItemView(checked: checked, content: content, indent: indent, todoIndex: todoIndex)
         case .image(let alt, let url):
             imageView(alt: alt, url: url)
-        case .table(let table):
-            MarkdownTableView(table: table, fontSize: fontSize, color: color, searchQuery: searchQuery)
+        case .table(let table, let placement, let todo):
+            tableView(table, placement: placement, todo: todo)
         case .text(let content):
             if !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 inlineMarkdownText(content)
@@ -158,17 +158,38 @@ struct MarkdownBody: View {
         return path
     }
 
+    // MARK: - Table containers
+
+    @ViewBuilder
+    private func tableView(
+        _ table: MarkdownTable, placement: MarkdownTablePlacement, todo: TodoMarkdown.TodoItem?
+    ) -> some View {
+        let tableView = MarkdownTableView(table: table, fontSize: fontSize, color: color, searchQuery: searchQuery)
+        if placement.listDepth == 0 && placement.quoteDepth == 0 {
+            tableView
+        } else {
+            HStack(alignment: .top, spacing: 6) {
+                if let todo, let onTodoToggle {
+                    todoButton(checked: todo.checked, index: todo.todoIndex, onToggle: onTodoToggle)
+                        .padding(.top, 4)
+                } else if let marker = placement.listMarker {
+                    Text(todo.map { "\(marker) [\($0.checked ? "x" : " ")]" } ?? marker)
+                        .font(.system(size: fontSize))
+                        .foregroundColor(color)
+                        .padding(.top, 4)
+                }
+                tableView
+            }
+            .padding(.leading, CGFloat(placement.listDepth - (placement.listMarker == nil ? 0 : 1)) * 16)
+            .modifier(MarkdownQuoteIndent(depth: placement.quoteDepth))
+        }
+    }
+
     // MARK: - Blockquote
 
     private func blockquoteView(content: String) -> some View {
         inlineMarkdownText(content)
-        .padding(.leading, 10)
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 1.5)
-                .fill(Color(.systemGray3))
-                .frame(width: 3)
-        }
-        .padding(.vertical, 2)
+            .modifier(MarkdownQuoteIndent(depth: 1))
     }
 
     // MARK: - List item
@@ -189,15 +210,7 @@ struct MarkdownBody: View {
     private func todoItemView(checked: Bool, content: String, indent: Int, todoIndex: Int) -> some View {
         if let onToggle = onTodoToggle {
             HStack(alignment: .top, spacing: 6) {
-                Button {
-                    HapticManager.impact(.light)
-                    onToggle(todoIndex, !checked)
-                } label: {
-                    Image(systemName: checked ? "checkmark.square.fill" : "square")
-                        .font(.system(size: fontSize + 1))
-                        .foregroundColor(checked ? .accent : .textSecondary)
-                }
-                .buttonStyle(.plain)
+                todoButton(checked: checked, index: todoIndex, onToggle: onToggle)
                 inlineMarkdownText(content)
             }
             .padding(.leading, CGFloat(indent) * 16)
@@ -211,6 +224,18 @@ struct MarkdownBody: View {
             }
             .padding(.leading, CGFloat(indent) * 16)
         }
+    }
+
+    private func todoButton(checked: Bool, index: Int, onToggle: @escaping (Int, Bool) -> Void) -> some View {
+        Button {
+            HapticManager.impact(.light)
+            onToggle(index, !checked)
+        } label: {
+            Image(systemName: checked ? "checkmark.square.fill" : "square")
+                .font(.system(size: fontSize + 1))
+                .foregroundColor(checked ? .accent : .textSecondary)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Inline markdown text (with accent-colored links)
@@ -229,6 +254,29 @@ struct MarkdownBody: View {
             lineSpacing: lineSpacing,
             searchQuery: searchQuery
         ))
+    }
+}
+
+private struct MarkdownQuoteIndent: ViewModifier {
+    let depth: Int
+
+    func body(content: Content) -> some View {
+        if depth == 0 {
+            content
+        } else {
+            content
+                .padding(.leading, CGFloat(depth) * 10)
+                .overlay(alignment: .leading) {
+                    HStack(spacing: 7) {
+                        ForEach(0..<depth, id: \.self) { _ in
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .fill(Color(.systemGray3))
+                                .frame(width: 3)
+                        }
+                    }
+                }
+                .padding(.vertical, 2)
+        }
     }
 }
 
@@ -372,7 +420,7 @@ func parseInternalIssueURL(_ url: URL) -> (id: Int, type: String)? {
 
 enum MarkdownBlock {
     case text(String)
-    case table(MarkdownTable)
+    case table(MarkdownTable, placement: MarkdownTablePlacement, todo: TodoMarkdown.TodoItem?)
     case heading(level: Int, content: String)
     case codeBlock(language: String, code: String)
     case mermaidBlock(code: String)
@@ -387,14 +435,13 @@ func parseBlocks(_ source: String) -> [MarkdownBlock] {
     let markdown = source.replacingOccurrences(of: "\r\n", with: "\n")
         .replacingOccurrences(of: "\r", with: "\n")
     let lines = markdown.components(separatedBy: "\n")
-    let tables = MarkdownTable.tablesByFirstLine(in: markdown)
-    var tableEndLine = -1
+    let sourceBlocks = MarkdownSourceBlocks(markdown: markdown, lines: lines)
+    let todos = Dictionary(uniqueKeysWithValues: TodoMarkdown
+        .enumerateTodos(lines: lines, excluding: sourceBlocks.fencedLines)
+        .map { ($0.lineIndex, $0) })
+    var lastParsedLine = -1
     var currentText = ""
-    var inCodeBlock = false
-    var codeLanguage = ""
-    var codeContent = ""
     var quoteLines: [String] = []
-    var todoCounter = 0
 
     func flushText() {
         if !currentText.isEmpty {
@@ -411,41 +458,24 @@ func parseBlocks(_ source: String) -> [MarkdownBlock] {
     }
 
     for (lineIndex, line) in lines.enumerated() {
-        if lineIndex <= tableEndLine { continue }
-        if !inCodeBlock, let table = tables[lineIndex] {
+        if lineIndex <= lastParsedLine { continue }
+        if let table = sourceBlocks.tables[lineIndex] {
             flushText()
             flushQuote()
-            blocks.append(.table(table.content))
-            tableEndLine = table.lastLine
+            blocks.append(.table(table.table, placement: table.placement, todo: todos[lineIndex]))
+            lastParsedLine = table.lastLine
             continue
         }
 
-        // Code block fence
-        if !inCodeBlock && line.hasPrefix("```") {
+        if let code = sourceBlocks.codeBlocks[lineIndex] {
             flushText()
             flushQuote()
-            inCodeBlock = true
-            codeLanguage = String(line.dropFirst(3)).trimmingCharacters(in: .whitespaces)
-            codeContent = ""
-            continue
-        }
-        if inCodeBlock && line.hasPrefix("```") {
-            if codeContent.hasSuffix("\n") {
-                codeContent = String(codeContent.dropLast())
-            }
-            if codeLanguage.lowercased() == "mermaid" {
-                blocks.append(.mermaidBlock(code: codeContent))
+            if code.language.lowercased() == "mermaid" {
+                blocks.append(.mermaidBlock(code: code.code))
             } else {
-                blocks.append(.codeBlock(language: codeLanguage, code: codeContent))
+                blocks.append(.codeBlock(language: code.language, code: code.code))
             }
-            inCodeBlock = false
-            codeLanguage = ""
-            codeContent = ""
-            continue
-        }
-        if inCodeBlock {
-            if !codeContent.isEmpty { codeContent += "\n" }
-            codeContent += line
+            lastParsedLine = code.lastLine
             continue
         }
 
@@ -482,27 +512,12 @@ func parseBlocks(_ source: String) -> [MarkdownBlock] {
         }
 
         // Todo item (- [ ] / - [x]) — must be checked BEFORE plain list item
-        if let match = line.range(of: #"^(\s*)[*\-+]\s+\[[ xX]\]\s+(.+)$"#, options: .regularExpression) {
+        if let todo = todos[lineIndex], !todo.content.isEmpty {
             flushText()
             flushQuote()
-            let fullMatch = String(line[match])
-            let leadingSpaces = fullMatch.prefix(while: { $0 == " " || $0 == "\t" }).count
-            let indent = leadingSpaces / 2
-            // Find the bracket char to determine checked state
-            let trimmed = fullMatch.drop(while: { $0 == " " || $0 == "\t" })
-            // trimmed starts with `- [ ] ` or `- [x] ` etc. Skip marker + space, peek bracket char.
-            // Marker is 1 char (- * +). Space follows. Then `[`, then bracket char, then `]`, then space.
-            let afterMarker = trimmed.dropFirst() // drop -, *, or +
-            let afterMarkerSpace = afterMarker.drop(while: { $0 == " " || $0 == "\t" })
-            // afterMarkerSpace now starts with `[X] content` or `[ ] content`
-            guard afterMarkerSpace.count >= 4 else { continue }
-            let bracketChar = afterMarkerSpace[afterMarkerSpace.index(afterMarkerSpace.startIndex, offsetBy: 1)]
-            let checked = bracketChar == "x" || bracketChar == "X"
-            // Content starts after `[X] ` — that's 4 characters after the bracket starts
-            let contentStart = afterMarkerSpace.index(afterMarkerSpace.startIndex, offsetBy: 3)
-            let contentTrimmed = afterMarkerSpace[contentStart...].drop(while: { $0 == " " || $0 == "\t" })
-            blocks.append(.todoItem(checked: checked, content: String(contentTrimmed), indent: indent, todoIndex: todoCounter))
-            todoCounter += 1
+            blocks.append(.todoItem(
+                checked: todo.checked, content: todo.content, indent: todo.indent / 2, todoIndex: todo.todoIndex
+            ))
             continue
         }
 
@@ -531,15 +546,6 @@ func parseBlocks(_ source: String) -> [MarkdownBlock] {
         flushQuote()
         if !currentText.isEmpty { currentText += "\n" }
         currentText += line
-    }
-
-    // Handle unclosed code block
-    if inCodeBlock && !codeContent.isEmpty {
-        if codeLanguage.lowercased() == "mermaid" {
-            blocks.append(.mermaidBlock(code: codeContent))
-        } else {
-            blocks.append(.codeBlock(language: codeLanguage, code: codeContent))
-        }
     }
 
     flushQuote()
