@@ -26,6 +26,17 @@ const ALLOWED = {
   head: (args) => args.every((a) => a.startsWith('-') || /^\d+$/.test(a)) || onlySkillFiles(args.filter((a) => !/^\d+$/.test(a))),
   tail: (args) => args.every((a) => a.startsWith('-') || /^\d+$/.test(a)) || onlySkillFiles(args.filter((a) => !/^\d+$/.test(a))),
   sed: (args) => args.includes('-n') && !args.some((a) => a.startsWith('-i')) && onlySkillFiles(args.filter((a) => a !== '-n')),
+
+  // main の取り込みと状態の確認は窓口が自分で行う。
+  // 担当役に回すと、escalated の承認依頼が担当役のスレッドに出て、iPhone からの操作では表示されない。
+  // Task 2114 では git fetch と git merge --ff-only の承認待ちで、それぞれ約1時間止まった。
+  git: (args) => {
+    const [sub, ...rest] = args;
+    if (['fetch', 'status', 'log', 'rev-parse', 'ls-remote'].includes(sub)) return true;
+    if (sub === 'merge' || sub === 'pull') return rest.includes('--ff-only');
+    if (sub === 'worktree') return rest[0] === 'list';
+    return false;
+  },
 };
 
 // 窓口が自分で行わない操作（調査・画面操作・撮影・画像の点検）。
@@ -106,7 +117,7 @@ function deny(message) {
 }
 
 const DELEGATE =
-  '窓口が行うのは、ユーザーとの会話、task.mjs による Task の読み書き、担当役の起動と待機だけです。' +
+  '窓口が行うのは、ユーザーとの会話、task.mjs による Task の読み書き、担当役の起動と待機、ローカルの main の更新（git fetch・git merge --ff-only）だけです。' +
   '調査・コードの読み取り・画面操作・撮影・画像の点検・編集・ビルド・テスト・push・PR 作成は、担当役に spawn_agent で渡してください。';
 
 // 拒否する文言を返す。許可なら null。
