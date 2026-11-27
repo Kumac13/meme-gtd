@@ -11,6 +11,9 @@ export default function Layout() {
   const isArticlesActive = location.pathname.startsWith("/articles");
   const isTemplatesActive = location.pathname.startsWith("/templates");
   const isActivityActive = location.pathname.startsWith("/activity");
+  // Issue 系（Memo / Task / Article / Template / Links）は外枠を画面幅の8割まで広げるため、sm 以上で max-w-7xl の上限を外す
+  const isWideRoute = isMemosRoute || isTasksActive || isArticlesActive || isTemplatesActive || isLinksActive;
+  const mainWidth = isWideRoute ? "max-w-7xl sm:max-w-none" : "max-w-7xl";
 
   return (
     <div className={isMemosRoute ? "min-h-screen bg-white sm:bg-gray-50" : "min-h-screen bg-gray-50"}>
@@ -108,8 +111,7 @@ export default function Layout() {
           </div>
         </nav>
       </header>
-      {/* Links はグラフを画面幅の8割まで広げるため、sm 以上で max-w-7xl の上限を外す */}
-      <main className={isMemosRoute ? "max-w-7xl mx-auto sm:py-4 sm:px-6 lg:px-8 bg-white sm:bg-transparent" : isLinksActive ? "max-w-7xl sm:max-w-none mx-auto py-4 sm:px-6 lg:px-8" : "max-w-7xl mx-auto py-4 sm:px-6 lg:px-8"}>
+      <main className={isMemosRoute ? `${mainWidth} mx-auto sm:py-4 sm:px-6 lg:px-8 bg-white sm:bg-transparent` : `${mainWidth} mx-auto py-4 sm:px-6 lg:px-8`}>
         <Outlet />
       </main>
     </div>

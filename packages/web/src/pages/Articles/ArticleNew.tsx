@@ -9,7 +9,7 @@ import TemplateCreationFlow from '../../components/TemplateCreationFlow';
  */
 export default function ArticleNew() {
   return (
-    <FormPageLayout backTo="/articles" backLabel="Back to articles" title="Create New Article">
+    <FormPageLayout wide backTo="/articles" backLabel="Back to articles" title="Create New Article">
         <TemplateCreationFlow target="article">
           {(initialValues) => (
             <ArticleForm

@@ -54,6 +54,7 @@ export default function MemoEdit() {
 
   return (
     <FormPageLayout
+      wide
       backTo={`/memos/${memo.id}`}
       backLabel="Back to memo"
       title={`Edit ${memo.title || `Memo #${memo.id}`}`}

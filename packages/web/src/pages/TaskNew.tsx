@@ -91,6 +91,7 @@ export default function TaskNew() {
 
   return (
     <FormPageLayout
+      wide
       backTo="/tasks"
       backLabel="Back to tasks"
       title={memo ? 'Promote Memo to Task' : 'Create New Task'}
