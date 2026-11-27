@@ -67,6 +67,7 @@ protocol IssueRelationManaging: IssueLinkProvider {
     var relationIssueId: Int { get }
     var dataSources: DataSourceProvider { get }
     var issueLinks: [IssueLink] { get set }
+    var issueLinksLoadID: UUID? { get set }
     var urlLinks: [UrlLink] { get set }
     var error: String? { get set }
     func relationDidChange() async
@@ -79,8 +80,27 @@ extension IssueRelationManaging {
 
     var linkedPickerItems: [IssuePickerItem] { IssueRelationService.pickerItems(from: issueLinks) }
 
+    var issueReferenceTitles: IssueReferenceTitles { IssueReferenceTitles(links: issueLinks) }
+
     func loadIssueLinks() async {
-        issueLinks = (try? await relationService.loadIssueLinks()) ?? issueLinks
+        let issueID = relationIssueId
+        let loadID = UUID()
+        issueLinksLoadID = loadID
+        guard let links = try? await relationService.loadIssueLinks(),
+              issueLinksLoadID == loadID, relationIssueId == issueID, !Task.isCancelled else { return }
+        issueLinks = links
+    }
+
+    func refreshIssueLinksAfterCommentDelivery(from previous: ThreadDelivery, to current: ThreadDelivery) async {
+        let previousBodies = Dictionary(
+            previous.comments.filter { !previous.pendingComments.contains($0.id) }.map { ($0.id, $0.bodyMd) },
+            uniquingKeysWith: { _, latest in latest }
+        )
+        if current.comments.contains(where: {
+            !current.pendingComments.contains($0.id) && previousBodies[$0.id] != $0.bodyMd
+        }) {
+            await loadIssueLinks()
+        }
     }
 
     func loadUrlLinks() async {
@@ -89,7 +109,9 @@ extension IssueRelationManaging {
 
     func createIssueLink(targetIssueId: Int, linkType: LinkType) async {
         do {
-            issueLinks = try await relationService.createIssueLink(targetIssueId: targetIssueId, linkType: linkType)
+            let links = try await relationService.createIssueLink(targetIssueId: targetIssueId, linkType: linkType)
+            issueLinksLoadID = nil
+            issueLinks = links
             await relationDidChange()
             HapticManager.notification(.success)
         } catch {
@@ -101,6 +123,7 @@ extension IssueRelationManaging {
     func deleteIssueLink(_ linkId: Int) async {
         do {
             issueLinks = try await relationService.deleteIssueLink(linkId, from: issueLinks)
+            issueLinksLoadID = nil
             await relationDidChange()
         } catch {
             self.error = error.localizedDescription

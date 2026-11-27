@@ -157,6 +157,7 @@ stateDiagram-v2
 
 - `parent`, `child`, `relates`, `derived_from` のリンクタイプをサポート。
 - `memo promote` 時は `derived_from` を自動的に記録し、インターフェイス層から任意リンクを追加できる。
+- Web・iOS の Task・Memo・Article 詳細では、本文とコメントの内部番号リンクに Links と同じタイトルを表示する。Memo の参照先には本文の短いプレビューを使う。タイトルが不明な場合は番号を表示する。
 - Web の Links タブは、非削除の Task・Memo・Article と保存済みの4種の関係を表示する。起点なしでは孤立 Issue も含む。起点ありでは入出両方向の全到達範囲を表示し、必要に応じて Depth で最大距離を指定する。
 - 検索・Label・Project・Bookmarked は到達範囲を確定してから適用し、起点は表示を維持する。任意の Label nodes で表示中の Issue へのラベル付与を描画できる。
 - Link type で親子（保存種別 parent / child）・derived_from・relates を選ぶと、その種類のリンクと両端の Issue だけを表示する（起点は残す）。親子は親から子への矢印、derived_from は由来元への矢印、relates は矢印のない線で描く。

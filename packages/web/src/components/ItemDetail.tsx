@@ -16,6 +16,7 @@ import { ScheduleSection } from './ScheduleSection';
 import { StatusSelector } from './StatusSelector';
 import { type ActivityLogEntry } from '../utils/activityLogHelpers';
 import { isDisplayedActivity } from './ActivityTimelineItem';
+import { useDetailIssueLinks } from '../hooks/useDetailIssueLinks';
 import { stripArticleBlockIds } from '../utils/markdown';
 import { WIDE_DETAIL_WIDTH } from '../utils/pageWidth';
 
@@ -83,6 +84,7 @@ interface ItemDetailProps {
   onBeforeNavigate?: () => void;
   /** Callback to expose comments to parent component */
   threadRevision?: number;
+  sharedIssueLinks?: ReturnType<typeof useDetailIssueLinks>;
   onActivitiesLoaded?: (activities: ActivityLogEntry[]) => void;
   onCommentsLoaded?: (comments: Comment[]) => void;
   onRelationsChanged?: () => void;
@@ -105,6 +107,7 @@ export default function ItemDetail({
   onItemClick,
   onBeforeNavigate,
   threadRevision,
+  sharedIssueLinks,
   onActivitiesLoaded,
   onCommentsLoaded,
   onRelationsChanged,
@@ -116,7 +119,16 @@ export default function ItemDetail({
   // Bumped after a body/comment save so LinkSection refetches; the server may
   // have created a new `relates` link from a `#id` mention in the saved text.
   const [linksRefreshKey, setLinksRefreshKey] = useState(0);
-  const bumpLinks = () => setLinksRefreshKey((k) => k + 1);
+  const localIssueLinks = useDetailIssueLinks(
+    sharedIssueLinks ? undefined : item.id,
+    itemType === 'template' ? undefined : itemType,
+    linksRefreshKey,
+  );
+  const issueLinks = sharedIssueLinks ?? localIssueLinks;
+  const bumpLinks = () => {
+    setLinksRefreshKey(key => key + 1);
+    sharedIssueLinks?.refresh();
+  };
 
   // Store callback in ref to avoid dependency issues
   const onCommentsLoadedRef = useRef(onCommentsLoaded);
@@ -315,13 +327,15 @@ export default function ItemDetail({
             enableInteractiveTodos={itemType === 'task'}
             readOnly={isWebArticle}
             onIssueLinkClick={onItemClick}
+            issueReferenceTitles={itemType === 'template' ? undefined : issueLinks.titles}
           />
 
           {/* Links section (not for templates — scaffolds have no links) */}
           {itemType !== 'template' && (
             <LinkSection
               itemId={item.id}
-              itemType={itemType}
+              key={`${itemType}:${item.id}`}
+              issueLinks={issueLinks}
               onItemClick={onItemClick}
               onBeforeNavigate={onBeforeNavigate}
               parentTask={itemType === 'task' ? {
@@ -331,7 +345,6 @@ export default function ItemDetail({
                 labels: item.labels || [],
               } : undefined}
               onIssueLinksChanged={() => { bumpLinks(); onRelationsChanged?.(); }}
-              refreshKey={linksRefreshKey}
             />
           )}
 
@@ -347,6 +360,7 @@ export default function ItemDetail({
               issueId={item.id}
               enableInteractiveTodos={itemType === 'task'}
               onIssueLinkClick={onItemClick}
+              issueReferenceTitles={issueLinks.titles}
             />
           )}
         </div>

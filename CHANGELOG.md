@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.60.0 - 2026-11-27
+## 0.61.0 - 2026-11-27
 
 ### New Features
 
@@ -11,6 +11,19 @@
 ### Tests
 
 - 画面幅の8割へ広げる指定を `utils/pageWidth.ts` だけが持つことを `ComponentBoundaries.test.ts` で検査。
+
+## 0.60.1 - 2026-11-27
+
+### Bug Fixes
+
+- Web の狭幅 Memo で、本文の保存中に別のメモを開いても、新しく開いた詳細を表示し続ける。
+- Web・iOS の内部参照に、`(deleted)` を含む正常なタイトルや、`Issue #123` のような Memo・Article の実際の表示名を表示する。
+
+## 0.60.0 - 2026-11-27
+
+### New Features
+
+- Web・iOS の Task・Memo・Article 詳細で、本文とコメントの内部番号リンクに Links と同じタイトルを表示する。Memo への参照は本文の短いプレビューを表示し、タイトルが不明な参照は番号で表示する。
 
 ## 0.59.0 - 2026-11-27
 

@@ -54,6 +54,7 @@ struct ArticleDetailView: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     if let article = viewModel.article {
+                        let issueReferenceTitles = viewModel.issueReferenceTitles
                         // === Header Area (glass card): Title + Meta ===
                         IssueAreaCard(glassTopExtension: topInset) {
                             VStack(alignment: .leading, spacing: 8) {
@@ -133,7 +134,8 @@ struct ArticleDetailView: View {
                             } : nil,
                             onIssueTap: { id, type in
                                 onNavigateToLinkedIssue?(id, type, "")
-                            }
+                            },
+                            issueReferenceTitles: issueReferenceTitles
                         )
 
                         // === Timeline: Comments + activities interleaved ===
@@ -155,7 +157,8 @@ struct ArticleDetailView: View {
                             },
                             onIssueTap: { id, type in
                                 onNavigateToLinkedIssue?(id, type, "")
-                            }
+                            },
+                            issueReferenceTitles: issueReferenceTitles
                         )
                     }
 
@@ -292,8 +295,12 @@ struct ArticleDetailView: View {
         }
         .observeThread(id: articleId) { snapshot in
             if let resolved = snapshot.serverID { viewModel.resolvedID = resolved }
+            let previousDelivery = delivery
             delivery = snapshot
             viewModel.comments = snapshot.comments
+            Task {
+                await viewModel.refreshIssueLinksAfterCommentDelivery(from: previousDelivery, to: snapshot)
+            }
         }
         .task {
             viewModel.articleStore = articleStore

@@ -1,3 +1,5 @@
+import { useDetailIssueLinks } from '../hooks/useDetailIssueLinks';
+import type { IssueReferenceTitles } from '../utils/issueReferenceTitles';
 import ShowLinks from '../components/ShowLinks';
 import { ActivityRow } from '../components/CommentSection';
 import type { ActivityLogEntry } from '../utils/activityLogHelpers';
@@ -6,7 +8,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import type { IssueType } from 'meme-gtd-shared';
 import { MemosService } from '../api/services/MemosService';
 import { CommentsService } from '../api/services/CommentsService';
-import ItemDetail, { type Item, type Comment } from '../components/ItemDetail';
+import ItemDetail, { type Comment } from '../components/ItemDetail';
 import { useCopyItemContent } from '../hooks/useCopyItemContent';
 import { ItemDetailPanel } from '../components/ItemDetailPanel';
 import LoadingState from '../components/LoadingState';
@@ -41,6 +43,7 @@ interface MemoComment {
 }
 
 interface MobileThreadItemProps {
+  issueReferenceTitles: IssueReferenceTitles;
   content: string;
   createdAt: string;
   labels?: string[];
@@ -51,6 +54,7 @@ interface MobileThreadItemProps {
 }
 
 function MobileThreadItem({
+  issueReferenceTitles,
   content,
   createdAt,
   labels,
@@ -141,7 +145,7 @@ function MobileThreadItem({
         </div>
       ) : (
         <div className="prose prose-sm prose-p:my-0 prose-li:my-0 prose-p:text-[13px] prose-p:leading-6 max-w-none [overflow-wrap:anywhere] pr-8 text-gray-700">
-          <MarkdownRenderer content={content} />
+          <MarkdownRenderer content={content} issueReferenceTitles={issueReferenceTitles} />
         </div>
       )}
 
@@ -158,6 +162,11 @@ function MobileThreadItem({
 
 export default function MemoDetail() {
   const { id } = useParams<{ id: string }>();
+  // 保存中に移動した場合も、応答先の表示状態をメモ単位で持つ。
+  return <MemoDetailPage key={id} id={id} />;
+}
+
+function MemoDetailPage({ id }: { id?: string }) {
   const navigate = useNavigate();
 
   const [memo, setMemo] = useState<Memo | null>(null);
@@ -168,6 +177,8 @@ export default function MemoDetail() {
   const [selectedItem, setSelectedItem] = useState<{ id: number; type: IssueType } | null>(null);
   const { copiedFormat, copy: copyItemContent, copyWithJSON } = useCopyItemContent();
   const [threadRevision, setThreadRevision] = useState(0);
+  const isCurrentMemo = memo?.id === Number(id);
+  const issueLinks = useDetailIssueLinks(isCurrentMemo ? memo?.id : undefined, 'memo', threadRevision);
   const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
   const [threadComments, setThreadComments] = useState<MemoComment[]>([]);
   const [replyBody, setReplyBody] = useState('');
@@ -178,6 +189,7 @@ export default function MemoDetail() {
   useDocumentTitle(titleText);
 
   useEffect(() => {
+    let active = true;
     async function fetchMemo() {
       if (!id) {
         setError('Memo ID is required');
@@ -189,18 +201,21 @@ export default function MemoDetail() {
         setLoading(true);
         setError(null);
         const response = await MemosService.getMemo(id);
+        if (!active) return;
         setMemo(response as Memo);
         const commentResponse = await CommentsService.listMemoComments(id);
-        setThreadComments(commentResponse as MemoComment[]);
+        if (active) setThreadComments(commentResponse as MemoComment[]);
       } catch (err) {
+        if (!active) return;
         setError(err instanceof Error ? err.message : 'Failed to load memo');
         console.error('Error fetching memo:', err);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
 
     fetchMemo();
+    return () => { active = false; };
   }, [id]);
 
   const handleDelete = async () => {
@@ -262,12 +277,16 @@ export default function MemoDetail() {
     await copyWithJSON({ item: memo, comments: threadComments });
   };
 
+  const applyMemoUpdate = useCallback((updated: Memo) => {
+    if (updated.id === Number(id)) setMemo(updated);
+  }, [id]);
+
   const handleMemoUpdate = useCallback(async (bodyMd: string) => {
     if (!id || !memo) return;
     const updated = await MemosService.updateMemo(id, { bodyMd });
-    setMemo(updated as Memo);
+    applyMemoUpdate(updated);
     setThreadRevision(value => value + 1);
-  }, [id, memo]);
+  }, [id, memo, applyMemoUpdate]);
 
   const handleReplySubmit = useCallback(async () => {
     if (!id || replySubmitting || !replyBody.trim()) return;
@@ -304,10 +323,10 @@ export default function MemoDetail() {
   const handleLabelsChanged = useCallback(async () => {
     if (!id) return;
     const refreshed = await MemosService.getMemo(id);
-    setMemo(refreshed as Memo);
-  }, [id]);
+    applyMemoUpdate(refreshed);
+  }, [id, applyMemoUpdate]);
 
-  if (loading) {
+  if (loading || (memo && !isCurrentMemo && !error)) {
     return <LoadingState message="Loading memo..." />;
   }
 
@@ -348,6 +367,7 @@ export default function MemoDetail() {
             </div>
             <MobileThreadItem
               content={memo.bodyMd}
+              issueReferenceTitles={issueLinks.titles}
               createdAt={memo.createdAt}
               labels={memo.labels}
               showInlineTime
@@ -373,6 +393,7 @@ export default function MemoDetail() {
                   )}
                   <MobileThreadItem
                     content={comment.bodyMd}
+                    issueReferenceTitles={issueLinks.titles}
                     createdAt={comment.createdAt}
                     showMenu
                     onSave={(bodyMd) => handleReplyUpdate(comment.id, bodyMd)}
@@ -433,7 +454,7 @@ export default function MemoDetail() {
           itemType="memo"
           onDelete={handleDelete}
           onBookmarkToggle={handleBookmarkToggle}
-          onUpdate={(updatedItem: Item) => setMemo(updatedItem as Memo)}
+          onUpdate={applyMemoUpdate}
           deleting={deleting}
           bookmarking={bookmarking}
           sidebarActions={(
@@ -469,6 +490,7 @@ export default function MemoDetail() {
           )}
           onItemClick={handleItemClick}
           threadRevision={threadRevision}
+          sharedIssueLinks={issueLinks}
           onActivitiesLoaded={setActivities}
           onCommentsLoaded={handleCommentsLoaded}
         />

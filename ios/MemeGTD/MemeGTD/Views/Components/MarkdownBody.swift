@@ -11,6 +11,7 @@ struct MarkdownBody: View {
     let color: Color
     let searchQuery: String?
     let onIssueTap: ((Int, String) -> Void)?
+    let issueReferenceTitles: IssueReferenceTitles
     let onTodoToggle: ((Int, Bool) -> Void)?
 
     init(
@@ -19,6 +20,7 @@ struct MarkdownBody: View {
         color: Color = Color(.label).opacity(0.75),
         searchQuery: String? = nil,
         onIssueTap: ((Int, String) -> Void)? = nil,
+        issueReferenceTitles: IssueReferenceTitles = .init(),
         onTodoToggle: ((Int, Bool) -> Void)? = nil
     ) {
         self.text = text
@@ -26,6 +28,7 @@ struct MarkdownBody: View {
         self.color = color
         self.searchQuery = searchQuery
         self.onIssueTap = onIssueTap
+        self.issueReferenceTitles = issueReferenceTitles
         self.onTodoToggle = onTodoToggle
     }
 
@@ -220,10 +223,7 @@ struct MarkdownBody: View {
         let baseColor = color ?? UIColor(self.color)
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineSpacing = lineSpacing
-        let parsed = (try? AttributedString(
-            markdown: content,
-            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        )) ?? AttributedString(content)
+        let parsed = renderInlineMarkdown(content, issueReferenceTitles: issueReferenceTitles)
         let rendered = NSMutableAttributedString()
         for run in parsed.runs {
             let intent = run.inlinePresentationIntent ?? []
@@ -271,6 +271,46 @@ struct MarkdownBody: View {
         components.path = url.path.hasPrefix("/") ? url.path : "/\(url.path)"
         return components.url ?? url
     }
+}
+
+func renderInlineMarkdown(
+    _ markdown: String,
+    issueReferenceTitles: IssueReferenceTitles = .init()
+) -> AttributedString {
+    let parsed = (try? AttributedString(
+        markdown: markdown,
+        options: .init(
+            interpretedSyntax: .inlineOnlyPreservingWhitespace,
+            appliesSourcePositionAttributes: !issueReferenceTitles.isEmpty
+        )
+    )) ?? AttributedString(markdown)
+    if issueReferenceTitles.isEmpty { return parsed }
+
+    let source = Array(markdown.utf8)
+    let lineStarts = [0] + source.indices.compactMap { source[$0] == 10 ? $0 + 1 : nil }
+    var result = AttributedString()
+    for run in parsed.runs {
+        result.append(AttributedString(parsed[run.range]))
+        guard let url = run.link, url.scheme == nil, url.host == nil,
+              let issue = parseInternalIssueURL(url),
+              let title = issueReferenceTitles[issue.id, issue.type],
+              !(run.inlinePresentationIntent ?? []).contains(.code),
+              let digits = url.absoluteString.split(separator: "/").last,
+              String(parsed[run.range].characters) == "#\(digits)",
+              let position = run.markdownSourcePosition,
+              position.startLine == position.endLine,
+              lineStarts.indices.contains(position.startLine - 1) else { continue }
+
+        // 装飾付きの独自リンク名の一部が番号と一致する場合を除く。
+        let lineStart = lineStarts[position.startLine - 1]
+        let openingBracket = lineStart + position.startColumn - 2
+        let closingBracket = lineStart + position.endColumn
+        guard source.indices.contains(openingBracket), source.indices.contains(closingBracket),
+              source[openingBracket] == 91, source[closingBracket] == 93 else { continue }
+        // 同じリンク属性のまま表示の文字列を追加する。
+        result.append(AttributedString(": \(title)", attributes: run.attributes))
+    }
+    return result
 }
 
 // MARK: - Internal issue URL parser
