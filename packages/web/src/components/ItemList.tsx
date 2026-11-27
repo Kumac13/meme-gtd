@@ -265,7 +265,7 @@ export default function ItemList({
                   ) : isArticle(item) ? ( // Article-specific rendering
                     <>
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h2 className="text-base text-gray-900">
+                        <h2 className="text-base text-gray-900 [overflow-wrap:anywhere]">
                           {item.title || `Article #\${item.id}`}
                         </h2>
                         {showStatusBadges && (

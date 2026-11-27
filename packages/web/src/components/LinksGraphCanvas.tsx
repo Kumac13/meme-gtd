@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import cytoscape, { type Core, type ElementDefinition, type NodeSingular, type StylesheetStyle } from 'cytoscape';
+import cytoscape, { type BoundingBox12, type Core, type ElementDefinition, type NodeSingular, type Position, type StylesheetStyle } from 'cytoscape';
 import type { LinksGraphData } from '../hooks/useLinksGraph';
 
 type IssueNode = LinksGraphData['nodes'][number];
@@ -32,7 +32,7 @@ const styles: StylesheetStyle[] = [
   { selector: 'edge.membership', style: { 'line-style': 'dotted', 'target-arrow-shape': 'none' } },
   { selector: 'edge.inspected', style: { width: 2.5, opacity: 1, 'z-index': 10 } },
   { selector: '.dimmed', style: { opacity: 0.2 } },
-  { selector: 'node.issue.dense', style: { label: '' } },
+  { selector: 'node.issue.dense, node.issue.overlapping-title', style: { label: '' } },
 ];
 
 const issueId = (id: number) => `issue-${id}`;
@@ -55,6 +55,46 @@ function graphElements(graph: LinksGraphData): ElementDefinition[] {
       data: { id: `member-${issue}-${label}`, source: issueId(issue), target: labelId(label), color: '#78716c' }, classes: 'membership',
     })),
   ];
+}
+
+function hideOverlappingTitles(cy: Core) {
+  const issues = cy.nodes('.issue');
+  if (issues.length > 120) return;
+  issues.removeClass('overlapping-title');
+
+  const footprints = cy.nodes().map(node => ({
+    id: node.id(), bounds: node.boundingBox({ includeLabels: false, includeOverlays: false }),
+  }));
+  const overlaps = (a: BoundingBox12, b: BoundingBox12) =>
+    a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
+  const visibleTitles: BoundingBox12[] = [];
+  const hiddenTitles: NodeSingular[] = [];
+  // 起点順を優先する。収まらない名前はホバー・フォーカスで読める。
+  issues.forEach(node => {
+    const title = node.boundingBox({ includeNodes: false, includeOverlays: false });
+    if (footprints.some(({ id, bounds }) => id !== node.id() && overlaps(title, bounds))
+        || visibleTitles.some(bounds => overlaps(title, bounds))) {
+      hiddenTitles.push(node);
+    } else {
+      visibleTitles.push(title);
+    }
+  });
+  cy.batch(() => hiddenTitles.forEach(node => node.addClass('overlapping-title')));
+}
+
+export function nearestTouchNode(cy: Core, point: Position) {
+  let closest: NodeSingular | undefined;
+  let distance = Infinity;
+  // Canvas のタッチ判定は描画順を優先する。余白が重なる縮尺では点の中心を基準にする。
+  cy.nodes().forEach(node => {
+    const center = node.renderedPosition();
+    const candidate = Math.hypot(center.x - point.x, center.y - point.y);
+    if (candidate < distance && candidate <= node.renderedOuterWidth() / 2 + 8) {
+      closest = node;
+      distance = candidate;
+    }
+  });
+  return closest;
 }
 
 const emptyInspection = { name: '', neighbors: [] as string[], count: 0 };
@@ -118,7 +158,15 @@ export default function LinksGraphCanvas({ graph, selectedId, onSelect }: {
     cyRef.current = cy;
     cy.on('mouseover', 'node', event => inspect(event.target));
     cy.on('mouseout', 'node', () => inspect());
-    cy.on('tap', 'node.issue', event => handlers.current.onSelect(event.target.data('issue') as IssueNode));
+    cy.on('tap', event => {
+      const eventType = event.originalEvent?.type;
+      const node = eventType === 'touchend' || eventType === 'pointerup'
+        ? nearestTouchNode(cy, event.renderedPosition)
+        : event.target;
+      if (node !== cy && node?.isNode() && node.hasClass('issue')) {
+        handlers.current.onSelect(node.data('issue') as IssueNode);
+      }
+    });
     const resize = new ResizeObserver(() => cy.resize());
     resize.observe(container.current);
     return () => {
@@ -156,15 +204,17 @@ export default function LinksGraphCanvas({ graph, selectedId, onSelect }: {
       } else {
         cy.layout({
           name: 'cose', fit: false, animate: false, randomize: true,
+          nodeDimensionsIncludeLabels: true,
           numIter: 250, nodeRepulsion: () => 5500, idealEdgeLength: () => 85, componentSpacing: 65,
         }).run();
       }
-      if (resetView && cy.nodes().length > 0) {
-        cy.fit(cy.elements(), 24);
-        if (cy.zoom() > 1.3) {
-          cy.zoom(1.3);
-          cy.center(cy.nodes());
-        }
+    }
+    hideOverlappingTitles(cy);
+    if (resetView && cy.nodes().length > 0) {
+      cy.fit(cy.elements(), 24);
+      if (cy.zoom() > 1.3) {
+        cy.zoom(1.3);
+        cy.center(cy.nodes());
       }
     }
     const inspected = inspectionId.current ? cy.getElementById(inspectionId.current) : null;
