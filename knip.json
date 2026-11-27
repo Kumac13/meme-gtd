@@ -4,9 +4,7 @@
     ".": {
       "entry": [
         "scripts/*.mjs",
-        ".claude/hooks/*.mjs",
-        ".codex/hooks/*.mjs",
-        ".codex/skills/*/scripts/*.mjs"
+        ".claude/hooks/*.mjs"
       ]
     },
     "packages/api": {
