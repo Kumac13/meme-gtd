@@ -108,7 +108,8 @@ export default function Layout() {
           </div>
         </nav>
       </header>
-      <main className={isMemosRoute ? "max-w-7xl mx-auto sm:py-4 sm:px-6 lg:px-8 bg-white sm:bg-transparent" : "max-w-7xl mx-auto py-4 sm:px-6 lg:px-8"}>
+      {/* Links はグラフを画面幅の8割まで広げるため、sm 以上で max-w-7xl の上限を外す */}
+      <main className={isMemosRoute ? "max-w-7xl mx-auto sm:py-4 sm:px-6 lg:px-8 bg-white sm:bg-transparent" : isLinksActive ? "max-w-7xl sm:max-w-none mx-auto py-4 sm:px-6 lg:px-8" : "max-w-7xl mx-auto py-4 sm:px-6 lg:px-8"}>
         <Outlet />
       </main>
     </div>

@@ -573,9 +573,11 @@ export default function LinksGraphCanvas({ graph, selectedId, onSelect }: {
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-      <div className="relative">
-        <div ref={container} data-testid="links-graph-canvas" className="h-[min(65dvh,36rem)] min-h-72 touch-none" aria-hidden />
+    // 親の縦 flex の残りを埋める。高さが変わっても ResizeObserver が cy.resize() と全体表示を合わせ直す。
+    <div className="flex flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white">
+      {/* cytoscape がコンテナへ position: relative を付けるため、絶対配置ではなく flex で高さを渡す */}
+      <div className="relative flex min-h-72 flex-1 flex-col">
+        <div ref={container} data-testid="links-graph-canvas" className="flex-1 touch-none" aria-hidden />
         <div tabIndex={0} role="group" aria-label="Issue link graph" aria-describedby="links-keyboard-help"
           onFocus={inspectKeyboardNode} onBlur={() => inspect()} onKeyDown={handleKey}
           className="pointer-events-none absolute inset-0 rounded-t-lg focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-github-green-600" />
