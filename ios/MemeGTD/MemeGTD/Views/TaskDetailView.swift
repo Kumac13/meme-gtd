@@ -68,6 +68,7 @@ struct TaskDetailView: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     if let task = viewModel.task {
+                        let issueReferenceTitles = viewModel.issueReferenceTitles
                         // === Title Area (glass) ===
                         IssueAreaCard(glassTopExtension: topInset) {
                             TaskTitleSection(
@@ -96,6 +97,7 @@ struct TaskDetailView: View {
                             onIssueTap: { id, type in
                                 onNavigateToLinkedIssue?(id, type, "")
                             },
+                            issueReferenceTitles: issueReferenceTitles,
                             onTodoToggle: { todoIndex, _ in
                                 guard !isOfflineReadOnly else { return }
                                 Task { await viewModel.toggleBodyTodo(at: todoIndex) }
@@ -122,6 +124,7 @@ struct TaskDetailView: View {
                             onIssueTap: { id, type in
                                 onNavigateToLinkedIssue?(id, type, "")
                             },
+                            issueReferenceTitles: issueReferenceTitles,
                             onTodoToggle: { comment, todoIndex, _ in
                                 Task { await viewModel.toggleCommentTodo(commentId: comment.id, todoIndex: todoIndex) }
                             }
@@ -352,8 +355,12 @@ struct TaskDetailView: View {
         }
         .observeThread(id: taskId) { snapshot in
             let justSynced = taskId < 0 && delivery.serverID == nil && snapshot.serverID != nil
+            let previousDelivery = delivery
             delivery = snapshot
             viewModel.comments = snapshot.comments
+            Task {
+                await viewModel.refreshIssueLinksAfterCommentDelivery(from: previousDelivery, to: snapshot)
+            }
             if justSynced, viewModel.task != nil {
                 Task { await viewModel.loadTask() }
             }

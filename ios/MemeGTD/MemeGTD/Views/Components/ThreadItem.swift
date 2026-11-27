@@ -11,11 +11,12 @@ struct ThreadItem: View {
     var onDelete: (() -> Void)?
     var onCopy: (() -> Void)?
     var onIssueTap: ((Int, String) -> Void)?
+    var issueReferenceTitles = IssueReferenceTitles()
     var onTodoToggle: ((Int, Bool) -> Void)?
 
     var body: some View {
         HStack(alignment: .top, spacing: 4) {
-            MemoBody(bodyMd: bodyMd, labels: labels, onIssueTap: onIssueTap, onTodoToggle: onTodoToggle)
+            MemoBody(bodyMd: bodyMd, labels: labels, onIssueTap: onIssueTap, issueReferenceTitles: issueReferenceTitles, onTodoToggle: onTodoToggle)
                 .pendingSyncDot(pending)
                 .frame(maxWidth: .infinity, alignment: .leading)
 

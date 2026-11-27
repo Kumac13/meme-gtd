@@ -22,6 +22,7 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
 
     // Links
     @Published var issueLinks: [IssueLink] = []
+    var issueLinksLoadID: UUID?
     @Published var urlLinks: [UrlLink] = []
 
     let memoId: Int
@@ -77,6 +78,15 @@ class MemoDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
     func applyMemo(_ memo: Memo, comments: [Comment]) {
         self.memo = memo
         if dataSources.syncScheduler == nil { self.comments = comments }
+    }
+
+    func reloadSyncedBody() async {
+        guard let current = memo,
+              let synced = try? await dataSources.memos.getMemo(id: memoId),
+              memo?.bodyMd == current.bodyMd,
+              synced.id != current.id || synced.bodyMd != current.bodyMd else { return }
+        memo = synced
+        await loadIssueLinks()
     }
 
     func relationDidChange() async {

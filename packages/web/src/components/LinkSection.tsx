@@ -48,11 +48,10 @@ interface ParentTaskInfo {
 }
 
 interface LinkSectionProps {
-  onIssueLinksChanged?: () => void;
+  onIssueLinksChanged: () => void;
+  issueLinks: { links: LinkDisplayItem[]; loading: boolean; error: boolean; refresh: () => void };
   /** ID of the issue (task, memo, or article) */
   itemId: number;
-  /** Type of the issue */
-  itemType: IssueType;
   /** Optional callback when a linked item is clicked (used in page mode for modal) */
   onItemClick?: (id: number, type: IssueType) => void;
   /** Optional callback before navigation (used in panel mode to close modal first) */
@@ -61,23 +60,26 @@ interface LinkSectionProps {
   parentTask?: ParentTaskInfo;
   /** Callback when a child task is created */
   onChildTaskCreated?: () => void;
-  /**
-   * Bump from the parent to trigger a refetch (e.g. after a body or comment
-   * save where #id mention auto-linking may have added a new `relates` row).
-   */
-  refreshKey?: number;
 }
 
-export default function LinkSection({ itemId, itemType: _itemType, onItemClick, onBeforeNavigate, parentTask, onChildTaskCreated: _onChildTaskCreated, refreshKey, onIssueLinksChanged }: LinkSectionProps) {
-  const [links, setLinks] = useState<LinkDisplayItem[]>([]);
+export default function LinkSection({ itemId, onItemClick, onBeforeNavigate, parentTask, onChildTaskCreated: _onChildTaskCreated, issueLinks, onIssueLinksChanged }: LinkSectionProps) {
+  const links = sortLinksByStatus(issueLinks.links.map(link => {
+    if (link.targetIssue) return link;
+    const id = link.direction === 'incoming' ? link.sourceIssueId : link.targetIssueId;
+    return { ...link, targetIssue: { id, type: 'task', title: `Issue #${id}`, status: null } };
+  }));
   const [urlLinks, setUrlLinks] = useState<UrlLinkDisplayItem[]>([]);
   // Child task creation state
   const [isAddingChild, setIsAddingChild] = useState(false);
   const [childTitle, setChildTitle] = useState('');
   const [isCreatingChild, setIsCreatingChild] = useState(false);
   const [childCreationError, setChildCreationError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [urlsLoading, setUrlsLoading] = useState(true);
+  const [urlsError, setUrlsError] = useState(false);
+  const [urlRefreshKey, setUrlRefreshKey] = useState(0);
+  const refreshUrls = () => setUrlRefreshKey(key => key + 1);
+  const loading = issueLinks.loading || urlsLoading;
+  const error = issueLinks.error || urlsError;
   const [isExpanded, setIsExpanded] = useState(true);
   const [deletingLinkId, setDeletingLinkId] = useState<number | null>(null);
   const [deletingUrlLinkId, setDeletingUrlLinkId] = useState<number | null>(null);
@@ -92,53 +94,31 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
   // Total links count for display
   const totalLinksCount = links.length + urlLinks.length;
 
-  // Fetch links on mount, when itemId changes, and when the parent bumps refreshKey
   useEffect(() => {
-    fetchAllLinks();
-  }, [itemId, refreshKey]);
+    let active = true;
+    setUrlsLoading(true);
+    setUrlsError(false);
+    UrlLinksService.listUrlLinks(String(itemId)).then(
+      links => { if (active) setUrlLinks(links); },
+      error => {
+        if (!active) return;
+        console.error('Failed to load URL links:', error);
+        setUrlsError(true);
+      },
+    ).finally(() => { if (active) setUrlsLoading(false); });
+    return () => { active = false; };
+  }, [itemId, urlRefreshKey]);
 
-  // Auto-collapse when no links, expand when links exist
   useEffect(() => {
     setIsExpanded(totalLinksCount > 0);
   }, [totalLinksCount]);
-
-  const fetchAllLinks = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Fetch both issue links and URL links in parallel
-      const [issueLinksResponse, urlLinksResponse] = await Promise.all([
-        LinksService.listIssueLinks(String(itemId)),
-        UrlLinksService.listUrlLinks(String(itemId)),
-      ]);
-
-      // Type assertion to add targetIssue field (which is in the actual API response but not in the generated type)
-      const linksWithTarget = (issueLinksResponse || []).map((link: any) => ({
-        ...link,
-        targetIssue: link.targetIssue || {
-          id: link.targetIssueId,
-          type: 'task' as const,
-          title: `Issue #${link.targetIssueId}`,
-        },
-      }));
-      // Sort links by status (active tasks first, completed last)
-      setLinks(sortLinksByStatus(linksWithTarget));
-      setUrlLinks(urlLinksResponse || []);
-    } catch (err) {
-      console.error('Failed to fetch links:', err);
-      setError('Failed to load links');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDelete = async (linkId: number) => {
     setDeletingLinkId(linkId);
     try {
       await LinksService.deleteLink(String(linkId));
       // Refresh links after deletion
-      if (onIssueLinksChanged) onIssueLinksChanged();
-      else await fetchAllLinks();
+      onIssueLinksChanged();
     } catch (err) {
       console.error('Failed to delete link:', err);
       alert('Failed to delete link. Please try again.');
@@ -152,7 +132,7 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
     try {
       await UrlLinksService.deleteUrlLink(String(urlLinkId));
       // Refresh links after deletion
-      await fetchAllLinks();
+      refreshUrls();
     } catch (err) {
       console.error('Failed to delete URL link:', err);
       alert('Failed to delete URL link. Please try again.');
@@ -232,8 +212,7 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
       });
 
       // 5. Refresh links and reset form
-      if (onIssueLinksChanged) onIssueLinksChanged();
-      else await fetchAllLinks();
+      onIssueLinksChanged();
       setChildTitle('');
       setIsAddingChild(false);
     } catch (err) {
@@ -258,8 +237,7 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
         linkType,
       });
       // Refresh links after creation
-      if (onIssueLinksChanged) onIssueLinksChanged();
-      else await fetchAllLinks();
+      onIssueLinksChanged();
       // Close form and reset state
       setCreationState({
         isAdding: false,
@@ -285,7 +263,7 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
     try {
       await UrlLinksService.createUrlLink(String(itemId), { url, title });
       // Refresh links after creation
-      await fetchAllLinks();
+      refreshUrls();
       // Close form and reset state
       setCreationState({
         isAdding: false,
@@ -304,7 +282,7 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
     try {
       await UrlLinksService.updateUrlLink(String(urlLinkId), { title });
       // Refresh links after update
-      await fetchAllLinks();
+      refreshUrls();
     } catch (err) {
       console.error('Failed to update URL link:', err);
       throw err;
@@ -378,9 +356,12 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
 
           {error && (
             <div className="text-sm text-red-600 py-2 flex items-center gap-2">
-              <span>⚠️ {error}</span>
+              <span>⚠️ Failed to load links</span>
               <button
-                onClick={fetchAllLinks}
+                onClick={() => {
+                  if (issueLinks.error) issueLinks.refresh();
+                  if (urlsError) refreshUrls();
+                }}
                 className="text-xs px-2 py-1 bg-red-50 hover:bg-red-100 rounded text-red-700"
               >
                 Retry
@@ -451,7 +432,7 @@ export default function LinkSection({ itemId, itemType: _itemType, onItemClick, 
             </div>
           )}
 
-          {!loading && !error && totalLinksCount > 0 && (
+          {totalLinksCount > 0 && (
             <div className="space-y-1">
               {/* Issue Links */}
               {links.map((link) => (
