@@ -11,8 +11,9 @@ export function issueLinkDisplayTitle(title: string): string {
   return title.length > 100 ? `${title.substring(0, 100)}...` : title;
 }
 
-export function isDeletedIssueLink(title: string): boolean {
-  return title.includes('(deleted)');
+export function isMissingIssueLinkTarget(target: LinkDisplayItem['targetIssue']): boolean {
+  // Links API は参照先が欠損した場合にこの組み合わせを返す。
+  return target.type === 'task' && target.status === null && target.title === `Issue #${target.id}`;
 }
 
 export function getIssueReferenceTitles(links: LinkDisplayItem[]): IssueReferenceTitles {
@@ -21,8 +22,7 @@ export function getIssueReferenceTitles(links: LinkDisplayItem[]): IssueReferenc
     const target = link.targetIssue;
     const otherId = link.direction === 'incoming' ? link.sourceIssueId : link.targetIssueId;
     if (!target || target.id !== otherId || !target.title?.trim()
-      || (target.status === null && target.title === `Issue #${otherId}`)
-      || isDeletedIssueLink(target.title)) {
+      || isMissingIssueLinkTarget(target)) {
       continue;
     }
     titles.set(issueReferenceKey(target.type, otherId), issueLinkDisplayTitle(target.title));

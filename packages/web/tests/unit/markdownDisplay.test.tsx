@@ -104,6 +104,8 @@ describe('extractPreview', () => {
   });
 });
 
+const jsonResponse = (body: unknown) => new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } });
+
 const makeLink = (id: number, type: LinkDisplayItem['targetIssue']['type'], title: string): LinkDisplayItem => ({
   id,
   sourceIssueId: 1,
@@ -154,11 +156,10 @@ describe('Detail issue reference titles', () => {
       available,
       makeLink(14, 'task', '  '),
       makeLink(15, 'task', 'Issue #15'),
-      makeLink(16, 'article', 'Article (deleted)'),
       { ...makeLink(17, 'task', ''), targetIssue: undefined } as unknown as LinkDisplayItem,
     ]);
     const content = [
-      '[#14](/tasks/14) [#15](/tasks/15) [#16](/articles/16) [#17](/tasks/17) [#18](/memos/18)',
+      '[#14](/tasks/14) [#15](/tasks/15) [#17](/tasks/17) [#18](/memos/18)',
       '[#12](/memos/12) [#99](/tasks/12) [Custom](/tasks/12) [#12](https://example.com/tasks/12)',
       '`[#12](/tasks/12)` and #12',
     ].join('\n\n');
@@ -166,7 +167,7 @@ describe('Detail issue reference titles', () => {
       <MemoryRouter><MarkdownRenderer content={content} issueReferenceTitles={titles} /></MemoryRouter>,
     );
 
-    for (const id of [14, 15, 16, 17, 18, 99]) {
+    for (const id of [14, 15, 17, 18, 99]) {
       expect(screen.getByRole('link', { name: `#${id}` })).toBeInTheDocument();
     }
     expect(screen.getAllByRole('link', { name: '#12' }).map(link => link.getAttribute('href')))
@@ -177,6 +178,31 @@ describe('Detail issue reference titles', () => {
 
     rerender(<MemoryRouter><MarkdownRenderer content="[#12](/tasks/12)" /></MemoryRouter>);
     expect(screen.getByRole('link', { name: '#12' })).toHaveAttribute('href', '/tasks/12');
+  });
+
+  it('keeps legitimate titles that resemble a missing-target placeholder', () => {
+    const task = makeLink(21, 'task', 'Issue #21');
+    const titles = getIssueReferenceTitles([
+      { ...task, targetIssue: { ...task.targetIssue, status: 'open' } },
+      makeLink(22, 'memo', 'Preview (deleted)'),
+      makeLink(23, 'memo', 'Issue #23'),
+      makeLink(24, 'article', 'Issue #24'),
+      makeLink(25, 'article', 'Article (deleted)'),
+    ]);
+    render(
+      <MemoryRouter>
+        <MarkdownRenderer
+          content="[#21](/tasks/21) [#22](/memos/22) [#23](/memos/23) [#24](/articles/24) [#25](/articles/25)"
+          issueReferenceTitles={titles}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: '#21: Issue #21' })).toHaveAttribute('href', '/tasks/21');
+    expect(screen.getByRole('link', { name: '#22: Preview (deleted)' })).toHaveAttribute('href', '/memos/22');
+    expect(screen.getByRole('link', { name: '#23: Issue #23' })).toHaveAttribute('href', '/memos/23');
+    expect(screen.getByRole('link', { name: '#24: Issue #24' })).toHaveAttribute('href', '/articles/24');
+    expect(screen.getByRole('link', { name: '#25: Article (deleted)' })).toHaveAttribute('href', '/articles/25');
   });
 
   it('ignores responses from previous detail identities and superseded refreshes', async () => {
@@ -199,24 +225,23 @@ describe('Detail issue reference titles', () => {
   });
 
   it('shares one response across both Memo detail layouts and reloads after posting a reply', async () => {
-    const task = makeLink(12, 'task', 'Initial task');
+    const task = makeLink(12, 'task', 'Initial task (deleted)');
     const article = makeLink(13, 'article', 'New article');
     const createdAt = '2026-11-27T00:00:00';
     const memo = { id: 1, bodyMd: '[#12](/tasks/12)', title: null, isBookmarked: false, createdAt, updatedAt: createdAt };
     const reply = { id: 2, issueId: 1, bodyMd: '[#13](/articles/13)', createdAt, updatedAt: createdAt };
-    const json = (body: unknown) => new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } });
     let posted = false;
     const fetch = vi.fn(async (url: string, init?: RequestInit) => {
-      if (url === '/api/issues/1/links') return json(posted ? [task, article] : [task]);
-      if (url === '/api/memos/1') return json(memo);
+      if (url === '/api/issues/1/links') return jsonResponse(posted ? [task, article] : [task]);
+      if (url === '/api/memos/1') return jsonResponse(memo);
       if (url === '/api/memos/1/comments') {
         if (init?.method === 'POST') {
           posted = true;
-          return json(reply);
+          return jsonResponse(reply);
         }
-        return json(posted ? [reply] : []);
+        return jsonResponse(posted ? [reply] : []);
       }
-      return json([]);
+      return jsonResponse([]);
     });
     vi.stubGlobal('fetch', fetch);
     const { container } = render(
@@ -227,8 +252,8 @@ describe('Detail issue reference titles', () => {
     const renderedTitles = (name: string) => within(container).getAllByText(name, { selector: 'a' });
     const issueRequests = () => fetch.mock.calls.filter(([url]) => url === '/api/issues/1/links');
     await waitFor(() => {
-      expect(renderedTitles('#12: Initial task')).toHaveLength(2);
-      expect(screen.getByRole('button', { name: '#12: Initial task' })).toBeInTheDocument();
+      expect(renderedTitles('#12: Initial task (deleted)')).toHaveLength(2);
+      expect(screen.getByRole('button', { name: '#12: Initial task (deleted)' })).toBeInTheDocument();
     });
     expect(issueRequests()).toHaveLength(1);
 
@@ -238,4 +263,48 @@ describe('Detail issue reference titles', () => {
     await waitFor(() => expect(renderedTitles('#13: New article')).toHaveLength(2));
     expect(issueRequests()).toHaveLength(2);
   });
+
+  it('keeps the next Memo and its reference titles after the previous Memo finishes saving', async () => {
+    const createdAt = '2026-11-27T00:00:00';
+    const fields = { title: null, isBookmarked: false, createdAt, updatedAt: createdAt };
+    const memoA = { ...fields, id: 1, bodyMd: 'Memo A body' };
+    const memoB = { ...fields, id: 2, bodyMd: 'Memo B body [#12](/tasks/12)' };
+    const reply = { id: 30, issueId: 1, bodyMd: '[#2](/memos/2)', createdAt, updatedAt: createdAt };
+    let finishSave!: (value: Response) => void;
+    const saveResponse = new Promise<Response>(resolve => { finishSave = resolve; });
+    const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === '/api/memos/1') return init?.method === 'PATCH' ? saveResponse : jsonResponse(memoA);
+      if (url === '/api/memos/2') return jsonResponse(memoB);
+      if (url === '/api/memos/1/comments') return jsonResponse([reply]);
+      if (url === '/api/issues/1/links') return jsonResponse([makeLink(2, 'memo', 'Open Memo B')]);
+      if (url === '/api/issues/2/links') return jsonResponse([{ ...makeLink(12, 'task', 'Task title'), sourceIssueId: 2 }]);
+      return jsonResponse([]);
+    });
+    vi.stubGlobal('fetch', fetch);
+
+    render(
+      <MemoryRouter initialEntries={['/memos/1']}>
+        <Routes><Route path="/memos/:id" element={<MemoDetail />} /></Routes>
+      </MemoryRouter>,
+    );
+    const [openMemoB] = await screen.findAllByRole('link', { name: '#2: Open Memo B' });
+    const [bodyMenu] = screen.getAllByRole('button', { name: 'More options' });
+    fireEvent.click(bodyMenu);
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    fireEvent.change(screen.getByDisplayValue(memoA.bodyMd), { target: { value: 'Updated Memo A' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/memos/1', expect.objectContaining({ method: 'PATCH' })));
+
+    fireEvent.click(openMemoB);
+    await screen.findAllByRole('link', { name: '#12: Task title' });
+    await act(async () => {
+      finishSave(jsonResponse({ ...memoA, bodyMd: 'Updated Memo A' }));
+    });
+
+    expect(screen.getAllByRole('link', { name: '#12: Task title' })).toHaveLength(2);
+    expect(screen.getAllByText('Memo B body', { exact: false })).toHaveLength(2);
+    expect(screen.queryByText('Loading memo...')).toBeNull();
+    expect(screen.queryByText('Updated Memo A')).toBeNull();
+  });
+
 });

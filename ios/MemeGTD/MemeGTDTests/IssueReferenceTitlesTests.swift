@@ -5,13 +5,13 @@ import XCTest
 @MainActor
 final class IssueReferenceTitlesTests: XCTestCase {
     private func link(
-        _ id: Int, type: String = "task", title: String, direction: LinkDirection = .outgoing
+        _ id: Int, type: String = "task", title: String, direction: LinkDirection = .outgoing, status: String? = nil
     ) -> IssueLink {
         IssueLink(
             id: id, sourceIssueId: direction == .outgoing ? 1 : id,
             targetIssueId: direction == .outgoing ? id : 1,
             linkType: .relates, createdAt: "", direction: direction,
-            targetIssue: TargetIssue(id: id, type: type, title: title, status: nil)
+            targetIssue: TargetIssue(id: id, type: type, title: title, status: status)
         )
     }
 
@@ -39,9 +39,8 @@ final class IssueReferenceTitlesTests: XCTestCase {
             link(12, title: "A task"),
             link(14, title: "  "),
             link(15, title: "Issue #15"),
-            link(16, type: "article", title: "Article (deleted)"),
         ])
-        let markdown = "[#14](/tasks/14) [#15](/tasks/15) [#16](/articles/16) [#17](/tasks/17) "
+        let markdown = "[#14](/tasks/14) [#15](/tasks/15) [#17](/tasks/17) "
             + "[#12](/memos/12) [#99](/tasks/12) [#12 **custom**](/tasks/12) "
             + "[#12](https://example.com/tasks/12) `[#12](/tasks/12)`"
         let original = renderInlineMarkdown(markdown)
@@ -49,6 +48,22 @@ final class IssueReferenceTitlesTests: XCTestCase {
         XCTAssertEqual(String(withTitles.characters), String(original.characters))
         XCTAssertEqual(
             String(renderInlineMarkdown("[#12](/tasks/12)").characters), "#12"
+        )
+    }
+
+    func testLegitimateTitlesThatResembleMissingTargetsAreDisplayed() {
+        let titles = IssueReferenceTitles(links: [
+            link(21, title: "Issue #21", status: "open"),
+            link(22, type: "memo", title: "Preview (deleted)"),
+            link(23, type: "memo", title: "Issue #23"),
+            link(24, type: "article", title: "Issue #24"),
+            link(25, type: "article", title: "Article (deleted)"),
+        ])
+        let markdown = "[#21](/tasks/21) [#22](/memos/22) [#23](/memos/23) [#24](/articles/24) [#25](/articles/25)"
+        let rendered = renderInlineMarkdown(markdown, issueReferenceTitles: titles)
+        XCTAssertEqual(
+            String(rendered.characters),
+            "#21: Issue #21 #22: Preview (deleted) #23: Issue #23 #24: Issue #24 #25: Article (deleted)"
         )
     }
 

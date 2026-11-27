@@ -76,10 +76,11 @@ struct IssueReferenceTitles {
             let target = link.targetIssue
             let otherID = link.direction == .incoming ? link.sourceIssueId : link.targetIssueId
             let title = target.displayTitle
+            // Links API は参照先が欠損した場合にこの組み合わせを返す。
+            let missingTarget = target.type == "task" && target.status == nil && target.title == "Issue #\(otherID)"
             guard target.id == otherID,
                   !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                  !target.title.contains("(deleted)"),
-                  !(target.status == nil && target.title == "Issue #\(otherID)") else { continue }
+                  !missingTarget else { continue }
             titles[Key(id: otherID, type: target.type)] = title
         }
         self.titles = titles
