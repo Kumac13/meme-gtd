@@ -82,6 +82,7 @@ Web閲覧中の記事を保存するためのChrome拡張機能が利用可能�
 ### 機能
 
 - Memo/Task/Article 一覧・詳細・作成・編集・削除（Markdown表示）
+- Web と iOS の Task 詳細で、本文とコメントの Markdown 表を表示
 - Task / Article の作成時テンプレート
 - コメント投稿・編集・削除、Bookmark、Task Status変更
 - Link管理（親子関係・関連付け）、Project管理（Board/Tableビュー対応）

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MarkdownRenderer, InlineMarkdownRenderer, extractPreview, stripArticleBlockIds } from '../../src/utils/markdown';
 
 describe('stripArticleBlockIds', () => {
@@ -48,6 +48,77 @@ describe('MarkdownRenderer list alignment', () => {
     // ネストした番号付きリストが li の内側に描画される
     const nestedOl = container.querySelector('li ol');
     expect(nestedOl).not.toBeNull();
+  });
+});
+
+describe('MarkdownRenderer GFM tables', () => {
+  it('renders matching header and body columns with empty cells, safe alignment, and inline markup', () => {
+    const lines = [
+      '| Left | Center | Right |',
+      '| :--- | :---: | ---: |',
+      '| **bold** | A\\|B | `x\\|y` |',
+      '| *italic* ||',
+      '| | | |',
+    ];
+    const { container } = render(<MarkdownRenderer content={lines.join('\n')} />);
+
+    const table = screen.getByRole('table');
+    const headers = screen.getAllByRole('columnheader');
+    expect(headers.map((cell) => cell.textContent)).toEqual(['Left', 'Center', 'Right']);
+    expect(headers.map((cell) => cell.style.textAlign)).toEqual(['left', 'center', 'right']);
+    expect(table.parentElement).toHaveClass('overflow-x-auto', 'max-w-full');
+
+    const rows = [...table.querySelectorAll('tbody tr')];
+    expect(rows.map((row) => [...row.cells].map((cell) => cell.textContent))).toEqual([
+      ['bold', 'A|B', 'x|y'],
+      ['italic', '', ''],
+      ['', '', ''],
+    ]);
+    expect([...rows[0].cells].map((cell) => cell.style.textAlign)).toEqual(['left', 'center', 'right']);
+    expect(container.querySelector('td strong')).toHaveTextContent('bold');
+    expect(container.querySelector('td em')).toHaveTextContent('italic');
+    expect(container.querySelector('td code')).toHaveTextContent('x|y');
+  });
+
+  it('keeps the existing issue and external link behavior inside and outside tables', () => {
+    const onIssueLinkClick = vi.fn();
+    const lines = [
+      '[Outside task](/tasks/12) [Outside web](https://example.com/outside)',
+      '',
+      '| Link | Web |',
+      '| --- | --- |',
+      '| [Inside memo](/memos/34) | [Inside web](https://example.com/inside) |',
+    ];
+    render(<MarkdownRenderer content={lines.join('\n')} onIssueLinkClick={onIssueLinkClick} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Outside task' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inside memo' }));
+    expect(onIssueLinkClick.mock.calls).toEqual([[12, 'task'], [34, 'memo']]);
+    for (const path of ['Outside', 'Inside']) {
+      const link = screen.getByRole('link', { name: path + ' web' });
+      expect(link).toHaveAttribute('href', 'https://example.com/' + path.toLowerCase());
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    }
+  });
+
+  it('sanitizes HTML and URL attributes in cells with the shared pipeline', () => {
+    const lines = [
+      '| Markup | Destination |',
+      '| --- | --- |',
+      '| <strong style="color:red" onclick="example()">safe markup</strong> | [Local file](file:///example) |',
+      '',
+      '<table><tbody><tr><td align="invalid" style="color:red">HTML cell</td></tr></tbody></table>',
+    ];
+    const { container } = render(<MarkdownRenderer content={lines.join('\n')} />);
+
+    const strong = screen.getByText('safe markup');
+    expect(strong.tagName).toBe('STRONG');
+    expect(strong).not.toHaveAttribute('onclick');
+    expect(strong).not.toHaveAttribute('style');
+    expect(container.querySelector('td a')).not.toHaveAttribute('href');
+    expect(screen.getByText('HTML cell').style.textAlign).toBe('left');
+    expect(screen.getByText('HTML cell').style.color).toBe('');
   });
 });
 

@@ -112,7 +112,7 @@ export default function EditableContent({
   });
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg py-1 px-4">
+    <div className="min-w-0 bg-white border border-gray-200 rounded-lg py-1 px-4">
       <div className="flex items-center justify-between py-1 border-b border-gray-200">
         <div className="text-xs text-gray-500">
           <span title={updatedAt}>{formatRelativeTime(updatedAt)}</span>
