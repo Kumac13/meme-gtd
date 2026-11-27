@@ -46,7 +46,7 @@ const styles: StylesheetStyle[] = [
     width: 1.5, opacity: 0.72, 'line-color': 'data(color)', 'target-arrow-color': 'data(color)',
     'target-arrow-shape': 'triangle', 'curve-style': 'bezier',
   } },
-  { selector: 'edge[relation = "relates"]', style: { 'target-arrow-shape': 'none' } },
+  { selector: 'edge[relation = "relates"], edge.plain', style: { 'target-arrow-shape': 'none' } },
   { selector: 'edge.membership', style: { 'line-style': 'dotted', 'target-arrow-shape': 'none' } },
   { selector: 'edge.inspected', style: { width: 2.5, opacity: 1, 'z-index': 10 } },
   { selector: '.dimmed', style: { opacity: 0.2 } },
@@ -56,7 +56,7 @@ const styles: StylesheetStyle[] = [
 const issueId = (id: number) => `issue-${id}`;
 const labelId = (id: number) => `label-${id}`;
 
-function graphElements(graph: LinksGraphData): ElementDefinition[] {
+function graphElements(graph: LinksGraphData, arrows: boolean): ElementDefinition[] {
   const degree = new Map<number, number>();
   for (const { sourceIssueId, targetIssueId } of graph.edges) {
     degree.set(sourceIssueId, (degree.get(sourceIssueId) ?? 0) + 1);
@@ -74,6 +74,7 @@ function graphElements(graph: LinksGraphData): ElementDefinition[] {
       return {
         data: { id: `edge-${edge.id}`, source: issueId(tail), target: issueId(head), saved: issueId(edge.sourceIssueId),
           color: relationships[edge.linkType].color, relation: edge.linkType },
+        classes: arrows ? '' : 'plain',
       };
     }),
     ...graph.labels.map(label => ({
@@ -204,8 +205,9 @@ export function nearestTouchNode(cy: Core, point: Position) {
 type Neighbor = { name: string; icon?: ReactElement; relation?: string; label?: boolean };
 const emptyInspection = { name: '', neighbors: [] as Neighbor[], count: 0 };
 
-export default function LinksGraphCanvas({ graph, selectedId, onSelect }: {
+export default function LinksGraphCanvas({ graph, arrows, selectedId, onSelect }: {
   graph: LinksGraphData;
+  arrows: boolean;
   selectedId?: number;
   onSelect: (node: IssueNode) => void;
 }) {
@@ -339,7 +341,7 @@ export default function LinksGraphCanvas({ graph, selectedId, onSelect }: {
     const view = container.current;
     if (!cy || !view) return;
 
-    const elements = graphElements(graph);
+    const elements = graphElements(graph, arrows);
     const ids = elements.map(element => element.data.id as string);
     const viewportScope = `${graph.rootId}/${graph.depth}`;
     const last = previous.current;
@@ -370,13 +372,13 @@ export default function LinksGraphCanvas({ graph, selectedId, onSelect }: {
     delete view.dataset.firstRenderMs;
     cy.one('render', () => { view.dataset.firstRenderMs = (performance.now() - layoutStart).toFixed(1); });
     cy.forceRender();
-  }, [graph]);
+  }, [graph, arrows]);
 
   useEffect(() => {
     const cy = cyRef.current;
     cy?.nodes('.chosen').removeClass('chosen');
     if (selectedId !== undefined) cy?.getElementById(issueId(selectedId)).addClass('chosen');
-  }, [selectedId, graph]);
+  }, [selectedId, graph, arrows]);
 
   function inspectKeyboardNode() {
     const node = graph.nodes[keyboardIndex.current] ?? graph.nodes[0];
@@ -392,6 +394,16 @@ export default function LinksGraphCanvas({ graph, selectedId, onSelect }: {
   }
 
   function handleKey(event: KeyboardEvent<HTMLDivElement>) {
+    const cy = cyRef.current;
+    if (cy && ['+', '=', '-'].includes(event.key)) {
+      event.preventDefault();
+      viewMoved.current = true;
+      cy.zoom({
+        level: cy.zoom() * (event.key === '-' ? 1 / 1.2 : 1.2),
+        renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 },
+      });
+      return;
+    }
     const last = graph.nodes.length - 1;
     const index = Math.min(keyboardIndex.current, last);
     switch (event.key) {
@@ -426,7 +438,7 @@ export default function LinksGraphCanvas({ graph, selectedId, onSelect }: {
         <div tabIndex={0} role="group" aria-label="Issue link graph" aria-describedby="links-keyboard-help"
           onFocus={inspectKeyboardNode} onBlur={() => inspect()} onKeyDown={handleKey}
           className="pointer-events-none absolute inset-0 rounded-t-lg focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-github-green-600" />
-        <p id="links-keyboard-help" className="sr-only">Use the arrow keys to move between issues, then Enter to open details.</p>
+        <p id="links-keyboard-help" className="sr-only">Use the arrow keys to move between issues, then Enter to open details. Use plus and minus to zoom.</p>
         <div role="status" aria-live="polite" className={inspection.name
           ? 'pointer-events-none absolute inset-x-3 top-3 z-1 max-h-[45%] overflow-hidden rounded-md border border-gray-200 bg-white/95 px-3 py-2 text-sm shadow-sm sm:right-auto sm:max-w-[65%]'
           : 'sr-only'}>

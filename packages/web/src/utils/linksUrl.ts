@@ -22,7 +22,7 @@ export function parseLinksUrl(params: URLSearchParams) {
   if (params.has('depth') && (!rootId || !depth || params.getAll('depth').length !== 1)) invalidKeys.add('depth');
   if (projects.some(value => value !== 'none' && !positiveInteger(value))) invalidKeys.add('projectId');
   if (linkTypes.some(value => !(LINK_TYPES as readonly string[]).includes(value))) invalidKeys.add('linkType');
-  for (const key of ['bookmarked', 'includeLabels']) {
+  for (const key of ['bookmarked', 'includeLabels', 'orphans', 'arrows']) {
     if (params.has(key) && (params.getAll(key).length !== 1 || !['true', 'false'].includes(params.get(key)!))) invalidKeys.add(key);
   }
 
@@ -35,7 +35,12 @@ export function parseLinksUrl(params: URLSearchParams) {
     bookmarked: params.get('bookmarked') === 'true' ? 'true' : undefined,
     includeLabels: params.get('includeLabels') === 'true' ? 'true' : undefined,
   };
-  return { query, labels, projects: new Set(projects), linkTypes: new Set(linkTypes as LinkTypeName[]), invalidKeys };
+  return {
+    query, labels, projects: new Set(projects), linkTypes: new Set(linkTypes as LinkTypeName[]), invalidKeys,
+    // どちらも既定は表示。URL には非表示にしたときだけ false を持つ。
+    showOrphans: params.get('orphans') !== 'false',
+    showArrows: params.get('arrows') !== 'false',
+  };
 }
 
 export function setLinksRoot(params: URLSearchParams, rootId?: number): URLSearchParams {

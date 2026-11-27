@@ -174,7 +174,7 @@ Label / Project管理欄は`ManagementSection`、Task / Projectの編集可能�
 
 Calendarを含むIssue詳細の右パネルは`ItemDetailPanel`を単一の正とし、リソース別の専用Detail panelを増やさない。
 
-Links は `ListPageLayout` と一覧用フィルタを共有し、起点選択は `IssuePicker` を使う。詳細の `ItemDetail` と狭幅 Memo の操作欄は `ShowLinks` を共有する。起点・Depth・フィルタは URL が正。グラフコンポーネントは遅延読み込みし、描画と操作は Cytoscape.js の Canvas、配置は d3-force の力学シミュレーション（中心への力・斥力・リンクの引力・衝突回避）が担う。リンクのない Issue も同じシミュレーションに乗せる（格子や輪に整列させないため）。Canvas・イベント・シミュレーションは画面離脱時に解放する。Link type は取得済みグラフに対する表示フィルタで、API には送らない。Issue ノードで `ItemDetailPanel` を開く処理と、パネルからの保存成功通知によるグラフの再取得を Links ページが所有する。
+Links は `ListPageLayout` と一覧用フィルタを共有し、起点選択は `IssuePicker` を使う。詳細の `ItemDetail` と狭幅 Memo の操作欄は `ShowLinks` を共有する。起点・Depth・フィルタは URL が正。グラフコンポーネントは遅延読み込みし、描画と操作は Cytoscape.js の Canvas、配置は d3-force の力学シミュレーション（中心への力・斥力・リンクの引力・衝突回避）が担う。リンクのない Issue も同じシミュレーションに乗せる（格子や輪に整列させないため）。Canvas・イベント・シミュレーションは画面離脱時に解放する。Link type・Orphans・Arrows は取得済みグラフに対する表示の切替で、API には送らない。Issue ノードで `ItemDetailPanel` を開く処理と、パネルからの保存成功通知によるグラフの再取得を Links ページが所有する。
 
 本節と「iOS プレゼンテーション層」の境界は、`packages/web/tests/unit/ComponentBoundaries.test.ts`（Web CI で自動実行、iOS ソースの走査を含む）と `ios/MemeGTD/MemeGTDTests/ComponentBoundaryTests.swift`（Xcode テスト）のディレクトリ走査型構造テストが検査する。共通境界を追加・変更したら、両テストと `packages/web/CLAUDE.md`・`ios/CLAUDE.md` の選択表も更新する。
 

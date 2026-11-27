@@ -155,6 +155,16 @@ describe('Links page state', () => {
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'relates' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'parent / child' }));
     expect(await screen.findByText('2 issues · 2 links')).toBeVisible();
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'parent / child' }));
+    expect(await screen.findByRole('button', { name: 'Unlinked memo' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Orphans' }));
+    expect(screen.getByTestId('current-links-url')).toHaveTextContent('?orphans=false');
+    expect(await screen.findByText('3 issues · 4 links')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Unlinked memo' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Arrows' }));
+    expect(screen.getByTestId('current-links-url')).toHaveTextContent('?orphans=false&arrows=false');
+    expect(parseLinksUrl(new URLSearchParams('orphans=false&arrows=false'))).toMatchObject({ showOrphans: false, showArrows: false });
+    expect([...parseLinksUrl(new URLSearchParams('orphans=no')).invalidKeys]).toEqual(['orphans']);
     expect(get).toHaveBeenCalledTimes(1);
     expect([...parseLinksUrl(new URLSearchParams('linkType=relates,unknown')).invalidKeys]).toEqual(['linkType']);
   });
