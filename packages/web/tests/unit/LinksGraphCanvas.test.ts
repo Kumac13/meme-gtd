@@ -1,6 +1,37 @@
 import cytoscape from 'cytoscape';
 import { afterEach, describe, expect, it } from 'vitest';
-import { nearestTouchNode } from '../../src/components/LinksGraphCanvas';
+import { layoutGraph, nearestTouchNode } from '../../src/components/LinksGraphCanvas';
+
+describe('graph layout', () => {
+  it('pulls linked issues together and scatters isolated issues around them without rows or overlaps', () => {
+    const elements = [
+      ...Array.from({ length: 400 }, (_, index) => ({ data: { id: `issue-${index}` }, classes: 'issue' })),
+      ...Array.from({ length: 30 }, (_, index) => ({ data: { id: `edge-${index}`, source: `issue-${index}`, target: `issue-${index + (index % 5 === 4 ? 2 : 1)}` } })),
+    ];
+    const graph = cytoscape({ headless: true, styleEnabled: true, layout: { name: 'preset' }, elements });
+    layoutGraph(graph);
+
+    const linked = graph.nodes().filter(node => node.degree(false) > 0);
+    const isolated = graph.nodes().difference(linked);
+    const points = isolated.map(node => node.position());
+    const members = linked.map(node => node.position());
+    expect(points.every(point => members.every(member => Math.hypot(point.x - member.x, point.y - member.y) > 20))).toBe(true);
+
+    // 格子配置では同じ y 座標に多数の点が並ぶ。散布では行が生まれない。
+    const rows = new Map<number, number>();
+    for (const point of points) rows.set(Math.round(point.y), (rows.get(Math.round(point.y)) ?? 0) + 1);
+    expect(Math.max(...rows.values())).toBeLessThan(6);
+
+    let closest = Infinity;
+    for (let a = 0; a < points.length; a++) {
+      for (let b = a + 1; b < points.length; b++) {
+        closest = Math.min(closest, Math.hypot(points[a].x - points[b].x, points[a].y - points[b].y));
+      }
+    }
+    expect(closest).toBeGreaterThan(20);
+    graph.destroy();
+  });
+});
 
 describe('touch selection with overlapping graph hit areas', () => {
   const cy = cytoscape({

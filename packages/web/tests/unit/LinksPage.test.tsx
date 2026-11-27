@@ -126,6 +126,39 @@ describe('Links page state', () => {
     expect(get).toHaveBeenCalledTimes(2);
   });
 
+  it('shows only the selected link types and the issues they connect without refetching', async () => {
+    const response = {
+      ...graph(null,
+        { id: 1, type: 'task', title: 'Parent task', status: 'open' },
+        { id: 2, type: 'memo', title: 'Related memo', status: null },
+        { id: 3, type: 'memo', title: 'Unlinked memo', status: null },
+        { id: 4, type: 'article', title: 'Source article', status: null }),
+      edges: [
+        { id: 1, sourceIssueId: 1, targetIssueId: 2, linkType: 'parent' },
+        { id: 2, sourceIssueId: 2, targetIssueId: 1, linkType: 'relates' },
+        { id: 3, sourceIssueId: 2, targetIssueId: 1, linkType: 'child' },
+        { id: 4, sourceIssueId: 2, targetIssueId: 4, linkType: 'derived_from' },
+      ],
+    } as LinksGraphData;
+    const get = vi.spyOn(LinksService, 'getLinksGraph').mockImplementation(() =>
+      Object.assign(Promise.resolve(response), { cancel: vi.fn() }) as ReturnType<typeof LinksService.getLinksGraph>,
+    );
+    setup(['/links']);
+    expect(await screen.findByText('4 issues · 4 links')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Link type' }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'relates' }));
+    expect(screen.getByTestId('current-links-url')).toHaveTextContent('?linkType=relates');
+    expect(await screen.findByText('2 issues · 1 links')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Parent task' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Unlinked memo' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Source article' })).toBeNull();
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'relates' }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'parent / child' }));
+    expect(await screen.findByText('2 issues · 2 links')).toBeVisible();
+    expect(get).toHaveBeenCalledTimes(1);
+    expect([...parseLinksUrl(new URLSearchParams('linkType=relates,unknown')).invalidKeys]).toEqual(['linkType']);
+  });
+
   it('validates URL recovery and resets depth when switching starting issues', () => {
     const bad = new URLSearchParams('rootId=b&depth=0&projectId=-1&q=kept&bookmarked=true');
     expect([...parseLinksUrl(bad).invalidKeys]).toEqual(['rootId', 'depth', 'projectId']);
