@@ -216,6 +216,10 @@ function transformAttachmentPath(src: string | undefined): string | undefined {
 /**
  * Default markdown components configuration with Tailwind CSS styling
  */
+function tableCellAlignment(align: unknown) {
+  return align === 'center' || align === 'right' ? align : 'left';
+}
+
 const defaultComponents: Components = {
   // Images with attachment path transformation
   img: ({ src, alt, ...props }) => {
@@ -321,8 +325,8 @@ const defaultComponents: Components = {
 
   // Tables (GFM)
   table: ({ children }) => (
-    <div className="overflow-x-auto mb-4">
-      <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
+    <div className="mb-4 min-w-0 max-w-full overflow-x-auto [contain:inline-size]">
+      <table className="w-full border-collapse border border-gray-300">
         {children}
       </table>
     </div>
@@ -330,13 +334,22 @@ const defaultComponents: Components = {
   thead: ({ children }) => <thead className="bg-gray-50">{children}</thead>,
   tbody: ({ children }) => <tbody className="bg-white divide-y divide-gray-200">{children}</tbody>,
   tr: ({ children }) => <tr>{children}</tr>,
-  th: ({ children }) => (
-    <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border border-gray-300">
+  th: ({ node, children }) => (
+    <th
+      scope="col"
+      style={{ textAlign: tableCellAlignment(node?.properties.align) }}
+      className="min-w-24 px-3 py-2 align-top text-xs font-semibold text-gray-700 border border-gray-300 [overflow-wrap:anywhere]"
+    >
       {children}
     </th>
   ),
-  td: ({ children }) => (
-    <td className="px-4 py-2 text-sm text-gray-700 border border-gray-300">{children}</td>
+  td: ({ node, children }) => (
+    <td
+      style={{ textAlign: tableCellAlignment(node?.properties.align) }}
+      className="min-w-24 px-3 py-2 align-top text-sm text-gray-700 border border-gray-300 [overflow-wrap:anywhere]"
+    >
+      {children}
+    </td>
   ),
 
   // Horizontal rule

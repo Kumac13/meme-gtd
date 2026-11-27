@@ -4,7 +4,7 @@ import UIKit
 import WebKit
 
 /// A view that renders markdown text with support for headings, code blocks,
-/// blockquotes, lists, inline code, bold, italic, and links.
+/// blockquotes, lists, tables, inline code, bold, italic, and links.
 struct MarkdownBody: View {
     let text: String
     let fontSize: CGFloat
@@ -70,6 +70,8 @@ struct MarkdownBody: View {
             todoItemView(checked: checked, content: content, indent: indent, todoIndex: todoIndex)
         case .image(let alt, let url):
             imageView(alt: alt, url: url)
+        case .table(let table):
+            MarkdownTableView(table: table, fontSize: fontSize, color: color, searchQuery: searchQuery)
         case .text(let content):
             if !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 inlineMarkdownText(content)
@@ -219,58 +221,74 @@ struct MarkdownBody: View {
         color: UIColor? = nil,
         lineSpacing: CGFloat = 4
     ) -> some View {
-        let baseFont = font ?? .systemFont(ofSize: fontSize)
-        let baseColor = color ?? UIColor(self.color)
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.lineSpacing = lineSpacing
         let parsed = renderInlineMarkdown(content, issueReferenceTitles: issueReferenceTitles)
-        let rendered = NSMutableAttributedString()
-        for run in parsed.runs {
-            let intent = run.inlinePresentationIntent ?? []
-            let runFont = intent.contains(.code)
-                ? UIFont.monospacedSystemFont(ofSize: baseFont.pointSize, weight: .regular)
-                : baseFont
-            var traits = runFont.fontDescriptor.symbolicTraits
-            if intent.contains(.stronglyEmphasized) { traits.insert(.traitBold) }
-            if intent.contains(.emphasized) { traits.insert(.traitItalic) }
-            let descriptor = runFont.fontDescriptor.withSymbolicTraits(traits) ?? runFont.fontDescriptor
-            var attributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont(descriptor: descriptor, size: runFont.pointSize),
-                .foregroundColor: baseColor,
-                .paragraphStyle: paragraph,
-            ]
-            if intent.contains(.strikethrough) {
-                attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
-            }
-            if let url = run.link {
-                attributes[.link] = selectableLinkURL(url)
-            }
-            rendered.append(NSAttributedString(string: String(parsed[run.range].characters), attributes: attributes))
-        }
+        return SelectableText(content: renderedMarkdownText(
+            parsed,
+            font: font ?? .systemFont(ofSize: fontSize),
+            color: color ?? UIColor(self.color),
+            lineSpacing: lineSpacing,
+            searchQuery: searchQuery
+        ))
+    }
+}
 
-        if let query = searchQuery, !query.isEmpty {
-            let plainText = rendered.string
-            var searchStart = plainText.startIndex
-            while let range = plainText.range(of: query, options: .caseInsensitive, range: searchStart..<plainText.endIndex) {
-                rendered.addAttributes([
-                    .foregroundColor: UIColor(Color.accentDarker),
-                    .font: UIFont.systemFont(ofSize: baseFont.pointSize, weight: .semibold),
-                ], range: NSRange(range, in: plainText))
-                searchStart = range.upperBound
-            }
+func renderedMarkdownText(
+    _ parsed: AttributedString,
+    font baseFont: UIFont,
+    color baseColor: UIColor,
+    lineSpacing: CGFloat = 4,
+    alignment: NSTextAlignment = .natural,
+    searchQuery: String?
+) -> NSAttributedString {
+    let paragraph = NSMutableParagraphStyle()
+    paragraph.lineSpacing = lineSpacing
+    paragraph.alignment = alignment
+    let rendered = NSMutableAttributedString()
+    for run in parsed.runs {
+        let intent = run.inlinePresentationIntent ?? []
+        let runFont = intent.contains(.code)
+            ? UIFont.monospacedSystemFont(ofSize: baseFont.pointSize, weight: .regular)
+            : baseFont
+        var traits = runFont.fontDescriptor.symbolicTraits
+        if intent.contains(.stronglyEmphasized) { traits.insert(.traitBold) }
+        if intent.contains(.emphasized) { traits.insert(.traitItalic) }
+        let descriptor = runFont.fontDescriptor.withSymbolicTraits(traits) ?? runFont.fontDescriptor
+        var attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont(descriptor: descriptor, size: runFont.pointSize),
+            .foregroundColor: baseColor,
+            .paragraphStyle: paragraph,
+        ]
+        if intent.contains(.strikethrough) {
+            attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
         }
-        return SelectableText(content: rendered)
+        if let url = run.link {
+            attributes[.link] = selectableLinkURL(url)
+        }
+        rendered.append(NSAttributedString(string: String(parsed[run.range].characters), attributes: attributes))
     }
 
-    private func selectableLinkURL(_ url: URL) -> URL {
-        // 相対リンクも既存のアプリ内ルーティングに渡す。
-        guard url.scheme == nil, !url.path.isEmpty else { return url }
-        var components = URLComponents()
-        components.scheme = "memegtd-internal"
-        components.host = "internal"
-        components.path = url.path.hasPrefix("/") ? url.path : "/\(url.path)"
-        return components.url ?? url
+    if let query = searchQuery, !query.isEmpty {
+        let plainText = rendered.string
+        var searchStart = plainText.startIndex
+        while let range = plainText.range(of: query, options: .caseInsensitive, range: searchStart..<plainText.endIndex) {
+            rendered.addAttributes([
+                .foregroundColor: UIColor(Color.accentDarker),
+                .font: UIFont.systemFont(ofSize: baseFont.pointSize, weight: .semibold),
+            ], range: NSRange(range, in: plainText))
+            searchStart = range.upperBound
+        }
     }
+    return rendered
+}
+
+func selectableLinkURL(_ url: URL) -> URL {
+    // 相対リンクも既存のアプリ内ルーティングに渡す。
+    guard url.scheme == nil, !url.path.isEmpty else { return url }
+    var components = URLComponents()
+    components.scheme = "memegtd-internal"
+    components.host = "internal"
+    components.path = url.path.hasPrefix("/") ? url.path : "/\(url.path)"
+    return components.url ?? url
 }
 
 func renderInlineMarkdown(
@@ -315,7 +333,7 @@ func renderInlineMarkdown(
 
 // MARK: - Internal issue URL parser
 
-private func parseInternalIssueURL(_ url: URL) -> (id: Int, type: String)? {
+func parseInternalIssueURL(_ url: URL) -> (id: Int, type: String)? {
     // Accept three forms:
     //   1. relative path-only (`/tasks/63`) from raw AttributedString
     //   2. our promoted custom scheme (`memegtd-internal://internal/tasks/63`)
@@ -352,8 +370,9 @@ private func parseInternalIssueURL(_ url: URL) -> (id: Int, type: String)? {
 
 // MARK: - Markdown parser
 
-private enum MarkdownBlock {
+enum MarkdownBlock {
     case text(String)
+    case table(MarkdownTable)
     case heading(level: Int, content: String)
     case codeBlock(language: String, code: String)
     case mermaidBlock(code: String)
@@ -363,9 +382,13 @@ private enum MarkdownBlock {
     case image(alt: String, url: String)
 }
 
-private func parseBlocks(_ markdown: String) -> [MarkdownBlock] {
+func parseBlocks(_ source: String) -> [MarkdownBlock] {
     var blocks: [MarkdownBlock] = []
+    let markdown = source.replacingOccurrences(of: "\r\n", with: "\n")
+        .replacingOccurrences(of: "\r", with: "\n")
     let lines = markdown.components(separatedBy: "\n")
+    let tables = MarkdownTable.tablesByFirstLine(in: markdown)
+    var tableEndLine = -1
     var currentText = ""
     var inCodeBlock = false
     var codeLanguage = ""
@@ -387,7 +410,16 @@ private func parseBlocks(_ markdown: String) -> [MarkdownBlock] {
         }
     }
 
-    for line in lines {
+    for (lineIndex, line) in lines.enumerated() {
+        if lineIndex <= tableEndLine { continue }
+        if !inCodeBlock, let table = tables[lineIndex] {
+            flushText()
+            flushQuote()
+            blocks.append(.table(table.content))
+            tableEndLine = table.lastLine
+            continue
+        }
+
         // Code block fence
         if !inCodeBlock && line.hasPrefix("```") {
             flushText()
