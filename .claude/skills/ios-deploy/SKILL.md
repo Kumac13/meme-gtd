@@ -6,7 +6,7 @@ description: Use when the user asks to build, deploy, or install the iOS app. Al
 # iOS Deploy
 
 Build and deploy MemeGTD iOS app to both Simulator and physical device.
-This skill is the single source of truth for the deploy procedure and configuration values (the `.codex` copy points here).
+This skill is the single source of truth for the deploy procedure and configuration values.
 
 ## Configuration
 

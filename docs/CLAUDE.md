@@ -23,7 +23,6 @@
 | `ios/README.md` | iOSセットアップ・実機デプロイ・デザインシステム | iOSビルド要件・デザインシステム変更時 |
 | `ios/CLAUDE.md` `schema/CLAUDE.md` `packages/*/CLAUDE.md` `packages/web/src/*/CLAUDE.md` | 各ディレクトリ固有の開発ルール（作業時に自動ロード）。入れ子の CLAUDE.md は「そのディレクトリでファイルを作る瞬間に考慮すべきこと」を書き、詳細は親へのポインタにする | そのディレクトリのルール変更時 |
 | `.claude/skills/*/SKILL.md` | 定型手順の唯一の正（release / api-schema-sync / db-migration / test-env / ios-deploy） | 手順が変わったとき・手順ミスが再発したとき |
-| `.codex/skills/*/SKILL.md` | Codex 専用の手順（dev-flow: Task 起点の検討・計画・実装・PR・レビューの流れ / ios-deploy: `.claude/skills/ios-deploy` への参照と Codex 固有ルール） | Codex での開発の流れを変えるとき・同じ指摘が再発したとき |
 | `packages/api/docs/api/openapi.yaml` | API契約の正（自動生成・手編集禁止） | `openapi:generate` で再生成 |
 
 ## 追加・更新・削除のルール
