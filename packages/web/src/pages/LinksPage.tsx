@@ -53,7 +53,7 @@ function DepthControl({ depth, onChange }: { depth?: number; onChange: (value?: 
 export default function LinksPage() {
   const [params, setParams] = useSearchParams();
   const { filters, actions } = useUrlFilters();
-  const { query, labels, projects, linkTypes, showOrphans, showArrows, invalidKeys } = parseLinksUrl(params);
+  const { query, labels, projects, linkTypes, showOrphans, invalidKeys } = parseLinksUrl(params);
   const { rootId, depth, includeLabels } = query;
   const { graph: loaded, loading, reload, error } = useLinksGraph(query, invalidKeys.size === 0);
   const linkTypeKey = [...linkTypes].join(',');
@@ -175,8 +175,6 @@ export default function LinksPage() {
             </FilterDropdown>
             <ToggleFilterButton active={showOrphans}
               onToggle={() => setParam('orphans', showOrphans ? 'false' : undefined)}>Orphans</ToggleFilterButton>
-            <ToggleFilterButton active={showArrows}
-              onToggle={() => setParam('arrows', showArrows ? 'false' : undefined)}>Arrows</ToggleFilterButton>
             <ToggleFilterButton active={includeLabels === 'true'}
               onToggle={() => setParam('includeLabels', includeLabels ? undefined : 'true')}>Label nodes</ToggleFilterButton>
           </div>
@@ -205,7 +203,7 @@ export default function LinksPage() {
           </div>
         ) : graph ? (
           <Suspense fallback={<LoadingState message="Loading graph..." />}>
-            <LinksGraphCanvas graph={graph} arrows={showArrows} selectedId={selected?.id} onSelect={node => setSelection({ scope, node })} />
+            <LinksGraphCanvas graph={graph} selectedId={selected?.id} onSelect={node => setSelection({ scope, node })} />
           </Suspense>
         ) : loading && <LoadingState message="Loading graph..." />}
       </ListPageLayout>

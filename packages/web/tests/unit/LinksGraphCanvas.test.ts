@@ -1,6 +1,6 @@
 import cytoscape from 'cytoscape';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createGraphSimulation, nearestTouchNode } from '../../src/components/LinksGraphCanvas';
+import { createGraphSimulation, graphStyles, nearestTouchNode, zoomStep } from '../../src/components/LinksGraphCanvas';
 
 describe('graph force simulation', () => {
   const elements = [
@@ -57,9 +57,33 @@ describe('graph force simulation', () => {
     next.apply();
     expect(graph.getElementById('issue-0').position().x).toBeCloseTo(origin.x + 900);
     expect(neighbour.position().x - origin.x).toBeGreaterThan(400);
-    next.release('issue-0');
+    // つながっていないノードは、ドラッグ中もその場に留まる。
+    expect(graph.getElementById('issue-200').position()).toEqual(start);
+    // Cytoscape がノードを離しているのに free が届かなかった場合も、次の反映で固定を解く。
+    const pinned = next.simulation.nodes().find(node => node.id === 'issue-0')!;
+    expect(pinned.fx).toBeNull();
+    next.simulation.tick(120);
+    next.apply();
+    expect(graph.getElementById('issue-0').position().x).toBeLessThan(origin.x + 890);
     next.simulation.stop();
     graph.destroy();
+  });
+});
+
+describe('graph styles by zoom', () => {
+  const fontSize = (zoom: number) => Number((graphStyles(zoomStep(zoom))
+    .find(rule => rule.selector === 'node.issue')!.style as Record<string, unknown>)['font-size']);
+
+  it('keeps titles the same size on screen from half zoom up, so zooming in separates them', () => {
+    for (const zoom of [0.5, 1, 2, 4]) expect(fontSize(zoom) * zoom).toBeCloseTo(12);
+    // さらに引いた表示では、文字は縮尺とともに小さくなる。
+    expect(fontSize(0.25) * 0.25).toBeCloseTo(6);
+  });
+
+  it('rounds zoom to coarse steps so styles update only when a step changes', () => {
+    expect(zoomStep(1.05)).toBe(zoomStep(0.95));
+    expect(zoomStep(1.3)).toBeCloseTo(Math.SQRT2);
+    expect(zoomStep(4)).toBe(4);
   });
 });
 

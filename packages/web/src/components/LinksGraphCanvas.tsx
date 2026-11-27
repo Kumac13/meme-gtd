@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
-import cytoscape, { type BoundingBox12, type Core, type ElementDefinition, type NodeSingular, type Position, type StylesheetStyle } from 'cytoscape';
+import cytoscape, { type Core, type ElementDefinition, type NodeSingular, type Position, type StylesheetStyle } from 'cytoscape';
 import {
   forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY,
   type SimulationLinkDatum, type SimulationNodeDatum,
@@ -9,6 +9,7 @@ import { getLinkIcon, getLinkLabel } from '../utils/linkIcons';
 import { LabelBadge } from './LabelBadge';
 
 type IssueNode = LinksGraphData['nodes'][number];
+type Box = { x1: number; x2: number; y1: number; y2: number };
 type LinkType = LinksGraphData['edges'][number]['linkType'];
 
 const issueColors = { task: '#2563eb', memo: '#7c3aed', article: '#c2410c' };
@@ -21,42 +22,57 @@ const relationships: Record<LinkType, { color: string; legend?: string; mark?: s
   relates: { color: '#64748b', legend: 'Relates', mark: '—' },
 };
 
-const styles: StylesheetStyle[] = [
-  { selector: 'node', style: { width: 20, height: 20, 'background-color': 'data(color)' } },
-  { selector: 'node.issue', style: {
-    // リンクの多い Issue ほど大きく描く。
-    width: 'mapData(degree, 0, 12, 16, 40)', height: 'mapData(degree, 0, 12, 16, 40)',
-    label: 'data(shortTitle)', 'text-valign': 'bottom', 'text-margin-y': 4, 'font-size': 11,
-    'text-max-width': '112px', 'text-wrap': 'ellipsis', color: '#1f2937',
-    'text-background-color': '#ffffff', 'text-background-opacity': 0.9, 'text-background-padding': '1px',
-  } },
-  { selector: 'node.label', style: {
-    width: 12, height: 12, shape: 'diamond', label: 'data(name)', 'font-size': 10, color: '#57534e',
-    'text-valign': 'bottom', 'text-margin-y': 3,
-  } },
-  // 名前は拡大に応じて段階的に濃くする。起点とホバー中のつながりは縮尺によらず読める。
-  { selector: 'node.text-faint', style: { 'text-opacity': 0.45 } },
-  { selector: 'node.text-hidden', style: { 'text-opacity': 0 } },
-  { selector: 'node.root, node.named', style: { 'text-opacity': 1 } },
-  { selector: 'node.root', style: { 'border-width': 4, 'border-color': '#16a34a' } },
-  { selector: 'node.chosen', style: { 'overlay-opacity': 0.2, 'overlay-color': '#0f172a', 'overlay-padding': '7px' } },
-  { selector: 'node.inspected', style: { 'border-width': 3, 'border-color': '#0f172a', 'z-index': 20 } },
-  { selector: 'node.root.inspected', style: { 'border-width': 5, 'border-color': '#16a34a' } },
-  { selector: 'edge', style: {
-    width: 1.5, opacity: 0.72, 'line-color': 'data(color)', 'target-arrow-color': 'data(color)',
-    'target-arrow-shape': 'triangle', 'curve-style': 'bezier',
-  } },
-  { selector: 'edge[relation = "relates"], edge.plain', style: { 'target-arrow-shape': 'none' } },
-  { selector: 'edge.membership', style: { 'line-style': 'dotted', 'target-arrow-shape': 'none' } },
-  { selector: 'edge.inspected', style: { width: 2.5, opacity: 1, 'z-index': 10 } },
-  { selector: '.dimmed', style: { opacity: 0.2 } },
-  { selector: 'node.overlapping-title', style: { label: '' } },
-];
+/** 拡大率を√2刻みの段階に丸める。スタイルの更新を段階が変わったときだけにして、ズーム操作を重くしない。 */
+export function zoomStep(zoom: number) {
+  return Math.pow(2, Math.round(Math.log2(zoom) * 2) / 2);
+}
+
+/**
+ * 名前の文字は画面上でほぼ一定の大きさに保つ（拡大率で割る）。
+ * 拡大するとノードの間隔だけが広がり、重なって隠れていた名前が出てくる。
+ * ノードの丸と線も、拡大に比例して巨大にならないよう伸びを抑える。
+ */
+export function graphStyles(step: number): StylesheetStyle[] {
+  // 0.5 倍より引いた表示では文字を一定に保たず、縮尺に合わせて小さくする（その先は非表示）。
+  const text = 1 / Math.max(step, 0.5);
+  const shape = step > 1 ? Math.pow(step, -0.6) : 1;
+  return [
+    { selector: 'node', style: { width: 20 * shape, height: 20 * shape, 'background-color': 'data(color)' } },
+    { selector: 'node.issue', style: {
+      // リンクの多い Issue ほど大きく描く。
+      width: `mapData(degree, 0, 12, ${16 * shape}, ${40 * shape})`, height: `mapData(degree, 0, 12, ${16 * shape}, ${40 * shape})`,
+      label: 'data(shortTitle)', 'text-valign': 'bottom', 'text-margin-y': 4 * text, 'font-size': 12 * text,
+      'text-max-width': `${150 * text}px`, 'text-wrap': 'ellipsis', color: '#1f2937',
+      'text-background-color': '#ffffff', 'text-background-opacity': 0.9, 'text-background-padding': `${text}px`,
+    } },
+    { selector: 'node.label', style: {
+      width: 12 * shape, height: 12 * shape, shape: 'diamond', label: 'data(name)', 'font-size': 11 * text, color: '#57534e',
+      'text-valign': 'bottom', 'text-margin-y': 3 * text,
+    } },
+    // 引いた表示では名前を薄くし、さらに引くと消す。起点と注目中のつながりは縮尺によらず読める。
+    { selector: 'node.text-faint', style: { 'text-opacity': 0.45 } },
+    { selector: 'node.text-hidden', style: { 'text-opacity': 0 } },
+    { selector: 'node.root, node.named', style: { 'text-opacity': 1 } },
+    { selector: 'node.root', style: { 'border-width': 4 * shape, 'border-color': '#16a34a' } },
+    { selector: 'node.chosen', style: { 'overlay-opacity': 0.2, 'overlay-color': '#0f172a', 'overlay-padding': `${7 * shape}px` } },
+    { selector: 'node.inspected', style: { 'border-width': 3 * shape, 'border-color': '#0f172a', 'z-index': 20 } },
+    { selector: 'node.root.inspected', style: { 'border-width': 5 * shape, 'border-color': '#16a34a' } },
+    { selector: 'edge', style: {
+      width: 1.5 * shape, opacity: 0.72, 'line-color': 'data(color)', 'target-arrow-color': 'data(color)',
+      'target-arrow-shape': 'triangle', 'curve-style': 'bezier',
+    } },
+    { selector: 'edge[relation = "relates"]', style: { 'target-arrow-shape': 'none' } },
+    { selector: 'edge.membership', style: { 'line-style': 'dotted', 'target-arrow-shape': 'none' } },
+    { selector: 'edge.inspected', style: { width: 2.5 * shape, opacity: 1, 'z-index': 10 } },
+    { selector: '.dimmed', style: { opacity: 0.2 } },
+    { selector: 'node.overlapping-title', style: { label: '' } },
+  ];
+}
 
 const issueId = (id: number) => `issue-${id}`;
 const labelId = (id: number) => `label-${id}`;
 
-function graphElements(graph: LinksGraphData, arrows: boolean): ElementDefinition[] {
+function graphElements(graph: LinksGraphData): ElementDefinition[] {
   const degree = new Map<number, number>();
   for (const { sourceIssueId, targetIssueId } of graph.edges) {
     degree.set(sourceIssueId, (degree.get(sourceIssueId) ?? 0) + 1);
@@ -74,7 +90,6 @@ function graphElements(graph: LinksGraphData, arrows: boolean): ElementDefinitio
       return {
         data: { id: `edge-${edge.id}`, source: issueId(tail), target: issueId(head), saved: issueId(edge.sourceIssueId),
           color: relationships[edge.linkType].color, relation: edge.linkType },
-        classes: arrows ? '' : 'plain',
       };
     }),
     ...graph.labels.map(label => ({
@@ -95,7 +110,9 @@ type SimulatedNode = SimulationNodeDatum & { id: string; element: NodeSingular; 
  */
 export function createGraphSimulation(cy: Core, placed?: ReadonlySet<string>) {
   const nodes = cy.nodes().map((element): SimulatedNode => ({
-    id: element.id(), element, radius: element.width() / 2, degree: element.degree(false),
+    id: element.id(), element, degree: element.degree(false),
+    // 衝突半径は表示中の拡大率に左右されないよう、等倍のときの丸の大きさから決める。
+    radius: element.hasClass('issue') ? 8 + Math.min(element.degree(false), 12) : 6,
     ...(placed?.has(element.id()) ? element.position() : {}),
   }));
   const byId = new Map(nodes.map(node => [node.id, node]));
@@ -110,32 +127,65 @@ export function createGraphSimulation(cy: Core, placed?: ReadonlySet<string>) {
     .force('centerX', forceX<SimulatedNode>(0).strength(0.05))
     .force('centerY', forceY<SimulatedNode>(0).strength(0.05))
     .force('collide', forceCollide<SimulatedNode>(node => node.radius + 6))
+    // 揺り戻しを抑えるため減衰を強め、約120回の計算で静止させる。
+    .velocityDecay(0.6)
+    .alphaDecay(1 - Math.pow(0.001, 1 / 120))
     .stop();
 
+  let held: string | null = null;
+  const frozen: SimulatedNode[] = [];
   return {
     simulation,
     /** シミュレーションの位置を描画へ反映する。つかんでいるノードは利用者の操作を優先する。 */
     apply() {
+      // タッチでノードに触れたまま2本目の指を置くと、Cytoscape は free を出さずにノードを離す。
+      // つかんだ扱いが残ると他のノードが留まったままになるため、離れていたらここで解除する。
+      const grabbed = held === null ? undefined : byId.get(held);
+      if (grabbed && !grabbed.element.grabbed()) this.release();
       cy.batch(() => {
         for (const node of nodes) {
           if (!node.element.grabbed()) node.element.position({ x: node.x ?? 0, y: node.y ?? 0 });
         }
       });
     },
-    /** つかんだノードをその位置に固定し、つながるノードが追従するよう再び動かす。 */
+    /**
+     * つかんだノードをその位置に固定し、リンクでつながる範囲だけを追従させる。
+     * つながっていないノードはその場に留め、ドラッグのたびにグラフ全体が揺れないようにする。
+     */
     hold(id: string, position: Position) {
       const node = byId.get(id);
       if (!node) return;
+      if (held !== id) {
+        this.rest();
+        held = id;
+        const moving = new Set(node.element.component().nodes().map(element => element.id()));
+        for (const other of nodes) {
+          if (moving.has(other.id)) continue;
+          other.fx = other.x;
+          other.fy = other.y;
+          frozen.push(other);
+        }
+        simulation.velocityDecay(0.8).alphaTarget(0.1);
+      }
       node.fx = position.x;
       node.fy = position.y;
-      simulation.alphaTarget(0.3);
     },
-    release(id: string) {
-      const node = byId.get(id);
+    /** つかんだノードを離す。留めていたノードは、追従した範囲が静止してから rest で解放する。 */
+    release() {
+      const node = held === null ? undefined : byId.get(held);
       if (!node) return;
+      held = null;
       node.fx = null;
       node.fy = null;
       simulation.alphaTarget(0);
+    },
+    /** 静止後に呼ぶ。その場に留めていたノードを解放する（力が働いていないので動かない）。 */
+    rest() {
+      for (const node of frozen.splice(0)) {
+        node.fx = null;
+        node.fy = null;
+      }
+      simulation.velocityDecay(0.6);
     },
   };
 }
@@ -157,34 +207,79 @@ function fitGraph(cy: Core) {
 }
 
 function textFade(zoom: number) {
-  return zoom < 0.45 ? 'text-hidden' : zoom < 0.7 ? 'text-faint' : '';
+  return zoom < 0.3 ? 'text-hidden' : zoom < 0.5 ? 'text-faint' : '';
 }
 
-function hideOverlappingTitles(cy: Core) {
-  // リンクの多いノードの名前を優先して残す。
-  const issues = cy.nodes('.issue, .label').sort((first, second) =>
-    Number(second.hasClass('root')) - Number(first.hasClass('root')) || second.degree(false) - first.degree(false));
-  issues.removeClass('overlapping-title');
-  if (issues.length > 2500) return;
+let measure: CanvasRenderingContext2D | null | undefined;
+const widths = new Map<string, number>();
 
-  const footprints = cy.nodes().map(node => ({
-    id: node.id(), bounds: node.boundingBox({ includeLabels: false, includeOverlays: false }),
-  }));
-  const overlaps = (a: BoundingBox12, b: BoundingBox12) =>
-    a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
-  const visibleTitles: BoundingBox12[] = [];
-  const hiddenTitles: NodeSingular[] = [];
-  // 収まらない名前はホバー・フォーカスで読める。
-  issues.forEach(node => {
-    const title = node.boundingBox({ includeNodes: false, includeOverlays: false });
-    if (footprints.some(({ id, bounds }) => id !== node.id() && overlaps(title, bounds))
-        || visibleTitles.some(bounds => overlaps(title, bounds))) {
-      hiddenTitles.push(node);
-    } else {
-      visibleTitles.push(title);
+/** 文字サイズ 1 のときの名前の幅。Canvas が使えない環境では文字数から見積もる。 */
+function titleWidth(name: string) {
+  let width = widths.get(name);
+  if (width === undefined) {
+    if (measure === undefined) {
+      measure = typeof document === 'undefined' ? null : document.createElement('canvas').getContext('2d');
+      if (measure) measure.font = '100px "Helvetica Neue", Helvetica, sans-serif';
     }
+    width = measure
+      ? measure.measureText(name).width / 100
+      : [...name].reduce((sum, char) => sum + (char.charCodeAt(0) > 0xff ? 1 : 0.6), 0);
+    widths.set(name, width);
+  }
+  return width;
+}
+
+/**
+ * 現在の拡大率で重なる名前を隠す。起点、次にリンクの多いノードの名前を優先して残す。
+ * 名前は画面上で一定の大きさなので、拡大するほど残る名前が増える。
+ */
+export function hideOverlappingTitles(cy: Core) {
+  const titled = cy.nodes('.issue, .label').sort((first, second) =>
+    Number(second.hasClass('root')) - Number(first.hasClass('root')) || second.degree(false) - first.degree(false));
+  titled.removeClass('overlapping-title');
+  // 名前を表示しない縮尺では計算しない。
+  if (textFade(cy.zoom()) === 'text-hidden') return;
+
+  // 近くの矩形だけを比べるため、名前の最大幅ほどの升目に分けて登録する。
+  const cell = 160 / Math.max(zoomStep(cy.zoom()), 0.5);
+  const grid = new Map<string, Box[]>();
+  const cells = (box: Box) => {
+    const keys: string[] = [];
+    for (let x = Math.floor(box.x1 / cell); x <= Math.floor(box.x2 / cell); x++) {
+      for (let y = Math.floor(box.y1 / cell); y <= Math.floor(box.y2 / cell); y++) keys.push(`${x}/${y}`);
+    }
+    return keys;
+  };
+  const collides = (box: Box, own?: Box) => cells(box).some(key => grid.get(key)?.some(other =>
+    other !== own && box.x1 < other.x2 && box.x2 > other.x1 && box.y1 < other.y2 && box.y2 > other.y1));
+  const add = (box: Box) => {
+    for (const key of cells(box)) grid.set(key, [...(grid.get(key) ?? []), box]);
+  };
+
+  const shapes = new Map<string, Box>();
+  cy.nodes().forEach(node => {
+    const { x, y } = node.position();
+    const half = node.width() / 2;
+    const box = { x1: x - half, x2: x + half, y1: y - half, y2: y + half };
+    shapes.set(node.id(), box);
+    add(box);
   });
-  cy.batch(() => hiddenTitles.forEach(node => node.addClass('overlapping-title')));
+  // 名前の矩形は自前で求める。Cytoscape の名前の寸法は描画後にしか更新されず、
+  // 隠していた名前を戻した直後は幅 0 のままになるため使わない。
+  const text = 1 / Math.max(zoomStep(cy.zoom()), 0.5);
+  const hidden: NodeSingular[] = [];
+  titled.forEach(node => {
+    const issue = node.hasClass('issue');
+    const font = (issue ? 12 : 11) * text;
+    const name = String(node.data(issue ? 'shortTitle' : 'name') ?? '');
+    const width = Math.min(issue ? 150 * text : Infinity, titleWidth(name) * font) + 2 * text;
+    const { x, y } = node.position();
+    const top = y + node.height() / 2 + (issue ? 4 : 3) * text;
+    const title = { x1: x - width / 2, x2: x + width / 2, y1: top, y2: top + font * 1.25 };
+    if (!name || collides(title, shapes.get(node.id()))) hidden.push(node);
+    else add(title);
+  });
+  cy.batch(() => hidden.forEach(node => node.addClass('overlapping-title')));
 }
 
 export function nearestTouchNode(cy: Core, point: Position) {
@@ -205,9 +300,8 @@ export function nearestTouchNode(cy: Core, point: Position) {
 type Neighbor = { name: string; icon?: ReactElement; relation?: string; label?: boolean };
 const emptyInspection = { name: '', neighbors: [] as Neighbor[], count: 0 };
 
-export default function LinksGraphCanvas({ graph, arrows, selectedId, onSelect }: {
+export default function LinksGraphCanvas({ graph, selectedId, onSelect }: {
   graph: LinksGraphData;
-  arrows: boolean;
   selectedId?: number;
   onSelect: (node: IssueNode) => void;
 }) {
@@ -223,17 +317,32 @@ export default function LinksGraphCanvas({ graph, arrows, selectedId, onSelect }
   const frame = useRef(0);
   const settling = useRef(false);
   const fade = useRef<string | null>(null);
+  const zoomLevel = useRef(1);
+  const titleTimer = useRef(0);
+  const suppressTap = useRef(false);
 
-  function fadeText(force = false) {
+  /** 拡大率に合わせて、文字と丸の大きさ・名前の濃さを付け直す。段階が変わったときだけ更新する。 */
+  function restyle(force = false) {
     const cy = cyRef.current;
     if (!cy) return;
+    const nextStep = zoomStep(cy.zoom());
+    if (nextStep !== zoomLevel.current) {
+      zoomLevel.current = nextStep;
+      cy.style().fromJson(graphStyles(nextStep)).update();
+    }
     const next = textFade(cy.zoom());
-    if (!force && next === fade.current) return;
-    fade.current = next;
-    cy.batch(() => {
-      cy.nodes().removeClass('text-faint text-hidden');
-      if (next) cy.nodes().addClass(next);
-    });
+    if (force || next !== fade.current) {
+      fade.current = next;
+      cy.batch(() => {
+        cy.nodes().removeClass('text-faint text-hidden');
+        if (next) cy.nodes().addClass(next);
+      });
+    }
+    // 拡大縮小が止まってから、その縮尺で重なる名前を選び直す。
+    window.clearTimeout(titleTimer.current);
+    titleTimer.current = window.setTimeout(() => {
+      if (cyRef.current === cy) hideOverlappingTitles(cy);
+    }, 120);
   }
 
   /** 力学シミュレーションを落ち着くまで進める。1フレームの計算時間を抑え、描画を止めない。 */
@@ -253,6 +362,7 @@ export default function LinksGraphCanvas({ graph, arrows, selectedId, onSelect }
         frame.current = requestAnimationFrame(step);
       } else {
         settling.current = false;
+        current.rest();
         hideOverlappingTitles(cy);
       }
     };
@@ -295,7 +405,7 @@ export default function LinksGraphCanvas({ graph, arrows, selectedId, onSelect }
     if (!container.current) return;
     const cy = cytoscape({
       container: container.current,
-      style: styles,
+      style: graphStyles(1),
       layout: { name: 'preset' },
       minZoom: 0.025,
       maxZoom: 4,
@@ -304,19 +414,48 @@ export default function LinksGraphCanvas({ graph, arrows, selectedId, onSelect }
     });
     cyRef.current = cy;
     cy.on('scrollzoom dragpan pinchzoom', () => { viewMoved.current = true; });
-    cy.on('zoom', () => fadeText());
-    cy.on('grab', 'node', () => animate());
-    cy.on('grab drag', 'node', event => physics.current?.hold(event.target.id(), event.target.position()));
-    cy.on('free', 'node', event => physics.current?.release(event.target.id()));
+    cy.on('zoom', () => restyle());
+    // 指を離した時点で、つかんだ扱いが残っていれば解除する（free が届かない経路の保険）。
+    cy.on('tapend', () => {
+      const current = physics.current;
+      if (!current) return;
+      current.release();
+      if (current.simulation.alpha() <= current.simulation.alphaMin()) current.rest();
+    });
+    // タッチにはホバーがないため、長押しでつながりの強調と一覧を出す。背景のタップで消す。
+    cy.on('taphold', event => {
+      if (!event.originalEvent?.type.startsWith('touch')) return;
+      const node = event.target !== cy && event.target.isNode()
+        ? event.target as NodeSingular : nearestTouchNode(cy, event.renderedPosition);
+      if (!node) return;
+      suppressTap.current = true;
+      inspect(node);
+    });
+    // クリックでは配置を動かさない。実際にドラッグしたときだけ、つながるノードを追従させる。
+    cy.on('drag', 'node', event => {
+      const current = physics.current;
+      if (!current) return;
+      const idle = current.simulation.alpha() <= current.simulation.alphaMin();
+      current.hold(event.target.id(), event.target.position());
+      if (idle) animate();
+    });
+    cy.on('free', 'node', () => physics.current?.release());
     cy.on('mouseover', 'node', event => inspect(event.target));
     cy.on('mouseout', 'node', () => inspect());
     cy.on('tap', event => {
+      // 長押しの指を離したときのタップでは詳細を開かない。
+      if (suppressTap.current) {
+        suppressTap.current = false;
+        return;
+      }
       const eventType = event.originalEvent?.type;
       const node = eventType === 'touchend' || eventType === 'pointerup'
         ? nearestTouchNode(cy, event.renderedPosition)
         : event.target;
       if (node !== cy && node?.isNode() && node.hasClass('issue')) {
         handlers.current.onSelect(node.data('issue') as IssueNode);
+      } else if (eventType?.startsWith('touch') || eventType === 'pointerup') {
+        inspect();
       }
     });
     const resize = new ResizeObserver(() => {
@@ -327,6 +466,7 @@ export default function LinksGraphCanvas({ graph, arrows, selectedId, onSelect }
     resize.observe(container.current);
     return () => {
       resize.disconnect();
+      window.clearTimeout(titleTimer.current);
       cancelAnimationFrame(frame.current);
       physics.current = null;
       placed.current = new Set();
@@ -341,7 +481,7 @@ export default function LinksGraphCanvas({ graph, arrows, selectedId, onSelect }
     const view = container.current;
     if (!cy || !view) return;
 
-    const elements = graphElements(graph, arrows);
+    const elements = graphElements(graph);
     const ids = elements.map(element => element.data.id as string);
     const viewportScope = `${graph.rootId}/${graph.depth}`;
     const last = previous.current;
@@ -354,17 +494,18 @@ export default function LinksGraphCanvas({ graph, arrows, selectedId, onSelect }
       const next = createGraphSimulation(cy, resetView ? undefined : placed.current);
       physics.current = next;
       placed.current = new Set(cy.nodes().map(node => node.id()));
-      // 初回描画までに大まかな形を作り、残りは画面上で落ち着くまで動かす。
-      const deadline = performance.now() + 300;
+      // 表示する前に静止するまで計算し、点が揺れながら位置を探す様子を見せない。
+      // 上限時間を超える大きさのグラフだけ、残りを画面上で進める。
+      const deadline = performance.now() + 1500;
       while (next.simulation.alpha() > next.simulation.alphaMin() && performance.now() < deadline) next.simulation.tick();
       next.apply();
-      settling.current = true;
-      animate();
+      settling.current = next.simulation.alpha() > next.simulation.alphaMin();
+      if (settling.current) animate();
     }
-    hideOverlappingTitles(cy);
     if (!viewMoved.current) fitGraph(cy);
-    // 要素を入れ替えるとクラスが初期化されるため、現在の縮尺に合わせて名前の濃さを付け直す。
-    fadeText(true);
+    // 要素を入れ替えるとクラスが初期化されるため、現在の縮尺に合わせて大きさと名前の濃さを付け直す。
+    restyle(true);
+    hideOverlappingTitles(cy);
     const inspected = inspectionId.current ? cy.getElementById(inspectionId.current) : null;
     inspect(inspected?.isNode() ? inspected as NodeSingular : undefined);
     previous.current = { viewportScope, elementIds: ids };
@@ -372,13 +513,13 @@ export default function LinksGraphCanvas({ graph, arrows, selectedId, onSelect }
     delete view.dataset.firstRenderMs;
     cy.one('render', () => { view.dataset.firstRenderMs = (performance.now() - layoutStart).toFixed(1); });
     cy.forceRender();
-  }, [graph, arrows]);
+  }, [graph]);
 
   useEffect(() => {
     const cy = cyRef.current;
     cy?.nodes('.chosen').removeClass('chosen');
     if (selectedId !== undefined) cy?.getElementById(issueId(selectedId)).addClass('chosen');
-  }, [selectedId, graph, arrows]);
+  }, [selectedId, graph]);
 
   function inspectKeyboardNode() {
     const node = graph.nodes[keyboardIndex.current] ?? graph.nodes[0];

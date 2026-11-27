@@ -161,9 +161,8 @@ describe('Links page state', () => {
     expect(screen.getByTestId('current-links-url')).toHaveTextContent('?orphans=false');
     expect(await screen.findByText('3 issues · 4 links')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Unlinked memo' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Arrows' }));
-    expect(screen.getByTestId('current-links-url')).toHaveTextContent('?orphans=false&arrows=false');
-    expect(parseLinksUrl(new URLSearchParams('orphans=false&arrows=false'))).toMatchObject({ showOrphans: false, showArrows: false });
+    expect(screen.queryByRole('button', { name: 'Arrows' })).toBeNull();
+    expect(parseLinksUrl(new URLSearchParams('orphans=false'))).toMatchObject({ showOrphans: false });
     expect([...parseLinksUrl(new URLSearchParams('orphans=no')).invalidKeys]).toEqual(['orphans']);
     expect(get).toHaveBeenCalledTimes(1);
     expect([...parseLinksUrl(new URLSearchParams('linkType=relates,unknown')).invalidKeys]).toEqual(['linkType']);
