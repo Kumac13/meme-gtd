@@ -1,6 +1,6 @@
 {
   "name": "meme-gtd-web",
-  "version": "0.57.5",
+  "version": "0.58.0",
   "description": "Web UI for meme-gtd",
   "type": "module",
   "scripts": {
@@ -23,6 +23,8 @@
     "@schedule-x/react": "^3.4.0",
     "@schedule-x/theme-default": "^3.4.2",
     "@tailwindcss/typography": "^0.5.19",
+    "cytoscape": "3.35.0",
+    "d3-force": "3.0.0",
     "meme-gtd-shared": "workspace:^",
     "mermaid": "^11.12.2",
     "nuqs": "^2.8.1",
@@ -45,6 +47,7 @@
     "@tailwindcss/postcss": "^4.1.14",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
+    "@types/d3-force": "3.0.10",
     "@types/hast": "^3.0.4",
     "@types/mdast": "^4.0.4",
     "@types/react": "^19.2.2",

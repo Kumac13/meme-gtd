@@ -23,6 +23,7 @@ import ArticleNew from "./pages/Articles/ArticleNew";
 import TemplatesList from "./pages/Templates/TemplatesList";
 import TemplateNew from "./pages/Templates/TemplateNew";
 import TemplateDetail from "./pages/Templates/TemplateDetail";
+import LinksPage from "./pages/LinksPage";
 import ActivityLogPage from "./pages/ActivityLog";
 
 function App() {
@@ -52,6 +53,7 @@ function App() {
               <Route path="articles" element={<ArticleList />} />
               <Route path="articles/new" element={<ArticleNew />} />
               <Route path="articles/:id" element={<ArticleReader />} />
+              <Route path="links" element={<LinksPage />} />
               <Route path="templates" element={<TemplatesList />} />
               <Route path="templates/new" element={<TemplateNew />} />
               <Route path="templates/:id" element={<TemplateDetail />} />

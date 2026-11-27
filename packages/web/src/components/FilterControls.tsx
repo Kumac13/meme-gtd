@@ -5,6 +5,18 @@ export function ToggleFilterButton({ active, onToggle, children }: { active: boo
   return <button type="button" onClick={onToggle} className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${active ? 'bg-github-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>{children}</button>;
 }
 
+/** Shared multi-select row for filter popovers. */
+export function FilterOption({ selected, onToggle, children }: { selected: boolean; onToggle: () => void; children: ReactNode }) {
+  return <button type="button" role="menuitemcheckbox" aria-checked={selected} onClick={onToggle} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+    <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill={selected ? 'currentColor' : 'none'}>
+      {selected
+        ? <path className="text-github-green-600" fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+        : <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-gray-300" />}
+    </svg>
+    {children}
+  </button>;
+}
+
 interface FilterDropdownProps {
   label: ReactNode;
   active: boolean;

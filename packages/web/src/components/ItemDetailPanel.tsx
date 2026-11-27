@@ -8,7 +8,7 @@ import ItemDetail, { type Item, type Comment } from './ItemDetail';
 import LoadingState from './LoadingState';
 import ErrorState from './ErrorState';
 import SidePanel from './SidePanel';
-import type { IssueType } from 'meme-gtd-shared';
+import { memoPreviewTitle, type IssueType } from 'meme-gtd-shared';
 import { useCopyItemContent } from '../hooks/useCopyItemContent';
 
 interface BaseItem {
@@ -39,10 +39,19 @@ interface ItemDetailPanelProps {
   onItemUpdated?: () => void;
 }
 
-export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: ItemDetailPanelProps) {
+export function ItemDetailPanel(props: ItemDetailPanelProps) {
+  const { itemId, itemType } = props;
+  if (!itemId || !itemType) return null;
+  return <SelectedItemDetailPanel key={`${itemType}-${itemId}`} {...props} itemId={itemId} itemType={itemType} />;
+}
+
+function SelectedItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: ItemDetailPanelProps & {
+  itemId: number;
+  itemType: IssueType;
+}) {
   const navigate = useNavigate();
   const [item, setItem] = useState<BaseItem | Task | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
@@ -50,36 +59,22 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
   const { copiedFormat, copy: copyItemContent, copyWithJSON } = useCopyItemContent();
 
   useEffect(() => {
-    if (!itemId || !itemType) {
-      setItem(null);
-      return;
-    }
-
-    const fetchItem = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        let response;
-        if (itemType === 'task') {
-          response = await TasksService.getTask(String(itemId));
-        } else if (itemType === 'article') {
-          response = await ArticlesService.getArticle(String(itemId));
-        } else {
-          response = await MemosService.getMemo(String(itemId));
-        }
-        setItem(response as BaseItem | Task);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : `Failed to load ${itemType}`);
-        console.error(`Error fetching ${itemType}:`, err);
-      } finally {
-        setLoading(false);
-      }
+    let active = true;
+    const request = itemType === 'task' ? TasksService.getTask(String(itemId))
+      : itemType === 'article' ? ArticlesService.getArticle(String(itemId))
+        : MemosService.getMemo(String(itemId));
+    void request.then(response => {
+      if (active) setItem(response as BaseItem | Task);
+    }).catch((err: unknown) => {
+      if (active) setError(err instanceof Error ? err.message : `Failed to load ${itemType}`);
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => {
+      active = false;
+      request.cancel();
     };
-
-    fetchItem();
   }, [itemId, itemType]);
-
-  if (!itemId || !itemType) return null;
 
   const handleDelete = async () => {
     if (!itemId) return;
@@ -170,7 +165,8 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
   };
 
   const basePath = itemType === 'task' ? '/tasks' : itemType === 'article' ? '/articles' : '/memos';
-  const displayTitle = item?.title || (itemType === 'task' ? 'Task' : itemType === 'article' ? 'Article' : 'Memo');
+  const displayTitle = item?.title || (itemType === 'memo' && memoPreviewTitle(item?.bodyMd ?? ''))
+    || (itemType === 'task' ? 'Task' : itemType === 'article' ? 'Article' : 'Memo');
 
   // Generate sidebarActions based on itemType
   const sidebarActions = itemType === 'task' ? (
@@ -253,8 +249,8 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
     <SidePanel
       onClose={onClose}
       header={
-        <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-gray-900 truncate">
+        <div className="flex min-w-0 items-start gap-2">
+            <h2 className="min-w-0 max-h-[25dvh] overflow-y-auto text-lg font-semibold text-gray-900 [overflow-wrap:anywhere]">
               {loading ? 'Loading...' : displayTitle}
             </h2>
             <button
@@ -289,6 +285,7 @@ export function ItemDetailPanel({ itemId, itemType, onClose, onItemUpdated }: It
           onBeforeNavigate={onClose}
           sidebarActions={sidebarActions}
           onCommentsLoaded={handleCommentsLoaded}
+          onRelationsChanged={onItemUpdated}
         />
       )}
     </SidePanel>

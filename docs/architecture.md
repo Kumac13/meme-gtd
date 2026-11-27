@@ -174,6 +174,8 @@ Label / Project管理欄は`ManagementSection`、Task / Projectの編集可能�
 
 Calendarを含むIssue詳細の右パネルは`ItemDetailPanel`を単一の正とし、リソース別の専用Detail panelを増やさない。
 
+Links は `ListPageLayout` と一覧用フィルタを共有し、起点選択は `IssuePicker` を使う。詳細の `ItemDetail` と狭幅 Memo の操作欄は `ShowLinks` を共有する。起点・Depth・フィルタは URL が正。グラフコンポーネントは遅延読み込みし、描画と操作は Cytoscape.js の Canvas、配置は d3-force の力学シミュレーション（中心への力・斥力・リンクの引力・衝突回避）が担う。リンクのない Issue も同じシミュレーションに乗せる（格子や輪に整列させないため）。配置は表示前に静止するまで計算し、読み込み時に点を動かさない（位置を探して揺れる様子を見せないため）。ドラッグ中は、つかんだノードとリンクでつながる範囲だけを動かし、それ以外はその場に留める。Canvas・イベント・シミュレーションは画面離脱時に解放する。Link type・Orphans は取得済みグラフに対する表示の切替で、API には送らない。文字と丸の大きさは拡大率を段階に丸めてスタイルを差し替え、重なる名前の選び直しは拡大縮小が止まってから行う（名前の矩形は自前で計算する。Cytoscape の名前の寸法は描画後にしか更新されないため）。Issue ノードで `ItemDetailPanel` を開く処理と、パネルからの保存成功通知によるグラフの再取得を Links ページが所有する。
+
 本節と「iOS プレゼンテーション層」の境界は、`packages/web/tests/unit/ComponentBoundaries.test.ts`（Web CI で自動実行、iOS ソースの走査を含む）と `ios/MemeGTD/MemeGTDTests/ComponentBoundaryTests.swift`（Xcode テスト）のディレクトリ走査型構造テストが検査する。共通境界を追加・変更したら、両テストと `packages/web/CLAUDE.md`・`ios/CLAUDE.md` の選択表も更新する。
 
 ## APIエンドポイントマップ
@@ -186,7 +188,7 @@ Calendarを含むIssue詳細の右パネルは`ItemDetailPanel`を単一の正�
 | Memos | `/api/memos`, `/api/memos/{id}`, `/{id}/promote-preview`, `/{id}/bookmark`, `/{id}/unbookmark`, `/{memoId}/comments`, `/{memoId}/comments/{commentId}` |
 | Tasks | `/api/tasks`, `/api/tasks/{id}`, `/{id}/close`, `/{id}/cancel`, `/{id}/reopen`, `/{id}/bookmark`, `/{id}/unbookmark`, `/{id}/demote`（旧コピー互換）, `/{id}/archive-to-article`, `/{id}/transfer-to-memo`, `/{taskId}/comments`, `/{taskId}/comments/{commentId}` |
 | Labels | `/api/labels`, `/api/labels/{name}`, `/api/issues/{issueId}/labels`, `/api/issues/{issueId}/labels/{labelId}` |
-| Links | `/api/links`, `/api/links/{id}`, `/api/issues/{id}/links` |
+| Links | `/api/links`, `/api/links/{id}`, `/api/issues/{id}/links`, `/api/links/graph` |
 | URL Links | `/api/issues/{id}/url-links`, `/api/url-links/{id}` |
 | Projects | `/api/projects`, `/api/projects/{id}`, `/{id}/items`, `/{id}/items/{issueId}`, `/api/issues/{id}/projects` |
 | Articles | `/api/articles`, `/api/articles/{id}`、`/{id}/bookmark`、`/{id}/unbookmark`、`/{articleId}/comments`、`/{articleId}/comments/{commentId}` |
@@ -220,6 +222,10 @@ Web/iOS の「Copy Results」「Copy with Comments」は、表示中のフィル
 - **上限とtruncated**: `all` は暴発防止に安全上限（`EXPORT_ALL_CAP`）を持ち、超過時は切り詰めて `truncated: true` を返す（サイレントカットにしない。クライアントは警告を表示）。個人利用規模では通常到達しない。
 - **keyword検索のスニペット**: `all` かつ keyword のときはサーバーが `searchByKeyword` の結果から `matchedComment` を再構築する（loaded と同じ情報を持たせるため）。articles の検索は一覧の LIKE 検索（`ArticleService.list`）でありkeyword検索エンドポイントを使わない点に注意。
 - 実装は `packages/api/src/handlers/searchHandlers.ts` の `searchExportHandler` / `resolveAllMatchIds`。契約の正は `openapi.yaml`。
+
+### Links の読み取り
+
+`LinkService` は1つの SQLite 読み取りトランザクション内で起点を検証し、対象種別の保存済みリンクを入出両方向にたどる。探索の後に SQL で表示条件と上限を適用し、返す Issue を確定してから、その集合の辺とラベル付与を取得する。検索・上限の契約は [API フィルタリング](./api-filtering.md#links-エンドポイント) を参照。
 
 ## 同期アーキテクチャ（iOSオフライン同期）
 

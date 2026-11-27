@@ -1,5 +1,5 @@
 import type { MgtdConfig } from 'meme-gtd-config';
-import type { Link, SourceType, TaskStatus } from 'meme-gtd-shared';
+import { memoPreviewTitle, type Link, type SourceType, type TaskStatus } from 'meme-gtd-shared';
 import type Database from 'better-sqlite3';
 import { ActivityLogger } from './activity-log/activity-logger.js';
 import {
@@ -10,6 +10,13 @@ import {
   findLink,
   findInverseParentChildLink,
   hasAncestor,
+  graphRootExists,
+  getGraphAdjacency,
+  getGraphNodes,
+  getGraphEdges,
+  getGraphLabels,
+  getGraphMemberships,
+  type LinkGraphFilters,
   getLinkById as dbGetLinkById,
   type CreateLinkInput,
   type ListLinksFilters
@@ -19,6 +26,45 @@ export interface LinkServiceOptions {
   config?: MgtdConfig;
   db?: Database.Database;
   sourceType?: SourceType;
+}
+
+const graphLimits = {
+  issueNodes: 5_000,
+  issueEdges: 20_000,
+  labelNodes: 2_000,
+  memberships: 20_000,
+};
+
+function reachableIssueIds(db: Database.Database, rootId: number, depth = Infinity): number[] {
+  const adjacency = new Map<number, number[]>();
+  const connect = (from: number, to: number) => {
+    const neighbors = adjacency.get(from);
+    if (neighbors) neighbors.push(to);
+    else adjacency.set(from, [to]);
+  };
+  for (const { sourceId, targetId } of getGraphAdjacency(db)) {
+    connect(sourceId, targetId);
+    connect(targetId, sourceId);
+  }
+
+  const ids = [rootId];
+  const visited = new Set(ids);
+  let layer = [rootId];
+  for (let distance = 0; distance < depth && layer.length > 0; distance++) {
+    const next: number[] = [];
+    for (const id of layer) {
+      for (const neighbor of adjacency.get(id) ?? []) {
+        if (visited.has(neighbor)) continue;
+        visited.add(neighbor);
+        next.push(neighbor);
+      }
+    }
+    next.sort((a, b) => a - b);
+    for (const id of next) ids.push(id);
+    layer = next;
+  }
+
+  return ids;
 }
 
 export class LinkService {
@@ -240,6 +286,40 @@ export class LinkService {
    */
   list(issueId: number, filters?: ListLinksFilters): Link[] {
     return dbListLinks(this.db, issueId, filters);
+  }
+
+  graph(filters: LinkGraphFilters) {
+    return this.db.transaction(() => {
+      const { rootId, depth, includeLabels } = filters;
+      if (rootId !== undefined && !graphRootExists(this.db, rootId)) return null;
+      const candidates = rootId === undefined ? undefined : reachableIssueIds(this.db, rootId, depth);
+      const rows = getGraphNodes(this.db, filters, candidates, graphLimits.issueNodes + 1);
+      const nodes = rows.slice(0, graphLimits.issueNodes).map(({ title, ...node }) => ({
+        ...node,
+        title: (node.type === 'memo' ? memoPreviewTitle(title ?? '') : title?.trim())
+          || `${node.type[0].toUpperCase()}${node.type.slice(1)} #${node.id}`,
+      }));
+      const issueIds = JSON.stringify(nodes.map(node => node.id));
+      const edges = getGraphEdges(this.db, issueIds, graphLimits.issueEdges + 1);
+      const allLabels = includeLabels ? getGraphLabels(this.db, issueIds, graphLimits.labelNodes + 1) : [];
+      const limitedLabels = allLabels.slice(0, graphLimits.labelNodes);
+      const allMemberships = includeLabels
+        ? getGraphMemberships(this.db, issueIds, JSON.stringify(limitedLabels.map(label => label.id)), graphLimits.memberships + 1)
+        : [];
+      const memberships = allMemberships.slice(0, graphLimits.memberships);
+      const usedLabels = new Set(memberships.map(membership => membership.labelId));
+      return {
+        rootId: rootId ?? null,
+        depth: depth ?? null,
+        nodes,
+        edges: edges.slice(0, graphLimits.issueEdges),
+        labels: limitedLabels.filter(label => usedLabels.has(label.id)),
+        memberships,
+        truncated: rows.length > graphLimits.issueNodes || edges.length > graphLimits.issueEdges
+          || allLabels.length > graphLimits.labelNodes || allMemberships.length > graphLimits.memberships,
+        limits: graphLimits,
+      };
+    })();
   }
 
   /**

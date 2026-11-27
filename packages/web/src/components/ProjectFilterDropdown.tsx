@@ -15,6 +15,8 @@ interface ProjectFilterDropdownProps {
   onToggle: (projectId: number) => void;
   onToggleNoProject: () => void;
   onClear: () => void;
+  showWhenEmpty?: boolean;
+  panelWidth?: string;
 }
 
 /** Shared project multi-select used by Task, Memo and Article lists. */
@@ -26,10 +28,12 @@ export default function ProjectFilterDropdown({
   onToggle,
   onToggleNoProject,
   onClear,
+  showWhenEmpty = false,
+  panelWidth = "min-w-[280px] max-w-[400px]",
 }: ProjectFilterDropdownProps) {
   const isActive = selectedIds.size > 0 || includesNoProject;
 
-  if (projects.length === 0) return null;
+  if (!showWhenEmpty && projects.length === 0) return null;
 
   const selectionIcon = (selected: boolean) => (
     <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill={selected ? 'currentColor' : 'none'}>
@@ -42,7 +46,7 @@ export default function ProjectFilterDropdown({
   );
 
   return (
-    <FilterDropdown label={label} active={isActive} onClear={onClear} panelClassName="min-w-[280px] max-w-[400px] max-h-64 overflow-y-auto">
+    <FilterDropdown label={label} active={isActive} onClear={onClear} panelClassName={`${panelWidth} max-h-64 overflow-y-auto`}>
           <button type="button" onClick={onToggleNoProject} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
             {selectionIcon(includesNoProject)}
             <span className="text-gray-500 italic truncate">No Project</span>

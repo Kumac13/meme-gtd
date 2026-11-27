@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import { nowIso, type Link } from 'meme-gtd-shared';
+import { keywordCommentMatch, keywordIssueMatch } from './searchRepository.js';
 
 export interface CreateLinkInput {
   sourceIssueId: number;
@@ -245,3 +246,138 @@ export const hasAncestor = (
 
   return result.count > 0;
 };
+
+type GraphIssueType = 'task' | 'memo' | 'article';
+
+export interface LinkGraphFilters {
+  rootId?: number;
+  depth?: number;
+  q?: string;
+  labels?: string[];
+  projectIds?: number[];
+  unassigned?: boolean;
+  bookmarked?: boolean;
+  includeLabels?: boolean;
+}
+
+interface GraphNodeRow {
+  id: number;
+  type: GraphIssueType;
+  title: string | null;
+  status: string | null;
+}
+
+type GraphEdge = Pick<Link, 'id' | 'sourceIssueId' | 'targetIssueId' | 'linkType'>;
+
+const activeGraphIssue = (alias: 'i' | 'source' | 'target') =>
+  `${alias}.is_deleted = 0 AND ${alias}.type IN ('task', 'memo', 'article')`;
+
+export function graphRootExists(db: Database.Database, rootId: number): boolean {
+  return Boolean(db.prepare(`SELECT i.id FROM issues i WHERE i.id = ? AND ${activeGraphIssue('i')}`).get(rootId));
+}
+
+export function getGraphAdjacency(db: Database.Database): Iterable<{ sourceId: number; targetId: number }> {
+  return db.prepare(`
+    SELECT l.source_issue_id AS sourceId, l.target_issue_id AS targetId
+    FROM links l
+    JOIN issues source ON source.id = l.source_issue_id AND ${activeGraphIssue('source')}
+    JOIN issues target ON target.id = l.target_issue_id AND ${activeGraphIssue('target')}
+  `).iterate() as Iterable<{ sourceId: number; targetId: number }>;
+}
+
+export function getGraphNodes(
+  db: Database.Database,
+  filters: LinkGraphFilters,
+  orderedIds: number[] | undefined,
+  limit: number,
+): GraphNodeRow[] {
+  const conditions: string[] = [];
+  const params: Record<string, string | number> = { limit };
+
+  if (filters.q) {
+    params.q = `%${filters.q}%`;
+    conditions.push(`(${keywordIssueMatch('i', '@q')} OR i.id IN (
+      SELECT c.issue_id FROM comments c WHERE ${keywordCommentMatch('c', '@q')}
+    ))`);
+  }
+  if (filters.labels?.length) {
+    params.labels = JSON.stringify(filters.labels);
+    conditions.push(`i.id IN (
+      SELECT il.issue_id FROM issue_labels il JOIN labels l ON l.id = il.label_id
+      WHERE l.name IN (SELECT value FROM json_each(@labels))
+    )`);
+  }
+  const projectConditions: string[] = [];
+  if (filters.projectIds?.length) {
+    params.projects = JSON.stringify(filters.projectIds);
+    projectConditions.push(`i.id IN (
+      SELECT issue_id FROM project_items WHERE project_id IN (SELECT value FROM json_each(@projects))
+    )`);
+  }
+  if (filters.unassigned) {
+    projectConditions.push('i.id NOT IN (SELECT issue_id FROM project_items)');
+  }
+  if (projectConditions.length) conditions.push(`(${projectConditions.join(' OR ')})`);
+  if (filters.bookmarked) conditions.push('i.is_bookmarked = 1');
+
+  let candidates = '';
+  if (orderedIds) {
+    candidates = 'JOIN json_each(@orderedIds) AS candidates ON i.id = candidates.value';
+    params.orderedIds = JSON.stringify(orderedIds);
+  }
+  if (filters.rootId !== undefined && conditions.length) {
+    params.rootId = filters.rootId;
+  }
+  const filter = conditions.length
+    ? `AND (${filters.rootId !== undefined ? 'i.id = @rootId OR ' : ''}(${conditions.join(' AND ')}))`
+    : '';
+  return db.prepare(`
+    WITH chosen AS MATERIALIZED (
+      SELECT i.id, ${orderedIds ? 'candidates.key' : 'i.updated_at'} AS sort_key
+      FROM issues i
+      ${candidates}
+      WHERE ${activeGraphIssue('i')} ${filter}
+      ORDER BY sort_key ${orderedIds ? 'ASC' : 'DESC'}, i.id ASC
+      LIMIT @limit
+    )
+    SELECT i.id, i.type,
+      CASE WHEN i.type = 'memo' THEN i.body_md ELSE i.title END AS title, i.status
+    FROM chosen JOIN issues i ON i.id = chosen.id
+    ORDER BY chosen.sort_key ${orderedIds ? 'ASC' : 'DESC'}, i.id ASC
+  `).all(params) as GraphNodeRow[];
+}
+
+export function getGraphEdges(db: Database.Database, issueIds: string, limit: number): GraphEdge[] {
+  return db.prepare(`
+    WITH selected(id) AS MATERIALIZED (SELECT value FROM json_each(@issueIds))
+    SELECT id, source_issue_id AS sourceIssueId, target_issue_id AS targetIssueId, link_type AS linkType
+    FROM links
+    WHERE source_issue_id IN (SELECT id FROM selected) AND target_issue_id IN (SELECT id FROM selected)
+    ORDER BY id
+    LIMIT @limit
+  `).all({ issueIds, limit }) as GraphEdge[];
+}
+
+export function getGraphLabels(db: Database.Database, issueIds: string, limit: number) {
+  return db.prepare(`
+    SELECT id, name FROM labels
+    WHERE id IN (
+      SELECT label_id FROM issue_labels WHERE issue_id IN (SELECT value FROM json_each(@issueIds))
+    )
+    ORDER BY id
+    LIMIT @limit
+  `).all({ issueIds, limit }) as Array<{ id: number; name: string }>;
+}
+
+export function getGraphMemberships(db: Database.Database, issueIds: string, labelIds: string, limit: number) {
+  return db.prepare(`
+    WITH assigned AS MATERIALIZED (
+      SELECT issue_id, label_id FROM issue_labels
+      WHERE issue_id IN (SELECT value FROM json_each(@issueIds))
+    )
+    SELECT issue_id AS issueId, label_id AS labelId FROM assigned
+    WHERE label_id IN (SELECT value FROM json_each(@labelIds))
+    ORDER BY label_id, issue_id
+    LIMIT @limit
+  `).all({ issueIds, labelIds, limit }) as Array<{ issueId: number; labelId: number }>;
+}

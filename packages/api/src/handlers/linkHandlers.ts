@@ -5,8 +5,38 @@ import { NotFoundError, ValidationError } from '../errors/index.js';
 import type {
   CreateLinkRequest,
   ListLinksQuery,
+  LinksGraphQuery,
   LinkWithDirection,
 } from '../schemas/linkSchemas.js';
+
+export async function getLinksGraphHandler(
+  request: FastifyRequest<{ Querystring: LinksGraphQuery }>,
+  reply: FastifyReply
+) {
+  reply.header('Cache-Control', 'no-store');
+  const { rootId, depth, q, label, projectId, bookmarked, includeLabels } = request.query;
+  if (depth !== undefined && rootId === undefined) {
+    throw new ValidationError('depth requires rootId');
+  }
+  const projects = projectId?.split(',').map(value => value.trim()) ?? [];
+  const projectIds = projects.filter(value => value !== 'none').map(value => {
+    const id = Number(value);
+    if (!/^\d+$/.test(value) || !Number.isSafeInteger(id) || id <= 0) {
+      throw new ValidationError('projectId must be a comma-separated list of positive integers or "none"');
+    }
+    return id;
+  });
+  const graph = new LinkService({ db: request.server.db }).graph({
+    rootId, depth, q: q?.trim(),
+    labels: label?.split(',').map(value => value.trim()).filter(Boolean),
+    projectIds,
+    unassigned: projects.includes('none'),
+    bookmarked: bookmarked === 'true',
+    includeLabels: includeLabels === 'true',
+  });
+  if (!graph && rootId !== undefined) throw new NotFoundError('Issue', rootId);
+  return reply.send(graph);
+}
 
 /**
  * Create a new link between issues

@@ -1,3 +1,4 @@
+import ShowLinks from './ShowLinks';
 import React, { useState, useEffect, useRef } from 'react';
 import type { IssueType, TaskKind } from 'meme-gtd-shared';
 import { MemosService } from '../api/services/MemosService';
@@ -83,6 +84,7 @@ interface ItemDetailProps {
   threadRevision?: number;
   onActivitiesLoaded?: (activities: ActivityLogEntry[]) => void;
   onCommentsLoaded?: (comments: Comment[]) => void;
+  onRelationsChanged?: () => void;
 }
 
 // Re-export Comment type for parent components
@@ -104,6 +106,7 @@ export default function ItemDetail({
   threadRevision,
   onActivitiesLoaded,
   onCommentsLoaded,
+  onRelationsChanged,
 }: ItemDetailProps) {
   // Comments & activities state management
   const [comments, setComments] = useState<Comment[]>([]);
@@ -168,6 +171,7 @@ export default function ItemDetail({
     setComments(updatedComments);
     onCommentsLoadedRef.current?.(updatedComments);
     bumpLinks();
+    onRelationsChanged?.();
   };
 
   const handleUpdateComment = async (commentId: number, bodyMd: string) => {
@@ -181,6 +185,7 @@ export default function ItemDetail({
     setComments(updatedComments);
     onCommentsLoadedRef.current?.(updatedComments);
     bumpLinks();
+    onRelationsChanged?.();
   };
 
   const handleDeleteComment = async (commentId: number) => {
@@ -194,6 +199,7 @@ export default function ItemDetail({
     const updatedComments = comments.filter((c) => c.id !== commentId);
     setComments(updatedComments);
     onCommentsLoadedRef.current?.(updatedComments);
+    onRelationsChanged?.();
   };
 
   const handleUpdateBody = async (newBody: string, newTitle?: string) => {
@@ -246,7 +252,7 @@ export default function ItemDetail({
       }
       onUpdate(updatedItem as Item);
     };
-    fetchUpdatedItem();
+    void fetchUpdatedItem().catch(error => console.error('Error refreshing labels:', error));
   };
 
   return (
@@ -256,7 +262,7 @@ export default function ItemDetail({
         {/* Mobile: stack vertically, Desktop: side by side */}
         <div className={`flex flex-col gap-3 mb-3 ${mode === 'page' ? 'sm:flex-row sm:items-start sm:justify-between' : ''}`}>
           {mode === 'page' && (
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            <h1 className="min-w-0 text-xl sm:text-2xl font-bold text-gray-900 [overflow-wrap:anywhere]">
               {item.title || `${itemType === 'memo' ? 'Memo' : itemType === 'article' ? 'Article' : itemType === 'template' ? 'Template' : 'Task'} #${item.id}`}
             </h1>
           )}
@@ -323,7 +329,7 @@ export default function ItemDetail({
                 status: 'status' in item ? item.status : null,
                 labels: item.labels || [],
               } : undefined}
-              onIssueLinksChanged={bumpLinks}
+              onIssueLinksChanged={() => { bumpLinks(); onRelationsChanged?.(); }}
               refreshKey={linksRefreshKey}
             />
           )}
@@ -347,7 +353,7 @@ export default function ItemDetail({
         {/* Sidebar (right column on page, bottom on panel) */}
         <div className={`w-full flex-shrink-0 space-y-6 ${mode === 'page' ? 'lg:w-80' : ''}`}>
           {/* Projects Section */}
-          <ProjectsSection itemId={item.id} itemType={itemType} />
+          <ProjectsSection itemId={item.id} itemType={itemType} onProjectsChanged={onRelationsChanged} />
 
           {/* Schedule Section (includes Task Kind) */}
           {itemType === 'task' && 'scheduledStart' in item && (
@@ -421,6 +427,7 @@ export default function ItemDetail({
               style={{ paddingBottom: mode === 'page' ? 'env(safe-area-inset-bottom, 0px)' : undefined }}
             >
               {sidebarActions}
+              {itemType !== 'template' && <div className="mt-2"><ShowLinks id={item.id} onNavigate={onBeforeNavigate} /></div>}
             </div>
           )}
         </div>

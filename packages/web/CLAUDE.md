@@ -57,6 +57,7 @@ await fetch(`/api/tasks/${id}`, { method: 'PATCH', ... });
 | Template選択からの作成フロー | `TemplateCreationFlow`（`TemplatesService` を画面から直接呼ばない） |
 | 右側オーバーレイパネル | `SidePanel` |
 | Issue詳細の右パネル | `ItemDetailPanel`（リソース別Detail panelを増やさない） |
+| 詳細から Links の起点へ移動する操作 | `ShowLinks` |
 | 一覧filterのtrigger・popover・Clear | `FilterDropdown` / `ToggleFilterButton` |
 | 実行前の確認モーダル | `ConfirmationModal`（Cancelへの初期フォーカス、処理中の多重送信防止、失敗表示を共有） |
 | 行の「…」メニュー・インライン削除確認 | `ActionMenu` / `InlineDeleteConfirmation` |

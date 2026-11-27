@@ -175,7 +175,7 @@ export default function EditableContent({
           </div>
         </div>
       ) : (
-        <div className="prose prose-sm max-w-none mt-1 break-words">
+        <div className="prose prose-sm max-w-none mt-1 [overflow-wrap:anywhere]">
           <MarkdownRenderer
             content={enableInteractiveTodos ? displayContent : content}
             interactiveTodos={

@@ -3,6 +3,7 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import {
   createLinkHandler,
+  getLinksGraphHandler,
   listLinksHandler,
   deleteLinkHandler,
 } from '../handlers/linkHandlers.js';
@@ -13,6 +14,8 @@ import {
   LinkIdParamsSchema,
   IssueIdForLinksParamsSchema,
   ListLinksQuerySchema,
+  LinksGraphQuerySchema,
+  LinksGraphSchema,
 } from '../schemas/linkSchemas.js';
 import { ErrorResponseSchema } from '../schemas/errorSchemas.js';
 
@@ -22,6 +25,26 @@ import { ErrorResponseSchema } from '../schemas/errorSchemas.js';
  */
 export async function linkRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>();
+
+  server.get(
+    '/api/links/graph',
+    {
+      schema: {
+        tags: ['Links'],
+        summary: 'Get the issue link graph',
+        description: 'Read the active issue graph in one snapshot. Reachability is computed before filters, and the root is always included.',
+        operationId: 'getLinksGraph',
+        querystring: LinksGraphQuerySchema,
+        response: {
+          200: LinksGraphSchema,
+          400: ErrorResponseSchema,
+          404: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      },
+    },
+    getLinksGraphHandler
+  );
 
   // POST /api/links - Create a new link
   server.post(

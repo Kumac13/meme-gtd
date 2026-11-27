@@ -9,9 +9,10 @@ import { ManagementSection } from './ManagementSection';
 interface ProjectsSectionProps {
   itemId: number;
   itemType: IssueType | 'template';
+  onProjectsChanged?: () => void;
 }
 
-export function ProjectsSection({ itemId, itemType: _itemType }: ProjectsSectionProps) {
+export function ProjectsSection({ itemId, itemType: _itemType, onProjectsChanged }: ProjectsSectionProps) {
   const [associatedProjects, setAssociatedProjects] = useState<ProjectWithMeta[]>([]);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +56,7 @@ export function ProjectsSection({ itemId, itemType: _itemType }: ProjectsSection
         await ProjectsService.addProjectItem(String(projectId), { issueId: itemId });
         addRecentProject(projectId);
       }
+      onProjectsChanged?.();
       await fetchProjects();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Failed to update project');
