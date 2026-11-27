@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
-import cytoscape, { type BoundingBox12, type Core, type ElementDefinition, type NodeCollection, type NodeSingular, type Position, type StylesheetStyle } from 'cytoscape';
+import cytoscape, { type BoundingBox12, type Core, type ElementDefinition, type NodeSingular, type Position, type StylesheetStyle } from 'cytoscape';
+import {
+  forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY,
+  type SimulationLinkDatum, type SimulationNodeDatum,
+} from 'd3-force';
 import type { LinksGraphData } from '../hooks/useLinksGraph';
 import { getLinkIcon, getLinkLabel } from '../utils/linkIcons';
 import { LabelBadge } from './LabelBadge';
@@ -20,16 +24,20 @@ const relationships: Record<LinkType, { color: string; legend?: string; mark?: s
 const styles: StylesheetStyle[] = [
   { selector: 'node', style: { width: 20, height: 20, 'background-color': 'data(color)' } },
   { selector: 'node.issue', style: {
-    // リンクの多い Issue ほど大きく描く。名前は読める縮尺まで拡大したときに出す。
-    width: 'mapData(degree, 0, 12, 16, 40)', height: 'mapData(degree, 0, 12, 16, 40)', 'min-zoomed-font-size': 9,
+    // リンクの多い Issue ほど大きく描く。
+    width: 'mapData(degree, 0, 12, 16, 40)', height: 'mapData(degree, 0, 12, 16, 40)',
     label: 'data(shortTitle)', 'text-valign': 'bottom', 'text-margin-y': 4, 'font-size': 11,
     'text-max-width': '112px', 'text-wrap': 'ellipsis', color: '#1f2937',
     'text-background-color': '#ffffff', 'text-background-opacity': 0.9, 'text-background-padding': '1px',
   } },
   { selector: 'node.label', style: {
     width: 12, height: 12, shape: 'diamond', label: 'data(name)', 'font-size': 10, color: '#57534e',
-    'text-valign': 'bottom', 'text-margin-y': 3, 'min-zoomed-font-size': 9,
+    'text-valign': 'bottom', 'text-margin-y': 3,
   } },
+  // 名前は拡大に応じて段階的に濃くする。起点とホバー中のつながりは縮尺によらず読める。
+  { selector: 'node.text-faint', style: { 'text-opacity': 0.45 } },
+  { selector: 'node.text-hidden', style: { 'text-opacity': 0 } },
+  { selector: 'node.root, node.named', style: { 'text-opacity': 1 } },
   { selector: 'node.root', style: { 'border-width': 4, 'border-color': '#16a34a' } },
   { selector: 'node.chosen', style: { 'overlay-opacity': 0.2, 'overlay-color': '#0f172a', 'overlay-padding': '7px' } },
   { selector: 'node.inspected', style: { 'border-width': 3, 'border-color': '#0f172a', 'z-index': 20 } },
@@ -77,164 +85,86 @@ function graphElements(graph: LinksGraphData): ElementDefinition[] {
   ];
 }
 
-const ISOLATED_SPACING = 46;
-
-/** 力学配置の後も重なったままの点を、互いに離れる向きへ少しずつ押し出す。 */
-function separateOverlaps(nodes: NodeCollection) {
-  if (nodes.length > 1500) return;
-  const points = nodes.map(node => ({ node, ...node.position(), radius: node.width() / 2 + 6, moved: false }));
-  for (let pass = 0; pass < 8; pass++) {
-    let touching = false;
-    for (let first = 0; first < points.length; first++) {
-      for (let second = first + 1; second < points.length; second++) {
-        const a = points[first];
-        const b = points[second];
-        const gap = a.radius + b.radius;
-        let dx = b.x - a.x;
-        let dy = b.y - a.y;
-        if (Math.abs(dx) >= gap || Math.abs(dy) >= gap) continue;
-        let distance = Math.hypot(dx, dy);
-        if (distance >= gap) continue;
-        if (distance === 0) {
-          dx = 1;
-          dy = 0;
-          distance = 1;
-        }
-        const push = (gap - distance) / 2 / distance;
-        a.x -= dx * push;
-        a.y -= dy * push;
-        b.x += dx * push;
-        b.y += dy * push;
-        a.moved = b.moved = touching = true;
-      }
-    }
-    if (!touching) break;
-  }
-  for (const point of points) if (point.moved) point.node.position({ x: point.x, y: point.y });
-}
+type SimulatedNode = SimulationNodeDatum & { id: string; element: NodeSingular; radius: number; degree: number };
 
 /**
- * リンクでつながるかたまりは力学配置（Cytoscape 内蔵 cose）で形を決め、
- * かたまりと孤立した点を一つの円盤の中へ不規則に散らす。格子・行・輪には並べない。
+ * Obsidian の Graph view と同じく、全ノードを1つの力学シミュレーションに乗せる。
+ * 中心へ引く力・ノード同士の斥力・リンクの引力を d3-force で計算し、位置を Cytoscape へ反映する。
+ * placed に含まれるノードは現在の位置から続け、それ以外は中心付近から広がる。
  */
-export function layoutGraph(cy: Core) {
-  const linked = cy.nodes().filter(node => node.degree(false) > 0);
-  const isolated = cy.nodes().difference(linked);
-  const count = linked.length;
-  const connected = linked.union(linked.connectedEdges());
-  if (count > 0) {
-    const side = Math.max(320, Math.sqrt(count) * 90);
-    connected.layout({
-      name: 'cose', fit: false, animate: false, randomize: true,
-      boundingBox: { x1: 0, y1: 0, w: side, h: side },
-      nodeDimensionsIncludeLabels: count <= 120,
-      // 斥力計算は点の数の2乗で増えるため、大きいグラフでは反復を減らして初回描画を保つ。
-      numIter: Math.max(12, Math.min(1000, Math.floor(2e8 / (count * count)))),
-      // リンクやラベル所属が集中する点ほど周りを広く空け、密集しても点同士が重ならないようにする。
-      nodeOverlap: 40,
-      nodeRepulsion: node => 6000 + 2500 * node.degree(false),
-      idealEdgeLength: edge => 70 + 22 * Math.sqrt(Math.max(edge.source().degree(false), edge.target().degree(false))),
-      componentSpacing: 65,
-    }).run();
-    separateOverlaps(linked);
-  }
+export function createGraphSimulation(cy: Core, placed?: ReadonlySet<string>) {
+  const nodes = cy.nodes().map((element): SimulatedNode => ({
+    id: element.id(), element, radius: element.width() / 2, degree: element.degree(false),
+    ...(placed?.has(element.id()) ? element.position() : {}),
+  }));
+  const byId = new Map(nodes.map(node => [node.id, node]));
+  const links = cy.edges().map((edge): SimulationLinkDatum<SimulatedNode> => ({
+    source: byId.get(edge.source().id())!, target: byId.get(edge.target().id())!,
+  }));
+  const simulation = forceSimulation(nodes)
+    // リンクが集中するノードほど周りを広く空け、密集しても読み取れるようにする。
+    .force('repel', forceManyBody<SimulatedNode>().strength(node => -60 - 25 * Math.sqrt(node.degree)).distanceMax(700))
+    .force('link', forceLink(links).distance(link => 45 + 12 * Math.sqrt(Math.max(
+      (link.source as SimulatedNode).degree, (link.target as SimulatedNode).degree))))
+    .force('centerX', forceX<SimulatedNode>(0).strength(0.05))
+    .force('centerY', forceY<SimulatedNode>(0).strength(0.05))
+    .force('collide', forceCollide<SimulatedNode>(node => node.radius + 6))
+    .stop();
 
-  // 再読み込みで位置が変わらないよう、固定シードの乱数を使う。
-  let seed = 0x2f6e2b1;
-  const random = () => {
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-  const inDisc = (radius: number): Position => {
-    const distance = radius * Math.sqrt(random());
-    const angle = random() * Math.PI * 2;
-    return { x: distance * Math.cos(angle), y: distance * Math.sin(angle) };
-  };
-
-  const clusters = connected.components().map(component => {
-    const box = component.boundingBox({ includeLabels: false, includeOverlays: false });
-    return {
-      nodes: component.nodes(), from: { x: (box.x1 + box.x2) / 2, y: (box.y1 + box.y2) / 2 },
-      radius: Math.hypot(box.w, box.h) / 2 + ISOLATED_SPACING / 2, x: 0, y: 0,
-    };
-  }).sort((first, second) => second.radius - first.radius);
-  if (clusters.length <= 1 && isolated.empty()) return;
-
-  const clusterArea = clusters.reduce((sum, cluster) => sum + cluster.radius * cluster.radius, 0);
-  const extent = Math.sqrt(clusterArea * 1.7 + (isolated.length * ISOLATED_SPACING * ISOLATED_SPACING * 1.8) / Math.PI);
-  // 大きいかたまりから中心寄りに置き、他のかたまりと重ならない位置を選ぶ。
-  const placed: typeof clusters = [];
-  for (const cluster of clusters) {
-    let best: Position = { x: 0, y: 0 };
-    let bestScore = Infinity;
-    for (let attempt = 0; attempt < (placed.length ? 60 : 1); attempt++) {
-      const candidate = placed.length ? inDisc(Math.max(0, extent - cluster.radius)) : { x: 0, y: 0 };
-      const overlap = placed.reduce((sum, other) =>
-        sum + Math.max(0, other.radius + cluster.radius - Math.hypot(other.x - candidate.x, other.y - candidate.y)), 0);
-      const score = overlap * 1000 + Math.hypot(candidate.x, candidate.y);
-      if (score < bestScore) {
-        best = candidate;
-        bestScore = score;
-      }
-    }
-    cluster.x = best.x;
-    cluster.y = best.y;
-    placed.push(cluster);
-  }
-
-  const cells = new Map<string, Position[]>();
-  const cell = (value: number) => Math.floor(value / ISOLATED_SPACING);
-  const nearest = (point: Position) => {
-    let best = Infinity;
-    for (let x = cell(point.x) - 1; x <= cell(point.x) + 1; x++) {
-      for (let y = cell(point.y) - 1; y <= cell(point.y) + 1; y++) {
-        for (const other of cells.get(`${x}/${y}`) ?? []) {
-          best = Math.min(best, Math.hypot(other.x - point.x, other.y - point.y));
+  return {
+    simulation,
+    /** シミュレーションの位置を描画へ反映する。つかんでいるノードは利用者の操作を優先する。 */
+    apply() {
+      cy.batch(() => {
+        for (const node of nodes) {
+          if (!node.element.grabbed()) node.element.position({ x: node.x ?? 0, y: node.y ?? 0 });
         }
-      }
-    }
-    return best;
+      });
+    },
+    /** つかんだノードをその位置に固定し、つながるノードが追従するよう再び動かす。 */
+    hold(id: string, position: Position) {
+      const node = byId.get(id);
+      if (!node) return;
+      node.fx = position.x;
+      node.fy = position.y;
+      simulation.alphaTarget(0.3);
+    },
+    release(id: string) {
+      const node = byId.get(id);
+      if (!node) return;
+      node.fx = null;
+      node.fy = null;
+      simulation.alphaTarget(0);
+    },
   };
-  cy.batch(() => {
-    for (const cluster of clusters) {
-      cluster.nodes.shift({ x: cluster.x - cluster.from.x, y: cluster.y - cluster.from.y });
-    }
-    isolated.forEach(node => {
-      // かたまりの外で、既存の点から最も離れた候補を選び、重なりと整列の両方を避ける。
-      let chosen: Position | undefined;
-      let chosenDistance = -1;
-      for (let attempt = 0; attempt < 12 && chosenDistance < ISOLATED_SPACING; attempt++) {
-        const candidate = inDisc(extent);
-        if (clusters.some(cluster => Math.hypot(cluster.x - candidate.x, cluster.y - candidate.y) < cluster.radius)) continue;
-        const distance = nearest(candidate);
-        if (distance > chosenDistance) {
-          chosen = candidate;
-          chosenDistance = distance;
-        }
-      }
-      chosen ??= inDisc(extent);
-      node.position(chosen);
-      const key = `${cell(chosen.x)}/${cell(chosen.y)}`;
-      cells.set(key, [...(cells.get(key) ?? []), chosen]);
-    });
-  });
 }
 
+/** ノードの位置だけから全体が収まる表示を求める。配置が動いている間も毎フレーム呼べる軽さにする。 */
 function fitGraph(cy: Core) {
-  if (cy.nodes().empty()) return;
-  cy.fit(cy.elements(), 24);
-  if (cy.zoom() > 1.3) {
-    cy.zoom(1.3);
-    cy.center(cy.elements());
-  }
+  if (cy.nodes().empty() || cy.width() === 0 || cy.height() === 0) return;
+  let left = Infinity, right = -Infinity, top = Infinity, bottom = -Infinity;
+  cy.nodes().forEach(node => {
+    const { x, y } = node.position();
+    left = Math.min(left, x);
+    right = Math.max(right, x);
+    top = Math.min(top, y);
+    bottom = Math.max(bottom, y);
+  });
+  const margin = 70;
+  const zoom = Math.min(1.3, cy.width() / (right - left + margin * 2), cy.height() / (bottom - top + margin * 2));
+  cy.viewport({ zoom, pan: { x: cy.width() / 2 - zoom * (left + right) / 2, y: cy.height() / 2 - zoom * (top + bottom) / 2 } });
+}
+
+function textFade(zoom: number) {
+  return zoom < 0.45 ? 'text-hidden' : zoom < 0.7 ? 'text-faint' : '';
 }
 
 function hideOverlappingTitles(cy: Core) {
-  const issues = cy.nodes('.issue, .label');
+  // リンクの多いノードの名前を優先して残す。
+  const issues = cy.nodes('.issue, .label').sort((first, second) =>
+    Number(second.hasClass('root')) - Number(first.hasClass('root')) || second.degree(false) - first.degree(false));
   issues.removeClass('overlapping-title');
-  if (issues.length > 800) return;
+  if (issues.length > 2500) return;
 
   const footprints = cy.nodes().map(node => ({
     id: node.id(), bounds: node.boundingBox({ includeLabels: false, includeOverlays: false }),
@@ -243,7 +173,7 @@ function hideOverlappingTitles(cy: Core) {
     a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
   const visibleTitles: BoundingBox12[] = [];
   const hiddenTitles: NodeSingular[] = [];
-  // 起点順を優先する。収まらない名前はホバー・フォーカスで読める。
+  // 収まらない名前はホバー・フォーカスで読める。
   issues.forEach(node => {
     const title = node.boundingBox({ includeNodes: false, includeOverlays: false });
     if (footprints.some(({ id, bounds }) => id !== node.id() && overlaps(title, bounds))
@@ -286,24 +216,65 @@ export default function LinksGraphCanvas({ graph, selectedId, onSelect }: {
   const previous = useRef<{ viewportScope: string; elementIds: string[] }>(null);
   const inspectionId = useRef<string | null>(null);
   const viewMoved = useRef(false);
+  const physics = useRef<ReturnType<typeof createGraphSimulation>>(null);
+  const placed = useRef<Set<string>>(new Set());
+  const frame = useRef(0);
+  const settling = useRef(false);
+  const fade = useRef<string | null>(null);
+
+  function fadeText(force = false) {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const next = textFade(cy.zoom());
+    if (!force && next === fade.current) return;
+    fade.current = next;
+    cy.batch(() => {
+      cy.nodes().removeClass('text-faint text-hidden');
+      if (next) cy.nodes().addClass(next);
+    });
+  }
+
+  /** 力学シミュレーションを落ち着くまで進める。1フレームの計算時間を抑え、描画を止めない。 */
+  function animate() {
+    cancelAnimationFrame(frame.current);
+    const step = () => {
+      const cy = cyRef.current;
+      const current = physics.current;
+      if (!cy || !current) return;
+      const { simulation } = current;
+      const started = performance.now();
+      do simulation.tick();
+      while (simulation.alpha() > simulation.alphaMin() && performance.now() - started < 10);
+      current.apply();
+      if (settling.current && !viewMoved.current) fitGraph(cy);
+      if (simulation.alpha() > simulation.alphaMin()) {
+        frame.current = requestAnimationFrame(step);
+      } else {
+        settling.current = false;
+        hideOverlappingTitles(cy);
+      }
+    };
+    frame.current = requestAnimationFrame(step);
+  }
   const keyboardIndex = useRef(0);
   const [inspection, setInspection] = useState(emptyInspection);
 
   function inspect(node?: NodeSingular) {
     const cy = cyRef.current;
     if (!cy) return;
-    const old = cy.elements('.inspected, .dimmed');
+    const old = cy.elements('.inspected, .dimmed, .named');
     inspectionId.current = node?.id() ?? null;
     if (!node) {
-      old.removeClass('inspected dimmed');
+      old.removeClass('inspected dimmed named');
       setInspection(emptyInspection);
       return;
     }
     const connected = node.connectedEdges();
     cy.batch(() => {
-      old.removeClass('inspected dimmed');
+      old.removeClass('inspected dimmed named');
       const neighborhood = node.closedNeighborhood();
       cy.elements().difference(neighborhood).addClass('dimmed');
+      neighborhood.nodes().addClass('named');
       node.union(connected).addClass('inspected');
     });
     const neighbors = connected.slice(0, 12).map((edge): Neighbor => {
@@ -331,6 +302,10 @@ export default function LinksGraphCanvas({ graph, selectedId, onSelect }: {
     });
     cyRef.current = cy;
     cy.on('scrollzoom dragpan pinchzoom', () => { viewMoved.current = true; });
+    cy.on('zoom', () => fadeText());
+    cy.on('grab', 'node', () => animate());
+    cy.on('grab drag', 'node', event => physics.current?.hold(event.target.id(), event.target.position()));
+    cy.on('free', 'node', event => physics.current?.release(event.target.id()));
     cy.on('mouseover', 'node', event => inspect(event.target));
     cy.on('mouseout', 'node', () => inspect());
     cy.on('tap', event => {
@@ -350,6 +325,9 @@ export default function LinksGraphCanvas({ graph, selectedId, onSelect }: {
     resize.observe(container.current);
     return () => {
       resize.disconnect();
+      cancelAnimationFrame(frame.current);
+      physics.current = null;
+      placed.current = new Set();
       cy.destroy();
       cyRef.current = null;
       previous.current = null;
@@ -369,12 +347,22 @@ export default function LinksGraphCanvas({ graph, selectedId, onSelect }: {
     const resetView = last?.viewportScope !== viewportScope;
     const layoutStart = performance.now();
     cy.json({ elements });
-    if (changed || resetView) layoutGraph(cy);
-    hideOverlappingTitles(cy);
-    if (resetView || (changed && !viewMoved.current)) {
-      viewMoved.current = false;
-      fitGraph(cy);
+    if (resetView) viewMoved.current = false;
+    if (changed || resetView) {
+      const next = createGraphSimulation(cy, resetView ? undefined : placed.current);
+      physics.current = next;
+      placed.current = new Set(cy.nodes().map(node => node.id()));
+      // 初回描画までに大まかな形を作り、残りは画面上で落ち着くまで動かす。
+      const deadline = performance.now() + 300;
+      while (next.simulation.alpha() > next.simulation.alphaMin() && performance.now() < deadline) next.simulation.tick();
+      next.apply();
+      settling.current = true;
+      animate();
     }
+    hideOverlappingTitles(cy);
+    if (!viewMoved.current) fitGraph(cy);
+    // 要素を入れ替えるとクラスが初期化されるため、現在の縮尺に合わせて名前の濃さを付け直す。
+    fadeText(true);
     const inspected = inspectionId.current ? cy.getElementById(inspectionId.current) : null;
     inspect(inspected?.isNode() ? inspected as NodeSingular : undefined);
     previous.current = { viewportScope, elementIds: ids };

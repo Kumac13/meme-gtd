@@ -1,26 +1,24 @@
 import cytoscape from 'cytoscape';
 import { afterEach, describe, expect, it } from 'vitest';
-import { layoutGraph, nearestTouchNode } from '../../src/components/LinksGraphCanvas';
+import { createGraphSimulation, nearestTouchNode } from '../../src/components/LinksGraphCanvas';
 
-describe('graph layout', () => {
-  it('pulls linked issues together and scatters isolated issues around them without rows or overlaps', () => {
-    const elements = [
-      ...Array.from({ length: 400 }, (_, index) => ({ data: { id: `issue-${index}` }, classes: 'issue' })),
-      ...Array.from({ length: 30 }, (_, index) => ({ data: { id: `edge-${index}`, source: `issue-${index}`, target: `issue-${index + (index % 5 === 4 ? 2 : 1)}` } })),
-    ];
+describe('graph force simulation', () => {
+  const elements = [
+    ...Array.from({ length: 400 }, (_, index) => ({ data: { id: `issue-${index}` }, classes: 'issue' })),
+    ...Array.from({ length: 30 }, (_, index) => ({ data: { id: `edge-${index}`, source: `issue-${index}`, target: `issue-${index + 1}` } })),
+  ];
+
+  it('pulls linked issues together and spreads the rest without rows or overlaps', () => {
     const graph = cytoscape({ headless: true, styleEnabled: true, layout: { name: 'preset' }, elements });
-    layoutGraph(graph);
+    const physics = createGraphSimulation(graph);
+    physics.simulation.tick(300);
+    physics.apply();
 
-    const linked = graph.nodes().filter(node => node.degree(false) > 0);
-    const isolated = graph.nodes().difference(linked);
-    const points = isolated.map(node => node.position());
-    const members = linked.map(node => node.position());
-    expect(points.every(point => members.every(member => Math.hypot(point.x - member.x, point.y - member.y) > 20))).toBe(true);
-
-    // 格子配置では同じ y 座標に多数の点が並ぶ。散布では行が生まれない。
+    const points = graph.nodes().map(node => node.position());
+    // 格子配置では同じ y 座標に多数の点が並ぶ。力学配置では行が生まれない。
     const rows = new Map<number, number>();
     for (const point of points) rows.set(Math.round(point.y), (rows.get(Math.round(point.y)) ?? 0) + 1);
-    expect(Math.max(...rows.values())).toBeLessThan(6);
+    expect(Math.max(...rows.values())).toBeLessThan(8);
 
     let closest = Infinity;
     for (let a = 0; a < points.length; a++) {
@@ -28,7 +26,39 @@ describe('graph layout', () => {
         closest = Math.min(closest, Math.hypot(points[a].x - points[b].x, points[a].y - points[b].y));
       }
     }
-    expect(closest).toBeGreaterThan(20);
+    expect(closest).toBeGreaterThan(18);
+
+    const lengths = graph.edges().map(edge => {
+      const from = edge.source().position();
+      const to = edge.target().position();
+      return Math.hypot(from.x - to.x, from.y - to.y);
+    });
+    const extent = graph.nodes().boundingBox({ includeLabels: false });
+    expect(Math.max(...lengths)).toBeLessThan(Math.min(extent.w, extent.h) / 3);
+    graph.destroy();
+  });
+
+  it('keeps placed nodes where they are and lets linked neighbours follow a held node', () => {
+    const graph = cytoscape({ headless: true, styleEnabled: true, layout: { name: 'preset' }, elements });
+    const first = createGraphSimulation(graph);
+    first.simulation.tick(300);
+    first.apply();
+    const before = graph.getElementById('issue-200').position();
+
+    const next = createGraphSimulation(graph, new Set(graph.nodes().map(node => node.id())));
+    const start = { ...graph.getElementById('issue-200').position() };
+    expect(start).toEqual(before);
+
+    const neighbour = graph.getElementById('issue-1');
+    const origin = { ...neighbour.position() };
+    next.hold('issue-0', { x: origin.x + 900, y: origin.y });
+    next.simulation.stop();
+    next.simulation.tick(200);
+    next.apply();
+    expect(graph.getElementById('issue-0').position().x).toBeCloseTo(origin.x + 900);
+    expect(neighbour.position().x - origin.x).toBeGreaterThan(400);
+    next.release('issue-0');
+    next.simulation.stop();
     graph.destroy();
   });
 });
