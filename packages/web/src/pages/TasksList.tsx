@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { TasksService } from '../api/services/TasksService';
 import { SearchService } from '../api/services/SearchService';
 import { ProjectsService } from '../api/services/ProjectsService';
+import { LinksService } from '../api/services/LinksService';
 import ItemList from '../components/ItemList';
 
 import LabelFilterDropdown from '../components/LabelFilterDropdown';
@@ -29,6 +30,7 @@ import {
   updateDateRangeParams,
 } from '../utils/urlFilterHelpers';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { arrangeByParent, parentIdFromLink } from '../utils/taskHierarchy';
 
 interface Task {
   id: number;
@@ -39,6 +41,7 @@ interface Task {
   commentCount?: number;
   scheduledOn: string | null;
   labels?: string[];
+  linkIds?: number[];
   preview?: string;
   createdAt: string;
   updatedAt: string;
@@ -67,6 +70,30 @@ import { sortProjectsByStatus } from '../utils/projectStatus';
 const statusOptions = ['all', 'inbox', 'open', 'next', 'waiting', 'scheduled', 'someday', 'done', 'canceled'];
 
 const PAGE_SIZE = 20;
+
+/**
+ * 表示中の Task それぞれの直接の親の ID を、既存の Issue リンク API から集める。
+ * リンクを持たないと分かっている Task（linkIds が空）は問い合わせない。
+ * 取得に失敗した Task は親なしとして扱い、一覧の表示は止めない。
+ */
+async function loadParentIds(items: Task[]): Promise<Map<number, number[]>> {
+  const candidates = items.filter((item) => item.linkIds === undefined || item.linkIds.length > 0);
+  const entries = await Promise.all(
+    candidates.map(async (item): Promise<[number, number[]]> => {
+      try {
+        const links = await LinksService.listIssueLinks(String(item.id));
+        const parentIds = links
+          .map((link) => parentIdFromLink(item.id, link))
+          .filter((id): id is number => id !== null);
+        return [item.id, parentIds];
+      } catch (err) {
+        console.error('Error fetching task links:', err);
+        return [item.id, []];
+      }
+    })
+  );
+  return new Map(entries);
+}
 
 export default function TasksList() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -115,6 +142,8 @@ export default function TasksList() {
   const [error, setError] = useState<string | null>(null);
   const [matchSnippets, setMatchSnippets] = useState<Record<number, string>>({});
   const [projects, setProjects] = useState<Project[]>([]);
+  // 単一の status で絞った一覧のときだけ持つ、Task ID から直接の親の ID 一覧への対応
+  const [parentIds, setParentIds] = useState<Map<number, number[]>>(new Map());
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -198,8 +227,10 @@ export default function TasksList() {
               }
             }
           }
+          const parents = searchStatus ? await loadParentIds(mapped) : new Map<number, number[]>();
           setMatchSnippets(snippets);
           setTasks(mapped);
+          setParentIds(parents);
           setTotal(response.total);
         } else {
           // Use list API
@@ -215,7 +246,11 @@ export default function TasksList() {
             PAGE_SIZE,
             offset
           );
-          setTasks(response?.data || []);
+          const loaded: Task[] = response?.data || [];
+          // 親子を表すのは同じ status の中だけ。all（status 指定なし）は並びも字下げも変えない
+          const parents = effectiveStatus ? await loadParentIds(loaded) : new Map<number, number[]>();
+          setTasks(loaded);
+          setParentIds(parents);
           setTotal(response?.total || 0);
         }
       } catch (err) {
@@ -235,6 +270,20 @@ export default function TasksList() {
       return true;
     });
   }, [tasks, bookmarkFilter]);
+
+  // 直接の親が同じ一覧に出ている Task を、その親の直下に一段下げて並べる
+  const hierarchyRows = useMemo(
+    () => arrangeByParent(filteredTasks, parentIds),
+    [filteredTasks, parentIds]
+  );
+  const arrangedTasks = useMemo(() => hierarchyRows.map((row) => row.item), [hierarchyRows]);
+  const indentLevels = useMemo(() => {
+    const levels: Record<number, number> = {};
+    for (const row of hierarchyRows) {
+      if (row.depth > 0) levels[row.item.id] = row.depth;
+    }
+    return levels;
+  }, [hierarchyRows]);
 
   // Filter snapshot for the Copy Results buttons. The backend uses this to
   // record a search.exported activity_log entry that reflects what the user
@@ -502,7 +551,7 @@ export default function TasksList() {
         />}
     >
         <>
-          <ItemList items={filteredTasks} itemType="task" basePath="/tasks" currentFilters={searchParams} onDelete={handleDelete} matchSnippets={matchSnippets} searchQuery={filters.parsedQuery.freeText} />
+          <ItemList items={arrangedTasks} indentLevels={indentLevels} itemType="task" basePath="/tasks" currentFilters={searchParams} onDelete={handleDelete} matchSnippets={matchSnippets} searchQuery={filters.parsedQuery.freeText} />
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

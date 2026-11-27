@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.59.0 - 2026-11-27
+
+### New Features
+
+- Web と iOS の Task 一覧で、同じステータスの中の親子がわかるようにした。ステータスで絞っているとき、直接の親が同じ一覧に出ている Task を、その親の直下に一段下げて表示する（孫は子の下にさらに一段）。
+  - 親が同じ一覧に出ていない Task は、これまで通りの行のまま。All は並びも字下げも変えない。
+  - 一覧に出る Task と件数は変わらない。API の変更はなく、既存の Issue リンク取得を使う。
+
+### Tests
+
+- 親子の並べ替えの単体テストを Web（`taskHierarchy.test.ts`）と iOS（`TaskHierarchyTests.swift`）に追加。
+
 ## 0.58.0 - 2026-11-27
 
 ### New Features

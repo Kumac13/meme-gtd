@@ -72,7 +72,12 @@ itemType: IssueType | "project" | "template";
   matchSnippets?: Record<number, string>;
   /** Search query for keyword highlighting */
   searchQuery?: string;
+  /** 親の直下に字下げして出す行の段数（item ID -> 段数）。指定のない行は字下げしない */
+  indentLevels?: Record<number, number>;
 }
+
+/** 親子1段あたりの字下げ幅（px） */
+const INDENT_STEP_PX = 24;
 
 function isTask(item: Item): item is Task {
   return "type" in item && (item as any).type === "task";
@@ -100,6 +105,7 @@ export default function ItemList({
   showStatusBadges = false,
   matchSnippets,
   searchQuery,
+  indentLevels,
 }: ItemListProps) {
   const [deleting, setDeleting] = useState<number | null>(null);
 
@@ -169,12 +175,15 @@ export default function ItemList({
           }
         };
 
+        const indentLevel = indentLevels?.[item.id] ?? 0;
+
         return (
-          <div key={item.id} className="relative">
+          <div key={item.id} className="relative" data-indent-level={indentLevel || undefined}>
             <Link
               to={itemPath}
               onClick={handleClick}
               className="block p-4 hover:bg-gray-50 transition-colors"
+              style={indentLevel > 0 ? { paddingLeft: 16 + indentLevel * INDENT_STEP_PX } : undefined}
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex-1 min-w-0">
