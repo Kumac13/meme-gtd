@@ -32,6 +32,10 @@ class TaskListViewModel: ObservableObject, IssueListStateProviding {
 
     // Search match info (issueId -> match label + snippet)
 
+    /// 表示中の Task の直接の親（Task ID -> 親の ID 一覧）。
+    /// 単一の status で絞った一覧のときだけ持つ。all では空のまま。
+    @Published private(set) var parentIds: [Int: [Int]] = [:]
+
     var store: TaskStore?
 
     /// Data source seam. Views overwrite this with the app-wide provider from
@@ -138,6 +142,7 @@ class TaskListViewModel: ObservableObject, IssueListStateProviding {
             }
             store?.setItems(response.data, total: response.total)
             logger.info("loadTasks done: count=\(response.data.count), total=\(response.total)")
+            await refreshParentIds(reset: true)
         } catch {
             self.error = error.localizedDescription
             logger.error("loadTasks error: \(error.localizedDescription)")
@@ -181,10 +186,62 @@ class TaskListViewModel: ObservableObject, IssueListStateProviding {
 
     func applyTasks(_ response: TaskListResponse) {
         store?.setItems(response.data, total: response.total)
+        Task { await refreshParentIds(reset: true) }
     }
 
     func applyOlderTasks(_ response: TaskListResponse) {
         store?.appendItems(response.data, total: response.total)
+        Task { await refreshParentIds(reset: false) }
+    }
+
+    // MARK: - Parent / child arrangement
+
+    /// 表示用の並び。直接の親が同じ一覧に出ている Task を、その親の直下に一段下げる。
+    func arrangedRows(_ tasks: [TaskItem]) -> [TaskHierarchy.Row<TaskItem>] {
+        TaskHierarchy.arrange(tasks, id: { $0.id }, parentIds: parentIds)
+    }
+
+    /// 表示中の Task の直接の親を、既存の Issue リンク取得から集める。
+    /// 親子を表すのは同じ status の中だけなので、all では何も持たない。
+    /// リンクを持たないと分かっている Task（linkIds が空）は問い合わせない。
+    /// 取得に失敗した Task は記録せず、次の読み込みで再度問い合わせる。
+    func refreshParentIds(reset: Bool) async {
+        guard let store, statusFilter.apiValue != nil else {
+            parentIds = [:]
+            return
+        }
+        let status = statusFilter
+        let known = reset ? [:] : parentIds
+        let targets = store.tasks.filter { task in
+            guard known[task.id] == nil else { return false }
+            guard let linkIds = task.linkIds else { return true }
+            return !linkIds.isEmpty
+        }.map(\.id)
+        let relations = dataSources.issueRelations
+
+        var fetched: [Int: [Int]] = [:]
+        await withTaskGroup(of: (Int, [IssueLink]?).self) { group in
+            for id in targets {
+                group.addTask {
+                    (id, try? await relations.listLinks(issueId: id))
+                }
+            }
+            for await (id, links) in group {
+                guard let links else { continue }
+                fetched[id] = links.compactMap { link in
+                    TaskHierarchy.parentId(
+                        of: id,
+                        sourceIssueId: link.sourceIssueId,
+                        targetIssueId: link.targetIssueId,
+                        linkType: link.linkType.rawValue
+                    )
+                }
+            }
+        }
+
+        // 取得中に status が切り替わっていたら、その結果は捨てる
+        guard status == statusFilter else { return }
+        parentIds = known.merging(fetched) { _, new in new }
     }
 
     func loadOlderTasks() async {
@@ -204,6 +261,7 @@ class TaskListViewModel: ObservableObject, IssueListStateProviding {
                 )
             }
             store.appendItems(response.data, total: response.total)
+            await refreshParentIds(reset: false)
             logger.info("loadOlderTasks done: count=\(store.tasks.count), total=\(store.total)")
         }
     }
