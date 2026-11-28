@@ -1,17 +1,20 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { WIDE_PAGE_WIDTH } from '../utils/pageWidth';
 
 interface FormPageLayoutProps {
   backTo: string;
   backLabel: string;
   title: ReactNode;
   children: ReactNode;
+  /** sm 以上で画面幅の8割まで広げる（Issue 系の作成・編集用）。既定は max-w-4xl。 */
+  wide?: boolean;
 }
 
 /** Shared page chrome for create and edit forms. */
-export default function FormPageLayout({ backTo, backLabel, title, children }: FormPageLayoutProps) {
+export default function FormPageLayout({ backTo, backLabel, title, children, wide = false }: FormPageLayoutProps) {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-2">
+    <div className={`${wide ? WIDE_PAGE_WIDTH : 'max-w-4xl px-4'} mx-auto py-2`}>
       <div className="mb-6">
         <Link
           to={backTo}

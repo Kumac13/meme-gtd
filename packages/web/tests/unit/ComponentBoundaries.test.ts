@@ -88,6 +88,15 @@ describe('shared component boundaries (web)', () => {
     }
   });
 
+  it('keeps the 80vw issue page width in utils/pageWidth.ts', () => {
+    // 画面幅の8割へ広げる指定は pageWidth.ts だけが持ち、外枠ごとに複製しない
+    expectOwnedBy(webSrc, files, 'w-[80vw]', ['utils/pageWidth.ts']);
+    // ヘッダーと本文の端を揃えるため、ヘッダーと Issue 系の外枠は同じ指定を使う
+    for (const file of ['components/Layout.tsx', 'components/ListPageLayout.tsx', 'components/FormPageLayout.tsx', 'components/ItemDetail.tsx']) {
+      expect(source(webSrc, file), `${file} must use utils/pageWidth`).toContain('utils/pageWidth');
+    }
+  });
+
   it('keeps every list page on ListPageLayout (including future pages)', () => {
     // ProjectsList は今回の共通化スコープ外の既知の例外。解消したらここから外す。
     const knownExceptions = ['pages/ProjectsList.tsx'];

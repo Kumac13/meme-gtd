@@ -134,7 +134,7 @@ export default function LinksPage() {
   return (
     <>
       {/* ヘッダー(4rem)と main の上下余白(2rem)を除いた画面の残りの高さを使い、グラフ枠を画面下端まで伸ばす */}
-      <ListPageLayout wide className="flex h-[calc(100dvh-6rem)] flex-col"
+      <ListPageLayout className="flex h-[calc(100dvh-6rem)] flex-col"
         search={<SearchInput value={filters.searchQuery} onChange={actions.setSearchQuery} placeholder="Search issues" />}
         filters={<>
           <LabelFilterDropdown selectedLabels={labels} countKey="issueCount" onClear={() => setParam('label')}
