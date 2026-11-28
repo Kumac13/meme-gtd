@@ -61,6 +61,9 @@ npm version [patch|minor|major] --no-git-tag-version
 # 全パッケージのバージョンを同期
 pnpm -r exec npm version $(node -p "require('./package.json').version") --no-git-tag-version
 
+# iOSアプリのバージョンも同期（実機・シミュレータのアプリ情報で更新を確認可能にするため）
+sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $(node -p "require('./package.json').version");/g" ios/MemeGTD/MemeGTD.xcodeproj/project.pbxproj
+
 # 変更をステージング
 git add .
 
