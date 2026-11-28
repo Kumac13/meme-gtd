@@ -6,6 +6,7 @@ struct MarkdownTableView: View {
     let table: MarkdownTable
     let color: Color
     let searchQuery: String?
+    let issueReferenceTitles: IssueReferenceTitles
 
     @ScaledMetric private var fontSize: CGFloat
     @ScaledMetric(relativeTo: .body) private var minimumComfortableWidth: CGFloat = 112
@@ -15,15 +16,19 @@ struct MarkdownTableView: View {
     private let horizontalPadding: CGFloat = 10
     private let verticalPadding: CGFloat = 6
 
-    init(table: MarkdownTable, fontSize: CGFloat, color: Color, searchQuery: String?) {
+    init(
+        table: MarkdownTable, fontSize: CGFloat, color: Color, searchQuery: String?,
+        issueReferenceTitles: IssueReferenceTitles = .init()
+    ) {
         self.table = table
+        self.issueReferenceTitles = issueReferenceTitles
         self.color = color
         self.searchQuery = searchQuery
         self._fontSize = ScaledMetric(wrappedValue: fontSize, relativeTo: .body)
     }
 
     var body: some View {
-        let rows = table.rows.enumerated().map { rowIndex, row in
+        let rows = table.rows(issueReferenceTitles: issueReferenceTitles).enumerated().map { rowIndex, row in
             let isHeader = rowIndex == 0
             let font = UIFont.systemFont(ofSize: fontSize, weight: isHeader ? .semibold : .regular)
             let textColor = isHeader ? UIColor.label : UIColor(color)
