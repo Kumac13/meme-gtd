@@ -68,11 +68,14 @@ struct CreateIssueTextFields: View {
                 Text(bodyLabel)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.textSecondary)
-                TextEditor(text: $bodyMd)
-                    .font(.system(size: 15))
-                    .frame(minHeight: 80, maxHeight: 160)
-                    .scrollContentBackground(.hidden)
-                    .tint(Color.accent)
+                MarkdownComposerInput(
+                    text: $bodyMd,
+                    placeholder: bodyLabel,
+                    fontSize: 15,
+                    textContainerInset: UIEdgeInsets(top: 8, left: 0, bottom: 8, right: 0),
+                    lineFragmentPadding: 5,
+                    heightRange: 80...160
+                )
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
