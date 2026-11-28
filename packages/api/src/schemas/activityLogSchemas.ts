@@ -105,6 +105,13 @@ export const IssueIdParamsSchema = z.object({
 });
 
 /**
+ * Schema for activity log entry ID path parameter
+ */
+export const ActivityLogEntryIdParamsSchema = z.object({
+  id: z.coerce.number().int().positive().describe('Activity log entry ID'),
+});
+
+/**
  * Schema for project ID path parameter
  */
 export const ProjectIdParamsSchema = z.object({

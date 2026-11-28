@@ -6,9 +6,11 @@ import {
   getProjectActivityLogHandler,
   getCompletedTasksHandler,
   listActivityLogHandler,
+  getActivityLogEntryHandler,
 } from '../handlers/activityLogHandlers.js';
 import {
   ActivityLogEntrySchema,
+  ActivityLogEntryIdParamsSchema,
   CompletedTaskEntrySchema,
   IssueIdParamsSchema,
   ProjectIdParamsSchema,
@@ -106,5 +108,27 @@ export async function activityLogRoutes(app: FastifyInstance) {
       },
     },
     getCompletedTasksHandler
+  );
+
+  // GET /api/activity-log/:id - Get a single activity log entry
+  // 静的パス（issues / projects / completed-tasks）はルーターが優先して解決する
+  server.get(
+    '/api/activity-log/:id',
+    {
+      schema: {
+        tags: ['ActivityLog'],
+        summary: 'Get activity log entry',
+        description: 'Get a single activity log entry by its ID',
+        operationId: 'getActivityLogEntry',
+        params: ActivityLogEntryIdParamsSchema,
+        response: {
+          200: ActivityLogEntrySchema,
+          400: ErrorResponseSchema,
+          404: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      },
+    },
+    getActivityLogEntryHandler
   );
 }

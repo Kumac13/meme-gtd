@@ -7655,6 +7655,174 @@ paths:
                   - error
                   - message
                 additionalProperties: false
+  /api/activity-log/{id}:
+    get:
+      operationId: getActivityLogEntry
+      summary: Get activity log entry
+      tags:
+        - ActivityLog
+      description: Get a single activity log entry by its ID
+      parameters:
+        - schema:
+            type: integer
+            exclusiveMinimum: true
+            minimum: 0
+          in: path
+          name: id
+          required: true
+          description: Activity log entry ID
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    exclusiveMinimum: true
+                    minimum: 0
+                    description: Unique identifier
+                  eventType:
+                    type: string
+                    enum:
+                      - task.created
+                      - issue.transferred
+                      - task.updated
+                      - task.status_changed
+                      - task.deleted
+                      - task.bookmarked
+                      - memo.created
+                      - memo.updated
+                      - memo.promoted
+                      - memo.deleted
+                      - memo.bookmarked
+                      - article.created
+                      - article.updated
+                      - article.deleted
+                      - article.bookmarked
+                      - label.created
+                      - label.deleted
+                      - label.assigned
+                      - label.removed
+                      - project.created
+                      - project.updated
+                      - project.deleted
+                      - project.item_added
+                      - project.item_removed
+                      - link.created
+                      - link.deleted
+                      - comment.created
+                      - comment.updated
+                      - comment.deleted
+                      - search.exported
+                    description: Event type (e.g., task.created, task.status_changed)
+                  occurredAt:
+                    type: string
+                    description: Event timestamp (ISO 8601)
+                  sourceType:
+                    type: string
+                    enum:
+                      - cli
+                      - api
+                      - system
+                    description: Source of the operation
+                  payload:
+                    type: object
+                    additionalProperties: {}
+                    description: Event-specific data
+                  issueId:
+                    type: integer
+                    nullable: true
+                    description: Related issue ID (extracted from payload)
+                  projectId:
+                    type: integer
+                    nullable: true
+                    description: Related project ID (extracted from payload)
+                  labelId:
+                    type: integer
+                    nullable: true
+                    description: Related label ID (extracted from payload)
+                required:
+                  - id
+                  - eventType
+                  - occurredAt
+                  - sourceType
+                  - payload
+                  - issueId
+                  - projectId
+                  - labelId
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type or name
+                  code:
+                    type: string
+                    description: Error code
+                  message:
+                    type: string
+                    description: Human-readable error message
+                  stack:
+                    type: string
+                    description: Stack trace (only in development)
+                required:
+                  - error
+                  - message
+                additionalProperties: false
   /api/sync/changes:
     get:
       operationId: listSyncChanges

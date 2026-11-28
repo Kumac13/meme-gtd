@@ -269,4 +269,60 @@ export class ActivityLogService {
             },
         });
     }
+    /**
+     * Get activity log entry
+     * Get a single activity log entry by its ID
+     * @param id Activity log entry ID
+     * @returns any Default Response
+     * @throws ApiError
+     */
+    public static getActivityLogEntry(
+        id: number,
+    ): CancelablePromise<{
+        /**
+         * Unique identifier
+         */
+        id: number;
+        /**
+         * Event type (e.g., task.created, task.status_changed)
+         */
+        eventType: 'task.created' | 'issue.transferred' | 'task.updated' | 'task.status_changed' | 'task.deleted' | 'task.bookmarked' | 'memo.created' | 'memo.updated' | 'memo.promoted' | 'memo.deleted' | 'memo.bookmarked' | 'article.created' | 'article.updated' | 'article.deleted' | 'article.bookmarked' | 'label.created' | 'label.deleted' | 'label.assigned' | 'label.removed' | 'project.created' | 'project.updated' | 'project.deleted' | 'project.item_added' | 'project.item_removed' | 'link.created' | 'link.deleted' | 'comment.created' | 'comment.updated' | 'comment.deleted' | 'search.exported';
+        /**
+         * Event timestamp (ISO 8601)
+         */
+        occurredAt: string;
+        /**
+         * Source of the operation
+         */
+        sourceType: 'cli' | 'api' | 'system';
+        /**
+         * Event-specific data
+         */
+        payload: Record<string, any>;
+        /**
+         * Related issue ID (extracted from payload)
+         */
+        issueId: number | null;
+        /**
+         * Related project ID (extracted from payload)
+         */
+        projectId: number | null;
+        /**
+         * Related label ID (extracted from payload)
+         */
+        labelId: number | null;
+    }> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/activity-log/{id}',
+            path: {
+                'id': id,
+            },
+            errors: {
+                400: `Default Response`,
+                404: `Default Response`,
+                500: `Default Response`,
+            },
+        });
+    }
 }

@@ -196,7 +196,7 @@ Links は `ListPageLayout` と一覧用フィルタを共有し、起点選択�
 | Articles | `/api/articles`, `/api/articles/{id}`、`/{id}/bookmark`、`/{id}/unbookmark`、`/{articleId}/comments`、`/{articleId}/comments/{commentId}` |
 | Templates | `/api/templates`, `/api/templates/{id}`（作成時テンプレートのCRUD。適用はクライアント側プリフィル） |
 | Attachments | `/api/attachments`（multipart画像アップロード）, `/api/attachments/{filename}`（配信） |
-| Activity Log | `/api/activity-log`, `/issues/{issueId}`, `/projects/{projectId}`, `/completed-tasks` |
+| Activity Log | `/api/activity-log`, `/api/activity-log/{id}`（単件取得）, `/issues/{issueId}`, `/projects/{projectId}`, `/completed-tasks` |
 | Search | `/api/search/keyword`, `/api/search/export` |
 | Sync | `/api/sync/changes`（差分プル）, `/api/sync/push`（オフライン操作の適用） |
 
