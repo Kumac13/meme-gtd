@@ -58,6 +58,41 @@ describe('MarkdownRenderer list alignment', () => {
 });
 
 describe('MarkdownRenderer GFM tables', () => {
+  const originalComment = '1 | 2  | 3\n— | — | —\nhoge | fuga | piyo';
+
+  it('renders the original comment with an em dash delimiter and no outer pipes', () => {
+    render(<MarkdownRenderer content={originalComment} />);
+
+    expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['1', '2', '3']);
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['hoge', 'fuga', 'piyo']);
+  });
+
+  it('keeps em dashes in prose, incompatible column counts, and fenced source', () => {
+    const markdown = [
+      'Before — after',
+      '',
+      'Left | Right',
+      '— | — | —',
+      '',
+      '```markdown',
+      originalComment,
+      '```',
+    ].join('\n');
+    const { container } = render(<MarkdownRenderer content={markdown} />);
+
+    expect(screen.queryByRole('table')).toBeNull();
+    expect(screen.getByText('Before — after')).toBeInTheDocument();
+    expect(screen.getByText('Left | Right — | — | —')).toBeInTheDocument();
+    expect(container.querySelector('pre')?.textContent).toContain(originalComment);
+  });
+
+  it('keeps em dash data cells and resolves links defined outside the table', () => {
+    render(<MarkdownRenderer content={'First | Second\n| — | — |\n— | —\n[Docs][docs] | Link\n\n[docs]: https://example.com'} />);
+
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['—', '—', 'Docs', 'Link']);
+    expect(screen.getByRole('link', { name: 'Docs' })).toHaveAttribute('href', 'https://example.com');
+  });
+
   it('renders matching header and body columns with empty cells, safe alignment, and inline markup', () => {
     const lines = [
       '| Left | Center | Right |',

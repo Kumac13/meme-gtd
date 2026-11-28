@@ -36,6 +36,7 @@ import jsonLang from 'react-syntax-highlighter/dist/esm/languages/prism/json';
 import pythonLang from 'react-syntax-highlighter/dist/esm/languages/prism/python';
 import cssLang from 'react-syntax-highlighter/dist/esm/languages/prism/css';
 import { MermaidDiagram } from '../components/MermaidDiagram';
+import { remarkEmDashTableDelimiters } from './remarkEmDashTableDelimiters';
 import { remarkFlattenListParagraphs } from './remarkFlattenListParagraphs';
 
 // Register languages for light Prism build (order matters for dependencies)
@@ -589,7 +590,7 @@ export function MarkdownRenderer({
 
   const body = (
     <ReactMarkdown
-      remarkPlugins={[remarkGfm, remarkBreaks, remarkFlattenListParagraphs]}
+      remarkPlugins={[remarkGfm, remarkEmDashTableDelimiters, remarkBreaks, remarkFlattenListParagraphs]}
       rehypePlugins={[rehypeRaw, rehypeSanitize]}
       components={mergedComponents}
     >

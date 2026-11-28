@@ -17,8 +17,57 @@ struct MarkdownSourceBlocks {
 
     init(markdown: String, lines: [String], collectTables: Bool = true) {
         self.collectTables = collectTables
-        let document = Document(parsing: markdown, options: .disableSmartOpts)
+        let document = collectTables
+            ? Self.documentForTables(markdown: markdown, lines: lines)
+            : Document(parsing: markdown, options: .disableSmartOpts)
         collect(document, lines: lines, placement: MarkdownTablePlacement())
+    }
+
+    private static func documentForTables(markdown: String, lines: [String]) -> Document {
+        let candidates = lines.indices.dropFirst().filter { isEmDashDelimiterCandidate(lines[$0]) }
+        guard !candidates.isEmpty else { return Document(parsing: markdown, options: .disableSmartOpts) }
+
+        var presentationLines = lines
+        for line in candidates {
+            // U+2014 は UTF-8 で3バイト。元の行・列範囲を保つ。
+            presentationLines[line] = lines[line].replacingOccurrences(of: "—", with: "---")
+        }
+        let draft = Document(parsing: presentationLines.joined(separator: "\n"), options: .disableSmartOpts)
+        var delimiterLines = Set<Int>()
+        collectTableDelimiterLines(in: draft, into: &delimiterLines)
+
+        let rejected = candidates.filter { !delimiterLines.contains($0) }
+        if rejected.isEmpty { return draft }
+        if rejected.count == candidates.count {
+            return Document(parsing: markdown, options: .disableSmartOpts)
+        }
+        // コードや表のデータ行など、区切りと認識されなかった行は原文に戻す。
+        for line in rejected {
+            presentationLines[line] = lines[line]
+        }
+        return Document(parsing: presentationLines.joined(separator: "\n"), options: .disableSmartOpts)
+    }
+
+    private static func isEmDashDelimiterCandidate(_ line: String) -> Bool {
+        guard line.contains("—"), line.contains("|") else { return false }
+        // 引用の接頭辞は候補の判定から外し、表の妥当性は Markdown の構文木で確認する。
+        let payload = line.drop(while: { $0 == " " || $0 == "\t" || $0 == ">" })
+        var cells = payload.split(separator: "|", omittingEmptySubsequences: false)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+        if cells.first == "" { cells.removeFirst() }
+        if cells.last == "" { cells.removeLast() }
+        return cells.count >= 2 && cells.allSatisfy { !$0.isEmpty && $0.allSatisfy { $0 == "—" } }
+    }
+
+    private static func collectTableDelimiterLines(in node: Markup, into lines: inout Set<Int>) {
+        if let table = node as? Table, let header = table.range?.lowerBound.line {
+            // ヘッダーの1ベース行番号は、次行の区切りの0ベース番号と等しい。
+            lines.insert(header)
+        } else {
+            for child in node.children {
+                collectTableDelimiterLines(in: child, into: &lines)
+            }
+        }
     }
 
     private mutating func collect(_ node: Markup, lines: [String], placement: MarkdownTablePlacement) {

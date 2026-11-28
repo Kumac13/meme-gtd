@@ -205,6 +205,60 @@ final class MarkdownTableTests: XCTestCase {
     }
 
     @MainActor
+    func testStoredCommentWithEmDashDelimiterRendersAsTable() throws {
+        let storedComment = """
+        1 | 2  | 3
+        — | — | —
+        hoge | fuga | piyo
+        """
+        let expected = [["1", "2", "3"], ["hoge", "fuga", "piyo"]]
+        XCTAssertEqual(strings(try table(in: storedComment)), expected)
+        XCTAssertEqual(strings(try table(in: storedComment.replacingOccurrences(of: "—", with: "--"))), expected)
+    }
+
+    @MainActor
+    func testEmDashConversionIsLimitedToRecognizedTableDelimiters() {
+        let markdown = #"""
+        — 文章中のダッシュ —
+
+        Only | two
+        — | — | —
+        not a table
+
+        | A\|B | C |
+        | — | — |
+        | — | — |
+
+        | Alpha | Beta |
+        | --- | --- |
+        | — | — |
+
+        ```md
+        1 | 2  | 3
+        — | — | —
+        hoge | fuga | piyo
+        ```
+        """#
+        let blocks = parseBlocks(markdown)
+        let rendered = blocks.compactMap { block -> [[String]]? in
+            guard case .table(let table, _, _) = block else { return nil }
+            return strings(table)
+        }
+        XCTAssertEqual(rendered, [
+            [["A|B", "C"], ["—", "—"]],
+            [["Alpha", "Beta"], ["—", "—"]],
+        ])
+        XCTAssertTrue(blocks.contains { block in
+            guard case .text(let text) = block else { return false }
+            return text.contains("— 文章中のダッシュ —") && text.contains("Only | two\n— | — | —")
+        })
+        XCTAssertTrue(blocks.contains { block in
+            guard case .codeBlock(let language, let code) = block else { return false }
+            return language == "md" && code == "1 | 2  | 3\n— | — | —\nhoge | fuga | piyo"
+        })
+    }
+
+    @MainActor
     private func table(in markdown: String) throws -> MarkdownTable {
         let table = parseBlocks(markdown).compactMap { block -> MarkdownTable? in
             guard case .table(let table, _, _) = block else { return nil }
