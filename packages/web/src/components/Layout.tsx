@@ -1,4 +1,5 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
+import { FRAME_WIDTH } from "../utils/pageWidth";
 
 export default function Layout() {
   const location = useLocation();
@@ -18,8 +19,9 @@ export default function Layout() {
   return (
     <div className={isMemosRoute ? "min-h-screen bg-white sm:bg-gray-50" : "min-h-screen bg-gray-50"}>
       <header className={isMemosRoute ? "bg-white shadow border-b border-gray-200 sm:border-b-0" : "bg-white shadow"}>
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
+        {/* ヘッダーの枠は全ルートで Issue 系ページの外枠と同じ幅にし、左右の端を本文と揃える */}
+        <nav className="px-4 sm:px-6 lg:px-8">
+          <div className={`${FRAME_WIDTH} mx-auto flex justify-between h-16`}>
             <div className="flex min-w-0 w-full sm:w-auto">
               <div className="flex-shrink-0 flex items-center">
                 <h1 className="hidden sm:block text-xl font-bold text-gray-900">Mëmo</h1>

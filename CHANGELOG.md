@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.62.0 - 2026-11-28
+
+### New Features
+
+- Web の Issue 系ページ（Memo / Task / Article / Template の一覧・詳細・作成・編集）の横幅を、Links と同じく画面幅の8割まで広げた。
+  - ヘッダーも同じ枠に広げ、ロゴ・タブと本文の左右の端を揃えた。ヘッダーの枠は全ページで共通。
+  - 詳細の右サイドバーは幅を変えず（320px 固定）、広がった分は本文・Links・コメントの列に割り当てる。
+  - 画面幅の8割が従来の枠（1280px）を下回る場合は従来の枠のまま。スマートフォン幅の表示、右パネルで開く詳細、Project / Calendar / Activity の本文の幅は変えない。
+
+### Tests
+
+- 画面幅の8割へ広げる指定を `utils/pageWidth.ts` だけが持つことを `ComponentBoundaries.test.ts` で検査。
+
 ## 0.61.2 - 2026-11-28
 
 ### Bug Fixes
@@ -32,13 +45,6 @@
 ### New Features
 
 - Web・iOS の Task・Memo・Article 詳細で、本文とコメントの内部番号リンクに Links と同じタイトルを表示する。Memo への参照は本文の短いプレビューを表示し、タイトルが不明な参照は番号で表示する。
-- Web の Issue 系ページ（Memo / Task / Article / Template の一覧・詳細・作成・編集）の横幅を、Links と同じく画面幅の8割まで広げた。
-  - 詳細の右サイドバーは幅を変えず（320px 固定）、広がった分は本文・Links・コメントの列に割り当てる。
-  - 画面幅の8割が従来の幅を下回る場合は従来の幅のまま。スマートフォン幅の表示、右パネルで開く詳細、Project / Calendar / Activity の幅は変えない。
-
-### Tests
-
-- 画面幅の8割へ広げる指定を `utils/pageWidth.ts` だけが持つことを `ComponentBoundaries.test.ts` で検査。
 
 ## 0.59.0 - 2026-11-27
 
