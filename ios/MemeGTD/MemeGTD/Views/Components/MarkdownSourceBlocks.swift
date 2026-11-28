@@ -56,7 +56,7 @@ struct MarkdownSourceBlocks {
             .map { $0.trimmingCharacters(in: .whitespaces) }
         if cells.first == "" { cells.removeFirst() }
         if cells.last == "" { cells.removeLast() }
-        return cells.count >= 2 && cells.allSatisfy { !$0.isEmpty && $0.allSatisfy { $0 == "—" } }
+        return cells.count >= 2 && cells.allSatisfy { $0 == "—" || $0 == "—-" }
     }
 
     private static func collectTableDelimiterLines(in node: Markup, into lines: inout Set<Int>) {

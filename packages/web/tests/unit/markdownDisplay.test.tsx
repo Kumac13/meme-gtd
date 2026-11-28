@@ -59,15 +59,16 @@ describe('MarkdownRenderer list alignment', () => {
 
 describe('MarkdownRenderer GFM tables', () => {
   const originalComment = '1 | 2  | 3\n— | — | —\nhoge | fuga | piyo';
+  const updatedComment = '1 | 2  | 3\n—- | —- | —-\nhoge | fuga | piyo';
 
-  it('renders the original comment with an em dash delimiter and no outer pipes', () => {
-    render(<MarkdownRenderer content={originalComment} />);
+  it.each([originalComment, updatedComment])('renders the comment with an em dash delimiter and no outer pipes: %j', (comment) => {
+    render(<MarkdownRenderer content={comment} />);
 
     expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['1', '2', '3']);
     expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['hoge', 'fuga', 'piyo']);
   });
 
-  it('keeps em dashes in prose, incompatible column counts, and fenced source', () => {
+  it.each([originalComment, updatedComment])('keeps em dashes in prose, incompatible column counts, and fenced source: %j', (comment) => {
     const markdown = [
       'Before — after',
       '',
@@ -75,7 +76,7 @@ describe('MarkdownRenderer GFM tables', () => {
       '— | — | —',
       '',
       '```markdown',
-      originalComment,
+      comment,
       '```',
     ].join('\n');
     const { container } = render(<MarkdownRenderer content={markdown} />);
@@ -83,7 +84,7 @@ describe('MarkdownRenderer GFM tables', () => {
     expect(screen.queryByRole('table')).toBeNull();
     expect(screen.getByText('Before — after')).toBeInTheDocument();
     expect(screen.getByText('Left | Right — | — | —')).toBeInTheDocument();
-    expect(container.querySelector('pre')?.textContent).toContain(originalComment);
+    expect(container.querySelector('pre')?.textContent).toContain(comment);
   });
 
   it('keeps em dash data cells and resolves links defined outside the table', () => {

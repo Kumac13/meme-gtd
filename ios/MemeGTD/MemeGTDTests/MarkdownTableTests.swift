@@ -213,7 +213,9 @@ final class MarkdownTableTests: XCTestCase {
         """
         let expected = [["1", "2", "3"], ["hoge", "fuga", "piyo"]]
         XCTAssertEqual(strings(try table(in: storedComment)), expected)
+        XCTAssertEqual(strings(try table(in: storedComment.replacingOccurrences(of: "—", with: "—-"))), expected)
         XCTAssertEqual(strings(try table(in: storedComment.replacingOccurrences(of: "—", with: "--"))), expected)
+        XCTAssertEqual(strings(try table(in: "1 | 2 | 3 \n --- | --- | --- \n hoge | fuga | piyo")), expected)
     }
 
     @MainActor
@@ -231,7 +233,7 @@ final class MarkdownTableTests: XCTestCase {
 
         | Alpha | Beta |
         | --- | --- |
-        | — | — |
+        | —- | — |
 
         ```md
         1 | 2  | 3
@@ -246,7 +248,7 @@ final class MarkdownTableTests: XCTestCase {
         }
         XCTAssertEqual(rendered, [
             [["A|B", "C"], ["—", "—"]],
-            [["Alpha", "Beta"], ["—", "—"]],
+            [["Alpha", "Beta"], ["—-", "—"]],
         ])
         XCTAssertTrue(blocks.contains { block in
             guard case .text(let text) = block else { return false }

@@ -1,7 +1,7 @@
 import type { Root } from 'mdast';
 import type { Plugin } from 'unified';
 
-const emDashDelimiter = /^ *\|?[ \t]*—(?:[ \t]*\|[ \t]*—)+[ \t]*\|?[ \t]*$/;
+const emDashDelimiter = /^ *\|?[ \t]*—-?(?:[ \t]*\|[ \t]*—-?)+[ \t]*\|?[ \t]*$/;
 
 export const remarkEmDashTableDelimiters: Plugin<[], Root> = function () {
   return (tree, file) => {
@@ -21,7 +21,7 @@ export const remarkEmDashTableDelimiters: Plugin<[], Root> = function () {
       if (node.position.end.line <= node.position.start.line || !emDashDelimiter.test(delimiter)) continue;
 
       // Two hyphens work even when there is no leading pipe.
-      const normalized = delimiter.replace(/—/g, '--');
+      const normalized = delimiter.replace(/—-?/g, '--');
       const candidate = this.parse(`${lines[headerIndex]}\n${normalized}`) as Root;
       if (candidate.children[0]?.type !== 'table') continue;
 
