@@ -21,9 +21,6 @@ struct TaskListView: View {
     @State private var dateTo: Date?
     @StateObject private var creation = CreationPresentationCoordinator<CreateTaskModeKind>()
     @State private var showCopyDialog: Bool = false
-    /// 親子1段あたりの字下げ幅
-    private static let indentStep: CGFloat = 20
-
     private var hasActiveFilters: Bool {
         !viewModel.searchQuery.isEmpty ||
         !viewModel.labelFilters.isEmpty ||
@@ -36,18 +33,17 @@ struct TaskListView: View {
 
     var body: some View {
         StandardIssueList(
-            items: viewModel.arrangedRows(taskStore.tasks),
+            items: taskStore.tasks,
             hasMore: taskStore.hasMore,
-            onSelect: { row in
+            onSelect: { task in
                 navigationPath.append(
-                    TaskRoute(taskId: row.item.id, initialTitle: row.item.title)
+                    TaskRoute(taskId: task.id, initialTitle: task.title)
                 )
             },
             onLoadMore: {
                 await viewModel.loadOlderTasks()
             }
-        ) { row in
-            let task = row.item
+        ) { task in
             VStack(alignment: .leading, spacing: 0) {
                 TaskCell(
                     task: task,
@@ -56,8 +52,6 @@ struct TaskListView: View {
                     searchQuery: !viewModel.searchQuery.isEmpty ? viewModel.searchQuery : nil
                 )
             }
-            // 親の直下に出す Task は、段数ぶん字下げする
-            .padding(.leading, CGFloat(row.depth) * Self.indentStep)
         }
         .issueListRefreshable(scheduler: dataSources.syncScheduler) {
             if let response = await viewModel.fetchTasks() {
