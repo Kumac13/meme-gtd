@@ -9,6 +9,7 @@ import { ProjectScheduleSection } from '../components/ProjectScheduleSection';
 import { StatusSelector } from '../components/StatusSelector';
 import { createBackUrl } from '../utils/navigationHelpers';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { WIDE_PAGE_WIDTH } from '../utils/pageWidth';
 import CreateTaskFromProjectModal from '../components/CreateTaskFromProjectModal';
 
 const PROJECT_STATUS_OPTIONS = [
@@ -131,7 +132,7 @@ export default function ProjectDetail() {
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-2">
+    <div className={`${WIDE_PAGE_WIDTH} mx-auto py-2`}>
       {/* Header */}
       <div className="mb-4">
         <Link

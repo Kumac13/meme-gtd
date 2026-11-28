@@ -7,6 +7,7 @@ import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import EmptyState from '../components/EmptyState';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { WIDE_PAGE_WIDTH } from '../utils/pageWidth';
 
 interface Project {
   id: number;
@@ -90,7 +91,7 @@ export default function ProjectsList() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-2">
+    <div className={`${WIDE_PAGE_WIDTH} mx-auto py-2`}>
       <div className="flex items-center justify-end mb-3">
         <Link
           to="/projects/new"

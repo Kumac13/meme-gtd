@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.62.2 - 2026-11-28
+
+### Bug Fixes
+
+- Web の Projects 一覧・新規作成・詳細（Kanban / Lists）の横幅を、Tasks・Links と揃えた。
+
 ## 0.62.1 - 2026-11-28
 
 ### Bug Fixes
