@@ -152,6 +152,7 @@ export {
 export {
   createActivityLog,
   listActivityLog,
+  getById as getActivityLogById,
   getByIssueId as getActivityLogByIssueId,
   getByProjectId as getActivityLogByProjectId,
   getCompletedTasks,

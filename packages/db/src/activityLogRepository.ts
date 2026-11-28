@@ -63,6 +63,22 @@ export const createActivityLog = (
 };
 
 /**
+ * Get a single activity log entry by its ID
+ */
+export const getById = (
+  db: Database.Database,
+  id: number
+): ActivityLogEntry | null => {
+  const row = db.prepare(`
+    SELECT id, event_type, occurred_at, source_type, payload,
+           issue_id, project_id, label_id, link_id, comment_id
+    FROM activity_log
+    WHERE id = ?
+  `).get(id);
+  return row ? rowToActivityLogEntry(row) : null;
+};
+
+/**
  * List activity log entries with optional filters
  */
 export const listActivityLog = (

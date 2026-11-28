@@ -596,4 +596,58 @@ describe('Activity Log API', () => {
       }
     });
   });
+
+  describe('GET /api/activity-log/:id', () => {
+    it('should return the entry with the requested id', async () => {
+      const taskResponse = await app.inject({
+        method: 'POST',
+        url: '/api/tasks',
+        payload: { title: 'Single entry task', bodyMd: '' },
+      });
+      const task = JSON.parse(taskResponse.body);
+      const listResponse = await app.inject({
+        method: 'GET',
+        url: `/api/activity-log?issueId=${task.id}&eventType=task.created`,
+      });
+      const [listed] = JSON.parse(listResponse.body) as ActivityLogEntry[];
+      assert.ok(listed, 'task creation should be logged');
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/activity-log/${listed.id}`,
+      });
+
+      assert.strictEqual(response.statusCode, 200);
+      assert.deepStrictEqual(JSON.parse(response.body), listed);
+    });
+
+    it('should return 404 for an unknown id', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/activity-log/999999',
+      });
+
+      assert.strictEqual(response.statusCode, 404);
+      assert.strictEqual(JSON.parse(response.body).code, 'NOT_FOUND');
+    });
+
+    it('should return 400 for a non-numeric id', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/activity-log/abc',
+      });
+
+      assert.strictEqual(response.statusCode, 400);
+    });
+
+    it('should keep resolving the static sibling routes', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/activity-log/completed-tasks',
+      });
+
+      assert.strictEqual(response.statusCode, 200);
+      assert.ok(Array.isArray(JSON.parse(response.body)));
+    });
+  });
 });

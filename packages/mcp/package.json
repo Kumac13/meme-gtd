@@ -1,0 +1,29 @@
+{
+  "name": "meme-gtd-mcp",
+  "version": "0.63.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server exposing meme-gtd operations as tools over the REST API",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "pnpm run clean && tsc -p tsconfig.json",
+    "clean": "rimraf dist",
+    "lint": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "tsx --test test/*.test.ts",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "meme-gtd-api": "workspace:*",
+    "meme-gtd-config": "workspace:*",
+    "meme-gtd-db": "workspace:*",
+    "rimraf": "^5.0.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.5.4"
+  }
+}

@@ -4,7 +4,9 @@ import {
   getActivityLogByProjectId,
   getCompletedTasks,
   listActivityLog,
+  getActivityLogById,
 } from 'meme-gtd-db';
+import { NotFoundError } from '../errors/index.js';
 import type {
   IssueActivityLogQuerystring,
   ProjectActivityLogQuerystring,
@@ -103,4 +105,24 @@ export async function listActivityLogHandler(
   });
 
   return reply.status(200).send(logs);
+}
+
+/**
+ * Get a single activity log entry by its ID
+ * GET /api/activity-log/:id
+ */
+export async function getActivityLogEntryHandler(
+  request: FastifyRequest<{
+    Params: { id: number };
+  }>,
+  reply: FastifyReply
+) {
+  const { id } = request.params;
+
+  const entry = getActivityLogById(request.server.db, id);
+  if (!entry) {
+    throw new NotFoundError('Activity log entry', id);
+  }
+
+  return reply.status(200).send(entry);
 }

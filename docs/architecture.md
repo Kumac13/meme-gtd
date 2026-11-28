@@ -37,12 +37,12 @@ GTD (Getting Things Done) ベースのローカルファースト個人タスク
         (oclif, mgtd)                 (Fastify, REST API)
         ※HTTPを使わずcoreを直接呼ぶ      │ Zodスキーマ → openapi.yaml 自動生成
                                           │ Web UI (packages/web/dist) も配信
-              ┌───────────────┬───────────┼───────────────┐
-              ▼               ▼           ▼               ▼
-        packages/web    ios/MemeGTD   ios/MemeGTD/   packages/extension
-        (React SPA,     (SwiftUI       ShareExtension (Chrome拡張 +
-         OpenAPIから      アプリ)       (Safari共有)     iOS用JS抽出バンドル)
-         自動生成クライアント)
+              ┌───────────────┬───────────┼───────────────┬───────────────┐
+              ▼               ▼           ▼               ▼               ▼
+        packages/web    ios/MemeGTD   ios/MemeGTD/   packages/extension  packages/mcp
+        (React SPA,     (SwiftUI       ShareExtension (Chrome拡張 +      (MCPサーバー,
+         OpenAPIから      アプリ)       (Safari共有)     iOS用JS抽出バンドル) APIを呼ぶ
+         自動生成クライアント)                                              手書きツール定義)
 ```
 
 ### クライアントとバックエンドへの経路
@@ -53,6 +53,7 @@ GTD (Getting Things Done) ベースのローカルファースト個人タスク
 | Web UI | `packages/web` | REST API（OpenAPIから自動生成したクライアント） |
 | iOS アプリ + Share Extension | `ios/MemeGTD` | REST API（手書きSwiftモデル・要手動同期） |
 | Chrome 拡張 | `packages/extension` | REST API（`POST /api/articles`） |
+| MCP サーバー（ChatGPT / Codex / Claude などの AI クライアント向け） | `packages/mcp` | REST API（手書きのツール入出力スキーマ・要手動同期） |
 
 ## パッケージ一覧と責務
 
@@ -67,6 +68,7 @@ GTD (Getting Things Done) ベースのローカルファースト個人タスク
 | `packages/cli` | oclif製CLI `mgtd`。**APIサーバーを経由せず core のサービスを直接呼ぶ** | `src/commands/`, `src/index.ts` |
 | `packages/web` | React 19 SPA。APIクライアントは openapi.yaml から自動生成（`src/api/` は生成物） | `src/App.tsx`, `src/pages/`, `src/components/` |
 | `packages/extension` | Chrome拡張（記事保存）+ iOS ShareExtension用のJS抽出バンドルのソース | `src/background/`, `src/ios-extractor.ts` |
+| `packages/mcp` | MCPサーバー。REST APIの操作をAI向けツールとして公開する（stdio / 127.0.0.1 の Streamable HTTP）。core / db には依存しない | `src/server.ts`, `src/tools/`, `src/schemas.ts` |
 | `ios/MemeGTD` | SwiftUI iOSアプリ + Safari ShareExtension。**SwiftモデルはAPIスキーマの手書きミラー** | `MemeGTD/Models/`, `Shared/APIClient.swift` |
 | `schema/` | SQLマイグレーションファイル（連番、`packages/db` が実行） | `NNN_*.sql` |
 
@@ -80,7 +82,7 @@ GTD (Getting Things Done) ベースのローカルファースト個人タスク
 
 ## API契約の同期チェーン（最重要）
 
-API契約は次の4段階で伝播する。**上流を変えたら下流を全て更新するまで作業は完了していない。**
+API契約は次の段階で伝播する。**上流を変えたら下流を全て更新するまで作業は完了していない。**
 変更手順のチェックリストは api-schema-sync スキル（`.claude/skills/api-schema-sync/`）を使うこと。
 
 ```
@@ -94,6 +96,9 @@ API契約は次の4段階で伝播する。**上流を変えたら下流を全�
 
 [4] ios/MemeGTD/MemeGTD/Models/*.swift + ios/MemeGTD/Shared/ArticleModels.swift
      （手書き。自動生成されない。**手動で同期すること**）
+
+[5] packages/mcp/src/schemas.ts + packages/mcp/src/tools/*.ts
+     （手書き。MCPが公開している操作の入出力だけをミラーする。**手動で同期すること**）
 ```
 
 ### iOS Swiftモデル ↔ APIスキーマ対応表
@@ -196,7 +201,7 @@ Links は `ListPageLayout` と一覧用フィルタを共有し、起点選択�
 | Articles | `/api/articles`, `/api/articles/{id}`、`/{id}/bookmark`、`/{id}/unbookmark`、`/{articleId}/comments`、`/{articleId}/comments/{commentId}` |
 | Templates | `/api/templates`, `/api/templates/{id}`（作成時テンプレートのCRUD。適用はクライアント側プリフィル） |
 | Attachments | `/api/attachments`（multipart画像アップロード）, `/api/attachments/{filename}`（配信） |
-| Activity Log | `/api/activity-log`, `/issues/{issueId}`, `/projects/{projectId}`, `/completed-tasks` |
+| Activity Log | `/api/activity-log`, `/api/activity-log/{id}`（単件取得）, `/issues/{issueId}`, `/projects/{projectId}`, `/completed-tasks` |
 | Search | `/api/search/keyword`, `/api/search/export` |
 | Sync | `/api/sync/changes`（差分プル）, `/api/sync/push`（オフライン操作の適用） |
 
@@ -271,6 +276,7 @@ iOS Standalone では共通の `IssueRecord` を受け取る `LocalIssueConversi
 - **スケジュールフィールドは新形式を使う**: `scheduledStart`/`scheduledEnd`/`isAllDay`/`actualStart`/`actualEnd` が現行。`scheduledOn`/`startTime`/`endTime`/`endDate`/`duration` は非推奨（後方互換のため残存）。新規コードで旧形式を使わない。
 - **Zodスキーマとsharedの型は意図的に別物**: sharedはドメイン型（純粋なinterface）、apiのZodはHTTP契約（バリデーションルール・ページネーション等を含む）。統合しないこと。
 - **自動 `#id` メンション**: 本文・コメント保存時、`#123` は core サービス層（`rewriteIssueMentions`）が `[#123](/<type>/123)` に書き換え、同時に `relates` リンクを作成する。コードブロック・インラインコード・既存リンク内・`\#id`（エスケープ）・存在しないid・自己参照は変換対象外。一度作られたリンクは本文編集で `#id` が消えても残る（GitHubと同じ流儀）。
+- **MCPはAPIのクライアントで、公開範囲を絞る**: `packages/mcp` は core を直接呼ばず REST API を呼ぶ（検証と activity log をAPIと同じ経路に通すため）。AIに任せる操作は Task とそのコメントの作成・変更までとし、Memo / Article / Project / Label / Template は読み取りと関連付け（リンク・外部URL・Project所属・既存Labelの付与）に限る。種別変更（アーカイブ・メモ化・降格）、検索エクスポート、添付、同期は公開しない。APIは `/api/issues/{id}/...` で種別や所属を確認しないため、Task限定の書き込みはMCP側でTaskであることと所属を確認してからAPIを呼ぶ。認証を持たないのでHTTPは127.0.0.1だけで待ち受け、外部からは OpenAI の Secure MCP Tunnel など同じマシン上のクライアント経由で使う。
 - **インタラクティブMarkdownチェックボックス（Task限定）**: Taskの本文・コメント内の `- [ ]` / `- [x]` は表示画面のままトグルできる。書き換えはクライアント側完結（Web: `packages/web/src/utils/todoMarkdown.ts`、iOS: `ios/.../Utilities/TodoMarkdown.swift`）。トグル結果は既存の `PATCH /api/tasks/{id}` 等で全文置換保存される。**インタラクティブ操作は activity log を積まない** — core層の `isInteractiveTodoChange` が old/new bodyMd を比較してログ呼び出しを抑止する。Memo・Articleは対象外。
 
 ## テストと検証
@@ -281,6 +287,7 @@ iOS Standalone では共通の `IssueRecord` を受け取る `LocalIssueConversi
 | CLI E2E/ユニット | `packages/cli/test/` | `pnpm --filter meme-gtd-cli test` |
 | Webユニット（ユーティリティ中心） | `packages/web/tests/` | `pnpm --filter meme-gtd-web test` |
 | iOS ユニットテスト（DB・同期層） | `ios/MemeGTD/MemeGTDTests/` | `xcodebuild test -project MemeGTD.xcodeproj -scheme MemeGTD -destination 'platform=iOS Simulator,name=iPhone 17'`（作業ディレクトリ `ios/MemeGTD/`） |
+| MCP結合テスト（実APIを一時DBで起動） | `packages/mcp/test/` | `pnpm --filter meme-gtd-mcp test` |
 | iOS UI | テストなし | `xcodebuild` でのビルド成功確認 + Simulator/実機での手動確認 |
 
 Push前の必須チェックはルート `CLAUDE.md` を参照。
@@ -291,7 +298,7 @@ Push前の必須チェックはルート `CLAUDE.md` を参照。
 | 変更内容 | 必須の追随作業（コード） | 手順 |
 |---|---|---|
 | DBスキーマ変更 | `schema/NNN_*.sql` 連番追加 → `packages/db` リポジトリ → `packages/shared` 型 → core → API契約チェーン | db-migration スキル |
-| APIエンドポイント追加・変更 | 同期チェーン4段階すべて + テスト | api-schema-sync スキル |
+| APIエンドポイント追加・変更 | 同期チェーンの全段階 + テスト | api-schema-sync スキル |
 | CLIコマンド追加 | `MULTIWORD_COMMANDS` 登録 + テスト + 補完 | `packages/cli/CLAUDE.md` のチェックリスト |
 | 記事抽出ロジック変更（`packages/extension/src/`） | iOS用 `extractor.bundle.js` 再ビルド | `packages/extension/CLAUDE.md` |
 | 新機能・修正の完了時 | バージョンバンプ | release スキル |

@@ -8,6 +8,7 @@ import { applyMigrations, openDatabase } from '../src/index';
 import {
   createActivityLog,
   listActivityLog,
+  getById,
   getByIssueId,
   getByProjectId,
   getCompletedTasks,
@@ -427,6 +428,27 @@ test('Date range filter', () => {
   });
 
   assert.equal(januaryOnly.length, 2);
+
+  db.close();
+  fs.removeSync(dir);
+});
+
+test('getById returns the entry or null', () => {
+  const { dir, db } = createTempDb();
+
+  createActivityLog(db, {
+    eventType: 'task.created',
+    sourceType: 'cli',
+    payload: { issue_id: 1, title: 'First', status: 'inbox' },
+  });
+  const second = createActivityLog(db, {
+    eventType: 'task.status_changed',
+    sourceType: 'api',
+    payload: { issue_id: 1, from_status: 'inbox', to_status: 'next' },
+  });
+
+  assert.deepEqual(getById(db, second.id), second);
+  assert.equal(getById(db, 9999), null);
 
   db.close();
   fs.removeSync(dir);
