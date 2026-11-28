@@ -12,7 +12,7 @@ struct FloatingComposer: View {
     var onExpand: (() -> Void)? = nil
     let onSubmit: () -> Void
 
-    @FocusState private var isFocused: Bool
+    @State private var isFocused = false
     @State private var expanded: Bool = false
 
     private var canSubmit: Bool {
@@ -53,23 +53,23 @@ struct FloatingComposer: View {
             }
 
             // Text input area - always in hierarchy to preserve focus identity
-            TextField(placeholder, text: $text, axis: .vertical)
-                .lineLimit(2...8)
-                .textFieldStyle(.plain)
-                .font(.system(size: 14))
-                .tint(Color.accent)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
+            MarkdownComposerInput(text: $text, isFocused: $isFocused, placeholder: placeholder)
+                .overlay(alignment: .topLeading) {
+                    if text.isEmpty {
+                        Text(placeholder)
+                            .font(.system(size: 14))
+                            .foregroundColor(Color(.placeholderText))
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
                 .padding(.horizontal, isExpanded ? 16 : 0)
                 .padding(.top, isExpanded ? (notice != nil ? 10 : 14) : 0)
                 .padding(.bottom, isExpanded ? 8 : 0)
                 .frame(maxHeight: isExpanded ? nil : 0, alignment: .top)
                 .clipped()
-                .focused($isFocused)
+                .accessibilityHidden(!isExpanded)
                 .disabled(disabled || submitting)
-                .onSubmit {
-                    if canSubmit { onSubmit() }
-                }
 
             // Bottom toolbar row
             HStack(spacing: 12) {

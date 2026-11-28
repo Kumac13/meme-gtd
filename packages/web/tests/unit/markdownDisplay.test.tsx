@@ -57,6 +57,113 @@ describe('MarkdownRenderer list alignment', () => {
   });
 });
 
+describe('MarkdownRenderer GFM tables', () => {
+  const originalComment = '1 | 2  | 3\n— | — | —\nhoge | fuga | piyo';
+  const updatedComment = '1 | 2  | 3\n—- | —- | —-\nhoge | fuga | piyo';
+
+  it.each([originalComment, updatedComment])('renders the comment with an em dash delimiter and no outer pipes: %j', (comment) => {
+    render(<MarkdownRenderer content={comment} />);
+
+    expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['1', '2', '3']);
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['hoge', 'fuga', 'piyo']);
+  });
+
+  it.each([originalComment, updatedComment])('keeps em dashes in prose, incompatible column counts, and fenced source: %j', (comment) => {
+    const markdown = [
+      'Before — after',
+      '',
+      'Left | Right',
+      '— | — | —',
+      '',
+      '```markdown',
+      comment,
+      '```',
+    ].join('\n');
+    const { container } = render(<MarkdownRenderer content={markdown} />);
+
+    expect(screen.queryByRole('table')).toBeNull();
+    expect(screen.getByText('Before — after')).toBeInTheDocument();
+    expect(screen.getByText('Left | Right — | — | —')).toBeInTheDocument();
+    expect(container.querySelector('pre')?.textContent).toContain(comment);
+  });
+
+  it('keeps em dash data cells and resolves links defined outside the table', () => {
+    render(<MarkdownRenderer content={'First | Second\n| — | — |\n— | —\n[Docs][docs] | Link\n\n[docs]: https://example.com'} />);
+
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['—', '—', 'Docs', 'Link']);
+    expect(screen.getByRole('link', { name: 'Docs' })).toHaveAttribute('href', 'https://example.com');
+  });
+
+  it('renders matching header and body columns with empty cells, safe alignment, and inline markup', () => {
+    const lines = [
+      '| Left | Center | Right |',
+      '| :--- | :---: | ---: |',
+      '| **bold** | A\\|B | `x\\|y` |',
+      '| *italic* ||',
+      '| | | |',
+    ];
+    const { container } = render(<MarkdownRenderer content={lines.join('\n')} />);
+
+    const table = screen.getByRole('table');
+    const headers = screen.getAllByRole('columnheader');
+    expect(headers.map((cell) => cell.textContent)).toEqual(['Left', 'Center', 'Right']);
+    expect(headers.map((cell) => cell.style.textAlign)).toEqual(['left', 'center', 'right']);
+    expect(table.parentElement).toHaveClass('overflow-x-auto', 'max-w-full');
+
+    const rows = [...table.querySelectorAll('tbody tr')];
+    expect(rows.map((row) => [...row.cells].map((cell) => cell.textContent))).toEqual([
+      ['bold', 'A|B', 'x|y'],
+      ['italic', '', ''],
+      ['', '', ''],
+    ]);
+    expect([...rows[0].cells].map((cell) => cell.style.textAlign)).toEqual(['left', 'center', 'right']);
+    expect(container.querySelector('td strong')).toHaveTextContent('bold');
+    expect(container.querySelector('td em')).toHaveTextContent('italic');
+    expect(container.querySelector('td code')).toHaveTextContent('x|y');
+  });
+
+  it('keeps the existing issue and external link behavior inside and outside tables', () => {
+    const onIssueLinkClick = vi.fn();
+    const lines = [
+      '[Outside task](/tasks/12) [Outside web](https://example.com/outside)',
+      '',
+      '| Link | Web |',
+      '| --- | --- |',
+      '| [Inside memo](/memos/34) | [Inside web](https://example.com/inside) |',
+    ];
+    render(<MarkdownRenderer content={lines.join('\n')} onIssueLinkClick={onIssueLinkClick} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Outside task' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inside memo' }));
+    expect(onIssueLinkClick.mock.calls).toEqual([[12, 'task'], [34, 'memo']]);
+    for (const path of ['Outside', 'Inside']) {
+      const link = screen.getByRole('link', { name: path + ' web' });
+      expect(link).toHaveAttribute('href', 'https://example.com/' + path.toLowerCase());
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    }
+  });
+
+  it('sanitizes HTML and URL attributes in cells with the shared pipeline', () => {
+    const lines = [
+      '| Markup | Destination |',
+      '| --- | --- |',
+      '| <strong style="color:red" onclick="example()">safe markup</strong> | [Local file](file:///example) |',
+      '',
+      '<table><tbody><tr><td align="invalid" style="color:red">HTML cell</td></tr></tbody></table>',
+    ];
+    const { container } = render(<MarkdownRenderer content={lines.join('\n')} />);
+
+    const strong = screen.getByText('safe markup');
+    expect(strong.tagName).toBe('STRONG');
+    expect(strong).not.toHaveAttribute('onclick');
+    expect(strong).not.toHaveAttribute('style');
+    expect(container.querySelector('td a')).not.toHaveAttribute('href');
+    expect(screen.getByText('HTML cell').style.textAlign).toBe('left');
+    expect(screen.getByText('HTML cell').style.color).toBe('');
+  });
+});
+
 describe('InlineMarkdownRenderer blockquote', () => {
   it('renders blockquotes without italic styling', () => {
     const { container } = render(<InlineMarkdownRenderer content={'> quoted text'} />);

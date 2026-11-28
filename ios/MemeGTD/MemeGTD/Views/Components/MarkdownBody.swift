@@ -4,7 +4,7 @@ import UIKit
 import WebKit
 
 /// A view that renders markdown text with support for headings, code blocks,
-/// blockquotes, lists, inline code, bold, italic, and links.
+/// blockquotes, lists, tables, inline code, bold, italic, and links.
 struct MarkdownBody: View {
     let text: String
     let fontSize: CGFloat
@@ -70,6 +70,8 @@ struct MarkdownBody: View {
             todoItemView(checked: checked, content: content, indent: indent, todoIndex: todoIndex)
         case .image(let alt, let url):
             imageView(alt: alt, url: url)
+        case .table(let table, let placement, let todo):
+            tableView(table, placement: placement, todo: todo)
         case .text(let content):
             if !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 inlineMarkdownText(content)
@@ -156,17 +158,38 @@ struct MarkdownBody: View {
         return path
     }
 
+    // MARK: - Table containers
+
+    @ViewBuilder
+    private func tableView(
+        _ table: MarkdownTable, placement: MarkdownTablePlacement, todo: TodoMarkdown.TodoItem?
+    ) -> some View {
+        let tableView = MarkdownTableView(table: table, fontSize: fontSize, color: color, searchQuery: searchQuery)
+        if placement.listDepth == 0 && placement.quoteDepth == 0 {
+            tableView
+        } else {
+            HStack(alignment: .top, spacing: 6) {
+                if let todo, let onTodoToggle {
+                    todoButton(checked: todo.checked, index: todo.todoIndex, onToggle: onTodoToggle)
+                        .padding(.top, 4)
+                } else if let marker = placement.listMarker {
+                    Text(todo.map { "\(marker) [\($0.checked ? "x" : " ")]" } ?? marker)
+                        .font(.system(size: fontSize))
+                        .foregroundColor(color)
+                        .padding(.top, 4)
+                }
+                tableView
+            }
+            .padding(.leading, CGFloat(placement.listDepth - (placement.listMarker == nil ? 0 : 1)) * 16)
+            .modifier(MarkdownQuoteIndent(depth: placement.quoteDepth))
+        }
+    }
+
     // MARK: - Blockquote
 
     private func blockquoteView(content: String) -> some View {
         inlineMarkdownText(content)
-        .padding(.leading, 10)
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 1.5)
-                .fill(Color(.systemGray3))
-                .frame(width: 3)
-        }
-        .padding(.vertical, 2)
+            .modifier(MarkdownQuoteIndent(depth: 1))
     }
 
     // MARK: - List item
@@ -187,15 +210,7 @@ struct MarkdownBody: View {
     private func todoItemView(checked: Bool, content: String, indent: Int, todoIndex: Int) -> some View {
         if let onToggle = onTodoToggle {
             HStack(alignment: .top, spacing: 6) {
-                Button {
-                    HapticManager.impact(.light)
-                    onToggle(todoIndex, !checked)
-                } label: {
-                    Image(systemName: checked ? "checkmark.square.fill" : "square")
-                        .font(.system(size: fontSize + 1))
-                        .foregroundColor(checked ? .accent : .textSecondary)
-                }
-                .buttonStyle(.plain)
+                todoButton(checked: checked, index: todoIndex, onToggle: onToggle)
                 inlineMarkdownText(content)
             }
             .padding(.leading, CGFloat(indent) * 16)
@@ -211,6 +226,18 @@ struct MarkdownBody: View {
         }
     }
 
+    private func todoButton(checked: Bool, index: Int, onToggle: @escaping (Int, Bool) -> Void) -> some View {
+        Button {
+            HapticManager.impact(.light)
+            onToggle(index, !checked)
+        } label: {
+            Image(systemName: checked ? "checkmark.square.fill" : "square")
+                .font(.system(size: fontSize + 1))
+                .foregroundColor(checked ? .accent : .textSecondary)
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Inline markdown text (with accent-colored links)
 
     private func inlineMarkdownText(
@@ -219,58 +246,97 @@ struct MarkdownBody: View {
         color: UIColor? = nil,
         lineSpacing: CGFloat = 4
     ) -> some View {
-        let baseFont = font ?? .systemFont(ofSize: fontSize)
-        let baseColor = color ?? UIColor(self.color)
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.lineSpacing = lineSpacing
         let parsed = renderInlineMarkdown(content, issueReferenceTitles: issueReferenceTitles)
-        let rendered = NSMutableAttributedString()
-        for run in parsed.runs {
-            let intent = run.inlinePresentationIntent ?? []
-            let runFont = intent.contains(.code)
-                ? UIFont.monospacedSystemFont(ofSize: baseFont.pointSize, weight: .regular)
-                : baseFont
-            var traits = runFont.fontDescriptor.symbolicTraits
-            if intent.contains(.stronglyEmphasized) { traits.insert(.traitBold) }
-            if intent.contains(.emphasized) { traits.insert(.traitItalic) }
-            let descriptor = runFont.fontDescriptor.withSymbolicTraits(traits) ?? runFont.fontDescriptor
-            var attributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont(descriptor: descriptor, size: runFont.pointSize),
-                .foregroundColor: baseColor,
-                .paragraphStyle: paragraph,
-            ]
-            if intent.contains(.strikethrough) {
-                attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
-            }
-            if let url = run.link {
-                attributes[.link] = selectableLinkURL(url)
-            }
-            rendered.append(NSAttributedString(string: String(parsed[run.range].characters), attributes: attributes))
-        }
+        return SelectableText(content: renderedMarkdownText(
+            parsed,
+            font: font ?? .systemFont(ofSize: fontSize),
+            color: color ?? UIColor(self.color),
+            lineSpacing: lineSpacing,
+            searchQuery: searchQuery
+        ))
+    }
+}
 
-        if let query = searchQuery, !query.isEmpty {
-            let plainText = rendered.string
-            var searchStart = plainText.startIndex
-            while let range = plainText.range(of: query, options: .caseInsensitive, range: searchStart..<plainText.endIndex) {
-                rendered.addAttributes([
-                    .foregroundColor: UIColor(Color.accentDarker),
-                    .font: UIFont.systemFont(ofSize: baseFont.pointSize, weight: .semibold),
-                ], range: NSRange(range, in: plainText))
-                searchStart = range.upperBound
-            }
+private struct MarkdownQuoteIndent: ViewModifier {
+    let depth: Int
+
+    func body(content: Content) -> some View {
+        if depth == 0 {
+            content
+        } else {
+            content
+                .padding(.leading, CGFloat(depth) * 10)
+                .overlay(alignment: .leading) {
+                    HStack(spacing: 7) {
+                        ForEach(0..<depth, id: \.self) { _ in
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .fill(Color(.systemGray3))
+                                .frame(width: 3)
+                        }
+                    }
+                }
+                .padding(.vertical, 2)
         }
-        return SelectableText(content: rendered)
+    }
+}
+
+func renderedMarkdownText(
+    _ parsed: AttributedString,
+    font baseFont: UIFont,
+    color baseColor: UIColor,
+    lineSpacing: CGFloat = 4,
+    alignment: NSTextAlignment = .natural,
+    searchQuery: String?
+) -> NSAttributedString {
+    let paragraph = NSMutableParagraphStyle()
+    paragraph.lineSpacing = lineSpacing
+    paragraph.alignment = alignment
+    let rendered = NSMutableAttributedString()
+    for run in parsed.runs {
+        let intent = run.inlinePresentationIntent ?? []
+        let runFont = intent.contains(.code)
+            ? UIFont.monospacedSystemFont(ofSize: baseFont.pointSize, weight: .regular)
+            : baseFont
+        var traits = runFont.fontDescriptor.symbolicTraits
+        if intent.contains(.stronglyEmphasized) { traits.insert(.traitBold) }
+        if intent.contains(.emphasized) { traits.insert(.traitItalic) }
+        let descriptor = runFont.fontDescriptor.withSymbolicTraits(traits) ?? runFont.fontDescriptor
+        var attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont(descriptor: descriptor, size: runFont.pointSize),
+            .foregroundColor: baseColor,
+            .paragraphStyle: paragraph,
+        ]
+        if intent.contains(.strikethrough) {
+            attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
+        }
+        if let url = run.link {
+            attributes[.link] = selectableLinkURL(url)
+        }
+        rendered.append(NSAttributedString(string: String(parsed[run.range].characters), attributes: attributes))
     }
 
-    private func selectableLinkURL(_ url: URL) -> URL {
-        // 相対リンクも既存のアプリ内ルーティングに渡す。
-        guard url.scheme == nil, !url.path.isEmpty else { return url }
-        var components = URLComponents()
-        components.scheme = "memegtd-internal"
-        components.host = "internal"
-        components.path = url.path.hasPrefix("/") ? url.path : "/\(url.path)"
-        return components.url ?? url
+    if let query = searchQuery, !query.isEmpty {
+        let plainText = rendered.string
+        var searchStart = plainText.startIndex
+        while let range = plainText.range(of: query, options: .caseInsensitive, range: searchStart..<plainText.endIndex) {
+            rendered.addAttributes([
+                .foregroundColor: UIColor(Color.accentDarker),
+                .font: UIFont.systemFont(ofSize: baseFont.pointSize, weight: .semibold),
+            ], range: NSRange(range, in: plainText))
+            searchStart = range.upperBound
+        }
     }
+    return rendered
+}
+
+func selectableLinkURL(_ url: URL) -> URL {
+    // 相対リンクも既存のアプリ内ルーティングに渡す。
+    guard url.scheme == nil, !url.path.isEmpty else { return url }
+    var components = URLComponents()
+    components.scheme = "memegtd-internal"
+    components.host = "internal"
+    components.path = url.path.hasPrefix("/") ? url.path : "/\(url.path)"
+    return components.url ?? url
 }
 
 func renderInlineMarkdown(
@@ -315,7 +381,7 @@ func renderInlineMarkdown(
 
 // MARK: - Internal issue URL parser
 
-private func parseInternalIssueURL(_ url: URL) -> (id: Int, type: String)? {
+func parseInternalIssueURL(_ url: URL) -> (id: Int, type: String)? {
     // Accept three forms:
     //   1. relative path-only (`/tasks/63`) from raw AttributedString
     //   2. our promoted custom scheme (`memegtd-internal://internal/tasks/63`)
@@ -352,8 +418,9 @@ private func parseInternalIssueURL(_ url: URL) -> (id: Int, type: String)? {
 
 // MARK: - Markdown parser
 
-private enum MarkdownBlock {
+enum MarkdownBlock {
     case text(String)
+    case table(MarkdownTable, placement: MarkdownTablePlacement, todo: TodoMarkdown.TodoItem?)
     case heading(level: Int, content: String)
     case codeBlock(language: String, code: String)
     case mermaidBlock(code: String)
@@ -363,15 +430,18 @@ private enum MarkdownBlock {
     case image(alt: String, url: String)
 }
 
-private func parseBlocks(_ markdown: String) -> [MarkdownBlock] {
+func parseBlocks(_ source: String) -> [MarkdownBlock] {
     var blocks: [MarkdownBlock] = []
+    let markdown = source.replacingOccurrences(of: "\r\n", with: "\n")
+        .replacingOccurrences(of: "\r", with: "\n")
     let lines = markdown.components(separatedBy: "\n")
+    let sourceBlocks = MarkdownSourceBlocks(markdown: markdown, lines: lines)
+    let todos = Dictionary(uniqueKeysWithValues: TodoMarkdown
+        .enumerateTodos(lines: lines, excluding: sourceBlocks.fencedLines)
+        .map { ($0.lineIndex, $0) })
+    var lastParsedLine = -1
     var currentText = ""
-    var inCodeBlock = false
-    var codeLanguage = ""
-    var codeContent = ""
     var quoteLines: [String] = []
-    var todoCounter = 0
 
     func flushText() {
         if !currentText.isEmpty {
@@ -387,33 +457,25 @@ private func parseBlocks(_ markdown: String) -> [MarkdownBlock] {
         }
     }
 
-    for line in lines {
-        // Code block fence
-        if !inCodeBlock && line.hasPrefix("```") {
+    for (lineIndex, line) in lines.enumerated() {
+        if lineIndex <= lastParsedLine { continue }
+        if let table = sourceBlocks.tables[lineIndex] {
             flushText()
             flushQuote()
-            inCodeBlock = true
-            codeLanguage = String(line.dropFirst(3)).trimmingCharacters(in: .whitespaces)
-            codeContent = ""
+            blocks.append(.table(table.table, placement: table.placement, todo: todos[lineIndex]))
+            lastParsedLine = table.lastLine
             continue
         }
-        if inCodeBlock && line.hasPrefix("```") {
-            if codeContent.hasSuffix("\n") {
-                codeContent = String(codeContent.dropLast())
-            }
-            if codeLanguage.lowercased() == "mermaid" {
-                blocks.append(.mermaidBlock(code: codeContent))
+
+        if let code = sourceBlocks.codeBlocks[lineIndex] {
+            flushText()
+            flushQuote()
+            if code.language.lowercased() == "mermaid" {
+                blocks.append(.mermaidBlock(code: code.code))
             } else {
-                blocks.append(.codeBlock(language: codeLanguage, code: codeContent))
+                blocks.append(.codeBlock(language: code.language, code: code.code))
             }
-            inCodeBlock = false
-            codeLanguage = ""
-            codeContent = ""
-            continue
-        }
-        if inCodeBlock {
-            if !codeContent.isEmpty { codeContent += "\n" }
-            codeContent += line
+            lastParsedLine = code.lastLine
             continue
         }
 
@@ -450,27 +512,12 @@ private func parseBlocks(_ markdown: String) -> [MarkdownBlock] {
         }
 
         // Todo item (- [ ] / - [x]) — must be checked BEFORE plain list item
-        if let match = line.range(of: #"^(\s*)[*\-+]\s+\[[ xX]\]\s+(.+)$"#, options: .regularExpression) {
+        if let todo = todos[lineIndex], !todo.content.isEmpty {
             flushText()
             flushQuote()
-            let fullMatch = String(line[match])
-            let leadingSpaces = fullMatch.prefix(while: { $0 == " " || $0 == "\t" }).count
-            let indent = leadingSpaces / 2
-            // Find the bracket char to determine checked state
-            let trimmed = fullMatch.drop(while: { $0 == " " || $0 == "\t" })
-            // trimmed starts with `- [ ] ` or `- [x] ` etc. Skip marker + space, peek bracket char.
-            // Marker is 1 char (- * +). Space follows. Then `[`, then bracket char, then `]`, then space.
-            let afterMarker = trimmed.dropFirst() // drop -, *, or +
-            let afterMarkerSpace = afterMarker.drop(while: { $0 == " " || $0 == "\t" })
-            // afterMarkerSpace now starts with `[X] content` or `[ ] content`
-            guard afterMarkerSpace.count >= 4 else { continue }
-            let bracketChar = afterMarkerSpace[afterMarkerSpace.index(afterMarkerSpace.startIndex, offsetBy: 1)]
-            let checked = bracketChar == "x" || bracketChar == "X"
-            // Content starts after `[X] ` — that's 4 characters after the bracket starts
-            let contentStart = afterMarkerSpace.index(afterMarkerSpace.startIndex, offsetBy: 3)
-            let contentTrimmed = afterMarkerSpace[contentStart...].drop(while: { $0 == " " || $0 == "\t" })
-            blocks.append(.todoItem(checked: checked, content: String(contentTrimmed), indent: indent, todoIndex: todoCounter))
-            todoCounter += 1
+            blocks.append(.todoItem(
+                checked: todo.checked, content: todo.content, indent: todo.indent / 2, todoIndex: todo.todoIndex
+            ))
             continue
         }
 
@@ -499,15 +546,6 @@ private func parseBlocks(_ markdown: String) -> [MarkdownBlock] {
         flushQuote()
         if !currentText.isEmpty { currentText += "\n" }
         currentText += line
-    }
-
-    // Handle unclosed code block
-    if inCodeBlock && !codeContent.isEmpty {
-        if codeLanguage.lowercased() == "mermaid" {
-            blocks.append(.mermaidBlock(code: codeContent))
-        } else {
-            blocks.append(.codeBlock(language: codeLanguage, code: codeContent))
-        }
     }
 
     flushQuote()
