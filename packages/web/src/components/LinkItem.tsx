@@ -11,6 +11,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { LinkDisplayItem } from '../types/links';
 import type { IssueType } from 'meme-gtd-shared';
 import { getLinkIcon, getLinkLabel, getDirectionArrow } from '../utils/linkIcons';
+import { issueLinkDisplayTitle, isMissingIssueLinkTarget } from '../utils/issueReferenceTitles';
 import { ActionMenu, InlineDeleteConfirmation } from './ActionMenu';
 
 // Status badge colors (same as ItemList)
@@ -41,17 +42,14 @@ interface LinkItemProps {
 export default function LinkItem({ link, onDelete, isDeleting = false, onItemClick, onBeforeNavigate }: LinkItemProps) {
   const navigate = useNavigate();
   const [showConfirm, setShowConfirm] = useState(false);
-  const isDeleted = link.targetIssue.title.includes('(deleted)');
+  const isMissing = isMissingIssueLinkTarget(link.targetIssue);
   const targetPath = link.targetIssue.type === 'memo'
     ? `/memos/${link.targetIssue.id}`
     : link.targetIssue.type === 'article'
     ? `/articles/${link.targetIssue.id}`
     : `/tasks/${link.targetIssue.id}`;
 
-  // Truncate title if too long
-  const displayTitle = link.targetIssue.title.length > 100
-    ? `${link.targetIssue.title.substring(0, 100)}...`
-    : link.targetIssue.title;
+  const displayTitle = issueLinkDisplayTitle(link.targetIssue.title);
 
   const handleDeleteClick = () => {
     setShowConfirm(true);
@@ -71,17 +69,17 @@ export default function LinkItem({ link, onDelete, isDeleting = false, onItemCli
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {/* Icon and direction */}
-          <span className={`flex-shrink-0 ${isDeleted ? 'text-gray-400' : 'text-gray-600'}`}>
+          <span className={`flex-shrink-0 ${isMissing ? 'text-gray-400' : 'text-gray-600'}`}>
             {getLinkIcon(link.linkType, link.direction)}
           </span>
 
           {/* Link label and arrow */}
-          <span className={`text-xs flex-shrink-0 ${isDeleted ? 'text-gray-400' : 'text-gray-500'}`}>
+          <span className={`text-xs flex-shrink-0 ${isMissing ? 'text-gray-400' : 'text-gray-500'}`}>
             {getLinkLabel(link.linkType, link.direction)} {getDirectionArrow(link.direction)}
           </span>
 
           {/* Target issue link */}
-          {isDeleted ? (
+          {isMissing ? (
             <span className="text-sm text-gray-400 truncate" title={link.targetIssue.title}>
               {displayTitle}
             </span>

@@ -1,3 +1,4 @@
+import type { IssueReferenceTitles } from '../utils/issueReferenceTitles';
 import { useCallback, useState, useRef } from 'react';
 import type { IssueType } from 'meme-gtd-shared';
 import { formatRelativeTime } from '../utils/dates';
@@ -23,6 +24,7 @@ interface EditableContentProps {
    * articles whose body is an archived snapshot (issues.origin='web').
    */
   readOnly?: boolean;
+  issueReferenceTitles?: IssueReferenceTitles;
   /**
    * Click handler for internal issue links inside the rendered body
    * (used by ItemDetail to mirror LinkSection's modal-open behavior).
@@ -41,6 +43,7 @@ export default function EditableContent({
   enableInteractiveTodos = false,
   readOnly = false,
   onIssueLinkClick,
+  issueReferenceTitles,
 }: EditableContentProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editingContent, setEditingContent] = useState(content);
@@ -112,7 +115,7 @@ export default function EditableContent({
   });
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg py-1 px-4">
+    <div className="min-w-0 bg-white border border-gray-200 rounded-lg py-1 px-4">
       <div className="flex items-center justify-between py-1 border-b border-gray-200">
         <div className="text-xs text-gray-500">
           <span title={updatedAt}>{formatRelativeTime(updatedAt)}</span>
@@ -188,6 +191,7 @@ export default function EditableContent({
                 : undefined
             }
             onIssueLinkClick={onIssueLinkClick}
+            issueReferenceTitles={issueReferenceTitles}
           />
         </div>
       )}

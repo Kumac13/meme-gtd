@@ -48,6 +48,7 @@ struct IssueContentCard: View {
     var onEdit: (() -> Void)?
     var onDelete: (() -> Void)?
     var onIssueTap: ((Int, String) -> Void)?
+    var issueReferenceTitles = IssueReferenceTitles()
     var onTodoToggle: ((Int, Bool) -> Void)?
 
     var body: some View {
@@ -87,6 +88,7 @@ struct IssueContentCard: View {
                         labels: nil,
                         showMenu: false,
                         onIssueTap: onIssueTap,
+                        issueReferenceTitles: issueReferenceTitles,
                         onTodoToggle: onTodoToggle
                     )
                 }
@@ -103,6 +105,7 @@ struct IssueTimeline: View {
     let onEditComment: (Comment) -> Void
     let onDeleteComment: (Comment) -> Void
     var onIssueTap: ((Int, String) -> Void)?
+    var issueReferenceTitles = IssueReferenceTitles()
     var onTodoToggle: ((Comment, Int, Bool) -> Void)?
 
     var body: some View {
@@ -121,6 +124,7 @@ struct IssueTimeline: View {
                     onEdit: { onEditComment(comment) },
                     onDelete: { onDeleteComment(comment) },
                     onIssueTap: onIssueTap,
+                    issueReferenceTitles: issueReferenceTitles,
                     onTodoToggle: onTodoToggle.map { toggle in
                         { index, checked in toggle(comment, index, checked) }
                     }

@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 struct MemoDetailView: View {
@@ -39,6 +40,7 @@ struct MemoDetailView: View {
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                     if let memo = viewModel.memo {
+                        let issueReferenceTitles = viewModel.issueReferenceTitles
                         let allItems = buildTimelineItems(memo: memo, comments: viewModel.comments)
 
                         ForEach(Array(allItems.enumerated()), id: \.element.id) { index, item in
@@ -91,7 +93,8 @@ struct MemoDetailView: View {
                                     },
                                     onIssueTap: { id, type in
                                         onNavigateToLinkedIssue?(id, type, "")
-                                    }
+                                    },
+                                    issueReferenceTitles: issueReferenceTitles
                                 )
                             }
                         }
@@ -289,8 +292,15 @@ struct MemoDetailView: View {
             )
         }
         .observeThread(id: memoId) { snapshot in
+            let previousDelivery = delivery
             delivery = snapshot
             viewModel.comments = snapshot.comments
+            Task {
+                await viewModel.refreshIssueLinksAfterCommentDelivery(from: previousDelivery, to: snapshot)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .syncEngineDidChangeData).receive(on: DispatchQueue.main)) { _ in
+            Task { await viewModel.reloadSyncedBody() }
         }
         .task {
             viewModel.memoStore = memoStore

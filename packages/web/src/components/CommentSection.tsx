@@ -1,3 +1,4 @@
+import type { IssueReferenceTitles } from '../utils/issueReferenceTitles';
 import { useState, useRef, useMemo } from 'react';
 import type { IssueType } from 'meme-gtd-shared';
 import EditableContent from './EditableContent';
@@ -28,6 +29,7 @@ interface CommentSectionProps {
   activities?: ActivityLogEntry[];
   issueId?: number;
   enableInteractiveTodos?: boolean;
+  issueReferenceTitles?: IssueReferenceTitles;
   /** Click handler for `#id` links inside rendered comment bodies. */
   onIssueLinkClick?: (id: number, type: IssueType) => void;
 }
@@ -42,6 +44,7 @@ export default function CommentSection({
   issueId,
   enableInteractiveTodos = false,
   onIssueLinkClick,
+  issueReferenceTitles,
 }: CommentSectionProps) {
   const [newCommentBody, setNewCommentBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -112,6 +115,7 @@ export default function CommentSection({
                     onDelete={() => onDeleteComment(entry.comment.id)}
                     enableInteractiveTodos={enableInteractiveTodos}
                     onIssueLinkClick={onIssueLinkClick}
+                    issueReferenceTitles={issueReferenceTitles}
                   />
                 );
               }

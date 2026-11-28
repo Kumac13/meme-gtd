@@ -36,6 +36,7 @@ class TaskDetailViewModel: ObservableObject, IssueMetadataManaging, IssueRelatio
 
     // Links
     @Published var issueLinks: [IssueLink] = []
+    var issueLinksLoadID: UUID?
     @Published var urlLinks: [UrlLink] = []
 
     // Shared detail capabilities

@@ -1,3 +1,4 @@
+import { issueReferenceKey, type IssueReferenceTitles } from './issueReferenceTitles';
 /**
  * Markdown rendering utilities for meme-gtd Web UI
  */
@@ -35,6 +36,7 @@ import jsonLang from 'react-syntax-highlighter/dist/esm/languages/prism/json';
 import pythonLang from 'react-syntax-highlighter/dist/esm/languages/prism/python';
 import cssLang from 'react-syntax-highlighter/dist/esm/languages/prism/css';
 import { MermaidDiagram } from '../components/MermaidDiagram';
+import { remarkEmDashTableDelimiters } from './remarkEmDashTableDelimiters';
 import { remarkFlattenListParagraphs } from './remarkFlattenListParagraphs';
 
 // Register languages for light Prism build (order matters for dependencies)
@@ -215,6 +217,10 @@ function transformAttachmentPath(src: string | undefined): string | undefined {
 /**
  * Default markdown components configuration with Tailwind CSS styling
  */
+function tableCellAlignment(align: unknown) {
+  return align === 'center' || align === 'right' ? align : 'left';
+}
+
 const defaultComponents: Components = {
   // Images with attachment path transformation
   img: ({ src, alt, ...props }) => {
@@ -320,8 +326,8 @@ const defaultComponents: Components = {
 
   // Tables (GFM)
   table: ({ children }) => (
-    <div className="overflow-x-auto mb-4">
-      <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
+    <div className="mb-4 min-w-0 max-w-full overflow-x-auto [contain:inline-size]">
+      <table className="w-full border-collapse border border-gray-300">
         {children}
       </table>
     </div>
@@ -329,13 +335,22 @@ const defaultComponents: Components = {
   thead: ({ children }) => <thead className="bg-gray-50">{children}</thead>,
   tbody: ({ children }) => <tbody className="bg-white divide-y divide-gray-200">{children}</tbody>,
   tr: ({ children }) => <tr>{children}</tr>,
-  th: ({ children }) => (
-    <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border border-gray-300">
+  th: ({ node, children }) => (
+    <th
+      scope="col"
+      style={{ textAlign: tableCellAlignment(node?.properties.align) }}
+      className="min-w-24 px-3 py-2 align-top text-xs font-semibold text-gray-700 border border-gray-300 [overflow-wrap:anywhere]"
+    >
       {children}
     </th>
   ),
-  td: ({ children }) => (
-    <td className="px-4 py-2 text-sm text-gray-700 border border-gray-300">{children}</td>
+  td: ({ node, children }) => (
+    <td
+      style={{ textAlign: tableCellAlignment(node?.properties.align) }}
+      className="min-w-24 px-3 py-2 align-top text-sm text-gray-700 border border-gray-300 [overflow-wrap:anywhere]"
+    >
+      {children}
+    </td>
   ),
 
   // Horizontal rule
@@ -391,7 +406,8 @@ interface IssueAnchorProps {
  * matching the LinkSection behavior). External URLs still open in a new tab.
  */
 function makeIssueAwareAnchor(
-  onIssueLinkClick: (id: number, type: IssueType) => void,
+  onIssueLinkClick?: (id: number, type: IssueType) => void,
+  issueReferenceTitles?: IssueReferenceTitles,
 ): (props: IssueAnchorProps) => ReactNode {
   return ({ href, children }) => {
     if (href) {
@@ -399,7 +415,24 @@ function makeIssueAwareAnchor(
       if (match) {
         const type = slugToIssueType[match[1]];
         const id = parseInt(match[2], 10);
-        if (type && Number.isFinite(id)) {
+        const numberLabel = `#${match[2]}`;
+        if (issueReferenceTitles && href === `/${match[1]}/${match[2]}` && children === numberLabel) {
+          const title = issueReferenceTitles.get(issueReferenceKey(type, id));
+          return (
+            <RouterLink
+              to={href}
+              onClick={onIssueLinkClick ? event => {
+                if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                onIssueLinkClick(id, type);
+              } : undefined}
+              className="text-github-green-600 hover:text-github-green-800 underline [overflow-wrap:anywhere]"
+            >
+              {title ? `${numberLabel}: ${title}` : children}
+            </RouterLink>
+          );
+        }
+        if (onIssueLinkClick && type && Number.isFinite(id)) {
           return (
             <button
               type="button"
@@ -449,6 +482,7 @@ interface MarkdownRendererProps {
   components?: Components;
   className?: string;
   interactiveTodos?: InteractiveTodosOptions;
+  issueReferenceTitles?: IssueReferenceTitles;
   /**
    * When supplied, internal issue links (`/memos/:id` etc.) render as a
    * button that calls this handler instead of navigating. Mirrors
@@ -482,6 +516,7 @@ export function MarkdownRenderer({
   components,
   className = '',
   interactiveTodos,
+  issueReferenceTitles,
   onIssueLinkClick,
 }: MarkdownRendererProps) {
   const counterRef = useRef(0);
@@ -526,8 +561,8 @@ export function MarkdownRenderer({
 
   const mergedComponents = useMemo<Components>(() => {
     const result: Components = { ...defaultComponents };
-    if (onIssueLinkClick) {
-      result.a = makeIssueAwareAnchor(onIssueLinkClick);
+    if (onIssueLinkClick || issueReferenceTitles) {
+      result.a = makeIssueAwareAnchor(onIssueLinkClick, issueReferenceTitles);
     }
     if (interactiveTodos?.enabled) {
       const onToggle = interactiveTodos.onToggle;
@@ -551,11 +586,11 @@ export function MarkdownRenderer({
     }
     if (components) Object.assign(result, components);
     return result;
-  }, [interactiveTodos?.enabled, interactiveTodos?.onToggle, sortable, onIssueLinkClick, components]);
+  }, [interactiveTodos?.enabled, interactiveTodos?.onToggle, sortable, onIssueLinkClick, issueReferenceTitles, components]);
 
   const body = (
     <ReactMarkdown
-      remarkPlugins={[remarkGfm, remarkBreaks, remarkFlattenListParagraphs]}
+      remarkPlugins={[remarkGfm, remarkEmDashTableDelimiters, remarkBreaks, remarkFlattenListParagraphs]}
       rehypePlugins={[rehypeRaw, rehypeSanitize]}
       components={mergedComponents}
     >
