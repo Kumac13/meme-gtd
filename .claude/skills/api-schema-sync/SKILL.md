@@ -5,7 +5,7 @@ description: Use whenever changing API contracts — anything under packages/api
 
 # APIスキーマ変更の同期チェーン
 
-API契約は4段階で伝播する。**上流を変えたら下流を全て更新するまで作業は完了していない。**
+API契約は次の段階で伝播する。**上流を変えたら下流を全て更新するまで作業は完了していない。**
 このスキルが同期手順の唯一の正。iOS Swiftモデル↔スキーマの完全な対応表は `docs/architecture.md` の「API契約の同期チェーン」にある。
 
 ```
@@ -19,6 +19,9 @@ API契約は4段階で伝播する。**上流を変えたら下流を全て更�
 
 [4] ios/MemeGTD/MemeGTD/Models/*.swift + ios/MemeGTD/Shared/ArticleModels.swift
      （手書き。自動生成されない。**手動で同期すること**）
+
+[5] packages/mcp/src/schemas.ts + packages/mcp/src/tools/*.ts
+     （手書き。MCPが公開している操作の入出力だけをミラーする。**手動で同期すること**）
 ```
 
 ## API変更時チェックリスト
@@ -30,6 +33,7 @@ API契約は4段階で伝播する。**上流を変えたら下流を全て更�
 - [ ] `pnpm --filter meme-gtd-api openapi:validate` で検証
 - [ ] Webが該当APIを使う場合: `pnpm --filter meme-gtd-web generate:api` でクライアント再生成 + UI側の対応
 - [ ] iOSが該当APIを使う場合: 対応するSwiftモデルを手動更新（完全な対応表は `docs/architecture.md`）+ `xcodebuild` でビルド確認
+- [ ] MCPが該当APIを公開している場合: `packages/mcp/src/schemas.ts` と `packages/mcp/src/tools/` の入出力を手動更新 + `pnpm --filter meme-gtd-mcp test`（公開範囲とツールの規約は `packages/mcp/CLAUDE.md`）
 - [ ] CLIが該当機能を持つ場合: `packages/cli/src/commands/` の対応コマンドを更新
 - [ ] `docs/architecture.md`（エンドポイントマップ）・`docs/er-diagram.md`（データモデル）・`docs/api-filtering.md` / `docs/cli-commands.md` の該当箇所を更新
 

@@ -72,6 +72,19 @@
         "pino-roll"
       ]
     },
+    "packages/mcp": {
+      "entry": [
+        "src/index.ts",
+        "test/*.test.ts"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "test/**/*.ts"
+      ],
+      "ignoreDependencies": [
+        "meme-gtd-api"
+      ]
+    },
     "packages/shared": {
       "entry": [
         "src/index.ts"

@@ -1,7 +1,7 @@
 # meme-gtd 開発ガイド
 
 GTD (Getting Things Done) ベースのローカルファースト個人タスク管理ツール。
-pnpmモノレポ（CLI / REST API / Web UI / Chrome拡張）+ iOSアプリ。単一ユーザー・認証なし。
+pnpmモノレポ（CLI / REST API / Web UI / Chrome拡張 / MCPサーバー）+ iOSアプリ。単一ユーザー・認証なし。
 
 ## ドキュメントルーティング（作業前にここで参照先を決める）
 
@@ -55,7 +55,7 @@ pnpmモノレポ（CLI / REST API / Web UI / Chrome拡張）+ iOSアプリ。単
 git push する前にCIと同じチェックをローカルで通すこと:
 
 ```bash
-pnpm --filter meme-gtd-api lint && pnpm --filter meme-gtd-api openapi:validate && pnpm --filter meme-gtd-api test && pnpm --filter meme-gtd-web test && pnpm build && pnpm knip
+pnpm --filter meme-gtd-api lint && pnpm --filter meme-gtd-api openapi:validate && pnpm --filter meme-gtd-api test && pnpm --filter meme-gtd-mcp lint && pnpm --filter meme-gtd-mcp test && pnpm --filter meme-gtd-web test && pnpm build && pnpm knip
 ```
 
 Web テストには共通コンポーネントの境界チェック（`ComponentBoundaries.test.ts`、iOS ソース走査を含む）が含まれる。iOS のみの変更でも Web テストは実行すること。

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.63.0 - 2026-11-28
+
+### New Features
+
+- MCP サーバー（`packages/mcp`）を追加した。ChatGPT・Codex・Claude などの MCP クライアントから、既存の REST API を通して meme-gtd を操作できる。
+  - Task は一覧・取得・作成・更新・削除・完了・キャンセル・再開・ブックマークができ、Task のコメントは一覧・追加・編集・削除ができる。
+  - Memo・Article・Project・Label・Template・Activity は読み取りに限る。Issue 間リンクと外部 URL の追加、Project への追加、既存 Label の付与は種別を問わずできる。リンクと外部 URL の解除・表示名変更、Project 内の並び替え・所属解除、Label の解除は Task に限り、その Task のものであることを確認してから実行する。
+  - 起動方式は stdio と Streamable HTTP（`127.0.0.1` のみで待ち受け、認証なし）。`MGTD_MCP_READ_ONLY=true` で読み取りツールだけを公開する。接続先 API は `MGTD_API_URL` で必ず指定する。
+  - 使い方とツール一覧は `README.md` の「MCP サーバー」を参照。
+- API に `GET /api/activity-log/{id}` を追加した。アクティビティの1件を ID で取得する。
+
+### Tests
+
+- MCP の全ツールを、一時 DB で起動した実 API に対して実行する結合テストを追加。CI（MCP CI）でも実行する。
+
 ## 0.62.2 - 2026-11-28
 
 ### Bug Fixes

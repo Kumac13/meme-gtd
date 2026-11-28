@@ -64,6 +64,52 @@ curl http://localhost:3000/api/health
 Web閲覧中の記事を保存するためのChrome拡張機能が利用可能です。
 インストール方法の詳細は [docs/extension-setup.md](./docs/extension-setup.md) を参照してください。
 
+## MCP サーバー
+
+ChatGPT・Codex・Claude などの MCP クライアントから meme-gtd を操作するためのサーバー（`packages/mcp`）。既存の REST API を呼び出すため、API サーバーが起動している必要があります。
+
+### 起動方法
+
+```bash
+pnpm --filter meme-gtd-mcp... build
+```
+
+stdio（クライアントがプロセスを起動する方式）:
+
+```bash
+MGTD_API_URL=http://127.0.0.1:3000 node packages/mcp/dist/index.js
+```
+
+Streamable HTTP（`http://127.0.0.1:3100/mcp` で待ち受け）:
+
+```bash
+MGTD_API_URL=http://127.0.0.1:3000 MGTD_MCP_TRANSPORT=http node packages/mcp/dist/index.js
+```
+
+| 環境変数 | 既定値 | 意味 |
+|---|---|---|
+| `MGTD_API_URL` | なし（必須） | 接続先 API の origin。本番は `http://127.0.0.1:3000`、検証は `http://127.0.0.1:3001` |
+| `MGTD_MCP_READ_ONLY` | `false` | `true` にすると読み取りツールだけを公開する |
+| `MGTD_MCP_TRANSPORT` | `stdio` | `stdio` または `http` |
+| `MGTD_MCP_PORT` | `3100` | HTTP の待ち受けポート |
+
+HTTP は 127.0.0.1 だけで待ち受け、認証を持ちません。ポートを外部へ公開せず、同じマシン上のクライアント（OpenAI の Secure MCP Tunnel の `tunnel-client` など）から接続してください。
+
+### 公開するツール
+
+Task とそのコメントは作成・変更でき、それ以外は読み取りと関連付けに限ります。
+
+| 対象 | 読み取り | 書き込み |
+|---|---|---|
+| Task | `list_tasks` `get_task` | `create_task` `update_task` `delete_task` `close_task` `cancel_task` `reopen_task` `bookmark_task` `unbookmark_task` |
+| コメント | `list_task_comments` `list_memo_comments` `list_article_comments` | `create_task_comment` `update_task_comment` `delete_task_comment` |
+| Memo・Article・Template | `list_memos` `get_memo` `list_articles` `get_article` `list_templates` `get_template` | なし |
+| Project | `list_projects` `get_project` `get_projects_for_issue` | `add_project_item`、Task のみ `update_project_item` `remove_project_item` |
+| Issue リンク | `list_issue_links` `get_link` `get_links_graph` | `create_link`、Task のみ `delete_link` |
+| 外部 URL | `list_url_links` `get_url_link` | `create_url_link`、Task のみ `update_url_link` `delete_url_link` |
+| Label | `list_labels` | `assign_label_to_issue`、Task のみ `remove_label_from_issue` |
+| Activity・検索 | `list_activity_log` `get_issue_activity_log` `get_project_activity_log` `get_completed_tasks` `get_activity_log_entry` `keyword_search` | なし |
+
 ## Web UI
 
 ### 起動方法

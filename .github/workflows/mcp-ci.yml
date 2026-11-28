@@ -1,0 +1,51 @@
+name: MCP CI
+
+# MCP のテストは実 API を起動する結合テストで、ツールの入出力は API スキーマの
+# 手書きミラーのため、packages/api/ の変更でも実行する。
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/mcp/**'
+      - 'packages/api/**'
+      - '.github/workflows/mcp-ci.yml'
+  pull_request:
+    paths:
+      - 'packages/mcp/**'
+      - 'packages/api/**'
+      - '.github/workflows/mcp-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Tokyo
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .tool-versions
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build better-sqlite3 native bindings
+        run: |
+          cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3
+          npm run build-release
+
+      - name: Build dependencies
+        run: pnpm --filter meme-gtd-mcp... build
+
+      - name: Run lint
+        run: pnpm --filter meme-gtd-mcp lint
+
+      - name: Run tests
+        run: pnpm --filter meme-gtd-mcp test
