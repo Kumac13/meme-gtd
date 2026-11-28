@@ -257,6 +257,17 @@ describe('Detail issue reference titles', () => {
       .toHaveAttribute('href', '/articles/9001');
   });
 
+  it('adds titles to number-only references inside table cells', () => {
+    const titles = getIssueReferenceTitles([makeLink(12, 'task', 'A task')]);
+    const content = '| Ref | Other |\n| --- | --- |\n| [#12](/tasks/12) | [Custom](/tasks/12) [#17](/tasks/17) |';
+    render(<MemoryRouter><MarkdownRenderer content={content} issueReferenceTitles={titles} /></MemoryRouter>);
+
+    const table = screen.getByRole('table');
+    expect(within(table).getByRole('link', { name: '#12: A task' })).toHaveAttribute('href', '/tasks/12');
+    expect(within(table).getByRole('link', { name: 'Custom' })).toHaveAttribute('href', '/tasks/12');
+    expect(within(table).getByRole('link', { name: '#17' })).toHaveAttribute('href', '/tasks/17');
+  });
+
   it('keeps number fallbacks, custom labels, code, external links and other renderers intact', () => {
     const available = makeLink(12, 'task', 'A task');
     const titles = getIssueReferenceTitles([

@@ -261,6 +261,38 @@ final class MarkdownTableTests: XCTestCase {
     }
 
     @MainActor
+    func testReferenceTitlesFollowTheSameRulesAsBodyText() throws {
+        func link(_ id: Int, type: String = "task", title: String) -> IssueLink {
+            IssueLink(
+                id: id, sourceIssueId: 1, targetIssueId: id, linkType: .relates, createdAt: "",
+                direction: .outgoing, targetIssue: TargetIssue(id: id, type: type, title: title, status: nil)
+            )
+        }
+        let titles = IssueReferenceTitles(links: [
+            link(12, title: "A task"), link(13, type: "memo", title: "A | memo"), link(14, title: "  "),
+        ])
+        let parsed = try table(in: """
+        | Ref | Other |
+        | --- | --- |
+        | [#12](/tasks/12) | **[#13](/memos/13)** |
+        | [#14](/tasks/14) [#17](/tasks/17) [#12](/memos/12) | [#99](/tasks/12) [#12 **custom**](/tasks/12) |
+        | [#12](https://example.com/tasks/12) | `[#12](/tasks/12)` [`#12`](/tasks/12) |
+        """)
+        let rows = parsed.rows(issueReferenceTitles: titles)
+        XCTAssertEqual(rows.map { row in row.map { String($0.characters) } }, [
+            ["Ref", "Other"],
+            ["#12: A task", "#13: A | memo"],
+            ["#14 #17 #12", "#99 #12 custom"],
+            ["#12", "[#12](/tasks/12) #12"],
+        ])
+        // タイトルまで含めた全体が同じリンクになり、周囲の装飾も引き継ぐ。
+        XCTAssertEqual(rows[1][0].runs.map { $0.link?.absoluteString }, ["/tasks/12"])
+        XCTAssertEqual(rows[1][1].runs.map { $0.link?.absoluteString }, ["/memos/13"])
+        XCTAssertEqual(rows[1][1].runs.map(\.inlinePresentationIntent), [.stronglyEmphasized])
+        XCTAssertEqual(strings(parsed)[1], ["#12", "#13"])
+    }
+
+    @MainActor
     private func table(in markdown: String) throws -> MarkdownTable {
         let table = parseBlocks(markdown).compactMap { block -> MarkdownTable? in
             guard case .table(let table, _, _) = block else { return nil }

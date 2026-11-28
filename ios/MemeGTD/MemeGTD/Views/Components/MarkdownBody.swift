@@ -164,7 +164,10 @@ struct MarkdownBody: View {
     private func tableView(
         _ table: MarkdownTable, placement: MarkdownTablePlacement, todo: TodoMarkdown.TodoItem?
     ) -> some View {
-        let tableView = MarkdownTableView(table: table, fontSize: fontSize, color: color, searchQuery: searchQuery)
+        let tableView = MarkdownTableView(
+            table: table, fontSize: fontSize, color: color, searchQuery: searchQuery,
+            issueReferenceTitles: issueReferenceTitles
+        )
         if placement.listDepth == 0 && placement.quoteDepth == 0 {
             tableView
         } else {
