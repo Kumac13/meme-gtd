@@ -380,7 +380,13 @@ async function create(flags) {
   const id = task.id ?? task.item?.id;
   if (flags.parent) {
     const parentId = taskIdOf(flags.parent);
-    await api('POST', '/api/links', { sourceIssueId: id, targetIssueId: parentId, linkType: 'parent' });
+    // parent リンクは source が親、target が子（packages/web/src/utils/taskHierarchy.ts と同じ向き）。
+    await api('POST', '/api/links', { sourceIssueId: parentId, targetIssueId: id, linkType: 'parent' });
+    const links = await api('GET', `/api/issues/${id}/links`);
+    const asChild = (Array.isArray(links) ? links : []).some((link) =>
+      (link.linkType === 'parent' && link.sourceIssueId === parentId && link.targetIssueId === id)
+      || (link.linkType === 'child' && link.sourceIssueId === id && link.targetIssueId === parentId));
+    if (!asChild) fail(`登録後の確認で、Task ${id} が Task ${parentId} の子になっていません`);
   }
   console.log(`Task ${id} を作りました${flags.parent ? `（親 Task ${flags.parent}）` : ''}`);
 }
