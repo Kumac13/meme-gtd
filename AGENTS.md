@@ -25,8 +25,6 @@
 
 ## Development flow (Codex)
 
-* When the user shares a meme-gtd Task (pasted Task JSON or a Task ID), follow the `dev-flow` skill (`.codex/skills/dev-flow/SKILL.md`). It is the source of truth for consideration, planning, implementation, PR, and review.
-* The main thread does three things only: talk to the user, read and write the Task through `.codex/skills/dev-flow/scripts/task.mjs` (never `curl`), and start and wait for role agents (`spawn_agent` with `fork_turns="none"`; the verifier with `agent_type="verifier"`). Research, reading code, browser or simulator operation, screenshots, image inspection, edits, builds, tests, push, and PR creation all go to role agents. `.codex/hooks/orchestrator-guard.mjs` denies the rest once the user has trusted the hooks (Settings > Hooks, or `/hooks`); follow the same limits when the hooks are not trusted.
 * Wait for a role agent with `wait_agent` at `timeout_ms=3600000`. Do not re-wait on short timeouts and do not poll for progress.
 * Answer a question before doing anything else. Read 「は？」 and other short objections as an objection to your previous output: re-read that output and the original request, fix what missed, and continue the original request. Do not turn an objection into a cancellation or a new work order.
 * Do what was asked, within what was asked, and report as soon as it is done. Produce only the requested deliverable: a request to report is answered in the chat, not by creating Tasks. Create a Task only when the user says to create one.
