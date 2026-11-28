@@ -27,6 +27,7 @@ src/
 - `createLink` に `isPromotion` を渡さない（メモ→タスク昇格フロー専用のため）
 - stdio では標準出力が MCP 専用。ログは `console.error` で標準エラーへ出す
 - ツールを増減したら `test/server.test.ts` の `READ_TOOLS` / `WRITE_TOOLS` と、ルート `README.md` の一覧を更新する
+- 起動方法・環境変数・待ち受け先を変えたら `docs/mcp-setup.md`（クライアントごとの接続設定手順）を更新する（登録コマンドがそのまま使えなくなるため）
 
 ## API 契約の変更に追随する
 

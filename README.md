@@ -67,6 +67,7 @@ Web閲覧中の記事を保存するためのChrome拡張機能が利用可能�
 ## MCP サーバー
 
 ChatGPT・Codex・Claude などの MCP クライアントから meme-gtd を操作するためのサーバー（`packages/mcp`）。既存の REST API を呼び出すため、API サーバーが起動している必要があります。
+Claude Code・Codex・ChatGPT への接続設定の手順は [docs/mcp-setup.md](./docs/mcp-setup.md) を参照してください。
 
 ### 起動方法
 
