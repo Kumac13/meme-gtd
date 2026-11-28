@@ -1,6 +1,6 @@
 {
   "name": "meme-gtd-mcp",
-  "version": "0.62.2",
+  "version": "0.63.0",
   "private": true,
   "type": "module",
   "description": "MCP server exposing meme-gtd operations as tools over the REST API",
