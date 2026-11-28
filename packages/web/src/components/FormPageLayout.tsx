@@ -7,7 +7,7 @@ interface FormPageLayoutProps {
   backLabel: string;
   title: ReactNode;
   children: ReactNode;
-  /** sm 以上で画面幅の8割まで広げる（Issue 系の作成・編集用）。既定は max-w-4xl。 */
+  /** sm 以上で画面幅の8割まで広げる（Issue 系と Project の作成・編集用）。既定は max-w-4xl。 */
   wide?: boolean;
 }
 

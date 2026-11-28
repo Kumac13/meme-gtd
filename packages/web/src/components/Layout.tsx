@@ -12,8 +12,8 @@ export default function Layout() {
   const isArticlesActive = location.pathname.startsWith("/articles");
   const isTemplatesActive = location.pathname.startsWith("/templates");
   const isActivityActive = location.pathname.startsWith("/activity");
-  // Issue 系（Memo / Task / Article / Template / Links）は外枠を画面幅の8割まで広げるため、sm 以上で max-w-7xl の上限を外す
-  const isWideRoute = isMemosRoute || isTasksActive || isArticlesActive || isTemplatesActive || isLinksActive;
+  // 共通の幅設定を使うページでは、sm 以上で main の max-w-7xl の上限を外す
+  const isWideRoute = isMemosRoute || isTasksActive || isProjectsActive || isArticlesActive || isTemplatesActive || isLinksActive;
   const mainWidth = isWideRoute ? "max-w-7xl sm:max-w-none" : "max-w-7xl";
 
   return (
