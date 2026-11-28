@@ -18,7 +18,7 @@ import { type ActivityLogEntry } from '../utils/activityLogHelpers';
 import { isDisplayedActivity } from './ActivityTimelineItem';
 import { useDetailIssueLinks } from '../hooks/useDetailIssueLinks';
 import { stripArticleBlockIds } from '../utils/markdown';
-import { WIDE_DETAIL_WIDTH } from '../utils/pageWidth';
+import { WIDE_PAGE_WIDTH } from '../utils/pageWidth';
 
 const TASK_STATUS_OPTIONS = [
   { value: 'inbox', label: 'Inbox' },
@@ -269,7 +269,7 @@ export default function ItemDetail({
   };
 
   return (
-    <div className={`${mode === 'page' ? WIDE_DETAIL_WIDTH : 'px-4'} mx-auto py-2`}>
+    <div className={`${mode === 'page' ? WIDE_PAGE_WIDTH : 'px-4'} mx-auto py-2`}>
       {/* Header - Full width */}
       <div className="mb-4">
         {/* Mobile: stack vertically, Desktop: side by side */}

@@ -166,7 +166,7 @@ Templateを使うTask新規、Article新規、Task DetailのNew Taskは`Template
 
 Task / Memo / Article / Template一覧は`ListPageLayout`で検索、作成導線、filter、件数、empty、results、paginationの配置を共有する。各filterのtrigger、popover、Clearは`FilterDropdown`、選択toggleは`ToggleFilterButton`、documentの外側クリックlistenerは`useOutsideClick`が所有する。リソース固有のURL query、filter内容、ItemList、Memo mobile timelineは各一覧に残す。
 
-Issue 系ページ（Memo / Task / Article / Template の一覧・詳細・作成・編集と Links）の外枠は、sm 以上で画面幅の8割まで広げる。幅の指定は `utils/pageWidth.ts` を単一の正とし、`ListPageLayout`、`FormPageLayout`（`wide` 指定時）、`ItemDetail`（page 表示時）が使う。8割が従来の幅（一覧・フォームは `max-w-4xl`、詳細は `max-w-7xl`）を下回る画面幅では従来の幅を保つ。`Layout` は Issue 系ルートでのみ `main` の `max-w-7xl` 上限を外す。詳細の右サイドバーは幅固定（`lg:w-80`）のままとし、広がった分は本文・Links・コメントの列に割り当てる。`ItemDetailPanel` 内の `ItemDetail` と Project / Calendar / Activity の幅は変えない。
+ヘッダーと Issue 系ページ（Memo / Task / Article / Template の一覧・詳細・作成・編集と Links）は同じ外枠を共有し、左右の端を揃える。外枠は sm 以上で画面幅の8割、8割が従来の枠（`max-w-7xl`）を下回る画面幅では従来の枠とする。幅の指定は `utils/pageWidth.ts` を単一の正とし、`Layout` のヘッダー、`ListPageLayout`、`FormPageLayout`（`wide` 指定時）、`ItemDetail`（page 表示時）が使う（本文だけを広げるとヘッダーの枠からはみ出して端が揃わなくなるため、枠を個別に指定しない）。ヘッダーの枠は全ルートで同じ幅にする（タブを切り替えたときにロゴとタブの位置が動かないようにするため）。`Layout` は Issue 系ルートでのみ `main` の `max-w-7xl` 上限を外す。詳細の右サイドバーは幅固定（`lg:w-80`）のままとし、広がった分は本文・Links・コメントの列に割り当てる。`ItemDetailPanel` 内の `ItemDetail` と Project / Calendar / Activity の幅は変えない。
 
 Markdown画像のpaste / drop / upload / cursor挿入は`MarkdownTextarea`が所有する。Issue form、comment、editable content、Project formは本文Bindingだけを渡す。実行前の確認モーダルは`ConfirmationModal`を使い、native dialogのフォーカス制御・背景操作の抑止・キャンセル・処理中の多重実行防止・エラー表示を一箇所で所有する。呼び出し側は確認内容と実行callbackだけを渡す。DetailのCopy Allは`useCopyItemContent`、overflow操作は`ActionMenu`と`InlineDeleteConfirmation`を使い、画面ごとにclipboard feedback timerやbackdropを複製しない。
 
